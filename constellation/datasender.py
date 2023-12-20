@@ -5,6 +5,7 @@ import time
 import datetime
 import threading
 import os
+import logging
 from typing import Optional
 from queue import Queue, Empty
 
@@ -51,12 +52,13 @@ class PushThread(threading.Thread):
         - context    :: ZMQ context to use (optional).
         """
         super().__init__(*args, **kwargs)
+        self._logger = logging.getLogger(__name__)
         self.stopevt = stopevt
         self.queue = queue
+        self.packet_num = 0
         ctx = context or zmq.Context()
         self._socket = ctx.socket(zmq.PUSH)
         self._socket.bind(f"tcp://*:{port}")
-        self.packet_num = 0
 
     def run(self):
         """Start sending data.
@@ -71,6 +73,7 @@ class PushThread(threading.Thread):
                 if isinstance(item, DataBlock):
                     item.meta["packet_num"] = self.packet_num
                     transmitter.send(self._socket, item.payload, item.meta)
+                    self._logger.debug(f"Sending packet number {self.packet_num}")
                     self.packet_num += 1
                 else:
                     raise RuntimeError(f"Unable to handle queue item: {type(item)}")
@@ -125,14 +128,14 @@ class RandomDataSender(DataSender):
         t0 = time.time()
         num = 0
         while not self._stop_running.is_set():
-            meta = {'eventid': num, 'time': time.strftime()}
+            meta = {'eventid': num, 'time': datetime.datetime.now().isoformat()}
             data = DataBlock(payload, meta)
             self.data_queue.put(data)
+            self.logger.debug(f"Queueing data packet {num}")
             num += 1
-            time.sleep(0.2)
-
+            time.sleep(0.5)
         t1 = time.time()
-        print(f'total time for {num} evt / {num * len(payload) / 1024 / 1024}MB: {t1 - t0}s')
+        self.logger.info(f'total time for {num} evt / {num * len(payload) / 1024 / 1024}MB: {t1 - t0}s')
 
 
 # -------------------------------------------------------------------------
@@ -140,7 +143,6 @@ class RandomDataSender(DataSender):
 def main(args=None):
     """Start the Lecroy oscilloscope device server."""
     import argparse
-    import logging
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--log-level", default="info")

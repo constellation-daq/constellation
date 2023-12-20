@@ -103,16 +103,9 @@ class Satellite:
         while True:
 
             # TODO: add check for heartbeatchecker: if any entries in hb.get_failed, trigger action
-
-            i = 0 # TODO remove this
             try:
                 cmdmsg = self.cmd_sock.recv_multipart(flags=zmq.NOBLOCK)
             except zmq.ZMQError:
-                # TODO remove this vvvvv
-                self.logger.debug("Received no msg via ZMQ, sleeping... [example for frequent debug msg]")
-                i += 1
-                self.stats.sendStats("tries", DataType.INT, i)
-                # TODO remove this ^^^^
                 time.sleep(0.1)
                 continue
             except KeyboardInterrupt:
@@ -270,13 +263,15 @@ class Satellite:
         self.fsm.start()
         # start thread running during acquistion
         self._stop_running = threading.Event()
-        self._running_thread = threading.Thread(target=self.do_run)
+        self._running_thread = threading.Thread(target=self.do_run, daemon=True)
         self._running_thread.start()
         self.logger.info( "Satellite Running. Acquistion taking place.")
 
     @handle_error
     def on_start(self):
         """Callback method for the 'start_run' transition of the FSM.
+
+        Is called *before* the 'do_run' thread is started.
         """
         pass
 
@@ -289,14 +284,21 @@ class Satellite:
         aslong as the transition is allowed.
         """
         self.fsm.stop()
+        self._stop_running.set()
+        if self._running_thread and self._running_thread.is_alive():
+            # TODO select a sensible timeout value
+            self._running_thread.join(30.0)
+        if self._running_thread and self._running_thread.is_alive():
+            raise RuntimeError("Could not join running thread within timeout!")
         self.logger.info( "Satellite stopped Acquistion.")
 
     @handle_error
     def on_stop(self):
         """Callback method for the 'stop_run' transition of the FSM.
 
-        This method needs to the stop acquisition on the other thread.
+        This method is called *before* the 'do_run' is stopped.
         """
+        pass
 
     def do_run(self):
         """The acquisition event loop.

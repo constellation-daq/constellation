@@ -147,7 +147,9 @@ def main():
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
         level=args.log_level.upper(),
     )
-
+    if not args.satellite:
+        print("No satellites specified! Use '--satellite' to add one.")
+        return
     # Set up simple tab completion
     commands = ["exit", "get_state", "transition ", "failure", "register "]
     transitions = ["load", "unload", "launch", "land", "start", "stop", "recover", "reset"]
