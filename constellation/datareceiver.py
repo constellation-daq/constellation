@@ -81,7 +81,7 @@ class DataReceiver(Satellite):
         self._pull_interfaces[host] = port
         self.logger.info(f"Adding interface tcp://{host}:{port} to listen to.")
 
-    def on_load(self):
+    def on_initialize(self):
         """Set up threads to listen to interfaces.
 
         Stops any still-running threads.
@@ -108,10 +108,6 @@ class DataReceiver(Satellite):
     def on_failure(self):
         """Stop all threads."""
         self._stop_pull_threads(2.0)
-
-    def on_unload(self):
-        """Go back to init state."""
-        self.on_failure()
 
     def do_run(self):
         """Handle the data enqueued by the pull threads.

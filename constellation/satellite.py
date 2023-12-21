@@ -176,7 +176,7 @@ class Satellite:
 
     @handle_error
     @debug_log
-    def Load(self):
+    def Initialize(self):
         """Initialize.
 
         Actual actions will be performed by the callback method 'on_load'
@@ -186,31 +186,10 @@ class Satellite:
         self.logger.info( "Satellite Initialized.")
 
     @handle_error
-    def on_load(self):
+    def on_initialize(self):
         """Callback method for the 'initialize' transition of the FSM.
 
         Set and check config, maybe initialize device.
-        """
-        pass
-
-    @handle_error
-    @debug_log
-    def Unload(self):
-        """Deinitialize Satellite.
-
-        Actual Satellite-specific actions will be performed by the callback
-        method 'on_unload' as long as the transition is allowed.
-
-        """
-        self.fsm.unload()
-        self.logger.info( "Satellite Deinitialized.")
-
-    @handle_error
-    @debug_log
-    def on_unload(self):
-        """Callback method for the 'deinitialize' transition of the FSM.
-
-        Undo actions from 'do_initialize'
         """
         pass
 
@@ -365,6 +344,7 @@ class Satellite:
         if self._running_thread and self._running_thread.is_alive():
             # TODO consider to set a timeout and fail if device takes too long
             self._running_thread.join()
+        self.hb_checker.stop()
         self.logger.warning("Transitioned to Safe state.")
 
     @handle_error
@@ -384,29 +364,11 @@ class Satellite:
         aslong as the transition is allowed.
         """
         self.fsm.recover()
-        self.hb_checker.stop()
         self.logger.info( "Recovered from Safe state.")
 
     @handle_error
     def on_recover(self):
         """Callback method for the 'on_recover' transition of the FSM.
-        """
-        pass
-
-    @handle_error
-    @debug_log
-    def Reset(self):
-        """Transition to Idle state from Error state.
-
-        Actual actions will be performed by the callback method 'on_reset'
-        aslong as the transition is allowed.
-        """
-        self.fsm.reset()
-        self.logger.info( "Reset from Error state. Back in Idle state.")
-
-    @handle_error
-    def on_reset(self):
-        """Callback method for the 'on_reset' transition of the FSM.
         """
         pass
 
