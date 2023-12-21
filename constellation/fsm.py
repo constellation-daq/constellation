@@ -8,9 +8,9 @@ class SatelliteState(Enum):
     """Available states to cycle through."""
 
     # Idle state without any configuration
-    IDLE = auto()
-    # Initialized state with configuration but not (fully) applied
     INIT = auto()
+    # Initialized state with configuration but not (fully) applied
+    ON = auto()
     # Prepared state where configuration is applied
     ORBIT = auto()
     # Running state where DAQ is running
@@ -32,24 +32,25 @@ class SatelliteFSM(StateMachine):
     """Manage the satellite's state and its transitions."""
 
     # Convert enum to states
-    states = States.from_enum(SatelliteState, initial=SatelliteState.IDLE)
+    states = States.from_enum(SatelliteState, initial=SatelliteState.INIT)
 
     # Define transitions
-    # - IDLE <=> INIT
-    load = states.IDLE.to(states.INIT)
-    unload = states.INIT.to(states.IDLE)
-    # - INIT <=> ORBIT
-    launch = states.INIT.to(states.ORBIT)
-    land = states.ORBIT.to(states.INIT)
+    # - INIT <=> ON
+    load = states.INIT.to(states.ON) | states.ON.to(states.ON)
+    # - ON <=> ORBIT
+    launch = states.ON.to(states.ORBIT)
+    land = states.ORBIT.to(states.ON)
     # - ORBIT <=> RUN
     start = states.ORBIT.to(states.RUN)
     stop = states.RUN.to(states.ORBIT)
     # - safe
     interrupt = states.ORBIT.to(states.SAFE) | states.RUN.to(states.SAFE)
-    recover = states.SAFE.to(states.INIT)
+    recover = states.SAFE.to(states.ON)
     # - error
-    failure = states.RUN.to(states.ERROR) | states.ORBIT.to(states.ERROR) | states.INIT.to(states.ERROR) | states.SAFE.to(states.ERROR)
-    reset = states.ERROR.to(states.IDLE)
+    failure = states.RUN.to(states.ERROR) | states.ORBIT.to(states.ERROR)
+    failure |= states.ON.to(states.ERROR) | states.SAFE.to(states.ERROR)
+    failure |= states.ERROR.to(states.ERROR) | states.INIT.to(states.ERROR)
+    reset = states.ERROR.to(states.ON)
 
     def __init__(self):
         super().__init__()
