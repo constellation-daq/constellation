@@ -21,13 +21,6 @@ class SatelliteState(Enum):
     ERROR = auto()
 
 
-class SatelliteResponse(Enum):
-    SUCCESS = auto()
-    INVALID = auto()
-    NOTIMPLEMENTED = auto()
-    INCOMPLETE = auto()
-
-
 class SatelliteFSM(StateMachine):
     """Manage the satellite's state and its transitions."""
 

@@ -6,7 +6,7 @@ import zmq
 import msgpack
 
 from logging.handlers import QueueHandler, QueueListener
-
+from .protocol import LogTransmitter
 
 class MsgHeader:
     def __init__(self, sender, timestamp: msgpack.Timestamp, tags: dict):
@@ -78,39 +78,10 @@ class ZeroMQSocketHandler(QueueHandler):
 
     def __init__(self, socket: zmq.Socket):
         super().__init__(socket)
+        self.transmitter = LogTransmitter()
 
     def enqueue(self, record):
-        topic = f'LOG/{record.levelname}/{record.filename}'
-        header = MsgHeader(record.name, msgpack.Timestamp.from_unix_nano(time.time_ns()), {})
-        self.queue.send_string(topic, zmq.SNDMORE)
-        self.queue.send(msgpack.packb(header, default=MsgHeader.encode), zmq.SNDMORE)
-        # Instead of just adding the formatted message, this adds all attributes
-        # of the logRecord, allowing to reconstruct the entire message on the
-        # other end.
-        self.queue.send(msgpack.packb(
-            {'name': record.name,
-             'msg': record.msg,
-             'args': record.args,
-             'levelname': record.levelname,
-             'levelno': record.levelno,
-             'pathname': record.pathname,
-             'filename': record.filename,
-             'module': record.module,
-             'exc_info': record.exc_info,
-             'exc_text': record.exc_text,
-             'stack_info': record.stack_info,
-             'lineno': record.lineno,
-             'funcName': record.funcName,
-             'created': record.created,
-             'msecs': record.msecs,
-             'relativeCreated': record.relativeCreated,
-             'thread': record.thread,
-             'threadName': record.threadName,
-             'processName': record.processName,
-             'process': record.process,
-             'message': record.message,
-             }
-        ))
+        self.transmitter.send(record)
 
     def close(self):
         if not self.queue.closed:
@@ -121,16 +92,15 @@ class ZeroMQSocketListener(QueueListener):
     def __init__(self, uri, /, *handlers, **kwargs):
         self.ctx = kwargs.get('ctx') or zmq.Context()
         socket = zmq.Socket(self.ctx, zmq.SUB)
+        # TODO implement a filter parameter to customize what to subscribe to
         socket.setsockopt_string(zmq.SUBSCRIBE, 'LOG/')  # subscribe to LOGs
         socket.connect(uri)
+        self.transmitter = LogTransmitter()
         kwargs.pop('ctx', None)
         super().__init__(socket, *handlers, **kwargs)
 
     def dequeue(self, block):
-        _topic = self.queue.recv()
-        _header = MsgHeader.decode(msgpack.unpackb(self.queue.recv()))
-        record = msgpack.unpackb(self.queue.recv())
-        return logging.makeLogRecord(record)
+        return self.transmitter.recv(self.queue)
 
 
 def main(args=None):

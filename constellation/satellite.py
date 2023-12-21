@@ -11,11 +11,13 @@ import zmq
 import msgpack
 from statemachine.exceptions import TransitionNotAllowed
 
-from .fsm import SatelliteFSM, SatelliteResponse
+from .fsm import SatelliteFSM
 from .heartbeater import Heartbeater
 from .heartbeatchecker import HeartbeatChecker
-from .log_and_stats import DataType, getLoggerAndStats
+from .log_and_stats import getLoggerAndStats
 from ._version import version
+from .protocol import SatelliteResponse
+
 
 def handle_error(func):
     """Catch and handle exceptions in function calls."""
