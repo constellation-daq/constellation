@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "constellation"
+authors = [
+    {name = "Hanno Perrey", email = "hanno.perrey@dvel.se"},
+    # TODO add other authors!
+]
+description = "Constellation DAQ/SCADA implementation in Python."
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["DAQ", "SCADA", "experimental control"]
+license = {text = "EUPL"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "zmq",
+    "msgpack",
+    "python-statemachine",
+    "h5py",
+    "numpy",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+#pdf = ["ReportLab>=1.2", "RXP"]
+#rest = ["docutils>=0.3", "pack ==1.1, ==1.3"]
+
+[tool.setuptools_scm]
+version_file = "python/constellation/_version.py"
+
+[tool.setuptools.packages.find]
+where = ["python"]  # list of folders that contain the packages (["."] by default)
+#include = ["my_package*"]  # package names should match these glob patterns (["*"] by default)
+exclude = ["test*"]  # exclude packages matching these glob patterns (empty by default)
+#namespaces = false  # to disable scanning PEP 420 namespaces (true by default)
+
+#[project.scripts]
+#my-script = "my_package.module:function"
+
+# ... other project metadata fields as listed in:
+#     https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
