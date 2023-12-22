@@ -116,12 +116,12 @@ class LogTransmitter:
         self.host = host
         self._socket = socket
 
-    def send(self, record: logging.logRecord, socket: zmq.Socket = None):
-        """Send a logRecord via an ZMQ socket.
+    def send(self, record: logging.LogRecord, socket: zmq.Socket = None):
+        """Send a LogRecord via an ZMQ socket.
 
         Follows the Constellation Monitoring Distribution Protocol.
 
-        record: logRecord to send.
+        record: LogRecord to send.
 
         socket: ZMQ socket to use for transmission. If none is specified, use
         the one the class was initialized with.
@@ -142,7 +142,7 @@ class LogTransmitter:
         socket.send_string(topic, zmq.SNDMORE)
         socket.send(msgpack.packb(header), zmq.SNDMORE)
         # Instead of just adding the formatted message, this adds key attributes
-        # of the logRecord, allowing to reconstruct the full message on the
+        # of the LogRecord, allowing to reconstruct the full message on the
         # other end.
         # TODO filter and name these according to the Constellation LOG specifications
         return socket.send(
@@ -174,14 +174,14 @@ class LogTransmitter:
         )
 
     def recv(self, socket: zmq.Socket = None):
-        """Receive a Constellation log message and return a logRecord.
+        """Receive a Constellation log message and return a LogRecord.
 
         Follows the Constellation Monitoring Distribution Protocol.
 
         socket: ZMQ socket to use for transmission. If none is specified, use
         the one the class was initialized with.
 
-        Returns: logRecord.
+        Returns: LogRecord.
 
         """
         # use default socket if none was specified
