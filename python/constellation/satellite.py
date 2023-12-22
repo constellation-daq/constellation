@@ -335,7 +335,6 @@ class Satellite:
         self.logger.error(f"Failure action was triggered with reason given: {message}.")
         self.fsm.failure(message)
 
-    @handle_error
     def on_failure(self):
         """Callback method for the 'on_failure' transition of the FSM
 
@@ -345,10 +344,12 @@ class Satellite:
         """
         try:
             self._stop_daq_thread(10.0)
-        except RuntimeError as e:
+            # Stop heartbeat checking
+            self.hb_checker.stop()
+        # NOTE: we cannot have a non-handled exception disallow the state
+        # transition to failure state!
+        except Exception as e:
             self.logger.exception(e)
-        # Stop heartbeat checking
-        self.hb_checker.stop()
 
     @handle_error
     @debug_log
