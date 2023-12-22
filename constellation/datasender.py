@@ -72,7 +72,7 @@ class PushThread(threading.Thread):
                 # if we have data, send it
                 if isinstance(item, DataBlock):
                     item.meta["packet_num"] = self.packet_num
-                    transmitter.send(self._socket, item.payload, item.meta)
+                    transmitter.send(item.payload, item.meta, self._socket)
                     self._logger.debug(f"Sending packet number {self.packet_num}")
                     self.packet_num += 1
                 else:

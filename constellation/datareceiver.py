@@ -185,9 +185,6 @@ class H5DataReceiverWriter(DataReceiver):
         Satellite class. It therefore needs to monitor the self.stop_running
         Event and close itself down if the Event is set.
 
-        This is only an abstract method. Inheriting classes must implement their
-        own acquisition method.
-
         """
         h5file = self._open_file()
         # processing loop
@@ -211,6 +208,8 @@ class H5DataReceiverWriter(DataReceiver):
                                               dtype='uint8'
                                               )
                     dset.attrs["CLASS"] = "DETECTOR_DATA"
+                    for key, val in item.meta.items():
+                        dset.attr[key] = val
                     self.logger.debug(f"Processing data packet {item.meta['packet_num']}")
                 else:
                     raise RuntimeError(f"Unable to handle queue item: {type(item)}")

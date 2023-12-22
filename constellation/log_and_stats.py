@@ -6,7 +6,7 @@ import zmq
 import msgpack
 
 from logging.handlers import QueueHandler, QueueListener
-from .protocol import LogTransmitter
+from .protocol import LogTransmitter, MetricsTransmitter
 
 class MsgHeader:
     def __init__(self, sender, timestamp: msgpack.Timestamp, tags: dict):
@@ -26,37 +26,11 @@ class MsgHeader:
         return MsgHeader(_data[0], _data[1], _data[2])
 
 
-class DataType(Enum):
-    INT = 1
-    FLOAT = 2
-    ARRAY2D = 3
-
-
 class LogLevels(Enum):
     DEBUG = logging.DEBUG
     INFO = logging.INFO
     WARNING = logging.WARNING
     ERROR = logging.ERROR
-
-
-class Statistics:
-    def __init__(self, name: str, socket: zmq.Socket) -> None:
-        self.name = name
-        self.socket = socket
-
-    def _dispatch(self, topic: str, header, value):
-        self.socket.send_string(topic, zmq.SNDMORE)
-        self.socket.send(msgpack.packb(header, default=MsgHeader.encode), zmq.SNDMORE)
-        self.socket.send(value)
-
-    def sendStats(self, topic: str, type: DataType, value):
-        statTopic = "STATS/" + topic
-        header = MsgHeader(
-            self.name,
-            msgpack.Timestamp.from_unix_nano(time.time_ns()),
-            {'type': type.value}
-        )
-        self._dispatch(statTopic, header, bytes(str(value), 'utf-8'))
 
 
 def getLoggerAndStats(name: str, context: zmq.Context, port: int):
@@ -69,7 +43,7 @@ def getLoggerAndStats(name: str, context: zmq.Context, port: int):
     # set lowest level to ensure that all messages are published
     zmqhandler.setLevel(0)
     logger.addHandler(zmqhandler)
-    stats = Statistics(name, socket)
+    stats = MetricsTransmitter(socket, name)
     return logger, stats
 
 
@@ -77,11 +51,10 @@ class ZeroMQSocketHandler(QueueHandler):
     """This handler sends records to a ZMQ socket."""
 
     def __init__(self, socket: zmq.Socket):
-        super().__init__(socket)
-        self.transmitter = LogTransmitter()
+        super().__init__(LogTransmitter(socket))
 
     def enqueue(self, record):
-        self.transmitter.send(record)
+        self.queue.send(record)
 
     def close(self):
         if not self.queue.closed:
@@ -95,12 +68,11 @@ class ZeroMQSocketListener(QueueListener):
         # TODO implement a filter parameter to customize what to subscribe to
         socket.setsockopt_string(zmq.SUBSCRIBE, 'LOG/')  # subscribe to LOGs
         socket.connect(uri)
-        self.transmitter = LogTransmitter()
         kwargs.pop('ctx', None)
-        super().__init__(socket, *handlers, **kwargs)
+        super().__init__(LogTransmitter(socket), *handlers, **kwargs)
 
     def dequeue(self, block):
-        return self.transmitter.recv(self.queue)
+        return self.queue.recv()
 
 
 def main(args=None):
@@ -123,8 +95,6 @@ def main(args=None):
     zmqlistener = ZeroMQSocketListener(f'tcp://{args.host}:{args.port}', stream_handler, ctx=ctx)
     zmqlistener.start()
     while True:
-        #msg = socket.recv_json()
-        #print(msg)
         time.sleep(0.01)
 
 
