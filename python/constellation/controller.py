@@ -22,7 +22,7 @@ class TrivialController:
         context = zmq.Context()
         for host in hosts:
             socket = context.socket(zmq.REQ)
-            if not "tcp://" in host[:6]:
+            if "tcp://" not in host[:6]:
                 host = "tcp://" + host
             socket.connect(host)
             self.sockets.append(socket)
@@ -33,13 +33,13 @@ class TrivialController:
         response = socket.recv_multipart()
         d = msgpack.unpackb(response[1]) if len(response) > 1 else {}
         p = msgpack.unpackb(response[2]) if len(response) > 2 else {}
-        return response[0].decode('utf-8'), d, p
+        return response[0].decode("utf-8"), d, p
 
     def command(self, cmd, idx=0, socket=None):
         """Send cmd and await response."""
 
         # prepare request header:
-        rhead = {'time': time.time(), 'sender': "FIXME" }
+        rhead = {"time": time.time(), "sender": "FIXME"}
         rd = msgpack.packb(rhead)
 
         if socket:
@@ -75,12 +75,16 @@ class TrivialController:
 
     def run_from_cli(self):
         """Run commands from CLI."""
-        print('Possible commands: "exit", "get_state", "transition <transition>", "failure", "register <ip> <port>"')
-        print('Possible transitions: "load", "unload", "launch", "land", "start", "stop", "recover", "reset"')
+        print(
+            'Possible commands: "exit", "get_state", "transition <transition>", "failure", "register <ip> <port>"'
+        )
+        print(
+            'Possible transitions: "load", "unload", "launch", "land", "start", "stop", "recover", "reset"'
+        )
         socket = None
         while True:
-            user_input = input('Send command: ')
-            if user_input == 'exit':
+            user_input = input("Send command: ")
+            if user_input == "exit":
                 break
             elif user_input.startswith("target"):
                 idx = int(user_input.split(" ")[1])
@@ -89,16 +93,17 @@ class TrivialController:
                 socket = self.sockets[idx]
                 self._logger.info(f"target for next command: host ID {idx}")
             else:
-                self.command(user_input, idx, socket) if socket else self.command(user_input)
+                self.command(user_input, idx, socket) if socket else self.command(
+                    user_input
+                )
                 socket = None
 
 
 class CliCompleter(object):  # Custom completer
-
     def __init__(self, commands, transitions):
         self.commands = sorted(commands)
         self.transitions = sorted(transitions)
-    
+
     # Returns the first word if there is a space, otherwise nothing
     def get_cur_before(self):
         idx = readline.get_begidx()
@@ -108,15 +113,15 @@ class CliCompleter(object):  # Custom completer
         if len(n) > 0:
             return n[0]
         else:
-            return "" 
+            return ""
 
     def complete(self, text, state):
         cmd = self.get_cur_before()
         if cmd == "transition":
-            return self.complete_transition(text,state)
+            return self.complete_transition(text, state)
         elif cmd != "":
             return None
-        if text == "": # Display all possibilities
+        if text == "":  # Display all possibilities
             self.matches = self.commands[:]
         else:
             self.matches = [s for s in self.commands if s and s.startswith(text)]
@@ -140,7 +145,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--log-level", default="info")
-    parser.add_argument("--satellite", "--sat", action='append')
+    parser.add_argument("--satellite", "--sat", action="append")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -152,17 +157,26 @@ def main():
         return
     # Set up simple tab completion
     commands = ["exit", "get_state", "transition ", "failure", "register "]
-    transitions = ["load", "unload", "launch", "land", "start", "stop", "recover", "reset"]
+    transitions = [
+        "load",
+        "unload",
+        "launch",
+        "land",
+        "start",
+        "stop",
+        "recover",
+        "reset",
+    ]
 
     cliCompleter = CliCompleter(list(set(commands)), list(set(transitions)))
-    readline.set_completer_delims(' \t\n;')
+    readline.set_completer_delims(" \t\n;")
     readline.set_completer(cliCompleter.complete)
-    readline.parse_and_bind('tab: complete')
+    readline.parse_and_bind("tab: complete")
 
     # start server with args
     ctrl = TrivialController(hosts=args.satellite)
     ctrl.run_from_cli()
-    #ctrl.run()
+    # ctrl.run()
 
 
 if __name__ == "__main__":

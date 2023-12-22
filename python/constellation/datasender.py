@@ -18,8 +18,13 @@ from constellation.protocol import DataTransmitter
 class DataBlock:
     """Class to hold data payload and meta information (map) of an event."""
 
-    def __init__(self, payload=None, meta: dict = None, recv_host: str = None,
-                 recv_ts: datetime.datetime = None):
+    def __init__(
+        self,
+        payload=None,
+        meta: dict = None,
+        recv_host: str = None,
+        recv_ts: datetime.datetime = None,
+    ):
         """Initialize variables."""
         self.payload = payload
         self.meta = meta
@@ -36,12 +41,13 @@ class PushThread(threading.Thread):
     """Thread that pushes DataBlocks from a Queue to a ZMQ socket."""
 
     def __init__(
-            self, stopevt,
-            port: int,
-            queue: Queue,
-            *args,
-            context: Optional[zmq.Context] = None,
-            **kwargs,
+        self,
+        stopevt,
+        port: int,
+        queue: Queue,
+        *args,
+        context: Optional[zmq.Context] = None,
+        **kwargs,
     ):
         """Initialize values.
 
@@ -61,9 +67,7 @@ class PushThread(threading.Thread):
         self._socket.bind(f"tcp://*:{port}")
 
     def run(self):
-        """Start sending data.
-
-        """
+        """Start sending data."""
         transmitter = DataTransmitter()
         while not self.stopevt.is_set():
             try:
@@ -128,17 +132,20 @@ class RandomDataSender(DataSender):
         t0 = time.time()
         num = 0
         while not self._stop_running.is_set():
-            meta = {'eventid': num, 'time': datetime.datetime.now().isoformat()}
+            meta = {"eventid": num, "time": datetime.datetime.now().isoformat()}
             data = DataBlock(payload, meta)
             self.data_queue.put(data)
             self.logger.debug(f"Queueing data packet {num}")
             num += 1
             time.sleep(0.5)
         t1 = time.time()
-        self.logger.info(f'total time for {num} evt / {num * len(payload) / 1024 / 1024}MB: {t1 - t0}s')
+        self.logger.info(
+            f"total time for {num} evt / {num * len(payload) / 1024 / 1024}MB: {t1 - t0}s"
+        )
 
 
 # -------------------------------------------------------------------------
+
 
 def main(args=None):
     """Start the Lecroy oscilloscope device server."""
@@ -158,9 +165,13 @@ def main(args=None):
     )
 
     # start server with remaining args
-    s = RandomDataSender("random_data_sender", cmd_port=args.cmd_port,
-                         hb_port=args.hb_port, log_port=args.log_port,
-                         data_port=args.data_port)
+    s = RandomDataSender(
+        "random_data_sender",
+        cmd_port=args.cmd_port,
+        hb_port=args.hb_port,
+        log_port=args.log_port,
+        data_port=args.data_port,
+    )
     s.run_satellite()
 
 

@@ -90,6 +90,7 @@ class SatelliteFSM(StateMachine):
     def write_diagram(self, filename):
         """Create a png with the FSM schematic."""
         from statemachine.contrib.diagram import DotGraphMachine
+
         graph = DotGraphMachine(self)
         dot = graph()
         dot.write_png(filename)

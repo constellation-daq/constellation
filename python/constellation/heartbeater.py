@@ -10,10 +10,12 @@ HB_PERIOD = 1000
 
 
 class Heartbeater:
-    def __init__(self,
-                 status_callback: Callable,
-                 interface_or_socket: Union[str, zmq.Socket],
-                 context: Optional[zmq.Context] = None) -> None:
+    def __init__(
+        self,
+        status_callback: Callable,
+        interface_or_socket: Union[str, zmq.Socket],
+        context: Optional[zmq.Context] = None,
+    ) -> None:
         if isinstance(interface_or_socket, zmq.Socket):
             self.socket = interface_or_socket
             self.ctx = self.socket.context
@@ -35,30 +37,35 @@ class Heartbeater:
     def run(self) -> None:
         while not self._stop_heartbeating.is_set():
             state = self._callback()
-            dictData = {'time': time.time(), 'state': state}
+            dictData = {"time": time.time(), "state": state}
             self.socket.send(msgpack.packb(dictData), zmq.NOBLOCK)
-            time.sleep(HB_PERIOD*1e-3)
+            time.sleep(HB_PERIOD * 1e-3)
 
 
 def main():
     """Send random heartbeats."""
     import argparse
+
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument("--port", type=int, default=61234)
-    parser.add_argument("--num", type=int, default=10, help="Number of heartbeats to send.")
+    parser.add_argument(
+        "--num", type=int, default=10, help="Number of heartbeats to send."
+    )
     args = parser.parse_args()
 
     from fsm import SatelliteState
     from random import randint
 
     def demo_state():
-        return SatelliteState(randint(SatelliteState.IDLE.value, SatelliteState.ERROR.value)).name
+        return SatelliteState(
+            randint(SatelliteState.IDLE.value, SatelliteState.ERROR.value)
+        ).name
 
     heartbeater = Heartbeater(demo_state, f"tcp://*:{args.port}")
     heartbeater.start()
     ctx = zmq.Context()
     socket = zmq.Socket(ctx, zmq.SUB)
-    socket.setsockopt_string(zmq.SUBSCRIBE, '')
+    socket.setsockopt_string(zmq.SUBSCRIBE, "")
     socket.connect(f"tcp://localhost:{args.port}")
     hbs = 0
     while hbs < args.num:
@@ -68,5 +75,5 @@ def main():
     heartbeater.stop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -29,7 +29,9 @@ class DataTransmitter:
         self.host = host
         self._socket = socket
 
-    def send(self, payload, meta: dict = None, socket: zmq.Socket = None, flags: int = 0):
+    def send(
+        self, payload, meta: dict = None, socket: zmq.Socket = None, flags: int = 0
+    ):
         """Send a payload over a ZMQ socket.
 
         Follows the Constellation Data Transmission Protocol.
@@ -79,9 +81,13 @@ class DataTransmitter:
             socket = self._socket
         msg = socket.recv_multipart(flags=flags)
         if not len(msg) == 5:
-            raise RuntimeError(f"Received message with wrong length of {len(msg)} parts!")
+            raise RuntimeError(
+                f"Received message with wrong length of {len(msg)} parts!"
+            )
         if not msgpack.unpackb(msg[0]) == PROTOCOL_IDENTIFIER:
-            raise RuntimeError(f"Received message with malformed CDTP header: {msgpack.unpackb(msg[0])}!")
+            raise RuntimeError(
+                f"Received message with malformed CDTP header: {msgpack.unpackb(msg[0])}!"
+            )
         payload = msgpack.unpackb(msg[4])
         meta = msgpack.unpackb(msg[3])
         ts = msgpack.unpackb(msg[2])
@@ -126,38 +132,46 @@ class LogTransmitter:
         # use default socket if none was specified
         if not socket:
             socket = self._socket
-        topic = f'LOG/{record.levelname}/{record.name}'
-        header = [PROTOCOL_IDENTIFIER, self.host, msgpack.Timestamp.from_unix_nano(time.time_ns()), {}]
+        topic = f"LOG/{record.levelname}/{record.name}"
+        header = [
+            PROTOCOL_IDENTIFIER,
+            self.host,
+            msgpack.Timestamp.from_unix_nano(time.time_ns()),
+            {},
+        ]
         socket.send_string(topic, zmq.SNDMORE)
         socket.send(msgpack.packb(header), zmq.SNDMORE)
         # Instead of just adding the formatted message, this adds key attributes
         # of the logRecord, allowing to reconstruct the full message on the
         # other end.
         # TODO filter and name these according to the Constellation LOG specifications
-        return socket.send(msgpack.packb(
-            {'name': record.name,
-             'msg': record.msg,
-             'args': record.args,
-             'levelname': record.levelname,
-             'levelno': record.levelno,
-             'pathname': record.pathname,
-             'filename': record.filename,
-             'module': record.module,
-             'exc_info': record.exc_info,
-             'exc_text': record.exc_text,
-             'stack_info': record.stack_info,
-             'lineno': record.lineno,
-             'funcName': record.funcName,
-             'created': record.created,
-             'msecs': record.msecs,
-             'relativeCreated': record.relativeCreated,
-             'thread': record.thread,
-             'threadName': record.threadName,
-             'processName': record.processName,
-             'process': record.process,
-             'message': record.message,
-             }
-        ))
+        return socket.send(
+            msgpack.packb(
+                {
+                    "name": record.name,
+                    "msg": record.msg,
+                    "args": record.args,
+                    "levelname": record.levelname,
+                    "levelno": record.levelno,
+                    "pathname": record.pathname,
+                    "filename": record.filename,
+                    "module": record.module,
+                    "exc_info": record.exc_info,
+                    "exc_text": record.exc_text,
+                    "stack_info": record.stack_info,
+                    "lineno": record.lineno,
+                    "funcName": record.funcName,
+                    "created": record.created,
+                    "msecs": record.msecs,
+                    "relativeCreated": record.relativeCreated,
+                    "thread": record.thread,
+                    "threadName": record.threadName,
+                    "processName": record.processName,
+                    "process": record.process,
+                    "message": record.message,
+                }
+            )
+        )
 
     def recv(self, socket: zmq.Socket = None):
         """Receive a Constellation log message and return a logRecord.
@@ -178,10 +192,14 @@ class LogTransmitter:
         # same socket as the respective classes do not handle the other.
         # TODO : refactorize LogTransmitter to allow to transparently receive logs and stats
         if not topic.startswith("LOG/"):
-            raise RuntimeError(f"LogTransmitter cannot decode messages of topic '{topic}'")
+            raise RuntimeError(
+                f"LogTransmitter cannot decode messages of topic '{topic}'"
+            )
         header = msgpack.unpackb(self.queue.recv())
         if not header[0] == PROTOCOL_IDENTIFIER:
-            raise RuntimeError(f"Received message with malformed CDTP header: {header}!")
+            raise RuntimeError(
+                f"Received message with malformed CDTP header: {header}!"
+            )
         record = msgpack.unpackb(self.queue.recv())
         return logging.makeLogRecord(record)
 
@@ -200,8 +218,9 @@ class MetricsType(Enum):
 class Metric:
     """Class to hold information for a Constellation metric."""
 
-    def __init__(self, name: str, description: str, unit: str, handling:
-                 MetricsType, value=None):
+    def __init__(
+        self, name: str, description: str, unit: str, handling: MetricsType, value=None
+    ):
         self.name = name
         self.description = description
         self.unit = unit
@@ -243,12 +262,19 @@ class MetricsTransmitter:
         if not socket:
             socket = self._socket
         topic = "STATS/" + metric.name
-        header = [PROTOCOL_IDENTIFIER, self.host,
-                  msgpack.Timestamp.from_unix_nano(time.time_ns()), {}]
+        header = [
+            PROTOCOL_IDENTIFIER,
+            self.host,
+            msgpack.Timestamp.from_unix_nano(time.time_ns()),
+            {},
+        ]
         self._socket.send_string(topic, zmq.SNDMORE)
         self.queue.send(msgpack.packb(header), zmq.SNDMORE)
-        self.queue.send(msgpack.packb([metric.description, metric.unit,
-                                       metric.handling.value, metric.value]))
+        self.queue.send(
+            msgpack.packb(
+                [metric.description, metric.unit, metric.handling.value, metric.value]
+            )
+        )
 
     def recv(self, socket: zmq.Socket = None):
         """Receive a Constellation STATS message and return a Metric.
@@ -269,11 +295,15 @@ class MetricsTransmitter:
         # same socket as the respective classes do not handle the other.
         # TODO : refactorize MetricsTransmitter to allow to transparently receive logs and stats
         if not topic.startswith("STATS/"):
-            raise RuntimeError(f"MetricsTransmitter cannot decode messages of topic '{topic}'")
-        name = topic.split('/')[1]
+            raise RuntimeError(
+                f"MetricsTransmitter cannot decode messages of topic '{topic}'"
+            )
+        name = topic.split("/")[1]
         header = msgpack.unpackb(self.queue.recv())
         if not header[0] == PROTOCOL_IDENTIFIER:
-            raise RuntimeError(f"Received message with malformed CDTP header: '{header}'!")
+            raise RuntimeError(
+                f"Received message with malformed CDTP header: '{header}'!"
+            )
         description, unit, handling, value = msgpack.unpackb(self.queue.recv())
         return Metric(name, description, unit, MetricsType(handling), value)
 
@@ -288,6 +318,7 @@ class SatelliteResponse(Enum):
     Part of the Constellation Command Protocol.
 
     """
+
     SUCCESS = 0
     INVALID = 1
     NOTIMPLEMENTED = 2

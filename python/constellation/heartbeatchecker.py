@@ -30,31 +30,30 @@ class HeartbeatChecker:
         self.names = list[str]()
         self.failed = list[threading.Event]()
 
-    def register(self,
-                 name,
-                 interface: str,
-                 context: Optional[zmq.Context] = None) -> None:
+    def register(
+        self, name, interface: str, context: Optional[zmq.Context] = None
+    ) -> None:
         """Register a heartbeat check for a specific Satellite."""
         ctx = context or zmq.Context()
         socket = ctx.socket(zmq.SUB)
         socket.connect(interface)
-        socket.setsockopt_string(zmq.SUBSCRIBE, '')
+        socket.setsockopt_string(zmq.SUBSCRIBE, "")
         socket.setsockopt(zmq.RCVTIMEO, int(1.5 * HB_PERIOD))
         self._sockets.append(socket)
         self.names.append(name)
-        logging.info(f'Registered heartbeating check for {interface}')
+        logging.info(f"Registered heartbeating check for {interface}")
 
-    def _run_thread(self, name: str,
-                    socket: zmq.Socket,
-                    fail_evt: threading.Event) -> None:
-        logging.info(f'Thread {name} starting heartbeat check')
+    def _run_thread(
+        self, name: str, socket: zmq.Socket, fail_evt: threading.Event
+    ) -> None:
+        logging.info(f"Thread {name} starting heartbeat check")
         lifes = HB_INIT_LIFES
         while not self._stop_threads.is_set():
             try:
                 message_bin = socket.recv()
                 message = msgpack.unpackb(message_bin)
-                state = SatelliteState[message['state']]
-                logging.debug(f'Thread {name} got state {state}')
+                state = SatelliteState[message["state"]]
+                logging.debug(f"Thread {name} got state {state}")
                 if state == SatelliteState.ERROR or state == SatelliteState.SAFE:
                     # other satellite in error state, interrupt
                     fail_evt.set()
@@ -64,7 +63,7 @@ class HeartbeatChecker:
             except zmq.error.Again:
                 # no message after 1.5s, substract life
                 lifes -= 1
-                logging.debug(f'Thread {name} removed life, now {lifes}')
+                logging.debug(f"Thread {name} removed life, now {lifes}")
                 if lifes <= 0:
                     # no lifes left, interrupt
                     fail_evt.set()
@@ -102,8 +101,9 @@ class HeartbeatChecker:
                 threading.Thread(
                     target=self._run_thread,
                     args=(self.names[idx], socket, self.failed[idx]),
-                    daemon=True  # kill threads when main app closes
-                ))
+                    daemon=True,  # kill threads when main app closes
+                )
+            )
         # start threads
         for thread in self._threads:
             thread.start()
@@ -116,13 +116,13 @@ class HeartbeatChecker:
         self._reset()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
     import time
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--log-level", default='debug')
-    parser.add_argument("--ip", type=str, default='127.0.0.1')
+    parser.add_argument("--log-level", default="debug")
+    parser.add_argument("--ip", type=str, default="127.0.0.1")
     parser.add_argument("--port", type=int, default=61234)
     parser.add_argument("--timeout", type=int, default=10)
     args = parser.parse_args()

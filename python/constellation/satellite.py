@@ -21,6 +21,7 @@ from .protocol import SatelliteResponse
 
 def handle_error(func):
     """Catch and handle exceptions in function calls."""
+
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         try:
@@ -35,17 +36,20 @@ def handle_error(func):
             self.fsm.failure(err_msg)
             self.logger.error(err_msg + traceback.format_exc())
             raise RuntimeError(err_msg) from exc
+
     return wrapper
 
 
 def debug_log(func):
     """Add debug messages to function call."""
+
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         self.logger.debug(f"-> Entering {func.__name__} with args: {args}")
         output = func(self, *args, **kwargs)
         self.logger.debug(f"<- Exiting {func.__name__} with output: {output}")
         return output
+
     return wrapper
 
 
@@ -78,9 +82,9 @@ class Satellite:
         self.logger.info(f"Satellite listening on command port {cmd_port}")
 
         # register and start heartbeater
-        self.heartbeater = Heartbeater(self.get_state,
-                                       f"tcp://*:{hb_port}",
-                                       context=self.context)
+        self.heartbeater = Heartbeater(
+            self.get_state, f"tcp://*:{hb_port}", context=self.context
+        )
         self.heartbeater.start()
 
         # register heartbeat checker
@@ -100,12 +104,13 @@ class Satellite:
         # will fail with pytest.
         threading.excepthook = self._thread_exception
         # greet
-        self.logger.info(f"Satellite {self.name}, version {self.version} ready to launch!")
+        self.logger.info(
+            f"Satellite {self.name}, version {self.version} ready to launch!"
+        )
 
     def run_satellite(self):
         """Main event loop with command handler-routine"""
         while True:
-
             # TODO: add check for heartbeatchecker: if any entries in hb.get_failed, trigger action
             try:
                 cmdmsg = self.cmd_sock.recv_multipart(flags=zmq.NOBLOCK)
@@ -116,20 +121,22 @@ class Satellite:
                 break
 
             # prepare response header:
-            rhead = {'time': time.time(), 'sender': "FIXME" }
+            rhead = {"time": time.time(), "sender": "FIXME"}
             rd = msgpack.packb(rhead)
 
             try:
-                cmd = cmdmsg[0].decode('UTF-8')
+                cmd = cmdmsg[0].decode("UTF-8")
                 self.logger.info(f'Received CMD "{cmd}"')
 
                 header = msgpack.unpackb(cmdmsg[1])
-                self.logger.info(f'Header: {header}')
+                self.logger.info(f"Header: {header}")
 
                 if cmd.lower() == "get_state":
-                    self.cmd_sock.send_string(str(SatelliteResponse.SUCCESS), flags=zmq.SNDMORE)
+                    self.cmd_sock.send_string(
+                        str(SatelliteResponse.SUCCESS), flags=zmq.SNDMORE
+                    )
                     self.cmd_sock.send(rd, flags=zmq.SNDMORE)
-                    self.cmd_sock.send(msgpack.packb({'state': self.get_state()}))
+                    self.cmd_sock.send(msgpack.packb({"state": self.get_state()}))
 
                 elif cmd.lower().startswith("transition"):
                     target = cmd.split()[1].capitalize()
@@ -147,12 +154,16 @@ class Satellite:
                         raise RuntimeError(
                             f"State change to '{target}' with {len(cmdmsg)-1} arguments caused exception {e}"
                         )
-                    self.cmd_sock.send_string(str(SatelliteResponse.SUCCESS), flags=zmq.SNDMORE)
+                    self.cmd_sock.send_string(
+                        str(SatelliteResponse.SUCCESS), flags=zmq.SNDMORE
+                    )
                     self.cmd_sock.send(rd)
                 elif cmd.lower().startswith("register"):
                     try:
                         _, name, ip, port = cmd.split()
-                        self.hb_checker.register(name, f"tcp://{ip}:{port}", self.context)
+                        self.hb_checker.register(
+                            name, f"tcp://{ip}:{port}", self.context
+                        )
                         self.cmd_sock.send_string("OK")
                     except Exception as exc:
                         err_msg = f"Unable to register heartbeat in '{cmd}': {exc}"
@@ -161,14 +172,20 @@ class Satellite:
                     raise RuntimeError(f"Unknown command '{cmd}'")
 
             except IncompleteCommand as err:
-                self.cmd_sock.send_string(str(SatelliteResponse.INCOMPLETE), flags=zmq.SNDMORE)
+                self.cmd_sock.send_string(
+                    str(SatelliteResponse.INCOMPLETE), flags=zmq.SNDMORE
+                )
                 self.cmd_sock.send(rd, flags=zmq.SNDMORE)
-                self.cmd_sock.send(msgpack.packb({'message': f"{err}"}))
+                self.cmd_sock.send(msgpack.packb({"message": f"{err}"}))
 
             except Exception as exc:
-                self.cmd_sock.send_string(str(SatelliteResponse.INVALID), flags=zmq.SNDMORE)
+                self.cmd_sock.send_string(
+                    str(SatelliteResponse.INVALID), flags=zmq.SNDMORE
+                )
                 self.cmd_sock.send(rd, flags=zmq.SNDMORE)
-                self.cmd_sock.send(msgpack.packb({'message': f"Unable to execute {cmd}: {exc}"}))
+                self.cmd_sock.send(
+                    msgpack.packb({"message": f"Unable to execute {cmd}: {exc}"})
+                )
 
             time.sleep(1)
         # on exit: stop heartbeater
@@ -187,7 +204,7 @@ class Satellite:
         as long as the transition is allowed.
         """
         self.fsm.initialize("Satellite initialized.")
-        self.logger.info( "Satellite Initialized.")
+        self.logger.info("Satellite Initialized.")
 
     @handle_error
     def on_initialize(self):
@@ -213,12 +230,11 @@ class Satellite:
         self.fsm.launch("Satellite launched.")
         self.hb_checker.start()
 
-        self.logger.info( "Satellite Prepared. Acquistion ready.")
+        self.logger.info("Satellite Prepared. Acquistion ready.")
 
     @handle_error
     def on_launch(self):
-        """Callback method for the 'launch' transition of the FSM.
-        """
+        """Callback method for the 'launch' transition of the FSM."""
         pass
 
     @handle_error
@@ -235,8 +251,7 @@ class Satellite:
 
     @handle_error
     def on_land(self):
-        """Callback method for the 'unprepare' transition of the FSM.
-        """
+        """Callback method for the 'unprepare' transition of the FSM."""
         pass
 
     @handle_error
@@ -253,7 +268,7 @@ class Satellite:
         self._stop_running = threading.Event()
         self._running_thread = threading.Thread(target=self.do_run, daemon=True)
         self._running_thread.start()
-        self.logger.info( "Satellite Running. Acquistion taking place.")
+        self.logger.info("Satellite Running. Acquistion taking place.")
 
     @handle_error
     def on_start(self):
@@ -273,7 +288,7 @@ class Satellite:
         """
         self.fsm.stop("Acquisition stopped.")
         self._stop_daq_thread()
-        self.logger.info( "Satellite stopped Acquistion.")
+        self.logger.info("Satellite stopped Acquistion.")
 
     @handle_error
     def on_stop(self):
@@ -337,7 +352,7 @@ class Satellite:
 
     @handle_error
     @debug_log
-    def Interrupt(self, message: str=None):
+    def Interrupt(self, message: str = None):
         """Interrupt data acquisition and move to Safe state.
 
         Actual actions will be performed by the callback method 'on_interrupt'
@@ -363,7 +378,7 @@ class Satellite:
         aslong as the transition is allowed.
         """
         self.fsm.recover("Recovered from Safe state.")
-        self.logger.info( "Recovered from Safe state.")
+        self.logger.info("Recovered from Safe state.")
 
     @handle_error
     def on_recover(self):
@@ -382,7 +397,9 @@ class Satellite:
             self._running_thread.join(timeout)
         # check if thread is still alive
         if self._running_thread and self._running_thread.is_alive():
-            raise RuntimeError(f"Could not join running thread within timeout of {timeout}s!")
+            raise RuntimeError(
+                f"Could not join running thread within timeout of {timeout}s!"
+            )
         self._running_thread = None
 
     def _thread_exception(self, args):
@@ -440,7 +457,9 @@ def main(args=None):
 
     # set up logging
     logger = logging.getLogger()
-    formatter = logging.Formatter('%(asctime)s | %(name)s |  %(levelname)s: %(message)s')
+    formatter = logging.Formatter(
+        "%(asctime)s | %(name)s |  %(levelname)s: %(message)s"
+    )
     # global level should be the lowest level that we want to see on any
     # handler, even streamed via ZMQ
     logger.setLevel(0)

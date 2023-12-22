@@ -22,10 +22,13 @@ class PullThread(threading.Thread):
     """Thread that pulls DataBlocks from a ZMQ socket and enqueues them."""
 
     def __init__(
-            self, stopevt: threading.Event, interface: str, queue: Queue,
-            *args,
-            context: Optional[zmq.Context] = None,
-            **kwargs,
+        self,
+        stopevt: threading.Event,
+        interface: str,
+        queue: Queue,
+        *args,
+        context: Optional[zmq.Context] = None,
+        **kwargs,
     ):
         """Initialize values.
 
@@ -44,11 +47,8 @@ class PullThread(threading.Thread):
         self._socket.connect(interface)
         self._logger = logging.getLogger(f"PullThread_port_{interface}")
 
-
     def run(self):
-        """Start receiving data.
-
-        """
+        """Start receiving data."""
         transmitter = DataTransmitter()
         while not self.stopevt.is_set():
             try:
@@ -56,7 +56,9 @@ class PullThread(threading.Thread):
                 item = DataBlock(*transmitter.recv(self._socket, flags=zmq.NOBLOCK))
                 # TODO consider case where queue is full
                 self.queue.put(item)
-                self._logger.debug(f"Received packet as packet number {self.packet_num}")
+                self._logger.debug(
+                    f"Received packet as packet number {self.packet_num}"
+                )
                 self.packet_num += 1
             except zmq.ZMQError:
                 # no thing to process, sleep instead
@@ -133,7 +135,9 @@ class DataReceiver(Satellite):
                     t.join(timeout)
                     # check in case we timed out:
                     if t.is_alive():
-                        raise RuntimeError("Could not stop data-pulling thread {t.name} in time.")
+                        raise RuntimeError(
+                            "Could not stop data-pulling thread {t.name} in time."
+                        )
             self._stop_pulling = None
             self._puller_threads = list[PullThread]()
 
@@ -202,15 +206,18 @@ class H5DataReceiverWriter(DataReceiver):
                     evt = grp.create_group(f"event_{item.meta['eventid']}")
                     # TODO add a call to a "write_data" method that can be
                     # overloaded by inheriting classes
-                    dset = evt.create_dataset("data",
-                                              data=np.frombuffer(item.payload, dtype=np.uint8),
-                                              chunks=True,
-                                              dtype='uint8'
-                                              )
+                    dset = evt.create_dataset(
+                        "data",
+                        data=np.frombuffer(item.payload, dtype=np.uint8),
+                        chunks=True,
+                        dtype="uint8",
+                    )
                     dset.attrs["CLASS"] = "DETECTOR_DATA"
                     for key, val in item.meta.items():
                         dset.attr[key] = val
-                    self.logger.debug(f"Processing data packet {item.meta['packet_num']}")
+                    self.logger.debug(
+                        f"Processing data packet {item.meta['packet_num']}"
+                    )
                 else:
                     raise RuntimeError(f"Unable to handle queue item: {type(item)}")
                 self.data_queue.task_done()
@@ -222,6 +229,7 @@ class H5DataReceiverWriter(DataReceiver):
 
 
 # -------------------------------------------------------------------------
+
 
 def main(args=None):
     """Start the Lecroy oscilloscope device server."""
@@ -240,9 +248,13 @@ def main(args=None):
     )
 
     # start server with remaining args
-    s = H5DataReceiverWriter("h5_data_receiver", cmd_port=args.cmd_port,
-                             hb_port=args.hb_port, log_port=args.log_port,
-                             filename="test_data_{date}.h5")
+    s = H5DataReceiverWriter(
+        "h5_data_receiver",
+        cmd_port=args.cmd_port,
+        hb_port=args.hb_port,
+        log_port=args.log_port,
+        filename="test_data_{date}.h5",
+    )
 
     s.recv_from("localhost", 55557)
     s.run_satellite()
