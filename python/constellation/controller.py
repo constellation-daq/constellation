@@ -5,6 +5,8 @@ import msgpack
 import time
 import readline
 
+from .fsm import SatelliteFSM
+
 
 class TrivialController:
     """Simple controller class to send commands to a list of satellites."""
@@ -157,16 +159,7 @@ def main():
         return
     # Set up simple tab completion
     commands = ["exit", "get_state", "transition ", "failure", "register "]
-    transitions = [
-        "load",
-        "unload",
-        "launch",
-        "land",
-        "start",
-        "stop",
-        "recover",
-        "reset",
-    ]
+    transitions = [t.name for t in SatelliteFSM.events]
 
     cliCompleter = CliCompleter(list(set(commands)), list(set(transitions)))
     readline.set_completer_delims(" \t\n;")
