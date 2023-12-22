@@ -48,7 +48,44 @@ class SatelliteFSM(StateMachine):
     failure |= states.ERROR.to(states.ERROR) | states.NEW.to(states.ERROR)
 
     def __init__(self):
+        self.status = "Satellite not initialized yet."
         super().__init__()
+
+    def before_initialize(self, status):
+        """Set status before the state change."""
+        self.status = status
+
+    def before_launch(self, status):
+        """Set status before the state change."""
+        self.status = status
+
+    def before_land(self, status):
+        """Set status before the state change."""
+        self.status = status
+
+    def before_start(self, status):
+        """Set status before the state change."""
+        self.status = status
+
+    def before_stop(self, status):
+        """Set status before the state change."""
+        self.status = status
+
+    def before_reconfigure(self, status):
+        """Set status before the state change."""
+        self.status = status
+
+    def before_interrupt(self, status):
+        """Set status before the state change."""
+        self.status = status
+
+    def before_recover(self, status):
+        """Set status before the state change."""
+        self.status = status
+
+    def before_failure(self, status):
+        """Set status before the state change."""
+        self.status = status
 
     def write_diagram(self, filename):
         """Create a png with the FSM schematic."""

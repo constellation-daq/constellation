@@ -31,6 +31,8 @@ def handle_error(func):
             raise RuntimeError(err_msg) from exc
         except Exception as exc:
             err_msg = f"Unable to execute {func.__name__}: {exc}"
+            # set the FSM into failure
+            self.fsm.failure(err_msg)
             self.logger.error(err_msg + traceback.format_exc())
             raise RuntimeError(err_msg) from exc
     return wrapper
@@ -101,7 +103,7 @@ class Satellite:
         self.logger.info(f"Satellite {self.name}, version {self.version} ready to launch!")
 
     def run_satellite(self):
-        """Main command handler-routine"""
+        """Main event loop with command handler-routine"""
         while True:
 
             # TODO: add check for heartbeatchecker: if any entries in hb.get_failed, trigger action
@@ -184,7 +186,7 @@ class Satellite:
         Actual actions will be performed by the callback method 'on_load'
         as long as the transition is allowed.
         """
-        self.fsm.load()
+        self.fsm.initialize("Satellite initialized.")
         self.logger.info( "Satellite Initialized.")
 
     @handle_error
@@ -193,6 +195,7 @@ class Satellite:
 
         Set and check config, maybe initialize device.
         """
+        # TODO on_initialize should (re-)load config values
         pass
 
     @handle_error
@@ -203,7 +206,7 @@ class Satellite:
         Actual actions will be performed by the callback method 'on_launch'
         aslong as the transition is allowed.
         """
-        self.fsm.launch()
+        self.fsm.launch("Satellite launched.")
         self.hb_checker.start()
 
         self.logger.info( "Satellite Prepared. Acquistion ready.")
@@ -222,9 +225,9 @@ class Satellite:
         Actual actions will be performed by the callback method 'on_land'
         aslong as the transition is allowed.
         """
-        self.fsm.land()
+        self.fsm.land("Satellite landed.")
         self.hb_checker.stop()
-        self.logger.info( "Satellite Unprepared. Back in Initialized state.")
+        self.logger.info("Satellite landed.")
 
     @handle_error
     def on_land(self):
@@ -235,13 +238,13 @@ class Satellite:
     @handle_error
     @debug_log
     def Start(self):
-        """Start data acquisition.
+        """Start command to begin data acquisition.
 
         Actual Satellite-specific actions will be performed by the callback
         method 'on_start' as long as the transition is allowed.
 
         """
-        self.fsm.start()
+        self.fsm.start("Acquisition started.")
         # start thread running during acquistion
         self._stop_running = threading.Event()
         self._running_thread = threading.Thread(target=self.do_run, daemon=True)
@@ -259,18 +262,13 @@ class Satellite:
     @handle_error
     @debug_log
     def Stop(self):
-        """Stop data acquisition.
+        """Stop command stopping data acquisition.
 
         Actual actions will be performed by the callback method 'on_stop_run'
         aslong as the transition is allowed.
         """
-        self.fsm.stop()
-        self._stop_running.set()
-        if self._running_thread and self._running_thread.is_alive():
-            # TODO select a sensible timeout value
-            self._running_thread.join(30.0)
-        if self._running_thread and self._running_thread.is_alive():
-            raise RuntimeError("Could not join running thread within timeout!")
+        self.fsm.stop("Acquisition stopped.")
+        self._stop_daq_thread()
         self.logger.info( "Satellite stopped Acquistion.")
 
     @handle_error
@@ -306,21 +304,17 @@ class Satellite:
 
     @handle_error
     @debug_log
-    def Failure(self):
-        """Failure on Satellite.
+    def Failure(self, message: str = None):
+        """Trigger a failure on Satellite.
+
+        This is a "command" and will only be called by user action.
 
         Actual actions will be performed by the callback method 'on_failure'
-        aslong as the transition is allowed.
+        which is called automatically whenever a failure occurs.
+
         """
-        # Stop running if running
-        self._stop_running.set()
-        if self._running_thread and self._running_thread.is_alive():
-            # TODO select a sensible timeout value, add a warning if not succeeded
-            self._running_thread.join(5.0)
-        # Stop heartbeat checking
-        self.hb_checker.stop()
-        self.fsm.failure()
-        self.logger.error("There is a failure.")
+        self.logger.error(f"Failure action was triggered with reason given: {message}.")
+        self.fsm.failure(message)
 
     @handle_error
     def on_failure(self):
@@ -330,32 +324,31 @@ class Satellite:
         failure.
 
         """
-        pass
+        try:
+            self._stop_daq_thread(10.0)
+        except RuntimeError as e:
+            self.logger.exception(e)
+        # Stop heartbeat checking
+        self.hb_checker.stop()
 
     @handle_error
     @debug_log
-    def Interrupt(self):
+    def Interrupt(self, message: str=None):
         """Interrupt data acquisition and move to Safe state.
 
         Actual actions will be performed by the callback method 'on_interrupt'
         aslong as the transition is allowed.
         """
-        self.fsm.interrupt()
-        # Stop running if running
-        self._stop_running.set()
-        if self._running_thread and self._running_thread.is_alive():
-            # TODO consider to set a timeout and fail if device takes too long
-            self._running_thread.join()
-        self.hb_checker.stop()
+        self.fsm.interrupt(message)
         self.logger.warning("Transitioned to Safe state.")
 
     @handle_error
     def on_interrupt(self):
         """Callback method for the 'on_interrupt' transition of the FSM.
 
-        This method needs to the stop acquisition on the other thread.
+        Defaults to calling on_failure().
         """
-        pass
+        self.on_failure()
 
     @handle_error
     @debug_log
@@ -365,14 +358,28 @@ class Satellite:
         Actual actions will be performed by the callback method 'on_recover'
         aslong as the transition is allowed.
         """
-        self.fsm.recover()
+        self.fsm.recover("Recovered from Safe state.")
         self.logger.info( "Recovered from Safe state.")
 
     @handle_error
     def on_recover(self):
         """Callback method for the 'on_recover' transition of the FSM.
+
+        Defaults to on_initialize().
         """
-        pass
+        self.on_initialize()
+
+    def _stop_daq_thread(self, timeout: float = 30.0):
+        """Stop the acquisition thread.
+
+        Raises RuntimeError if thread is not stopped within timeout."""
+        self._stop_running.set()
+        if self._running_thread and self._running_thread.is_alive():
+            self._running_thread.join(timeout)
+        # check if thread is still alive
+        if self._running_thread and self._running_thread.is_alive():
+            raise RuntimeError(f"Could not join running thread within timeout of {timeout}s!")
+        self._running_thread = None
 
     def _thread_exception(self, args):
         """Handle exceptions in threads.
@@ -402,6 +409,9 @@ class Satellite:
 
     def get_state(self) -> str:
         return self.fsm.current_state.id
+
+    def get_status(self) -> str:
+        return self.fsm.status
 
     @property
     def version(self):
