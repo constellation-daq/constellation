@@ -196,7 +196,11 @@ class Satellite:
         Set and check config, maybe initialize device.
         """
         # TODO on_initialize should (re-)load config values
-        pass
+        #
+        # Verify that there are no running threads left. If there are and the
+        # timeout is exceeded joining them, the raised exception will take us
+        # into ERROR state.
+        self._stop_daq_thread(10.0)
 
     @handle_error
     @debug_log
