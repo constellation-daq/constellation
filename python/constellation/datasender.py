@@ -11,8 +11,8 @@ from queue import Queue, Empty
 
 import zmq
 
-from constellation.satellite import Satellite
-from constellation.protocol import DataTransmitter
+from .protocol import DataTransmitter
+from .satellite import Satellite
 
 
 class DataBlock:

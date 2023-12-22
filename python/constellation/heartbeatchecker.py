@@ -5,7 +5,7 @@ import zmq
 import msgpack
 
 from typing import Optional, Callable
-from fsm import SatelliteState
+from .fsm import SatelliteState
 
 HB_INIT_LIFES = 3
 HB_PERIOD = 1000

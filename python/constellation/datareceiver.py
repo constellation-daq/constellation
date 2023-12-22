@@ -13,9 +13,9 @@ import h5py
 import numpy as np
 import zmq
 
-from constellation.satellite import Satellite
-from constellation.protocol import DataTransmitter
-from constellation.datasender import DataBlock
+from .satellite import Satellite
+from .protocol import DataTransmitter
+from .datasender import DataBlock
 
 
 class PullThread(threading.Thread):
