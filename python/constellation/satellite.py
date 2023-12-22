@@ -393,8 +393,8 @@ class Satellite:
         """Stop the acquisition thread.
 
         Raises RuntimeError if thread is not stopped within timeout."""
-        self._stop_running.set()
         if self._running_thread and self._running_thread.is_alive():
+            self._stop_running.set()
             self._running_thread.join(timeout)
         # check if thread is still alive
         if self._running_thread and self._running_thread.is_alive():
@@ -402,6 +402,7 @@ class Satellite:
                 f"Could not join running thread within timeout of {timeout}s!"
             )
         self._running_thread = None
+        self._stop_running = None
 
     def _thread_exception(self, args):
         """Handle exceptions in threads.
