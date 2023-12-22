@@ -203,6 +203,12 @@ class LogTransmitter:
         record = msgpack.unpackb(self.queue.recv())
         return logging.makeLogRecord(record)
 
+    def closed(self) -> bool:
+        """Return whether socket is closed or not."""
+        if self._socket:
+            return self._socket.closed
+        return True
+
     def close(self):
         """Close the socket."""
         self._socket.close()
