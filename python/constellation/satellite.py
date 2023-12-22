@@ -188,6 +188,7 @@ class Satellite:
                 )
 
             time.sleep(1)
+        # TODO add a 'finally:' which closes zmq context via .term() and cleans up other things
         # on exit: stop heartbeater
         self.heartbeater.stop()
 
