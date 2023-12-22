@@ -37,6 +37,14 @@ meson test -C builddir_coverage
 ninja -C builddir coverage-html
 ```
 
+## Pre-commit hooks
+
+If you want to develop on Constellation, you can ensure following the coding style by setting up git pre-commit hooks which check your code against a variety of code validation tools automatically when you commit your code.
+
+Install [pre-commit](https://pre-commit.com/#1-install-pre-commit) and run `pre-commit install` once inside the Constellation repository to set up the pre-commit hooks for your local git clone.
+
+You will also need to install the validation tools, such as `black` and `flake8` for Python.
+
 ## Notes on sockets
 
 Since CHIRP requires a fixed port and we might have multiple programs running CHIRP on one machine, it is important to ensure that the port is not blocked by one program. Networking libraries like ZeroMQ and NNG do this by default when binding to a wildcard address. To ensure that a socket can be used by more than one program, the `SO_REUSEADDR` socket option has to be enabled. Further, to send broadcasts the `SO_BROADCAST` socket option has to be enabled.
