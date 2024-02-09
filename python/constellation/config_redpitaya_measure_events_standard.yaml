@@ -1,0 +1,23 @@
+Device:
+    Configuration:
+        Device: 250_14_4CH
+
+        bufferChannels: 4
+        bufferSize: 16384
+        bufferInt: True
+        bufferDouble: False
+        bufferFloat: False
+
+        dataFormat: "EVENTS"
+
+        triggerDelay: 0
+        triggerLevel: 0
+        triggerStop: "OFF"
+
+        acqDecimation: RP_DEC_1
+
+        clkSynchronization: "OFF"
+
+    CurrentPublish:
+        Interval: 0
+
