@@ -138,6 +138,16 @@ class RandomDataSender(DataSender):
             self.logger.debug(f"Queueing data packet {num}")
             num += 1
             time.sleep(0.5)
+
+        """
+        # Testing shut down process
+        meta = {"eventid": num, "time": datetime.datetime.now().isoformat(), "islast": True}
+        data = DataBlock(payload, meta)
+        self.data_queue.put(data)
+        self.logger.debug(f"Queueing data packet {num}")
+        num += 1
+        time.sleep(0.5) """
+
         t1 = time.time()
         self.logger.info(
             f"total time for {num} evt / {num * len(payload) / 1024 / 1024}MB: {t1 - t0}s"

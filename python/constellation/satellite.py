@@ -14,9 +14,10 @@ from statemachine.exceptions import TransitionNotAllowed
 from .fsm import SatelliteFSM
 from .heartbeater import Heartbeater
 from .heartbeatchecker import HeartbeatChecker
+from .broadcastmanager import BroadcastManager
 from .log_and_stats import getLoggerAndStats
 from ._version import version
-from .protocol import SatelliteResponse
+from .protocol import SatelliteResponse, ServiceIdentifier
 
 
 def handle_error(func):
@@ -90,6 +91,17 @@ class Satellite:
         # register heartbeat checker
         self.hb_checker = HeartbeatChecker()
 
+        # register broadcast manager
+        self.broadcast_manager = BroadcastManager()
+        self.broadcast_manager.start()
+        self.broadcast_manager.register_service(cmd_port, ServiceIdentifier.CONTROL)
+        self.logger.info("Satellite broadcasting CONTROL service")
+        time.sleep(1)  # Sleep to ensure every satellite has time to recieve broadcast
+        self.broadcast_manager.register_service(hb_port, ServiceIdentifier.HEARTBEAT)
+        self.logger.info("Satellite broadcasting HEARTBEAT service")
+        time.sleep(1)  # Sleep to ensure every satellite has time to recieve broadcast
+        self.broadcast_manager.register_service(log_port, ServiceIdentifier.MONITORING)
+        self.logger.info("Satellite broadcasting MONITORING service")
         # acquisition thread
         self._stop_running = None
         self._running_thread = None
@@ -453,7 +465,7 @@ def main(args=None):
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument("--log-level", default="info")
     parser.add_argument("--cmd-port", type=int, default=23999)
-    parser.add_argument("--log-port", type=int, default=5556)
+    parser.add_argument("--log-port", type=int, default=5556)  # Should be 55556?
     parser.add_argument("--hb-port", type=int, default=61234)
     parser.add_argument("--name", type=str, default="satellite_demo")
     args = parser.parse_args(args)

@@ -3,13 +3,14 @@
 
 import msgpack
 import zmq
+import socket
 import time
 import platform
 import logging
 from enum import Enum
+from typing import Optional
 
-
-PROTOCOL_IDENTIFIER = "CDTP%x01"
+PROTOCOL_IDENTIFIER = "CDTP%x01"  # TODO: Change PROTOCOL_IDENTIFIER to include all other protocols and change all methods in file to check for correct protocol
 
 
 class DataTransmitter:
@@ -329,3 +330,124 @@ class SatelliteResponse(Enum):
     INVALID = 1
     NOTIMPLEMENTED = 2
     INCOMPLETE = 3
+
+
+class ServiceIdentifier(str, Enum):
+    """The CONTROL service identifier indicates a CSCP (Constellation Satellite Control Protocol) service"""
+
+    CONTROL = ("\x01",)
+
+    """ The HEARTBEAT service identifier indicates a CHBP (Constellation Heartbeat Broadcasting Protocol) service """
+    HEARTBEAT = ("\x02",)
+
+    """ The MONITORING service identifier indicates a CMDP (Constellation Monitoring Distribution Protocol) service """
+    MONITORING = ("\x03",)
+
+    """ The DATA service identifier indicates a CDTP (Constellation Data Transmission Protocol) service """
+    DATA = ("\x04",)
+
+
+class MessageType(str, Enum):
+    """A message with REQUEST type indicates that CHIRP hosts should reply with an OFFER"""
+
+    REQUEST = "\x01"
+
+    """ A message with OFFER type indicates that service is available """
+    OFFER = "\x02"
+
+    """ A message with DEPART type indicates that a service is no longer available """
+    DEPART = "\x03"
+
+
+def get_ip_address():
+    try:
+        # Create a socket object to get the local machine's IP address
+        # TODO: Check if this works correctly
+        host_name = socket.gethostname()
+        ip_address = socket.gethostbyname(host_name)
+        return ip_address
+    except socket.error as e:
+        print(f"Error: {e}")
+        return None
+
+
+# NOTE: protocol isn't completely followed by this class. Some of its conditions are fulfilled in broadcastmanager.py.
+class SatelliteBeacon:
+    def __init__(
+        self,
+        hostid: str = None,
+        group: str = None,
+        context: Optional[zmq.Context] = None,
+    ) -> None:
+        """Create beacon to broadcast and listen in on."""
+        if not hostid:
+            hostid = platform.node()
+        self._hostid = hostid
+        self._group = group
+        self._address = get_ip_address()
+        ctx = context or zmq.Context()
+
+        # Create broadcasting socket
+        self._pub_socket = ctx.socket(
+            zmq.PUB
+        )  # NOTE: PUB/SUB sockets are not thread safe according to documentation.
+        # We could fix this by running RADIO/DISH sockets instead but that would require
+        # building libzmq with draft support which could be unstable. These seem to be the only sockets
+        # to support UDP also.
+        # https://pyzmq.readthedocs.io/en/v19.0.0/draft.html
+
+        # Bind to port as dictated by protocol
+        self._pub_socket.connect(
+            "tcp://192.168.10.169:7123"
+        )  # TODO: This should be generalized further using libraries: socket, netifaces, ipaddress
+
+        # Create listening socket
+        self._sub_socket = ctx.socket(zmq.SUB)
+
+        # Subscribe to all messages
+        self._sub_socket.setsockopt_string(zmq.SUBSCRIBE, "")
+
+        # Bind to port as dictated by protocol
+        self._sub_socket.connect("tcp://192.168.7.169:7123")
+
+    def broadcast_service(
+        self,
+        serviceid: ServiceIdentifier = None,
+        type: MessageType = None,
+        port: int = 0,
+        flags: int = 0,
+    ):
+        """Broadcast service."""
+        # message header
+        header = [
+            PROTOCOL_IDENTIFIER,
+        ]
+        # message body
+        body = [type, self._group, self._hostid, serviceid, port, self._address]
+        self._pub_socket.send(msgpack.packb(header), zmq.SNDMORE)
+        self._pub_socket.send(msgpack.packb(body), flags=flags)
+
+    def listen(self, flags: int = 0):
+        """Listen in on CHIRP port after new beacon"""
+        print("Listening")  # TODO: remove
+        msg = self._sub_socket.recv_multipart(flags=flags)
+        print("Found something")
+
+        if not msgpack.unpackb(msg[0]) == PROTOCOL_IDENTIFIER:
+            raise RuntimeError(
+                f"Received message with malformed CDTP header: {msgpack.unpackb(msg[0])}!"
+            )
+
+        # Unpack body
+        type = msgpack.unpackb(msg[1])
+        group = msgpack.unpackb(msg[2])
+        hostid = msgpack.unpackb(msg[3])
+        serviceid = msgpack.unpackb(msg[4])
+        port = msgpack.unpackb(msg[5])
+        address = msgpack.unpackb(msg[6])
+        return type, group, hostid, serviceid, port, address
+
+    def close(self):
+        """Close the socket."""
+        self._pub_socket.close()
+        self._sub_socket.close()
