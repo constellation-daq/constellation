@@ -221,6 +221,29 @@ reconfiguring -[dotted]up-> ORBIT
 
 This transition needs to be specifically implemented in individual satellites in order to make this transition available in the FSM.
 
+### Adding Conditions
+
+In some cases it can be required to launch, start or stop satellites in a specific order - they might for example depend on receiving a hardware clock from another satellite that is only available after initializing.
+
+For this purpose, Constellation provides the `before` and `after` keywords, available for each transition. The respective satellite will receive these as conditions from the controller and evaluate them upon entering transitional states. If, for example, Satellite `A` receives the condition `A start_after B` it will enter the `starting` transitional states but wait until it receives the state `RUN` for satellite `B` via the [heartbeat protocol]() before progressing through its own `starting` state. This can be visualized as follows:
+
+```plantuml
+@startuml
+hide empty description
+
+State ORBIT : Satellite orbiting
+State condition <<choice>>
+State starting #lightblue
+State RUN : Satellite running
+
+ORBIT -[#blue,bold]right-> condition : start
+condition -[dotted]right-> starting
+starting -[dotted]right-> RUN
+@enduml
+```
+
+This method allows satellites to asynchronously progress from steady state to steady state without the necessity of a controller supervising the order of action.
+
 ### Failure Modes & Safe State
 
 Satellites operate autonomously in the Constellation, and no central controller instance is required to run. Controllers are
