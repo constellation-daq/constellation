@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 /packagecache/
+/argparse-*/
 /asio-*/
 /Catch2-*/
 /cppzmq-*/

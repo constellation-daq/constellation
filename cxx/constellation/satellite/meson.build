@@ -16,8 +16,15 @@ satellite_lib = library('ConstellationSatellite',
   install: true,
 )
 
+# We do not provide a C ABI, so we are fine with exporting C++ symbols via extern C
+satellite_compiler_args = []
+if meson.get_compiler('cpp').has_argument('-Wno-return-type-c-linkage')
+  satellite_compiler_args += '-Wno-return-type-c-linkage'
+endif
+
 satellite_dep = declare_dependency(
   link_with: satellite_lib,
+  compile_args: satellite_compiler_args,
   include_directories: constellation_inc,
   dependencies: [core_dep, cppzmq_dep, magic_enum_dep],
 )

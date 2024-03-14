@@ -126,4 +126,6 @@ namespace constellation::satellite {
         std::string status_;
     };
 
+    using Generator = std::shared_ptr<Satellite>(std::string_view);
+
 } // namespace constellation::satellite

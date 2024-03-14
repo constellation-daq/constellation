@@ -22,3 +22,13 @@
 #define CNSTLN_API
 #endif
 #endif
+
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
+#define CNSTLN_VERSION "@version@"
+
+#define CNSTLN_LIBDIR "@libdir@"
+
+#define CNSTLN_BUILDDIR "@builddir@"
+
+// NOLINTEND(cppcoreguidelines-macro-usage)

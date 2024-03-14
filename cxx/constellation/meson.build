@@ -1,6 +1,9 @@
 # SPDX-FileCopyrightText: 2023 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
+# argparse
+argparse_dep = dependency('argparse')
+
 # Asio
 asio_raw_dep = dependency('asio')
 asio_dep = declare_dependency(
@@ -48,4 +51,5 @@ constellation_inc = include_directories('..')
 
 subdir('core')
 subdir('satellite')
+subdir('exec')
 subdir('tools')

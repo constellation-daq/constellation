@@ -25,6 +25,7 @@ variables:
   key: meson-wrap-cache
   paths:
     - subprojects/packagecache/
+    - subprojects/argparse-*/
     - subprojects/asio-*/
     - subprojects/Catch2-*/
     - subprojects/cppzmq-*/
