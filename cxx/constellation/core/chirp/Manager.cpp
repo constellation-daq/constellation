@@ -86,7 +86,11 @@ Manager::Manager(const asio::ip::address& brd_address,
                  std::string_view group_name,
                  std::string_view host_name)
     : receiver_(any_address, CHIRP_PORT), sender_(brd_address, CHIRP_PORT), group_id_(MD5Hash(group_name)),
-      host_id_(MD5Hash(host_name)), logger_("CHIRP") {}
+      host_id_(MD5Hash(host_name)), logger_("CHIRP") {
+
+    LOG(logger_, TRACE) << "Using broadcast address " << brd_address.to_string();
+    LOG(logger_, TRACE) << "Using any address " << any_address.to_string();
+}
 
 Manager::Manager(std::string_view brd_ip, std::string_view any_ip, std::string_view group_name, std::string_view host_name)
     : Manager(asio::ip::make_address(brd_ip), asio::ip::make_address(any_ip), group_name, host_name) {}
