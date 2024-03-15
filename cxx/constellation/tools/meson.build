@@ -33,10 +33,6 @@ executable('cmdp_log_send',
 
 # Satellite
 
-executable('dummy_satellite',
-           sources: 'dummy_satellite.cpp',
-           dependencies: [core_dep, satellite_dep],
-)
 executable('dummy_controller',
            sources: 'dummy_controller.cpp',
            dependencies: [core_dep, cppzmq_dep],

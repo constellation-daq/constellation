@@ -11,6 +11,7 @@ project('Constellation',
 impl_cpp = add_languages('cpp', required: get_option('impl_cpp'))
 if impl_cpp
   subdir('cxx/constellation')
+  subdir('cxx/satellites')
   subdir('cxx/tests')
 endif
 
