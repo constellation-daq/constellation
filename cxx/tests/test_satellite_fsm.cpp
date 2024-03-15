@@ -26,7 +26,7 @@ using namespace std::literals::chrono_literals;
 // NOLINTNEXTLINE(*-special-member-functions)
 class DummySatellite : public Satellite {
 public:
-    DummySatellite() { support_reconfigure(); }
+    DummySatellite() : Satellite("sat1") { support_reconfigure(); }
     void dummy_support_reconfigure(bool support_reconfigure) { Satellite::support_reconfigure(support_reconfigure); }
     void dummy_throw_transitional() { throw_transitional_ = true; }
     void initializing(const std::stop_token& stop_token, const std::any& config) override {

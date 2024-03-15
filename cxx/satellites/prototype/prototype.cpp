@@ -17,8 +17,8 @@
 
 using namespace constellation::satellite;
 
-prototype::prototype(std::string_view name) {
-    LOG(logger_, STATUS) << "Dummy satellite " << name << " created";
+prototype::prototype(std::string_view name) : Satellite(name) {
+    LOG(logger_, STATUS) << "Dummy satellite " << getName() << " created";
 }
 
 // generator function for loading satellite from shared library

@@ -109,8 +109,11 @@ namespace constellation::satellite {
         /** Return status of the satellite */
         std::string_view getStatus() const { return status_; }
 
+        /** Return satellite name (class.device_name) */
+        std::string_view getName() const { return name_; }
+
     protected:
-        Satellite();
+        Satellite(std::string_view name);
 
         /** Enable or disable support for reconfigure transition (disabled by default) */
         constexpr void support_reconfigure(bool enable = true) { support_reconfigure_ = enable; }
@@ -124,6 +127,7 @@ namespace constellation::satellite {
     private:
         bool support_reconfigure_ {false};
         std::string status_;
+        std::string name_;
     };
 
     using Generator = std::shared_ptr<Satellite>(std::string_view);

@@ -16,7 +16,7 @@
 
 using namespace constellation::satellite;
 
-Satellite::Satellite() : logger_("SATELLITE") {}
+Satellite::Satellite(std::string_view name) : logger_("SATELLITE"), name_(name) {}
 
 void Satellite::initializing(const std::stop_token& /* stop_token */, const std::any& /* config */) {
     LOG(logger_, INFO) << "Initializing - empty";

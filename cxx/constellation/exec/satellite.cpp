@@ -171,7 +171,7 @@ int constellation::exec::satellite_main(int argc,
     SinkManager::getInstance().registerService();
 
     // Start satellite
-    SatelliteImplementation satellite_implementation {satellite_name, satellite};
+    SatelliteImplementation satellite_implementation {satellite};
     satellite_implementation.start();
 
     // TODO(stephan.lachnit): implement catching CTRL+C and handling shutdown gracefully

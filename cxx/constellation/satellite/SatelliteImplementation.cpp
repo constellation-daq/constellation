@@ -41,8 +41,8 @@ using namespace constellation::message;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 
-SatelliteImplementation::SatelliteImplementation(std::string_view name, std::shared_ptr<Satellite> satellite)
-    : name_(name), rep_(context_, zmq::socket_type::rep), port_(bind_ephemeral_port(rep_)), satellite_(std::move(satellite)),
+SatelliteImplementation::SatelliteImplementation(std::shared_ptr<Satellite> satellite)
+    : rep_(context_, zmq::socket_type::rep), port_(bind_ephemeral_port(rep_)), satellite_(std::move(satellite)),
       fsm_(satellite_), logger_("CSCP") {
     // Set receive timeout for socket
     rep_.set(zmq::sockopt::rcvtimeo, static_cast<int>(std::chrono::milliseconds(100).count()));
@@ -95,7 +95,7 @@ std::optional<CSCP1Message> SatelliteImplementation::getNextCommand() {
 }
 
 void SatelliteImplementation::sendReply(std::pair<CSCP1Message::Type, std::string> reply_verb) {
-    CSCP1Message({to_string(name_)}, std::move(reply_verb)).assemble().send(rep_);
+    CSCP1Message({to_string(satellite_->getName())}, std::move(reply_verb)).assemble().send(rep_);
 }
 
 std::optional<std::pair<CSCP1Message::Type, std::string>>
@@ -110,7 +110,7 @@ SatelliteImplementation::handleGetCommand(std::string_view command) {
     using enum GetCommand;
     switch(command_enum.value()) {
     case get_name: {
-        return_verb = {CSCP1Message::Type::SUCCESS, to_string(name_)};
+        return_verb = {CSCP1Message::Type::SUCCESS, to_string(satellite_->getName())};
         break;
     }
     case get_commands: {
