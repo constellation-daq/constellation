@@ -90,6 +90,8 @@ Manager::Manager(const asio::ip::address& brd_address,
 
     LOG(logger_, TRACE) << "Using broadcast address " << brd_address.to_string();
     LOG(logger_, TRACE) << "Using any address " << any_address.to_string();
+    LOG(logger_, DEBUG) << "Host ID for satellite " << host_name << " is " << host_id_.to_string();
+    LOG(logger_, DEBUG) << "Group ID for constellation " << group_name << " is " << group_id_.to_string();
 }
 
 Manager::Manager(std::string_view brd_ip, std::string_view any_ip, std::string_view group_name, std::string_view host_name)
