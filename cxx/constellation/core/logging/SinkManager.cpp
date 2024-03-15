@@ -77,10 +77,9 @@ void SinkManager::registerService() const {
         chirp_manager->registerService(chirp::MONITORING, cmdp_sink_->getPort());
     } else {
         cmdp_console_logger_->log(to_spdlog_level(WARNING),
-                                  "Failed to register CMDP with CHIRP, satellite might not be discovered");
+                                  "Failed to advertise logging on the network, satellite might not be discovered");
     }
-    cmdp_console_logger_->log(to_spdlog_level(INFO),
-                              "Starting to log to CMDP on port " + std::to_string(cmdp_sink_->getPort()));
+    cmdp_console_logger_->log(to_spdlog_level(INFO), "Starting to log on port " + std::to_string(cmdp_sink_->getPort()));
 }
 
 std::shared_ptr<spdlog::async_logger> SinkManager::createLogger(std::string topic, std::optional<Level> console_level) {
