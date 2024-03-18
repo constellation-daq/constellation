@@ -9,19 +9,22 @@
 
 #pragma once
 
+#include <cstdint>
+#include <memory>
+#include <string>
 #include <string_view>
 
-#include "constellation/core/logging/SinkManager.hpp"
-#include "constellation/satellite/Satellite.hpp"
-
 // Caribou Peary includes
-#include "device/DeviceManager.hpp"
+#include <peary/device/Device.hpp>
+#include <peary/device/DeviceManager.hpp>
+
+#include "constellation/satellite/Satellite.hpp"
 
 using namespace constellation::satellite;
 
 class CaribouSatellite : public Satellite {
 public:
-    CaribouSatellite(std::string_view name);
+    CaribouSatellite(std::string_view type_name, std::string_view satellite_name);
 
 public:
     void initializing(const std::stop_token& stop_token, const std::any& config) override;
@@ -33,14 +36,15 @@ public:
     void running(const std::stop_token& stop_token) override;
 
 private:
-    unsigned m_ev;
+    std::string device_name_;
 
-    caribou::DeviceManager* manager_;
+    std::shared_ptr<caribou::DeviceManager> manager_;
     caribou::Device* device_ {nullptr};
     caribou::Device* secondary_device_ {nullptr};
-    std::string name_;
 
     std::mutex device_mutex_;
+
+    std::uint64_t frame_nr_;
 
     std::string adc_signal_;
     uint64_t adc_freq_;
