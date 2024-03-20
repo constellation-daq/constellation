@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
-peary_dep = dependency('peary', required: false, allow_fallback: false)
+peary_dep = dependency('Peary', required: false, allow_fallback: false, method: 'cmake', modules: ['Caribou::peary'])
 if not peary_dep.found()
   cmake = import('cmake')
   peary_opts = cmake.subproject_options()
