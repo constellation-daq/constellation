@@ -24,6 +24,11 @@ executable('chp_receiver',
   dependencies: [core_dep],
 )
 
+executable('console_logger',
+  sources: 'console_logger.cpp',
+  dependencies: [core_dep, argparse_dep, asio_dep, cppzmq_dep, magic_enum_dep],
+)
+
 # Satellite
 
 executable('dummy_controller',
