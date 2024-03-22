@@ -47,6 +47,10 @@ std::string get_rel_file_path(std::string file_path) {
 // Bind socket to ephemeral port on construction
 CMDPSink::CMDPSink() : publisher_(context_, zmq::socket_type::pub), port_(bind_ephemeral_port(publisher_)) {}
 
+void CMDPSink::setSender(std::string sender_name) {
+    sender_name_ = std::move(sender_name);
+}
+
 void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
 
     // At the very beginning we wait 500ms before starting the async logging.
@@ -54,7 +58,7 @@ void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
     std::call_once(setup_flag_, []() { std::this_thread::sleep_for(500ms); });
 
     // Create message header
-    auto msghead = CMDP1Message::Header(asio::ip::host_name(), msg.time);
+    auto msghead = CMDP1Message::Header(sender_name_, msg.time);
     // Add source and thread information only at TRACE level:
     if(from_spdlog_level(msg.level) <= TRACE) {
         msghead.setTag("thread", static_cast<std::int64_t>(msg.thread_id));

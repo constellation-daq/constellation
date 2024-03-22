@@ -10,6 +10,7 @@
 #pragma once
 
 #include <mutex>
+#include <string>
 
 #include <spdlog/sinks/base_sink.h>
 #include <zmq.hpp>
@@ -36,6 +37,13 @@ namespace constellation::log {
          */
         constexpr utils::Port getPort() const { return port_; }
 
+        /**
+         * Set sender name
+         *
+         * @param sender_name Canonical name of the sender
+         */
+        void setSender(std::string sender_name);
+
     protected:
         void sink_it_(const spdlog::details::log_msg& msg) final;
         void flush_() final {}
@@ -44,6 +52,7 @@ namespace constellation::log {
         zmq::context_t context_;
         zmq::socket_t publisher_;
         utils::Port port_;
+        std::string sender_name_;
         std::once_flag setup_flag_;
     };
 
