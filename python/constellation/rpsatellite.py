@@ -159,6 +159,7 @@ class RedPitayaSatellite(DataSender):
     ):
         super().__init__(*args, **kwargs)
         self._active_channels = []
+        self._buffer = []
 
     def do_initializing(self, payload: any) -> str:
         try:
@@ -189,6 +190,7 @@ class RedPitayaSatellite(DataSender):
             for idx, val in enumerate(bin(self.config["channels"])[2:]):
                 if val:
                     self._active_channels.append(RP_CHANNELS[idx])
+                    self._buffer.append(rp.i16Buffer(BUFFER_SIZE))
 
             axi_array_contents.runnint_sum_Integration_time = self.config[
                 "running_sum_Integration_time"
@@ -219,7 +221,6 @@ class RedPitayaSatellite(DataSender):
                 "test_pulser_rate"
             ]  # Set test pulser active
 
-            self._buffer = [rp.i16Buffer(BUFFER_SIZE)] * int(self.config["channels"])
             rp.rp_Init()
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
