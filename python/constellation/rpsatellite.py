@@ -379,6 +379,7 @@ def main(args=None):
     parser.add_argument("--cmd-port", type=int, default=23999)
     parser.add_argument("--mon-port", type=int, default=55556)
     parser.add_argument("--hb-port", type=int, default=61234)
+    parser.add_argument("--data-port", type=int, default=55557)
     parser.add_argument("--interface", type=str, default="*")
     parser.add_argument("--name", type=str, default="RedPitaya_data_sender")
     parser.add_argument("--group", type=str, default="constellation")
@@ -398,6 +399,7 @@ def main(args=None):
         hb_port=args.hb_port,
         mon_port=args.mon_port,
         data_port=args.data_port,
+        interface=args.interface,
     )
 
     s.run_satellite()
