@@ -191,7 +191,7 @@ class RedPitayaSatellite(DataSender):
                     self._active_channels.append(RP_CHANNELS[idx])
 
             axi_array_contents.runnint_sum_Integration_time = self.config[
-                "runint_sum_Integration_time"
+                "running_sum_Integration_time"
             ]  # Set 64 samples runnint_sum_Integration_time on all channels
             axi_array_contents.averaging_Integration_time = self.config[
                 "averaging_Integration_time"
