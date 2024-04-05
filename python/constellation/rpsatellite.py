@@ -5,6 +5,7 @@ import logging
 import mmap
 import os
 import time
+import coloredlogs
 
 import numpy as np
 import rp
@@ -363,41 +364,34 @@ class RedPitayaSatellite(DataSender):
 def main(args=None):
     import argparse
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument("--log-level", default="info")
     parser.add_argument("--cmd-port", type=int, default=23999)
-    parser.add_argument("--log-port", type=int, default=55556)
+    parser.add_argument("--mon-port", type=int, default=55556)
     parser.add_argument("--hb-port", type=int, default=61234)
-    parser.add_argument("--data-port", type=int, default=55557)
-    parser.add_argument(
-        "--config-file",
-        type=str,
-        default="./python/constellation/config_redpitaya_measure_events_standard.yaml",
-    )
-    parser.add_argument("--sampling-period", type=float, default=0.1)
-
+    parser.add_argument("--interface", type=str, default="*")
+    parser.add_argument("--name", type=str, default="RedPitaya_data_sender")
+    parser.add_argument("--group", type=str, default="constellation")
     args = parser.parse_args(args)
-    logging.basicConfig(
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        level=args.log_level.upper(),
-    )
+
+    # set up logging
+    logger = logging.getLogger(args.name)
+    coloredlogs.install(level=args.log_level.upper(), logger=logger)
+
+    logger.info("Starting up satellite!")
+    args = parser.parse_args(args)
 
     # start server with remaining args
     s = RedPitayaSatellite(
-        name="RedPitaya_data_sender",
+        name=args.name,
+        group=args.group,
         cmd_port=args.cmd_port,
         hb_port=args.hb_port,
-        log_port=args.log_port,
+        mon_port=args.mon_port,
         data_port=args.data_port,
-        config_file=args.config_file,
-        sampling_period=args.sampling_period,
     )
 
-    # start server with remaining args
-    try:
-        s.run_satellite()
-    except KeyboardInterrupt:
-        s.on_interrupt()
+    s.run_satellite()
 
 
 if __name__ == "__main__":
