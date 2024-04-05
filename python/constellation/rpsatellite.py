@@ -263,14 +263,24 @@ class RedPitayaSatellite(DataSender):
     def do_run(self, payload):
         self.log.info("Red Pitaya satellite running, publishing events.")
 
+        time_stamp = time.time_ns()
         self._readpos = self.get_write_pointer()
         while not self._state_thread_evt.is_set():
+            # Main DAQ-loop
             payload = self.get_data()
+
+            if payload is None:
+                continue
+
             meta = {
                 "dtype": f"{payload.dtype}",
             }
+
+            if (time.time_ns() - time_stamp) / 1000000000 > 10:
+                for reg_name, reg_val in self.read_registers():
+                    meta[reg_name] = reg_val
+                time_stamp = time.time_ns()
             self.data_queue.put((payload, meta))
-            time.sleep(self.sampling_period)
 
         return "Finished acquisition"
 
@@ -315,7 +325,7 @@ class RedPitayaSatellite(DataSender):
 
         # Skip sampling if we haven't moved
         if self._readpos == self._writepos:
-            return
+            return None
 
         # Calculate sample size
         chunk = (self._writepos - self._readpos + BUFFER_SIZE) % BUFFER_SIZE
