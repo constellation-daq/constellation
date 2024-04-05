@@ -379,7 +379,6 @@ def main(args=None):
     coloredlogs.install(level=args.log_level.upper(), logger=logger)
 
     logger.info("Starting up satellite!")
-    args = parser.parse_args(args)
 
     # start server with remaining args
     s = RedPitayaSatellite(
