@@ -214,6 +214,10 @@ class RedPitayaSatellite(DataSender):
                 "ratio"
             ]  # Sets ratio to 2 on all channels
 
+            axi_array_contents.use_test_pulser = self.config[
+                "test_pulser_rate"
+            ]  # Set test pulser active
+
             self._buffer = [rp.i16Buffer(BUFFER_SIZE)] * int(self.config["channels"])
             rp.rp_Init()
         except (ConfigError, OSError) as e:
