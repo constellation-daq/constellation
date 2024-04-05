@@ -23,6 +23,7 @@ constellation_files = files(
   'protocol.py',
   'satellite.py',
   'confighandler.py',
+  'rpsatellite.py',
 )
 
 py.install_sources(constellation_files,
