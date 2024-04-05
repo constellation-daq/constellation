@@ -14,7 +14,7 @@ from .confighandler import ConfigError
 from .cscp import CSCPMessage
 from .datasender import DataSender
 
-axi_gpio_regset = np.dtype(
+axi_gpio_regset_config = np.dtype(
     [
         ("data_type", "uint32"),
         ("active_channles", "uint32"),
@@ -74,6 +74,76 @@ axi_gpio_regset = np.dtype(
     ]
 )
 
+axi_gpio_regset_readout = np.dtype(
+    [
+        ("data_type", "uint32"),
+        ("active_channles", "uint32"),
+        ("use_test_pulser", "uint32"),
+        ("runnint_sum_Integration_time", "uint32"),
+        ("averaging_Integration_time", "uint32"),
+        ("trigger_level", "uint32"),
+        ("ToT_ch0_1", "uint32"),
+        ("ToT_ch2_3", "uint32"),
+        ("dist_ch0_1", "uint32"),
+        ("dist_ch2_3", "uint32"),
+        ("ratio", "uint32"),
+        ("trigger_per_s_ch0", "uint32"),
+        ("trigger_per_s_ch1", "uint32"),
+        ("trigger_per_s_ch2", "uint32"),
+        ("trigger_per_s_ch3", "uint32"),
+        ("mean_of_signal_ch0", "uint32"),
+        ("mean_of_signal_ch1", "uint32"),
+        ("mean_of_signal_ch2", "uint32"),
+        ("mean_of_signal_ch3", "uint32"),
+        ("mean_error_of_signal_ch0", "uint32"),
+        ("mean_error_of_signal_ch1", "uint32"),
+        ("mean_error_of_signal_ch2", "uint32"),
+        ("mean_error_of_signal_ch3", "uint32"),
+        ("total_number_of_triggers_ch0", "uint32"),
+        ("total_number_of_triggers_ch1", "uint32"),
+        ("total_number_of_triggers_ch2", "uint32"),
+        ("total_number_of_triggers_ch3", "uint32"),
+        ("total_numbers_of_over_threshold_triggers_ch0", "uint32"),
+        ("total_numbers_of_over_threshold_triggers_ch1", "uint32"),
+        ("total_numbers_of_over_threshold_triggers_ch2", "uint32"),
+        ("total_numbers_of_over_threshold_triggers_ch3", "uint32"),
+        ("total_numbers_of_over_ToT_triggers_ch0", "uint32"),
+        ("total_numbers_of_over_ToT_triggers_ch1", "uint32"),
+        ("total_numbers_of_over_ToT_triggers_ch2", "uint32"),
+        ("total_numbers_of_over_ToT_triggers_ch3", "uint32"),
+        ("total_numbers_of_over_ratio_triggers_ch0", "uint32"),
+        ("total_numbers_of_over_ratio_triggers_ch1", "uint32"),
+        ("total_numbers_of_over_ratio_triggers_ch2", "uint32"),
+        ("total_numbers_of_over_ratio_triggers_ch3", "uint32"),
+        ("total_numbers_of_over_distance_triggers_ch0", "uint32"),
+        ("total_numbers_of_over_distance_triggers_ch1", "uint32"),
+        ("total_numbers_of_over_distance_triggers_ch2", "uint32"),
+        ("total_numbers_of_over_distance_triggers_ch3", "uint32"),
+        ("minValueOut_ch0", "uint32"),
+        ("mintTOut_ch0", "uint32"),
+        ("totalTOut_ch0", "uint32"),
+        ("minValueOut_ch1", "uint32"),
+        ("mintTOut_ch1", "uint32"),
+        ("totalTOut_ch1", "uint32"),
+        ("minValueOut_ch2", "uint32"),
+        ("mintTOut_ch2", "uint32"),
+        ("totalTOut_ch2", "uint32"),
+        ("minValueOut_ch3", "uint32"),
+        ("mintTOut_ch3", "uint32"),
+        ("totalTOut_ch3", "uint32"),
+        ("Data_value_ch0", "uint32"),
+        ("Data_value_ch1", "uint32"),
+        ("Data_value_ch2", "uint32"),
+        ("Data_value_ch3", "uint32"),
+    ]
+)
+
+axi_gpio_regset_start = np.dtype([("Externaltrigger", "uint32")])
+
+axi_gpio_regset_stop = np.dtype([("Externaltrigger", "uint32")])
+
+axi_gpio_regset_reset = np.dtype([("data_type", "uint32")])
+
 BUFFER_SIZE = 16384
 RP_CHANNELS = [rp.RP_CH_4, rp.RP_CH_3, rp.RP_CH_2, rp.RP_CH_1]
 
@@ -107,7 +177,7 @@ class RedPitayaSatellite(DataSender):
                 length=mmap.PAGESIZE,
                 offset=self.config["offset"],
             )
-            axi_numpy_array = np.recarray(1, axi_gpio_regset, buf=axi_mmap)
+            axi_numpy_array = np.recarray(1, axi_gpio_regset_config, buf=axi_mmap)
             axi_array_contents = axi_numpy_array[0]
 
             axi_array_contents.active_channles = self.config[
@@ -161,14 +231,12 @@ class RedPitayaSatellite(DataSender):
         return super().do_landing(payload)
 
     def do_stopping(self, payload: any):
-        axi_gpio_regset = np.dtype([("Externaltrigger", "uint32")])
-
         memory_file_handle = os.open("/dev/mem", os.O_RDWR)
         axi_mmap0 = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
         )
 
-        axi_numpy_array0 = np.recarray(1, axi_gpio_regset, buf=axi_mmap0)
+        axi_numpy_array0 = np.recarray(1, axi_gpio_regset_stop, buf=axi_mmap0)
         axi_array_contents0 = axi_numpy_array0[0]
         axi_array_contents0.Externaltrigger = (
             0  # Don'tOverride GPIO_N_0 to output ADC or DAC trigger
@@ -176,13 +244,11 @@ class RedPitayaSatellite(DataSender):
         return super().do_stopping(payload)
 
     def do_starting(self, payload: any) -> str:
-        axi_gpio_regset = np.dtype([("Externaltrigger", "uint32")])
-
         memory_file_handle = os.open("/dev/mem", os.O_RDWR)
         axi_mmap0 = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
         )
-        axi_numpy_array0 = np.recarray(1, axi_gpio_regset, buf=axi_mmap0)
+        axi_numpy_array0 = np.recarray(1, axi_gpio_regset_start, buf=axi_mmap0)
         axi_array_contents0 = axi_numpy_array0[0]
         axi_array_contents0.Externaltrigger = (
             3  # Override GPIO_N_0 to output ADC or DAC trigger
@@ -280,9 +346,9 @@ class RedPitayaSatellite(DataSender):
         axi_mmap = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
         )
-        axi_numpy_array = np.recarray(1, axi_gpio_regset, buf=axi_mmap)
+        axi_numpy_array = np.recarray(1, axi_gpio_regset_readout, buf=axi_mmap)
         axi_array_contents = axi_numpy_array[0]
-        names = [field[0] for field in axi_gpio_regset.descr]
+        names = [field[0] for field in axi_gpio_regset_readout.descr]
 
         return (names, axi_array_contents)
 
