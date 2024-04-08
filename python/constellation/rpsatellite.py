@@ -280,7 +280,7 @@ class RedPitayaSatellite(DataSender):
             if (time.time_ns() - time_stamp) / 1000000000 > 10:
                 meta.update(self.read_registers())
                 time_stamp = time.time_ns()
-            self.data_queue.put((payload, meta))
+            self.data_queue.put((payload.tolist(), meta))
 
         return "Finished acquisition"
 
