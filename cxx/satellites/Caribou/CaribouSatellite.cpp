@@ -53,12 +53,12 @@ CaribouSatellite::CaribouSatellite(std::string_view type_name, std::string_view 
     manager_ = std::make_shared<DeviceManager>();
 }
 
-void CaribouSatellite::initializing(const std::stop_token& /*stop_token*/, const std::any& /*config*/) {
+void CaribouSatellite::initializing(const constellation::config::Configuration& config) {
     LOG(logger_, INFO) << "Initializing " << getCanonicalName();
 
     // Open configuration file and read caribou configuration
     caribou::Configuration caribou_config {};
-    const auto config_file_path = std::string("config.txt"); // FIXME config->get("config_file");
+    const auto config_file_path = config.getPath("config_file");
     LOG(logger_, INFO) << "Attempting to use initial device configuration \"" << config_file_path << "\"";
     std::ifstream config_file {config_file_path};
     if(!config_file.is_open()) {
@@ -84,8 +84,8 @@ void CaribouSatellite::initializing(const std::stop_token& /*stop_token*/, const
     }
 
     // Add secondary device if it is configured
-    if(false /*FIXME config->has("secondary_device")*/) {
-        const auto secondary = std::string(); // FIXME config->get("secondary_device", std::string());
+    if(config.has("secondary_device")) {
+        const auto secondary = config.get<std::string>("secondary_device");
         if(std::find(sections.begin(), sections.end(), secondary) != sections.end()) {
             caribou_config.SetSection(secondary);
         }
@@ -99,10 +99,12 @@ void CaribouSatellite::initializing(const std::stop_token& /*stop_token*/, const
         }
     }
 
+    // Store the configuration:
+    config_ = config;
     LOG(logger_, STATUS) << getCanonicalName() << " initialized";
 }
 
-void CaribouSatellite::launching(const std::stop_token& /*stop_token*/) {
+void CaribouSatellite::launching() {
     LOG(logger_, INFO) << "Configuring device " << device_->getName();
 
     std::lock_guard<std::mutex> lock {device_mutex_};
@@ -125,16 +127,16 @@ void CaribouSatellite::launching(const std::stop_token& /*stop_token*/) {
     }
 
     // Set additional registers from the configuration:
-    /*if(config_->has("register_key") || config_->has("register_value")) {
-        auto key = config_->get("register_key", "");
-        auto value = config_->get("register_value", 0);
+    if(config_.has("register_key") || config_.has("register_value")) {
+        auto key = config_.get<std::string>("register_key", "");
+        auto value = config_.get("register_value", 0);
         device_->setRegister(key, value);
         LOG(logger_, INFO) << "Setting " << key << " = " << std::to_string(value);
-    }*/
+    }
 
     // Select which ADC signal to regularly fetch:
-    adc_signal_ = ""; // FIXME config_->get("adc_signal", "");
-    adc_freq_ = 1000; // FIXME config_->get("adc_frequency", 1000);
+    adc_signal_ = config_.get<std::string>("adc_signal", "");
+    adc_freq_ = config_.get("adc_frequency", 1000);
 
     if(!adc_signal_.empty()) {
         // Try it out directly to catch misconfiugration
@@ -146,7 +148,7 @@ void CaribouSatellite::launching(const std::stop_token& /*stop_token*/) {
     LOG(logger_, STATUS) << getCanonicalName() << " launched";
 }
 
-void CaribouSatellite::landing(const std::stop_token& /*stop_token*/) {
+void CaribouSatellite::landing() {
     LOG(logger_, INFO) << "Switching off power for device " << device_->getName();
 
     // Switch off the device power
@@ -156,9 +158,9 @@ void CaribouSatellite::landing(const std::stop_token& /*stop_token*/) {
     LOG(logger_, STATUS) << getCanonicalName() << " landed";
 }
 
-void CaribouSatellite::reconfiguring(const std::stop_token& /*stop_token*/, const std::any& /*partial_config*/) {}
+void CaribouSatellite::reconfiguring(const constellation::config::Configuration& /*partial_config*/) {}
 
-void CaribouSatellite::starting(const std::stop_token& /*stop_token*/, std::uint32_t run_number) {
+void CaribouSatellite::starting(std::uint32_t run_number) {
     LOG(logger_, INFO) << "Starting run " << run_number << "...";
 
     // Reset frame number
@@ -184,7 +186,7 @@ void CaribouSatellite::starting(const std::stop_token& /*stop_token*/, std::uint
     LOG(logger_, STATUS) << getCanonicalName() << " started (run " << run_number << ")";
 }
 
-void CaribouSatellite::stopping(const std::stop_token& /*stop_token*/) {
+void CaribouSatellite::stopping() {
     LOG(logger_, INFO) << "Stopping run...";
 
     // Stop the DAQ
