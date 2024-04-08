@@ -187,7 +187,7 @@ class RedPitayaSatellite(DataSender):
             ]  # Start Channels
 
             # Track active channels
-            for idx, val in enumerate(bin(self.config["channels"])[2:]):
+            for idx, val in enumerate(format(self.config["channels"], "04b")):
                 if val:
                     self._active_channels.append(RP_CHANNELS[idx])
                     self._buffer.append(rp.i16Buffer(BUFFER_SIZE))
