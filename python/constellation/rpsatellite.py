@@ -298,7 +298,7 @@ class RedPitayaSatellite(DataSender):
     @cscp_requestable
     def get_registers(self, _request: CSCPMessage):
         return (
-            self.read_registers(),
+            str(self.read_registers()),
             None,
             None,
         )  # NOTE: Not sure if this is how we should do it
