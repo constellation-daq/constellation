@@ -368,7 +368,10 @@ class RedPitayaSatellite(DataSender):
         axi_array_contents = axi_numpy_array[0]
         names = [field[0] for field in axi_gpio_regset_readout.descr]
 
-        return (names, axi_array_contents)
+        ret = {}
+        for name, value in zip(names, axi_array_contents):
+            ret[name] = value
+        return ret
 
 
 # -------------------------------------------------------------------------
