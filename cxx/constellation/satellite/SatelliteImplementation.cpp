@@ -28,9 +28,9 @@
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config.hpp"
+#include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/logging/log.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
-#include "constellation/core/message/Dictionary.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/satellite_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
@@ -40,6 +40,7 @@
 #include "constellation/satellite/fsm_definitions.hpp"
 
 using namespace constellation;
+using namespace constellation::config;
 using namespace constellation::message;
 using namespace constellation::satellite;
 using namespace constellation::utils;

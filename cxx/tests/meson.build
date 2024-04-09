@@ -60,6 +60,16 @@ test('Core message test', test_core_message,
   args: ['--durations', 'yes', '--verbosity', 'high'],
 )
 
+# Core / Configuration
+
+test_core_config = executable('test_core_config',
+  sources: 'test_core_config.cpp',
+  dependencies: [core_dep, catch2_dep],
+)
+test('Core configuration test', test_core_config,
+  args: ['--durations', 'yes', '--verbosity', 'high'],
+)
+
 # Satellite
 
 test_satellite_fsm = executable('test_satellite_fsm',

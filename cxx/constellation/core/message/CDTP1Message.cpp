@@ -19,6 +19,7 @@
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std23.hpp"
 
+using namespace constellation::config;
 using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::string_view_literals;

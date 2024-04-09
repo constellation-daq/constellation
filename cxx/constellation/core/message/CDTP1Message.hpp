@@ -20,8 +20,8 @@
 #include <zmq_addon.hpp>
 
 #include "constellation/core/config.hpp"
+#include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/BaseHeader.hpp"
-#include "constellation/core/message/Dictionary.hpp"
 #include "constellation/core/message/Protocol.hpp"
 
 namespace constellation::message {
@@ -56,7 +56,7 @@ namespace constellation::message {
         private:
             Header(std::string sender,
                    std::chrono::system_clock::time_point time,
-                   Dictionary tags,
+                   config::Dictionary tags,
                    std::uint64_t seq,
                    Type type)
                 : BaseHeader(CDTP1, std::move(sender), time, std::move(tags)), seq_(seq), type_(type) {}

@@ -16,6 +16,7 @@
 #include <thread>
 
 #include "constellation/core/config.hpp"
+#include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
@@ -37,47 +38,38 @@ namespace constellation::satellite {
          *
          * Note: do not perform actions that require actions before shutdown or another initialization
          *
-         * @param stop_token Token which tracks if initializing should be aborted
-         * @param config Configuration of the Satellite TODO(stephan.lachnit): proper class
+         * @param config Configuration of the Satellite
          */
-        virtual void initializing(const std::stop_token& stop_token, const std::any& config);
+        virtual void initializing(const config::Configuration& config);
 
         /**
          * Launch satellite, i.e. apply configuration
-         *
-         * @param stop_token Token which tracks if launching should be aborted
          */
-        virtual void launching(const std::stop_token& stop_token);
+        virtual void launching();
 
         /**
          * Landing satellite, i.e. undo what was done in the `launching` function
-         *
-         * @param stop_token Token which tracks if landing should be aborted
          */
-        virtual void landing(const std::stop_token& stop_token);
+        virtual void landing();
 
         /**
          * Reconfigure satellite, i.e. apply a partial configuration to the already launched satellite
          *
-         * @param stop_token Token which tracks if reconfiguring should be aborted
-         * @param partial_config Changes to the configuration of the Satellite TODO(stephan.lachnit): proper class
+         * @param partial_config Changes to the configuration of the Satellite
          */
-        virtual void reconfiguring(const std::stop_token& stop_token, const std::any& partial_config);
+        virtual void reconfiguring(const config::Configuration& partial_config);
 
         /**
          * Start satellite, i.e. prepare for immediate data taking, e.g. opening files or creating buffers
          *
-         * @param stop_token Token which tracks if starting should be aborted
          * @param run_number Run number for the upcoming run
          */
-        virtual void starting(const std::stop_token& stop_token, std::uint32_t run_number);
+        virtual void starting(std::uint32_t run_number);
 
         /**
          * Stop satellite, i.e. prepare to return to ORBIT state, e.g. closing open files
-         *
-         * @param stop_token Token which tracks if stopping should be aborted
          */
-        virtual void stopping(const std::stop_token& stop_token);
+        virtual void stopping();
 
         /**
          * Run function, i.e. run data acquisition
@@ -87,20 +79,20 @@ namespace constellation::satellite {
         virtual void running(const std::stop_token& stop_token);
 
         /**
-         * Interrupt function, i.e. go immediately to safe state
+         * Interrupt function, i.e. go immediately from ORBIT or RUN to SAFE state
          *
-         * @param stop_token Token which tracks if interrupting should be aborted (i.e. an incoming shutdown)
+         * By default, this function calls `stopping` (if in RUN state) and then `landing`.
+         *
          * @param previous_state State in which the Satellite was being interrupted
          */
-        virtual void interrupting(const std::stop_token& stop_token, State previous_state);
+        virtual void interrupting(State previous_state);
 
         /**
-         * On-Failure function, i.e. executed when entering the failure state
+         * On-Failure function, i.e. executed when entering the ERROR state
          *
-         * @param stop_token Token which tracks if on_failure should be aborted (e.g. an incoming shutdown or restart)
          * @param previous_state State in which the Satellite was before experiencing a failure
          */
-        virtual void on_failure(const std::stop_token& stop_token, State previous_state);
+        virtual void on_failure(State previous_state);
 
     public:
         /** Whether or not the reconfigure function is implemented */

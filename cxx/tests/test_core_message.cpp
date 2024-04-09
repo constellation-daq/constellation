@@ -20,6 +20,7 @@
 #include "constellation/core/utils/casts.hpp"
 
 using namespace Catch::Matchers;
+using namespace constellation::config;
 using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::string_literals;

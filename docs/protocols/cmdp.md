@@ -110,7 +110,7 @@ If the log level is `TRACE`, the map SHOULD contain key-value pairs with keys `t
 
 ### Log Message Payload
 
-The log messages payload frame SHALL consist of a message string.
+The log message payload frame SHALL consist of the log message encoded as a UTF8 string.
 
 ### Metrics Data Payload
 

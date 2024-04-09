@@ -108,13 +108,13 @@ class CMDPTransmitter:
             "processName": record.processName,
             "process": record.process,
         }
-        payload = record.getMessage()
+        payload = record.getMessage().encode()
         return self._dispatch(topic, payload, meta)
 
     def send_metric(self, metric: Metric):
         """Send a metric via a ZMQ socket."""
         topic = "STATS/" + metric.name
-        payload = metric.as_list()
+        payload = msgpack.packb(metric.as_list())
         meta = None
         return self._dispatch(topic, payload, meta)
 
@@ -148,12 +148,12 @@ class CMDPTransmitter:
         """Close the socket."""
         self._socket.close()
 
-    def _recv_log(self, topic: str, msg: list) -> logging.LogRecord:
+    def _recv_log(self, topic: str, msg: list[bytes]) -> logging.LogRecord:
         """Receive a Constellation log message."""
         # Read header
         sender, time, record = self.msgheader.decode(msg[1])
         # receive payload
-        message = msgpack.unpackb(msg[2])
+        message = msg[2].decode()
         # message == msg % args
         if "msg" not in record and "args" not in record:
             record["msg"] = message
@@ -177,15 +177,14 @@ class CMDPTransmitter:
     def _dispatch(
         self,
         topic: str,
-        payload: any,
+        payload: bytes,
         meta: dict = None,
         flags: int = 0,
     ):
         """Dispatch a message via ZMQ socket."""
-        packer = msgpack.Packer()
         topic = topic.upper()
         flags = zmq.SNDMORE | flags
         self._socket.send_string(topic, flags)
         self.msgheader.send(self._socket, meta=meta, flags=flags)
         flags = flags & ~zmq.SNDMORE
-        self._socket.send(packer.pack(payload), flags=flags)
+        self._socket.send(payload, flags=flags)

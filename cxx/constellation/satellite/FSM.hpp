@@ -17,6 +17,7 @@
 #include <zmq.hpp>
 
 #include "constellation/core/config.hpp"
+#include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
@@ -26,8 +27,8 @@ namespace constellation::satellite {
 
     class FSM final {
     public:
-        /** Payload of a transition function: TODO(stephan.lachnit) variant with config, partial_config or run_nr */
-        using TransitionPayload = std::any;
+        /** Payload of a transition function: variant with config, partial_config or run_nr */
+        using TransitionPayload = std::variant<std::monostate, config::Configuration, std::uint32_t>;
 
         /** Function pointer for a transition function: takes the variant mentioned above, returns new State */
         using TransitionFunction = State (FSM::*)(TransitionPayload);
@@ -96,8 +97,8 @@ namespace constellation::satellite {
          * @param payload Payload frame from CSCP
          * @return Tuple containing the CSCP message type and a description
          */
-        CNSTLN_API std::pair<message::CSCP1Message::Type, std::string> reactCommand(TransitionCommand transition_command,
-                                                                                    std::shared_ptr<zmq::message_t> payload);
+        CNSTLN_API std::pair<message::CSCP1Message::Type, std::string>
+        reactCommand(TransitionCommand transition_command, const std::shared_ptr<zmq::message_t>& payload);
 
         /**
          * @brief Try to perform an interrupt as soon as possible
@@ -154,7 +155,6 @@ namespace constellation::satellite {
             }},
             {State::launching, {
                 {Transition::launched, &FSM::launched},
-                {Transition::interrupt, &FSM::interrupt},
                 {Transition::failure, &FSM::failure},
             }},
             {State::landing, {
@@ -170,17 +170,14 @@ namespace constellation::satellite {
             }},
             {State::reconfiguring, {
                 {Transition::reconfigured, &FSM::reconfigured},
-                {Transition::interrupt, &FSM::interrupt},
                 {Transition::failure, &FSM::failure},
             }},
             {State::starting, {
                 {Transition::started, &FSM::started},
-                {Transition::interrupt, &FSM::interrupt},
                 {Transition::failure, &FSM::failure},
             }},
             {State::stopping, {
                 {Transition::stopped, &FSM::stopped},
-                {Transition::interrupt, &FSM::interrupt},
                 {Transition::failure, &FSM::failure},
             }},
             {State::RUN, {
@@ -206,9 +203,9 @@ namespace constellation::satellite {
         State state_ {State::NEW};
         std::shared_ptr<Satellite> satellite_;
         log::Logger logger_;
-        std::jthread transitional_thread_;
+        std::thread transitional_thread_;
         std::jthread run_thread_;
-        std::jthread failure_thread_;
+        std::thread failure_thread_;
     };
 
 } // namespace constellation::satellite

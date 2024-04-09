@@ -7,6 +7,8 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
+#pragma once
+
 #include <cctype>
 #include <string>
 #include <string_view>

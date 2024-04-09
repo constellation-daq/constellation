@@ -18,14 +18,16 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
+#include "constellation/core/config/Configuration.hpp"
+#include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
-#include "constellation/core/message/Dictionary.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/ports.hpp"
 #include "constellation/satellite/Satellite.hpp"
 #include "constellation/satellite/SatelliteImplementation.hpp"
 
 using namespace Catch::Matchers;
+using namespace constellation::config;
 using namespace constellation::message;
 using namespace constellation::satellite;
 using namespace constellation::utils;
@@ -144,8 +146,7 @@ TEST_CASE("Transitions", "[satellite]") {
 
     // Send initialize
     auto initialize_msg = CSCP1Message({"cscp_sender"}, {CSCP1Message::Type::REQUEST, "initialize"});
-    auto initialize_payload = std::make_shared<zmq::message_t>("dummy payload");
-    initialize_msg.addPayload(std::move(initialize_payload));
+    initialize_msg.addPayload(Configuration().assemble());
     sender.send(initialize_msg);
 
     // Check reply
@@ -246,6 +247,35 @@ TEST_CASE("Catch unexpected protocol", "[satellite]") {
     REQUIRE(recv_msg_wrong_proto.getVerb().first == CSCP1Message::Type::ERROR);
     REQUIRE_THAT(to_string(recv_msg_wrong_proto.getVerb().second),
                  Equals("Received protocol \"CMDP1\" does not match expected identifier \"CSCP1\""));
+}
+
+TEST_CASE("Catch incorrect payload", "[satellite]") {
+    // Create and start satellite
+    auto satellite = std::make_shared<DummySatellite>();
+    auto satellite_implementation = SatelliteImplementation(satellite);
+    satellite_implementation.start();
+
+    // Create sender
+    CSCPSender sender {satellite_implementation.getPort()};
+
+    // Send initialize
+    auto initialize_msg = CSCP1Message({"cscp_sender"}, {CSCP1Message::Type::REQUEST, "initialize"});
+    auto initialize_payload = std::make_shared<zmq::message_t>("dummy payload");
+    initialize_msg.addPayload(std::move(initialize_payload));
+    sender.send(initialize_msg);
+
+    // Check reply
+    auto recv_msg_initialize = sender.recv();
+    REQUIRE(recv_msg_initialize.getVerb().first == CSCP1Message::Type::INCOMPLETE);
+    REQUIRE_THAT(to_string(recv_msg_initialize.getVerb().second),
+                 Equals("Transition initialize received incorrect payload"));
+
+    // Check state
+    std::this_thread::sleep_for(100ms);
+    sender.send_command("get_state");
+    auto recv_msg_get_status = sender.recv();
+    REQUIRE(recv_msg_get_status.getVerb().first == CSCP1Message::Type::SUCCESS);
+    REQUIRE_THAT(to_string(recv_msg_get_status.getVerb().second), Equals("NEW"));
 }
 
 TEST_CASE("Catch wrong number of frames", "[satellite]") {

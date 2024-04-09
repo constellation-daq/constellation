@@ -18,7 +18,7 @@
 #include <msgpack/sbuffer_decl.hpp>
 
 #include "constellation/core/config.hpp"
-#include "constellation/core/message/Dictionary.hpp"
+#include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/Protocol.hpp"
 
 namespace constellation::message {
@@ -42,13 +42,13 @@ namespace constellation::message {
         constexpr std::chrono::system_clock::time_point getTime() const { return time_; }
 
         /** Return message tags */
-        const Dictionary& getTags() const { return tags_; }
+        const config::Dictionary& getTags() const { return tags_; }
 
         /** Return message tag */
-        DictionaryValue getTag(const std::string& key) const { return tags_.at(key); }
+        config::Value getTag(const std::string& key) const { return tags_.at(key); }
 
         /** Set message tag */
-        void setTag(const std::string& key, DictionaryValue value) { tags_[key] = std::move(value); }
+        void setTag(const std::string& key, config::Value value) { tags_[key] = std::move(value); }
 
         /** Convert message header to human readable string */
         CNSTLN_API virtual std::string to_string() const;
@@ -65,7 +65,10 @@ namespace constellation::message {
          * @param time Message time
          * @param tags Message tags (defaults to empty dictionary)
          */
-        BaseHeader(Protocol protocol, std::string sender, std::chrono::system_clock::time_point time, Dictionary tags = {})
+        BaseHeader(Protocol protocol,
+                   std::string sender,
+                   std::chrono::system_clock::time_point time,
+                   config::Dictionary tags = {})
             : protocol_(protocol), sender_(std::move(sender)), time_(time), tags_(std::move(tags)) {}
 
         /**
@@ -80,7 +83,7 @@ namespace constellation::message {
         const Protocol protocol_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
         std::string sender_;
         std::chrono::system_clock::time_point time_;
-        Dictionary tags_;
+        config::Dictionary tags_;
     };
 
 } // namespace constellation::message

@@ -38,15 +38,15 @@ corresponding payloads:
 | ------- | ------- | ---------- | -------------
 | `get_name` | - | Name of the Satellite | -
 | `get_version` | - | Constellation version identifier string | -
-| `get_commands` | - | See payload | List of commands (+ description+payload?)
+| `get_commands` | - | See payload | List of commands as MsgPack map/dictionary with command names as keys and descriptions as values
 | `get_state` | - | Current state (as string) | -
 | `get_status` | - | Current status | -
 | `get_config` | - | Current config | -
-| `initialize` | Config | Acknowledgement | -
+| `initialize` | Satellite configuration as flat MsgPack map/dictionary | Acknowledgement | -
 | `launch` | - | Acknowledgement | -
 | `land` | - | Acknowledgement | -
-| `reconfigure` | Partial config | Acknowledgement | -
-| `start` | Run number | Acknowledgement | -
+| `reconfigure` | Partial configuration as flat MsgPack map/dictionary | Acknowledgement | -
+| `start` | Run number as MsgPack integer | Acknowledgement | -
 | `stop` | - | Acknowledgement | -
 | `shutdown` | - | Acknowledgement | -
 
