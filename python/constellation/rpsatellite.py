@@ -245,6 +245,7 @@ class RedPitayaSatellite(DataSender):
         return super().do_landing(payload)
 
     def do_stopping(self, payload: any):
+        """Stop acquisition by writing to address."""
         memory_file_handle = os.open("/dev/mem", os.O_RDWR)
         axi_mmap0 = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
@@ -258,6 +259,7 @@ class RedPitayaSatellite(DataSender):
         return super().do_stopping(payload)
 
     def do_starting(self, payload: any) -> str:
+        """Start acquisition by writing to address."""
         memory_file_handle = os.open("/dev/mem", os.O_RDWR)
         axi_mmap0 = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
@@ -270,6 +272,7 @@ class RedPitayaSatellite(DataSender):
         return super().do_starting(payload)
 
     def do_run(self, payload):
+        """Run the satellite. Collect data from buffers and send it."""
         self.log.info("Red Pitaya satellite running, publishing events.")
 
         data_size = 0
@@ -291,6 +294,7 @@ class RedPitayaSatellite(DataSender):
             # Expanded meta data sent periodically
             duration = (time.time_ns() - time_stamp) / 1000000000
             if duration > self._meta_period:
+                # FIXME: Temporary solution! This data should be sent via CMDP and run from init/launch!
                 meta["temp"] = self.get_cpu_temperature()
                 meta["cpu_load"] = self.get_cpu_load()
                 meta["data_transfer_speed"] = data_size / duration
