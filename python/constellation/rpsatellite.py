@@ -278,7 +278,7 @@ class RedPitayaSatellite(DataSender):
             }
 
             if (time.time_ns() - time_stamp) / 1000000000 > 10:
-                meta.update(self.read_registers())
+                meta["temp"] = self.get_cpu_temperature()
                 time_stamp = time.time_ns()
             self.data_queue.put((payload.tolist(), meta))
 
@@ -371,6 +371,19 @@ class RedPitayaSatellite(DataSender):
         for name, value in zip(names, axi_array_contents):
             ret[name] = value
         return ret
+
+    def get_cpu_temperature(self):
+        """Obtain temperature of CPU."""
+        paths = (
+            "/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_offset",
+            "/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_raw",
+            "/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_scale",
+        )
+
+        offset = self._get_val_from_file(paths[0])
+        raw = self._get_val_from_file(paths[1])
+        scale = self._get_val_from_file(paths[2])
+        return ((float)(offset + raw)) * scale / 1000.0
 
 
 # -------------------------------------------------------------------------
