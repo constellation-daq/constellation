@@ -97,7 +97,8 @@ SinkManager::SinkManager() : cmdp_global_level_(OFF) {
     formatter->add_flag<constellation_level_formatter>('l', false);
     formatter->add_flag<constellation_level_formatter>('L', true);
     formatter->add_flag<constellation_topic_formatter>('n');
-    formatter->set_pattern("|%Y-%m-%d %H:%M:%S.%e| %^%l%$ %n %v");
+    // formatter->set_pattern("|%Y-%m-%d %H:%M:%S.%e| %^%l%$ %n %v");
+    formatter->set_pattern("%^%L%$ %n %v");
     console_sink_->set_formatter(std::move(formatter));
 
     // Set colors of console sink
