@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""This module provides an implementation for a Constellation Satellite on a RedPitaya device."""
+
+"""
+SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+SPDX-License-Identifier: CC-BY-4.0
+
+This module provides an implementation for a Constellation Satellite on a RedPitaya device.
+"""
 
 import logging
 import mmap
