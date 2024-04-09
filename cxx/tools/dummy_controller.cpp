@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
     auto discovered_services = chirp_manager.getDiscoveredServices(chirp::ServiceIdentifier::CONTROL);
     while(discovered_services.empty()) {
         std::cout << "Waiting for a satellite..." << std::endl;
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(200ms);
         discovered_services = chirp_manager.getDiscoveredServices(chirp::ServiceIdentifier::CONTROL);
     }
     auto uri = "tcp://" + discovered_services[0].address.to_string() + ":" + std::to_string(discovered_services[0].port);
@@ -61,20 +61,20 @@ int main(int argc, char* argv[]) {
 
     while(true) {
         std::string command;
-        std::cout << "Send command: ";
+        std::cout << "\nSend command: ";
         std::getline(std::cin, command);
 
         // Send command
         auto send_msg = CSCP1Message({"dummy_controller"}, {CSCP1Message::Type::REQUEST, command});
         if(command == "initialize" || command == "reconfigure") {
             send_msg.addPayload(Configuration().assemble());
-            std::cout << "Added empty configuration to message" << std::endl;
+            // std::cout << "Added empty configuration to message" << std::endl;
         } else if(command == "start") {
             const std::uint32_t run_nr = 1234U;
             msgpack::sbuffer sbuf {};
             msgpack::pack(sbuf, run_nr);
             send_msg.addPayload(std::make_shared<zmq::message_t>(sbuf.data(), sbuf.size()));
-            std::cout << "Added run number " << run_nr << " to message" << std::endl;
+            // std::cout << "Added run number " << run_nr << " to message" << std::endl;
         }
         send_msg.assemble().send(req);
 
@@ -84,8 +84,8 @@ int main(int argc, char* argv[]) {
         auto recv_msg = CSCP1Message::disassemble(recv_zmq_msg);
 
         // Print message
-        std::cout << recv_msg.getHeader().to_string() << "\n"
-                  << "Verb: " << to_string(recv_msg.getVerb().first) << " : " << recv_msg.getVerb().second << std::endl;
+        // std::cout << recv_msg.getHeader().to_string() << "\n"
+        std::cout << "Verb: " << to_string(recv_msg.getVerb().first) << " : " << recv_msg.getVerb().second << std::endl;
 
         // Print payload if dict
         if(recv_msg.hasPayload()) {
