@@ -155,6 +155,8 @@ axi_gpio_regset_reset = np.dtype([("data_type", "uint32")])
 BUFFER_SIZE = 16384
 RP_CHANNELS = [rp.RP_CH_4, rp.RP_CH_3, rp.RP_CH_2, rp.RP_CH_1]
 
+METRICS_PERIOD = 10
+
 
 class RedPitayaSatellite(DataSender):
     """Constellation Satellite to control a RedPitaya."""
@@ -167,7 +169,6 @@ class RedPitayaSatellite(DataSender):
         super().__init__(*args, **kwargs)
         self._active_channels = []
         self._buffer = []
-        self._meta_period = 10
 
     def do_initializing(self, payload: any) -> str:
         try:
@@ -295,7 +296,7 @@ class RedPitayaSatellite(DataSender):
 
             # Expanded meta data sent periodically
             duration = (time.time_ns() - time_stamp) / 1000000000
-            if duration > self._meta_period:
+            if duration > METRICS_PERIOD:
                 # FIXME: Temporary solution! This data should be sent via CMDP and run from init/launch!
                 meta["temp"] = self.get_cpu_temperature()
                 meta["cpu_load"] = self.get_cpu_load()
