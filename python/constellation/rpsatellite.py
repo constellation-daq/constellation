@@ -421,7 +421,23 @@ class RedPitayaSatellite(DataSender):
         self.prev_cpu_idle = idle_cpu_time
         return utilization
 
-    def get_cpu_times(self):
+    def get_network_speeds(self):
+        """Estimate current network speeds."""
+        tx_bytes = int(
+            self._get_val_from_file("/sys/class/net/eth0/statistics/tx_bytes")
+        )
+        rx_bytes = int(
+            self._get_val_from_file("/sys/class/net/eth0/statistics/rx_bytes")
+        )
+
+        tx_speed = (tx_bytes - self.prev_tx) / METRICS_PERIOD
+        rx_speed = (rx_bytes - self.prev_rx) / METRICS_PERIOD
+
+        self.prev_tx = tx_bytes
+        self.prev_rx = rx_bytes
+
+        return (tx_speed, rx_speed)
+
         """Obtain idle time and active time of CPU."""
         # Get the line containing total values of CPU time
         stat = self._get_val_from_file("/proc/stat").split("\n")[0].split(" ")[2:]
