@@ -81,9 +81,9 @@ AssembledMessage CHIRPMessage::assemble() const {
     }
     // Service Identifier
     ret.at(39) = std::byte(std::to_underlying(service_id_));
-    // Port in network byte order (MSB first)
-    ret.at(40) = std::byte(static_cast<std::uint8_t>(static_cast<unsigned int>(port_ >> 8U) & 0x00FFU));
-    ret.at(41) = std::byte(static_cast<std::uint8_t>(port_ & 0x00FFU));
+    // Port
+    ret.at(40) = std::byte(static_cast<std::uint8_t>(port_ & 0x00FFU));
+    ret.at(41) = std::byte(static_cast<std::uint8_t>(static_cast<unsigned int>(port_ >> 8U) & 0x00FFU));
 
     return ret;
 }
@@ -126,9 +126,9 @@ CHIRPMessage CHIRPMessage::disassemble(std::span<const std::byte> assembled_mess
         throw MessageDecodingError("service identifier invalid");
     }
     chirp_message.service_id_ = static_cast<ServiceIdentifier>(assembled_message[39]);
-    // Port from network byte order (MSB first)
-    chirp_message.port_ = static_cast<std::uint16_t>(std::to_integer<unsigned int>(assembled_message[40]) << 8U) +
-                          std::to_integer<std::uint8_t>(assembled_message[41]);
+    // Port
+    chirp_message.port_ = std::to_integer<std::uint8_t>(assembled_message[40]) +
+                          static_cast<std::uint16_t>(std::to_integer<unsigned int>(assembled_message[41]) << 8U);
 
     return chirp_message;
 }

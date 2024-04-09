@@ -92,7 +92,7 @@ class CHIRPMessage:
         bytes.write(self.group_uuid.bytes)
         bytes.write(self.host_uuid.bytes)
         bytes.write(self.serviceid.value.to_bytes(length=1))
-        bytes.write(self.port.to_bytes(length=2, byteorder="big"))
+        bytes.write(self.port.to_bytes(length=2, byteorder="little"))
         return bytes.getvalue()
 
     def unpack(self, msg: bytes):
@@ -110,7 +110,7 @@ class CHIRPMessage:
         self.group_uuid = UUID(bytes=msg[7:23])
         self.host_uuid = UUID(bytes=msg[23:39])
         self.serviceid = CHIRPServiceIdentifier(int.from_bytes(msg[39:40]))
-        self.port = int.from_bytes(msg[40:42], byteorder="big")
+        self.port = int.from_bytes(msg[40:42], byteorder="little")
 
 
 class CHIRPBeaconTransmitter:
