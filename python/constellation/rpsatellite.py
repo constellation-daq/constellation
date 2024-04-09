@@ -403,9 +403,9 @@ class RedPitayaSatellite(DataSender):
             "/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_scale",
         )
 
-        offset = self._get_val_from_file(paths[0])
-        raw = self._get_val_from_file(paths[1])
-        scale = self._get_val_from_file(paths[2])
+        offset = int(self._get_val_from_file(paths[0]))
+        raw = int(self._get_val_from_file(paths[1]))
+        scale = float(self._get_val_from_file(paths[2]))
         return ((float)(offset + raw)) * scale / 1000.0
 
     def get_cpu_load(self):
@@ -426,9 +426,9 @@ class RedPitayaSatellite(DataSender):
         idle_cpu_time = 0
         total_cpu_time = 0
         for idx, val in enumerate(stat):
-            total_cpu_time += val
+            total_cpu_time += int(val)
             if idx == 3:
-                idle_cpu_time = val
+                idle_cpu_time = int(val)
 
         return idle_cpu_time, total_cpu_time
 
