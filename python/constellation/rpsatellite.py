@@ -229,6 +229,8 @@ class RedPitayaSatellite(DataSender):
                 "test_pulser_rate"
             ]  # Set test pulser active
 
+            axi_array_contents.data_type = self.config["data_type"]
+
             rp.rp_Init()
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
