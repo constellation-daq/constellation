@@ -264,6 +264,7 @@ class RedPitayaSatellite(DataSender):
     def do_run(self, payload):
         self.log.info("Red Pitaya satellite running, publishing events.")
 
+        self.prev_cpu_time, self.prev_cpu_idle = self.get_cpu_times()
         time_stamp = time.time_ns()
         self._readpos = self.get_write_pointer()
         while not self._state_thread_evt.is_set():
@@ -279,6 +280,7 @@ class RedPitayaSatellite(DataSender):
 
             if (time.time_ns() - time_stamp) / 1000000000 > 10:
                 meta["temp"] = self.get_cpu_temperature()
+                meta["cpu_load"] = self.get_cpu_load()
                 time_stamp = time.time_ns()
             self.data_queue.put((payload.tolist(), meta))
 
@@ -384,6 +386,40 @@ class RedPitayaSatellite(DataSender):
         raw = self._get_val_from_file(paths[1])
         scale = self._get_val_from_file(paths[2])
         return ((float)(offset + raw)) * scale / 1000.0
+
+    def get_cpu_load(self):
+        """Estimate current CPU load and update previously saved CPU times."""
+        idle_cpu_time, total_cpu_time = self.get_cpu_times()
+        total_cpu_time2 = total_cpu_time - self.prev_cpu_time
+        idle_cpu_time2 = idle_cpu_time - self.prev_cpu_idle
+        utilization = ((total_cpu_time2 - idle_cpu_time2) * 100) / total_cpu_time2
+        self.prev_cpu_time = total_cpu_time
+        self.prev_cpu_idle = idle_cpu_time
+        return utilization
+
+    def get_cpu_times(self):
+        """Obtain idle time and active time of CPU."""
+        # Get the line containing total values of CPU time
+        stat = self._get_val_from_file("/proc/stat").split("\n")[0].split(" ")[2:]
+
+        idle_cpu_time = 0
+        total_cpu_time = 0
+        for idx, val in enumerate(stat):
+            total_cpu_time += val
+            if idx == 3:
+                idle_cpu_time = val
+
+        return idle_cpu_time, total_cpu_time
+
+    def _get_val_from_file(self, path: str):
+        """Fetch all information stored in file from path."""
+        try:
+            f = open(path, "r")
+            var = f.read()
+            f.close()
+            return var
+        except FileNotFoundError:
+            self.log.warning("Failed to find path %s", path)
 
 
 # -------------------------------------------------------------------------
