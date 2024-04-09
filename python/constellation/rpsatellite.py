@@ -4,9 +4,10 @@
 import logging
 import mmap
 import os
+import sys
 import time
-import coloredlogs
 
+import coloredlogs
 import numpy as np
 import rp
 
@@ -160,6 +161,7 @@ class RedPitayaSatellite(DataSender):
         super().__init__(*args, **kwargs)
         self._active_channels = []
         self._buffer = []
+        self._meta_period = 10
 
     def do_initializing(self, payload: any) -> str:
         try:
@@ -264,6 +266,7 @@ class RedPitayaSatellite(DataSender):
     def do_run(self, payload):
         self.log.info("Red Pitaya satellite running, publishing events.")
 
+        data_size = 0
         self.prev_cpu_time, self.prev_cpu_idle = self.get_cpu_times()
         time_stamp = time.time_ns()
         self._readpos = self.get_write_pointer()
@@ -274,15 +277,23 @@ class RedPitayaSatellite(DataSender):
             if payload is None:
                 continue
 
+            # Include data type as part of meta
             meta = {
                 "dtype": f"{payload.dtype}",
             }
 
-            if (time.time_ns() - time_stamp) / 1000000000 > 10:
+            # Expanded meta data sent periodically
+            duration = (time.time_ns() - time_stamp) / 1000000000
+            if duration > self._meta_period:
                 meta["temp"] = self.get_cpu_temperature()
                 meta["cpu_load"] = self.get_cpu_load()
+                meta["data_transfer_speed"] = data_size / duration
                 time_stamp = time.time_ns()
-            self.data_queue.put((payload.tolist(), meta))
+
+            # Format payload to serializable
+            payload = payload.tolist()
+            self.data_queue.put((payload, meta))
+            data_size += sys.getsizeof(payload) + sys.getsizeof(meta)
 
         return "Finished acquisition"
 
