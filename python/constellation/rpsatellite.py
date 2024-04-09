@@ -412,7 +412,7 @@ class RedPitayaSatellite(DataSender):
     @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_cpu_load(self):
         """Estimate current CPU load and update previously saved CPU times."""
-        idle_cpu_time, total_cpu_time = self.get_cpu_times()
+        idle_cpu_time, total_cpu_time = self._get_cpu_times()
         total_cpu_time2 = total_cpu_time - self.prev_cpu_time
         idle_cpu_time2 = idle_cpu_time - self.prev_cpu_idle
         utilization = ((total_cpu_time2 - idle_cpu_time2) * 100) / total_cpu_time2
@@ -438,6 +438,7 @@ class RedPitayaSatellite(DataSender):
 
         return (tx_speed, rx_speed)
 
+    def _get_cpu_times(self):
         """Obtain idle time and active time of CPU."""
         # Get the line containing total values of CPU time
         stat = self._get_val_from_file("/proc/stat").split("\n")[0].split(" ")[2:]
