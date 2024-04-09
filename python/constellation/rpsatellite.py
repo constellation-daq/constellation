@@ -10,17 +10,18 @@ This module provides an implementation for a Constellation Satellite on a RedPit
 import logging
 import mmap
 import os
-import sys
 import time
 
 import coloredlogs
 import numpy as np
 import rp
 
+from .cmdp import MetricsType
 from .commandmanager import cscp_requestable
 from .confighandler import ConfigError
 from .cscp import CSCPMessage
 from .datasender import DataSender
+from .monitoring import schedule_metric
 
 axi_gpio_regset_config = np.dtype(
     [
@@ -278,8 +279,6 @@ class RedPitayaSatellite(DataSender):
         """Run the satellite. Collect data from buffers and send it."""
         self.log.info("Red Pitaya satellite running, publishing events.")
 
-        data_size = 0
-        self.prev_cpu_time, self.prev_cpu_idle = self.get_cpu_times()
         time_stamp = time.time_ns()
         self._readpos = self.get_write_pointer()
         while not self._state_thread_evt.is_set():
@@ -300,13 +299,11 @@ class RedPitayaSatellite(DataSender):
                 # FIXME: Temporary solution! This data should be sent via CMDP and run from init/launch!
                 meta["temp"] = self.get_cpu_temperature()
                 meta["cpu_load"] = self.get_cpu_load()
-                meta["data_transfer_speed"] = data_size / duration
+                meta["data_speeds"] = self.get_network_speeds()
                 time_stamp = time.time_ns()
 
             # Format payload to serializable
-            payload = payload.tolist()
-            self.data_queue.put((payload, meta))
-            data_size += sys.getsizeof(payload) + sys.getsizeof(meta)
+            self.data_queue.put((payload.tolist(), meta))
 
         return "Finished acquisition"
 
@@ -398,6 +395,7 @@ class RedPitayaSatellite(DataSender):
             ret[name] = value
         return ret
 
+    @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_cpu_temperature(self):
         """Obtain temperature of CPU."""
         paths = (
@@ -411,6 +409,7 @@ class RedPitayaSatellite(DataSender):
         scale = float(self._get_val_from_file(paths[2]))
         return ((float)(offset + raw)) * scale / 1000.0
 
+    @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_cpu_load(self):
         """Estimate current CPU load and update previously saved CPU times."""
         idle_cpu_time, total_cpu_time = self.get_cpu_times()
@@ -421,6 +420,7 @@ class RedPitayaSatellite(DataSender):
         self.prev_cpu_idle = idle_cpu_time
         return utilization
 
+    @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_network_speeds(self):
         """Estimate current network speeds."""
         tx_bytes = int(
