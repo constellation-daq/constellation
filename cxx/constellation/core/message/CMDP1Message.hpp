@@ -98,6 +98,15 @@ namespace constellation::message {
          * @param header Header of the message
          * @param payload Payload of the message
          */
+        CMDP1Message(std::string topic, Header header);
+
+        /**
+         * Construct a new CMDP1 message with payload
+         *
+         * @param topic Topic of the message
+         * @param header Header of the message
+         * @param payload Payload of the message
+         */
         CMDP1Message(std::string topic, Header header, message::PayloadBuffer&& payload);
 
         /**
