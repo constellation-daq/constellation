@@ -40,6 +40,8 @@ namespace constellation::metrics {
 
             Metric(const Type type, config::Value value) : type_(type), value_(value), changed_(true) {}
 
+            virtual ~Metric() noexcept = default;
+
             virtual void set(const config::Value& value);
 
             config::Value value() const { return value_; }
