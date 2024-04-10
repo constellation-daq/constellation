@@ -19,6 +19,7 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Configuration.hpp"
+#include "constellation/core/metrics/Manager.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
 
@@ -146,6 +147,42 @@ namespace constellation::satellite {
          * @param enable If online reconfiguration support should be enabled
          */
         constexpr void support_reconfigure(bool enable = true) { support_reconfigure_ = enable; }
+
+        /**
+         * Register a metric which will be emitted in regular intervals
+         *
+         * @param topic Unique topic of the metric
+         * @param interval Minimum interval between consecutive emissions
+         * @param value Initial value of the metric
+         * @retval true if the metric was registered
+         * @retval false if the metric was already registered
+         */
+        bool register_timed_metric(const std::string& topic,
+                                   metrics::Clock::duration interval,
+                                   metrics::Type type,
+                                   config::Value value = {});
+
+        /**
+         * Register a metric which will be emitted after having been triggered a given number of times
+         *
+         * @param topic Unique topic of the metric
+         * @param triggers Minimum number of triggers between consecutive emissions
+         * @param value Initial value of the metric
+         * @retval true if the metric was registered
+         * @retval false if the metric was already registered
+         */
+        bool register_triggered_metric(const std::string& topic,
+                                       std::size_t triggers,
+                                       metrics::Type type,
+                                       config::Value value = {});
+
+        /**
+         * Update the value cached for the given metric
+         *
+         * \param topic Unique topic of the metric
+         * \param value New value of the metric
+         */
+        void set_metric(const std::string& topic, config::Value value);
 
         /**
          * @brief Register a new user command

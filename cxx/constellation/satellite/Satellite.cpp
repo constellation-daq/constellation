@@ -51,3 +51,35 @@ void Satellite::interrupting(State previous_state) {
 void Satellite::failure(State previous_state) {
     LOG(logger_, DEBUG) << "Failure from " << to_string(previous_state) << " (default implementation)";
 }
+
+
+bool Satellite::register_timed_metric(const std::string& topic,
+                                      metrics::Clock::duration interval,
+                                      metrics::Type type,
+                                      config::Value value) {
+    auto* metrics_manager = metrics::Manager::getDefaultInstance();
+    if(metrics_manager == nullptr) {
+        metrics_manager = new metrics::Manager(getCanonicalName());
+        metrics_manager->setAsDefaultInstance();
+    }
+    return metrics_manager->registerTimedMetric(topic, interval, type, value);
+}
+
+bool Satellite::register_triggered_metric(const std::string& topic,
+                                          std::size_t triggers,
+                                          metrics::Type type,
+                                          config::Value value) {
+    auto* metrics_manager = metrics::Manager::getDefaultInstance();
+    if(metrics_manager == nullptr) {
+        metrics_manager = new metrics::Manager(getCanonicalName());
+        metrics_manager->setAsDefaultInstance();
+    }
+    return metrics_manager->registerTriggeredMetric(topic, triggers, type, value);
+}
+
+void Satellite::set_metric(const std::string& topic, config::Value value) {
+    auto* metrics_manager = metrics::Manager::getDefaultInstance();
+    if(metrics_manager != nullptr) {
+        metrics_manager->setMetric(topic, value);
+    }
+}
