@@ -43,6 +43,12 @@ namespace constellation::metrics {
 
             virtual ~Metric() noexcept = default;
 
+            // Default copy/move constructor/assignment
+            Metric(const Metric&) = default;
+            Metric& operator=(const Metric&) = default;
+            Metric(Metric&&) noexcept = default;
+            Metric& operator=(Metric&&) = default;
+
             virtual void set(const config::Value& value);
 
             config::Value value() const { return value_; }
