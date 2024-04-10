@@ -22,6 +22,7 @@ core_src = files(
   'message/CSCP1Message.cpp',
   'metrics/Metric.cpp',
   'metrics/Manager.cpp',
+  'metrics/Metric.cpp',
 )
 
 core_lib = library(
