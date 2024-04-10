@@ -12,6 +12,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <map>
+#include <string_view>
 #include <thread>
 
 #include "constellation/core/config.hpp"
@@ -38,7 +39,7 @@ namespace constellation::metrics {
         public:
             Metric(const Type type) : type_(type) {};
 
-            Metric(const Type type, config::Value value) : type_(type), value_(value), changed_(true) {}
+            Metric(const Type type, config::Value value) : type_(type), value_(std::move(value)), changed_(true) {}
 
             virtual ~Metric() noexcept = default;
 
@@ -62,8 +63,8 @@ namespace constellation::metrics {
 
         class TimedMetric : public Metric {
         public:
-            TimedMetric(Clock::duration interval, const Type type, config::Value value = {})
-                : Metric(type, value), interval_(interval), last_trigger_(Clock::now()) {}
+            TimedMetric(Clock::duration interval, Type type, config::Value value = {})
+                : Metric(type, std::move(value)), interval_(interval), last_trigger_(Clock::now()) {}
 
             bool condition() override;
             Clock::time_point next_trigger() const override;
@@ -75,14 +76,14 @@ namespace constellation::metrics {
 
         class TriggeredMetric : public Metric {
         public:
-            TriggeredMetric(const std::size_t triggers, const Type type, config::Value value);
+            TriggeredMetric(std::size_t triggers, Type type, config::Value value);
 
             void set(const config::Value& value) override;
 
             bool condition() override;
 
         private:
-            const std::size_t triggers_;
+            std::size_t triggers_;
             std::size_t current_triggers_ {0};
         };
 
@@ -100,7 +101,7 @@ namespace constellation::metrics {
         void setAsDefaultInstance();
 
     public:
-        Manager(const std::string& name) : name_(name), logger_("STAT"), thread_(std::bind_front(&Manager::run, this)) {};
+        Manager(std::string_view name) : name_(name), logger_("STAT"), thread_(std::bind_front(&Manager::run, this)) {};
 
         // No copy/move constructor/assignment
         Manager(Manager& other) = delete;
@@ -116,14 +117,14 @@ namespace constellation::metrics {
          * \param topic Unique topic of the metric
          * \param value New value of the metric
          */
-        void setMetric(const std::string& topic, config::Value value);
+        void setMetric(std::string_view topic, config::Value value);
 
         /**
          * Unregister a previously registered metric from the manager
          *
          * @param topic Unique metric topic
          */
-        void unregisterMetric(std::string topic);
+        void unregisterMetric(std::string_view topic);
 
         /**
          * Unregisters all metrics registered in the manager
@@ -141,7 +142,7 @@ namespace constellation::metrics {
          * @retval true if the metric was registered
          * @retval false if the metric was already registered
          */
-        bool registerTriggeredMetric(const std::string& topic, std::size_t triggers, Type type, config::Value value = {});
+        bool registerTriggeredMetric(std::string_view topic, std::size_t triggers, Type type, config::Value value = {});
 
         /**
          * Register a metric which will be emitted in regular intervals
@@ -152,7 +153,7 @@ namespace constellation::metrics {
          * @retval true if the metric was registered
          * @retval false if the metric was already registered
          */
-        bool registerTimedMetric(const std::string& topic, Clock::duration interval, Type type, config::Value value = {});
+        bool registerTimedMetric(std::string_view topic, Clock::duration interval, Type type, config::Value value = {});
 
     private:
         /**
@@ -166,11 +167,11 @@ namespace constellation::metrics {
          */
         void run(const std::stop_token& stop_token);
 
-        const std::string name_;
+        std::string name_;
         log::Logger logger_;
 
         /** Map of registered metrics */
-        std::map<std::string, std::shared_ptr<Metric>> metrics_;
+        std::map<std::string, std::shared_ptr<Metric>, std::less<>> metrics_;
 
         /** Main loop thread of the metrics manager */
         std::jthread thread_;

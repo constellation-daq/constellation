@@ -52,7 +52,7 @@ bool Manager::TimedMetric::condition() {
 Clock::time_point Manager::TimedMetric::next_trigger() const {
     return last_trigger_ + interval_;
 }
-Manager::TriggeredMetric::TriggeredMetric(const std::size_t triggers, const Type type, config::Value value)
+Manager::TriggeredMetric::TriggeredMetric(std::size_t triggers, Type type, config::Value value)
     : Metric(type, value), triggers_(triggers) {
     // We have an initial value, let's log it directly
     if(!std::holds_alternative<std::monostate>(value)) {
@@ -92,30 +92,49 @@ Manager::~Manager() noexcept {
     }
 }
 
-void Manager::setMetric(const std::string& topic, config::Value value) {
-    // FIXME access
-    metrics_.at(topic)->set(value);
+void Manager::setMetric(std::string_view topic, config::Value value) {
 
-    // Notify if this is a triggered metric:
-    if(std::dynamic_pointer_cast<TriggeredMetric>(metrics_.at(topic))) {
-        cv_.notify_all();
+    auto it = metrics_.find(topic);
+    if(it != metrics_.end()) {
+        it->second->set(value);
+
+        // Notify if this is a triggered metric:
+        if(std::dynamic_pointer_cast<TriggeredMetric>(it->second)) {
+            cv_.notify_all();
+        }
     }
 }
 
-void Manager::unregisterMetric(std::string topic) {
-    metrics_.erase(topic);
+void Manager::unregisterMetric(std::string_view topic) {
+
+    std::unique_lock<std::mutex> lock {mt_};
+    auto it = metrics_.find(topic);
+    if(it != metrics_.end()) {
+        metrics_.erase(it);
+    }
 }
 
-bool Manager::registerTriggeredMetric(const std::string& topic, std::size_t triggers, Type type, config::Value value) {
+bool Manager::registerTriggeredMetric(std::string_view topic, std::size_t triggers, Type type, config::Value value) {
     std::unique_lock<std::mutex> lock {mt_};
-    metrics_[topic] = std::make_shared<TriggeredMetric>(triggers, type, value);
+    const auto [it, success] =
+        metrics_.emplace(std::make_pair(topic, std::make_shared<TriggeredMetric>(triggers, type, value)));
+
+    if(!success) {
+        return false;
+    }
+
     cv_.notify_all();
     return true;
 }
 
-bool Manager::registerTimedMetric(const std::string& topic, Clock::duration interval, Type type, config::Value value) {
+bool Manager::registerTimedMetric(std::string_view topic, Clock::duration interval, Type type, config::Value value) {
     std::unique_lock<std::mutex> lock {mt_};
-    metrics_[topic] = std::make_shared<TimedMetric>(interval, type, value);
+    const auto [it, success] = metrics_.emplace(std::make_pair(topic, std::make_shared<TimedMetric>(interval, type, value)));
+
+    if(!success) {
+        return false;
+    }
+
     cv_.notify_all();
     return true;
 }
