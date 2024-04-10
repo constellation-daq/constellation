@@ -67,29 +67,72 @@ class DataTransmitter:
         socket: the ZMQ socket to use if no other is specified on send()/recv()
         calls.
 
-        host: the name to use in the message header. Defaults to system host name.
-
+        name: the name to use in the message header.
         """
         self.name = name
         self.msgheader = MessageHeader(name, Protocol.CDTP)
         self._socket = socket
         self.running = False
+        self.sequence_number = 0
 
-    def send_start(self, payload, meta: dict = {}, flags: int = 0):
+    def send_start(self, payload, flags: int = 0):
+        """
+        Send starting message of data run over a ZMQ socket.
+
+        Follows the Constellation Data Transmission Protocol.
+
+        payload: meta information about the beginning of run.
+
+        flags: additional ZMQ socket flags to use during transmission.
+
+        """
         self.sequence_number = 0
         self.running = True
-        return self._dispatch(CDTPMessageIdentifier.BOR, payload, meta, flags)
+        return self._dispatch(
+            run_identifier=CDTPMessageIdentifier.BOR, payload=payload, flags=flags
+        )
 
     def send_data(self, payload, meta: dict = {}, flags: int = 0):
+        """
+        Send data message of data run over a ZMQ socket.
+
+        Follows the Constellation Data Transmission Protocol.
+
+        payload: meta information about the beginning of run.
+
+        meta: optional dictionary that is sent as a map of string/value
+        pairs with the header.
+
+        flags: additional ZMQ socket flags to use during transmission.
+
+        """
         if self.running:
             self.sequence_number += 1
-            return self._dispatch(CDTPMessageIdentifier.DAT, payload, meta, flags)
+            return self._dispatch(
+                run_identifier=CDTPMessageIdentifier.DAT,
+                payload=payload,
+                meta=meta,
+                flags=flags,
+            )
         msg = "Data transfer sequence not started"
         raise RuntimeError(msg)
 
-    def send_end(self, payload, meta: dict = {}, flags: int = 0):
+    def send_end(self, payload, flags: int = 0):
+        """
+        Send ending message of data run over a ZMQ socket.
+
+        Follows the Constellation Data Transmission Protocol.
+
+        payload: meta information about the end of run.
+
+        flags: additional ZMQ socket flags to use during transmission.
+
+        """
+
         self.running = False
-        return self._dispatch(CDTPMessageIdentifier.EOR, payload, meta, flags)
+        return self._dispatch(
+            run_identifier=CDTPMessageIdentifier.EOR, payload=payload, flags=flags
+        )
 
     def _dispatch(
         self,
@@ -102,12 +145,11 @@ class DataTransmitter:
 
         Follows the Constellation Data Transmission Protocol.
 
+        run_identifier: flag identifying start, middle and end of run
+
         payload: data to send.
 
         meta: dictionary to include in the map of the message header.
-
-        socket: ZMQ socket to use for transmission. If none is specified, use
-        the one the class was initialized with.
 
         flags: additional ZMQ socket flags to use during transmission.
 
@@ -140,9 +182,6 @@ class DataTransmitter:
 
         Follows the Constellation Data Transmission Protocol.
 
-        socket: ZMQ socket to use for transmission. If none is specified, use
-        the one the class was initialized with.
-
         flags: additional ZMQ socket flags to use during transmission.
 
         Returns: payload, map (meta data), timestamp and sending host.
@@ -168,7 +207,6 @@ class DataTransmitter:
 
         try:
             # Retrieve payload
-            unpacker = msgpack.Unpacker()
             unpacker.feed(datamsg[2])
             msg.payload = unpacker.unpack()
         except IndexError:

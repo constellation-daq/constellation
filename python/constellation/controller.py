@@ -5,7 +5,6 @@ SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 """
 
-import os
 import logging
 import threading
 from queue import Empty
@@ -21,7 +20,6 @@ from .cscp import CommandTransmitter
 from .error import debug_log
 from .satellite import Satellite
 from .commandmanager import get_cscp_commands
-from .confighandler import get_config
 
 
 class SatelliteArray:
@@ -338,28 +336,6 @@ def main():
     # set up logging
     logger = logging.getLogger(args.name)
     coloredlogs.install(level=args.log_level.upper(), logger=logger)
-
-    # NOTE: Temporary solution for getting config-files
-    config_file_path = "./python/constellation/configs/master_config.toml"
-    f = os.path.abspath(config_file_path)
-
-    if not os.path.isfile(f):
-        msg = "Missing master config " + f
-        raise RuntimeError(msg)
-
-    write_config = {}
-
-    for category in ["constellation", "satellites"]:
-        try:
-            write_config.update(
-                get_config(
-                    config_path=config_file_path,
-                    category=category,
-                    host_class="H5DataReceiverWriter",
-                )
-            )
-        except KeyError as e:
-            logger.warning("Missing key %s from config category %s.", e, category)
 
     logger.debug("Starting up CLI Controller!")
 

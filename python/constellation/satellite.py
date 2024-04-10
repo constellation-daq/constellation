@@ -379,22 +379,6 @@ class Satellite(
         """
         return __version__, None, None
 
-    @cscp_requestable
-    def get_state(self, _request: CSCPMessage = None) -> str:
-        return self.fsm.current_state.id, None, None
-
-    @cscp_requestable
-    def get_status(self, _request: CSCPMessage = None) -> str:
-        return self.fsm.status, None, None
-
-    @cscp_requestable
-    def get_class(self, request: CSCPMessage = None) -> str:
-        return (
-            str(self.__class__.__name__),
-            None,
-            None,
-        )
-
 
 # -------------------------------------------------------------------------
 

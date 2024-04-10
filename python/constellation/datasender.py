@@ -16,7 +16,7 @@ import random
 import numpy as np
 import zmq
 
-from .cdtp import DataTransmitter
+from .cdtp import DataTransmitter, CDTPMessageIdentifier
 from .satellite import Satellite
 from .broadcastmanager import CHIRPServiceIdentifier
 
@@ -37,9 +37,10 @@ class PushThread(threading.Thread):
         """Initialize values.
 
         Arguments:
+        - name       :: Name of the satellite.
         - stopevt    :: Event that if set lets the thread shut down.
         - port       :: The port to bind to.
-        - queue      :: The Queue to process CDTPMessages from.
+        - queue      :: The Queue to process payload and meta of data runs from.
         - context    :: ZMQ context to use (optional).
         """
         super().__init__(*args, **kwargs)
@@ -59,10 +60,10 @@ class PushThread(threading.Thread):
                 # blocking call but with timeout to prevent deadlocks
                 payload, meta = self.queue.get(block=True, timeout=0.5)
                 # if we have data, send it
-                if "BOR" in meta:
-                    transmitter.send_start(payload=payload, meta=meta)
-                elif "EOR" in meta:
-                    transmitter.send_end(payload=payload, meta=meta)
+                if meta == CDTPMessageIdentifier.BOR:
+                    transmitter.send_start(payload=payload)
+                elif meta == CDTPMessageIdentifier.EOR:
+                    transmitter.send_end(payload=payload)
                 else:
                     transmitter.send_data(payload=payload, meta=meta)
                 self._logger.debug(
@@ -92,6 +93,7 @@ class DataSender(Satellite):
         self.broadcast_offers()
 
     def do_launching(self, payload: any) -> str:
+        """Launch satellite. Start PushThread."""
         self._stop_pusher = threading.Event()
         self._push_thread = PushThread(
             name=self.name,
@@ -107,6 +109,7 @@ class DataSender(Satellite):
         return super().do_launching(payload)
 
     def do_landing(self, payload: any) -> str:
+        """Land satellite. Stop PushThread."""
         self._stop_pusher.set()
         try:
             self._push_thread.join(timeout=10)
@@ -115,9 +118,17 @@ class DataSender(Satellite):
         return super().do_landing(payload)
 
     def _wrap_start(self, payload: any) -> str:
-        self.data_queue.put(("Run setup Here", {"BOR": True}))
+        """Wrapper for the 'run' state of the FSM.
+
+        This method notifies the data queue of the beginning and end of the data run,
+        as well as performing basic satellite transitioning.
+
+        """
+        self.data_queue.put(("FIXME: Setup of run here?", CDTPMessageIdentifier.BOR))
         ret = super()._wrap_start(payload)
-        self.data_queue.put(("Run end Here", {"EOR": True}))
+        self.data_queue.put(
+            ("FIXME: Info about end of run here?", CDTPMessageIdentifier.EOR)
+        )
         return ret
 
     def do_run(self, payload: any) -> str:

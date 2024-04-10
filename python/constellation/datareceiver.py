@@ -64,7 +64,7 @@ class PullThread(threading.Thread):
                 # non-blocking call to prevent deadlocks
                 item = transmitter.recv(flags=zmq.NOBLOCK)
                 if item:
-                    self.queue.put(item, block=False)
+                    self.queue.put(item)
                     self._logger.debug(
                         f"Received packet as packet number {item.sequence_number}"
                     )
@@ -88,9 +88,9 @@ class PullThread(threading.Thread):
         return super().join(*args, **kwargs)
 
 
-def extract_num(s, p, ret=0):
+def extract_num(key, pattern: re.Pattern, ret=0):
     """Help function used for sorting data keys in write_data_virtual"""
-    search = p.search(s)
+    search = pattern.search(key)
     if search:
         return int(search.groups()[0])
     else:
@@ -111,7 +111,47 @@ class DataReceiver(Satellite):
 
         self.request(CHIRPServiceIdentifier.DATA)
 
-    # NOTE: This callback method is not correct. Both BroadcastManager and Satellite needs to be able to handle PullThreads
+    def do_initializing(self, payload: any) -> str:
+        return super().do_initializing(payload)
+
+    def do_launching(self, payload: any) -> str:
+        """Set up threads to listen to interfaces.
+
+        Stops any still-running threads.
+
+        """
+        # Set up the data pusher which will transmit
+        # data placed into the queue via ZMQ socket.
+        self._stop_pulling = threading.Event()
+        # TODO self._pull_interfaces should be filled via configuration options
+        for uuid, host in self._pull_interfaces.items():
+            address, port = host
+            self._start_thread(uuid, address, port)
+
+        return super().do_launching(payload)
+
+    def do_landing(self, payload: any) -> str:
+        """Stop pull threads."""
+        self._stop_pull_threads(10.0)
+        return super().do_landing(payload)
+
+    def on_failure(self):
+        """Stop all threads."""
+        self._stop_pull_threads(2.0)
+
+    def do_run(self, payload: any) -> str:
+        """Handle the data enqueued by the pull threads.
+
+        This method will be executed in a separate thread by the underlying
+        Satellite class. It therefore needs to monitor the self.stop_running
+        Event and close itself down if the Event is set.
+
+        This is only an abstract method. Inheriting classes must implement their
+        own acquisition method.
+
+        """
+        raise NotImplementedError
+
     @chirp_callback(CHIRPServiceIdentifier.DATA)
     def _add_sender_callback(self, service: DiscoveredService):
         """Callback method for connecting to data service."""
@@ -133,19 +173,7 @@ class DataReceiver(Satellite):
         # NOTE: Not sure this is the right way to handle late-coming satellite offers
         if self.fsm.current_state.id in [SatelliteState.ORBIT, SatelliteState.RUN]:
             uuid = str(service.host_uuid)
-            thread = PullThread(
-                name=uuid,
-                stopevt=self._stop_pulling,
-                interface=f"tcp://{service.address}:{service.port}",
-                queue=self.data_queue,
-                context=self.context,
-                daemon=True,  # terminate with the main thread
-            )
-            self._puller_threads[uuid] = thread
-            thread.start()
-            self.log.info(
-                f"Satellite {self.name} pulling data from {service.address}:{service.port}"
-            )
+            self._start_thread(uuid, service.address, service.port)
 
     def _remove_sender(self, service: DiscoveredService):
         """Removes sender from pool"""
@@ -154,55 +182,19 @@ class DataReceiver(Satellite):
         self._pull_interfaces.pop(uuid)
         self._puller_threads.pop(uuid)
 
-    def do_initializing(self, payload: any) -> str:
-        return super().do_initializing(payload)
-
-    def do_launching(self, payload: any) -> str:
-        """Set up threads to listen to interfaces.
-
-        Stops any still-running threads.
-
-        """
-        # Set up the data pusher which will transmit
-        # data placed into the queue via ZMQ socket.
-        self._stop_pulling = threading.Event()
-        # TODO self._pull_interfaces should be filled via configuration options
-        for uuid, host in self._pull_interfaces.items():
-            address, port = host
-            thread = PullThread(
-                name=uuid,
-                stopevt=self._stop_pulling,
-                interface=f"tcp://{address}:{port}",
-                queue=self.data_queue,
-                context=self.context,
-                daemon=True,  # terminate with the main thread
-            )
-            thread.name = f"{self.name}_{address}_{port}_pull-thread"
-            thread.start()
-            self._puller_threads[uuid] = thread
-            self.log.info(f"Satellite {self.name} pulling data from {address}:{port}")
-        return super().do_launching(payload)
-
-    def do_landing(self, payload: any) -> str:
-        self._stop_pull_threads(10.0)
-        return super().do_landing(payload)
-
-    def on_failure(self):
-        """Stop all threads."""
-        self._stop_pull_threads(2.0)
-
-    def do_run(self, payload: any) -> str:
-        """Handle the data enqueued by the pull threads.
-
-        This method will be executed in a separate thread by the underlying
-        Satellite class. It therefore needs to monitor the self.stop_running
-        Event and close itself down if the Event is set.
-
-        This is only an abstract method. Inheriting classes must implement their
-        own acquisition method.
-
-        """
-        raise NotImplementedError
+    def _start_thread(self, uuid: str, address, port: int):
+        thread = PullThread(
+            name=uuid,
+            stopevt=self._stop_pulling,
+            interface=f"tcp://{address}:{port}",
+            queue=self.data_queue,
+            context=self.context,
+            daemon=True,  # terminate with the main thread
+        )
+        thread.name = f"{self.name}_{address}_{port}_pull-thread"
+        thread.start()
+        self._puller_threads[uuid] = thread
+        self.log.info(f"Satellite {self.name} pulling data from {address}:{port}")
 
     def _stop_pull_threads(self, timeout=None) -> None:
         """Stop any running threads that pull data."""
@@ -221,9 +213,6 @@ class DataReceiver(Satellite):
             self._stop_pulling = None
             self._puller_threads = dict[str, PullThread]()
 
-    def do_stopping(self, payload: any) -> str:
-        return super().do_stopping(payload)
-
 
 class H5DataReceiverWriter(DataReceiver):
     """Satellite which receives data via ZMQ writing it to HDF5."""
@@ -232,46 +221,18 @@ class H5DataReceiverWriter(DataReceiver):
         super().__init__(*args, **kwargs)
 
         self.run_number = 0
+
+        # Tracker for which satellites have joined the current data run.
         self.running_sats = []
         # NOTE: Necessary because of .replace() in _open_file() overwriting the string, thus losing format
+        self.file_name_pattern = None
 
     def do_initializing(self, payload: any) -> str:
+        """Initialize the satellite. Set pattern for file name."""
         self.file_name_pattern = self.config.setdefault(
             "file_name_pattern", "default_name_{run_number}_{date}.h5"
         )
         return "Initializing"
-
-    def _open_file(self):
-        """Open the hdf5 file and return the file object."""
-        h5file = None
-        filename = self.file_name_pattern.format(
-            run_number=self.run_number,
-            date=datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S"),
-        )
-        if os.path.isfile(filename):
-            self.log.error(f"file already exists: {filename}")
-            raise RuntimeError(f"file already exists: {filename}")
-
-        self.log.debug("Creating file %s", filename)
-        # Create directory path.
-        directory = os.path.dirname(filename)
-        try:
-            os.makedirs(directory)
-        except (FileExistsError, FileNotFoundError):
-            pass
-        except Exception as exception:
-            raise RuntimeError(
-                f"unable to create directory {directory}: \
-                {type(exception)} {str(exception)}"
-            ) from exception
-        try:
-            h5file = h5py.File(filename, "w")
-        except Exception as exception:
-            self.log.error("Unable to open %s: %s", filename, str(exception))
-            raise RuntimeError(
-                f"Unable to open {filename}: {str(exception)}",
-            ) from exception
-        return h5file
 
     def write_data(self, h5file: h5py.File, item: CDTPMessage):
         """Write data to HDF5 format
@@ -390,7 +351,8 @@ class H5DataReceiverWriter(DataReceiver):
         Format: h5file -> Group (name) -> Multiple Datasets (item) + Virtual Dataset
 
         Writes data by adding a dataset containing item.payload to group name. Also builds
-        a virtual dataset from the group.
+        a virtual dataset from the group. This allows each data package to be kept in a separate
+        dataset along with the virtual dataset containing all other datasets concatenated.
 
         # TODO add a call to a "write_data" method that can be
         # overloaded by inheriting classes
@@ -474,6 +436,38 @@ class H5DataReceiverWriter(DataReceiver):
             h5file.close()
             self.running_sats = []
             return "Finished Acquisition"
+
+    def _open_file(self):
+        """Open the hdf5 file and return the file object."""
+        h5file = None
+        filename = self.file_name_pattern.format(
+            run_number=self.run_number,
+            date=datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S"),
+        )
+        if os.path.isfile(filename):
+            self.log.error(f"file already exists: {filename}")
+            raise RuntimeError(f"file already exists: {filename}")
+
+        self.log.debug("Creating file %s", filename)
+        # Create directory path.
+        directory = os.path.dirname(filename)
+        try:
+            os.makedirs(directory)
+        except (FileExistsError, FileNotFoundError):
+            pass
+        except Exception as exception:
+            raise RuntimeError(
+                f"unable to create directory {directory}: \
+                {type(exception)} {str(exception)}"
+            ) from exception
+        try:
+            h5file = h5py.File(filename, "w")
+        except Exception as exception:
+            self.log.error("Unable to open %s: %s", filename, str(exception))
+            raise RuntimeError(
+                f"Unable to open {filename}: {str(exception)}",
+            ) from exception
+        return h5file
 
 
 # -------------------------------------------------------------------------
