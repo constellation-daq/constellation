@@ -353,8 +353,6 @@ class RedPitayaSatellite(DataSender):
         # Obtain to which point the buffer has written
         self._writepos = self.get_write_pointer()
 
-        self.log.debug("Read pointer is positioned at: %s", self._readpos)
-        self.log.debug("Write pointer is positioned at: %s", self._writepos)
         # Skip sampling if we haven't moved
         if self._readpos == self._writepos:
             return None
