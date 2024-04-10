@@ -14,6 +14,9 @@
 #include <map>
 #include <thread>
 
+#include "constellation/core/message/CMDP1Message.hpp"
+
+using namespace constellation::message;
 using namespace constellation::metrics;
 
 void Manager::Metric::set(const config::Value& value) {
@@ -117,7 +120,13 @@ void Manager::run(const std::stop_token& stop_token) {
         auto next = Clock::time_point::max();
         for(auto& [key, timer] : metrics_) {
             if(timer->check()) {
-                // FIXME dispatch!
+                // Create message header
+                auto msghead = CMDP1Message::Header("test", Clock::now());
+
+                // Create and send CMDP message
+                auto msg = CMDP1StatMessage(key, std::move(msghead), timer->value(), timer->type()).assemble();
+
+                // FIXME .send(publisher)
             }
 
             // Update time point until we can wait:
