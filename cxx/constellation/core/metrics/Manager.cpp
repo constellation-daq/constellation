@@ -49,8 +49,8 @@ bool Manager::TimedMetric::condition() {
 Manager::Clock::time_point Manager::TimedMetric::next_trigger() const {
     return last_trigger_ + interval_;
 }
-Manager::TriggeredMetric::TriggeredMetric(const std::size_t triggers, config::Value value)
-    : Metric(value), triggers_(triggers) {
+Manager::TriggeredMetric::TriggeredMetric(const std::size_t triggers, const Type type, config::Value value)
+    : Metric(type, value), triggers_(triggers) {
     // We have an initial value, let's log it directly
     if(!std::holds_alternative<std::monostate>(value)) {
         current_triggers_ = triggers_;
@@ -95,16 +95,16 @@ void Manager::unregisterMetric(std::string topic) {
     metrics_.erase(topic);
 }
 
-bool Manager::registerTriggeredMetric(const std::string& topic, std::size_t triggers, config::Value value) {
+bool Manager::registerTriggeredMetric(const std::string& topic, std::size_t triggers, Type type, config::Value value) {
     std::unique_lock<std::mutex> lock {mt_};
-    metrics_[topic] = std::make_shared<TriggeredMetric>(triggers, value);
+    metrics_[topic] = std::make_shared<TriggeredMetric>(triggers, type, value);
     cv_.notify_all();
     return true;
 }
 
-bool Manager::registerTimedMetric(const std::string& topic, Clock::duration interval, config::Value value) {
+bool Manager::registerTimedMetric(const std::string& topic, Clock::duration interval, Type type, config::Value value) {
     std::unique_lock<std::mutex> lock {mt_};
-    metrics_[topic] = std::make_shared<TimedMetric>(interval, value);
+    metrics_[topic] = std::make_shared<TimedMetric>(interval, type, value);
     cv_.notify_all();
     return true;
 }

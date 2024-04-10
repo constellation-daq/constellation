@@ -20,6 +20,15 @@
 
 namespace constellation::metrics {
 
+    /** Metrics types */
+    enum class Type : std::uint8_t {
+        LAST_VALUE = 1,
+        ACCUMULATE = 2,
+        AVERAGE = 3,
+        RATE = 4,
+    };
+    using enum Type;
+
     /** Manager for Metrics handling & transmission */
     class Manager {
     public:
@@ -28,11 +37,15 @@ namespace constellation::metrics {
     private:
         class Metric {
         public:
-            Metric() = default;
+            Metric(const Type type) : type_(type) {};
 
-            Metric(config::Value value) : value_(value), changed_(true) {}
+            Metric(const Type type, config::Value value) : type_(type), value_(value), changed_(true) {}
 
             virtual void set(const config::Value& value);
+
+            config::Value value() const { return value_; }
+
+            Type type() const { return type_; }
 
             bool check();
             virtual Clock::time_point next_trigger() const { return Clock::time_point::max(); }
@@ -41,16 +54,15 @@ namespace constellation::metrics {
             virtual bool condition() = 0;
 
         private:
+            Type type_;
             config::Value value_ {};
             bool changed_ {false};
         };
 
         class TimedMetric : public Metric {
         public:
-            TimedMetric() = default;
-
-            TimedMetric(Clock::duration interval, config::Value value = {})
-                : Metric(value), interval_(interval), last_trigger_(Clock::now()) {}
+            TimedMetric(Clock::duration interval, const Type type, config::Value value = {})
+                : Metric(type, value), interval_(interval), last_trigger_(Clock::now()) {}
 
             bool condition() override;
             Clock::time_point next_trigger() const override;
@@ -62,9 +74,7 @@ namespace constellation::metrics {
 
         class TriggeredMetric : public Metric {
         public:
-            TriggeredMetric() = default;
-
-            TriggeredMetric(const std::size_t triggers, config::Value value);
+            TriggeredMetric(const std::size_t triggers, const Type type, config::Value value);
 
             void set(const config::Value& value) override;
 
@@ -130,7 +140,8 @@ namespace constellation::metrics {
          * @retval true if the metric was registered
          * @retval false if the metric was already registered
          */
-        CNSTLN_API bool registerTriggeredMetric(const std::string& topic, std::size_t triggers, config::Value value = {});
+        CNSTLN_API bool
+        registerTriggeredMetric(const std::string& topic, std::size_t triggers, Type type, config::Value value = {});
 
         /**
          * Register a metric which will be emitted in regular intervals
@@ -141,7 +152,8 @@ namespace constellation::metrics {
          * @retval true if the metric was registered
          * @retval false if the metric was already registered
          */
-        CNSTLN_API bool registerTimedMetric(const std::string& topic, Clock::duration interval, config::Value value = {});
+        CNSTLN_API bool
+        registerTimedMetric(const std::string& topic, Clock::duration interval, Type type, config::Value value = {});
 
     private:
         /**
