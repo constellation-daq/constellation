@@ -59,10 +59,11 @@ void Manager::unregisterMetric(std::string_view topic) {
     }
 }
 
-void Manager::registerTriggeredMetric(std::string_view topic, std::size_t triggers, Type type, config::Value value) {
+void Manager::registerTriggeredMetric(
+    std::string_view topic, std::string_view unit, Type type, std::size_t triggers, config::Value value) {
     std::unique_lock<std::mutex> lock {mt_};
     const auto [it, success] =
-        metrics_.emplace(std::make_pair(topic, std::make_shared<TriggeredMetric>(triggers, type, value)));
+        metrics_.emplace(std::make_pair(topic, std::make_shared<TriggeredMetric>(unit, type, triggers, value)));
 
     if(!success) {
         throw utils::LogicError("Metric \"" + std::string(topic) + "\" is already registered");
@@ -71,9 +72,11 @@ void Manager::registerTriggeredMetric(std::string_view topic, std::size_t trigge
     cv_.notify_all();
 }
 
-void Manager::registerTimedMetric(std::string_view topic, Clock::duration interval, Type type, config::Value value) {
+void Manager::registerTimedMetric(
+    std::string_view topic, std::string_view unit, Type type, Clock::duration interval, config::Value value) {
     std::unique_lock<std::mutex> lock {mt_};
-    const auto [it, success] = metrics_.emplace(std::make_pair(topic, std::make_shared<TimedMetric>(interval, type, value)));
+    const auto [it, success] =
+        metrics_.emplace(std::make_pair(topic, std::make_shared<TimedMetric>(unit, type, interval, value)));
 
     if(!success) {
         throw utils::LogicError("Metric \"" + std::string(topic) + "\" is already registered");
@@ -88,19 +91,19 @@ void Manager::run(const std::stop_token& stop_token) {
     while(!stop_token.stop_requested()) {
 
         auto next = Clock::time_point::max();
-        for(auto& [key, timer] : metrics_) {
-            if(timer->check()) {
+        for(auto& [key, metric] : metrics_) {
+            if(metric->check()) {
                 // Create message header
                 auto msghead = CMDP1Message::Header("test", Clock::now());
 
                 // Create and send CMDP message
-                auto msg = CMDP1StatMessage(key, std::move(msghead), timer->value(), timer->type()).assemble();
+                auto msg = CMDP1StatMessage(key, std::move(msghead), metric).assemble();
 
                 // FIXME .send(publisher)
             }
 
             // Update time point until we can wait:
-            next = std::min(next, timer->next_trigger());
+            next = std::min(next, metric->next_trigger());
         }
 
         cv_.wait_until(lock, next, [&]() { return stop_token.stop_requested(); });

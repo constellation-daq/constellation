@@ -151,27 +151,31 @@ namespace constellation::satellite {
         /**
          * Register a metric which will be emitted in regular intervals
          *
-         * @param topic Unique topic of the metric
+         * @param name Unique topic of the metric
+         * @param unit Unit of the provided value
+         * @param type Type of the metric
          * @param interval Minimum interval between consecutive emissions
          * @param value Initial value of the metric
-         * @retval true if the metric was registered
          */
-        void register_timed_metric(const std::string& topic,
-                                   metrics::Clock::duration interval,
+        void register_timed_metric(std::string_view name,
+                                   std::string_view unit,
                                    metrics::Type type,
+                                   metrics::Clock::duration interval,
                                    config::Value value = {}) const;
 
         /**
          * Register a metric which will be emitted after having been triggered a given number of times
          *
-         * @param topic Unique topic of the metric
+         * @param name Unique topic of the metric
+         * @param unit Unit of the provided value
+         * @param type Type of the metric
          * @param triggers Minimum number of triggers between consecutive emissions
          * @param value Initial value of the metric
-         * @retval true if the metric was registered
          */
-        void register_triggered_metric(const std::string& topic,
-                                       std::size_t triggers,
+        void register_triggered_metric(std::string_view name,
+                                       std::string_view unit,
                                        metrics::Type type,
+                                       std::size_t triggers,
                                        config::Value value = {}) const;
 
         /**

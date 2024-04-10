@@ -53,28 +53,27 @@ void Satellite::failure(State previous_state) {
 }
 
 
-void Satellite::register_timed_metric(const std::string& topic,
-                                      metrics::Clock::duration interval,
+void Satellite::register_timed_metric(std::string_view name,
+                                      std::string_view unit,
                                       metrics::Type type,
+                                      metrics::Clock::duration interval,
                                       config::Value value) const {
     auto* metrics_manager = metrics::Manager::getDefaultInstance();
     if(metrics_manager == nullptr) {
         metrics_manager = new metrics::Manager(getCanonicalName());
         metrics_manager->setAsDefaultInstance();
     }
-    metrics_manager->registerTimedMetric(topic, interval, type, std::move(value));
+    metrics_manager->registerTimedMetric(name, unit, type, interval, std::move(value));
 }
 
-void Satellite::register_triggered_metric(const std::string& topic,
-                                          std::size_t triggers,
-                                          metrics::Type type,
-                                          config::Value value) const {
+void Satellite::register_triggered_metric(
+    std::string_view name, std::string_view unit, metrics::Type type, std::size_t triggers, config::Value value) const {
     auto* metrics_manager = metrics::Manager::getDefaultInstance();
     if(metrics_manager == nullptr) {
         metrics_manager = new metrics::Manager(getCanonicalName());
         metrics_manager->setAsDefaultInstance();
     }
-    metrics_manager->registerTriggeredMetric(topic, triggers, type, std::move(value));
+    metrics_manager->registerTriggeredMetric(name, unit, type, triggers, std::move(value));
 }
 
 void Satellite::set_metric(const std::string& topic, config::Value value) const {

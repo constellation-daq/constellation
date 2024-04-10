@@ -74,21 +74,27 @@ namespace constellation::metrics {
          * Register a metric which will be emitted after having been triggered a given number of times
          *
          * @param topic Unique topic of the metric
+         * @param unit Unit of the provided metric value
+         * @param type Type of the metric
          * @param triggers Minimum number of triggers between consecutive emissions
          * @param value Initial value of the metric
          * @retval true if the metric was registered
          */
-        void registerTriggeredMetric(std::string_view topic, std::size_t triggers, Type type, config::Value value = {});
+        void registerTriggeredMetric(
+            std::string_view topic, std::string_view unit, Type type, std::size_t triggers, config::Value value = {});
 
         /**
          * Register a metric which will be emitted in regular intervals
          *
          * @param topic Unique topic of the metric
+         * @param unit Unit of the provided value
+         * @param type Type of the metric
          * @param interval Minimum interval between consecutive emissions
          * @param value Initial value of the metric
          * @retval true if the metric was registered
          */
-        void registerTimedMetric(std::string_view topic, Clock::duration interval, Type type, config::Value value = {});
+        void registerTimedMetric(
+            std::string_view topic, std::string_view unit, Type type, Clock::duration interval, config::Value value = {});
 
     private:
         /**

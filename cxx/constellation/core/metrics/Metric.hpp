@@ -95,4 +95,31 @@ namespace constellation::metrics {
         Type type_;
         config::Value value_ {};
     };
+
+
+    class TimedMetric : public Metric {
+    public:
+        TimedMetric(std::string_view unit, Type type, Clock::duration interval, config::Value value = {})
+            : Metric(unit, type, std::move(value)), interval_(interval), last_trigger_(Clock::now()) {}
+
+        bool condition() override;
+        Clock::time_point next_trigger() const override;
+
+    private:
+        Clock::duration interval_;
+        Clock::time_point last_trigger_;
+    };
+
+    class TriggeredMetric : public Metric {
+    public:
+        TriggeredMetric(std::string_view unit, Type type, std::size_t triggers, config::Value value);
+
+        void set(const config::Value& value) override;
+
+        bool condition() override;
+
+    private:
+        std::size_t triggers_;
+        std::size_t current_triggers_ {0};
+    };
 } // namespace constellation::metrics
