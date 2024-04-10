@@ -170,6 +170,13 @@ class RedPitayaSatellite(DataSender):
         super().__init__(*args, **kwargs)
         self._active_channels = []
         self._buffer = []
+        self.prev_cpu_idle, self.prev_cpu_time = self._get_cpu_times()
+        self.prev_tx = int(
+            self._get_val_from_file("/sys/class/net/eth0/statistics/tx_bytes")
+        )
+        self.prev_rx = int(
+            self._get_val_from_file("/sys/class/net/eth0/statistics/rx_bytes")
+        )
 
     def do_initializing(self, payload: any) -> str:
         try:
