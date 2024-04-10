@@ -179,8 +179,8 @@ class RedPitayaSatellite(DataSender):
         )
 
     def do_initializing(self, payload: any) -> str:
+        """Initialize satellite. Change the FPGA image and set register values."""
         try:
-            """Change the FPGA image"""
             # os.system('cat /root/Stopwatch.bit > /dev/xdevcfg')    # OS 1.04 or older
 
             bin_file = self.config["bin_file"]
