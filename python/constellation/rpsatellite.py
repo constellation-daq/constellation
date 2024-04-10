@@ -239,6 +239,7 @@ class RedPitayaSatellite(DataSender):
             ]  # Set test pulser active
 
             axi_array_contents.data_type = self.config["data_type"]
+            self.master = self.config["master"]
 
             rp.rp_Init()
         except (ConfigError, OSError) as e:
@@ -257,29 +258,31 @@ class RedPitayaSatellite(DataSender):
 
     def do_stopping(self, payload: any):
         """Stop acquisition by writing to address."""
-        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-        axi_mmap0 = mmap.mmap(
-            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
-        )
+        if self.master:
+            memory_file_handle = os.open("/dev/mem", os.O_RDWR)
+            axi_mmap0 = mmap.mmap(
+                fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
+            )
 
-        axi_numpy_array0 = np.recarray(1, axi_gpio_regset_stop, buf=axi_mmap0)
-        axi_array_contents0 = axi_numpy_array0[0]
-        axi_array_contents0.Externaltrigger = (
-            0  # Don'tOverride GPIO_N_0 to output ADC or DAC trigger
-        )
+            axi_numpy_array0 = np.recarray(1, axi_gpio_regset_stop, buf=axi_mmap0)
+            axi_array_contents0 = axi_numpy_array0[0]
+            axi_array_contents0.Externaltrigger = (
+                0  # Don'tOverride GPIO_N_0 to output ADC or DAC trigger
+            )
         return super().do_stopping(payload)
 
     def do_starting(self, payload: any) -> str:
         """Start acquisition by writing to address."""
-        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-        axi_mmap0 = mmap.mmap(
-            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
-        )
-        axi_numpy_array0 = np.recarray(1, axi_gpio_regset_start, buf=axi_mmap0)
-        axi_array_contents0 = axi_numpy_array0[0]
-        axi_array_contents0.Externaltrigger = (
-            3  # Override GPIO_N_0 to output ADC or DAC trigger
-        )
+        if self.master:
+            memory_file_handle = os.open("/dev/mem", os.O_RDWR)
+            axi_mmap0 = mmap.mmap(
+                fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
+            )
+            axi_numpy_array0 = np.recarray(1, axi_gpio_regset_start, buf=axi_mmap0)
+            axi_array_contents0 = axi_numpy_array0[0]
+            axi_array_contents0.Externaltrigger = (
+                3  # Override GPIO_N_0 to output ADC or DAC trigger
+            )
         return super().do_starting(payload)
 
     def do_run(self, payload):
