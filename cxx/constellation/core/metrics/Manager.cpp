@@ -15,6 +15,7 @@
 #include <thread>
 
 #include "constellation/core/message/CMDP1Message.hpp"
+#include "constellation/core/utils/exceptions.hpp"
 
 using namespace constellation::message;
 using namespace constellation::metrics;
@@ -114,29 +115,27 @@ void Manager::unregisterMetric(std::string_view topic) {
     }
 }
 
-bool Manager::registerTriggeredMetric(std::string_view topic, std::size_t triggers, Type type, config::Value value) {
+void Manager::registerTriggeredMetric(std::string_view topic, std::size_t triggers, Type type, config::Value value) {
     std::unique_lock<std::mutex> lock {mt_};
     const auto [it, success] =
         metrics_.emplace(std::make_pair(topic, std::make_shared<TriggeredMetric>(triggers, type, value)));
 
     if(!success) {
-        return false;
+        throw utils::LogicError("Metric \"" + std::string(topic) + "\" is already registered");
     }
 
     cv_.notify_all();
-    return true;
 }
 
-bool Manager::registerTimedMetric(std::string_view topic, Clock::duration interval, Type type, config::Value value) {
+void Manager::registerTimedMetric(std::string_view topic, Clock::duration interval, Type type, config::Value value) {
     std::unique_lock<std::mutex> lock {mt_};
     const auto [it, success] = metrics_.emplace(std::make_pair(topic, std::make_shared<TimedMetric>(interval, type, value)));
 
     if(!success) {
-        return false;
+        throw utils::LogicError("Metric \"" + std::string(topic) + "\" is already registered");
     }
 
     cv_.notify_all();
-    return true;
 }
 
 void Manager::run(const std::stop_token& stop_token) {

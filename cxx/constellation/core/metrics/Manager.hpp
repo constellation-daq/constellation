@@ -140,9 +140,8 @@ namespace constellation::metrics {
          * @param triggers Minimum number of triggers between consecutive emissions
          * @param value Initial value of the metric
          * @retval true if the metric was registered
-         * @retval false if the metric was already registered
          */
-        bool registerTriggeredMetric(std::string_view topic, std::size_t triggers, Type type, config::Value value = {});
+        void registerTriggeredMetric(std::string_view topic, std::size_t triggers, Type type, config::Value value = {});
 
         /**
          * Register a metric which will be emitted in regular intervals
@@ -151,9 +150,8 @@ namespace constellation::metrics {
          * @param interval Minimum interval between consecutive emissions
          * @param value Initial value of the metric
          * @retval true if the metric was registered
-         * @retval false if the metric was already registered
          */
-        bool registerTimedMetric(std::string_view topic, Clock::duration interval, Type type, config::Value value = {});
+        void registerTimedMetric(std::string_view topic, Clock::duration interval, Type type, config::Value value = {});
 
     private:
         /**
