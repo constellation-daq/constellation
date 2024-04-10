@@ -49,7 +49,7 @@ bool Manager::TimedMetric::condition() {
     return false;
 }
 
-Manager::Clock::time_point Manager::TimedMetric::next_trigger() const {
+Clock::time_point Manager::TimedMetric::next_trigger() const {
     return last_trigger_ + interval_;
 }
 Manager::TriggeredMetric::TriggeredMetric(const std::size_t triggers, const Type type, config::Value value)
@@ -73,6 +73,14 @@ bool Manager::TriggeredMetric::condition() {
     }
 
     return false;
+}
+
+Manager* Manager::getDefaultInstance() {
+    return Manager::default_manager_instance_;
+}
+
+void Manager::setAsDefaultInstance() {
+    Manager::default_manager_instance_ = this;
 }
 
 Manager::~Manager() noexcept {

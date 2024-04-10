@@ -29,11 +29,10 @@ namespace constellation::metrics {
     };
     using enum Type;
 
-    /** Manager for Metrics handling & transmission */
-    class Manager {
-    public:
-        using Clock = std::chrono::high_resolution_clock;
+    using Clock = std::chrono::high_resolution_clock;
 
+    /** Manager for Metrics handling & transmission */
+    class CNSTLN_API Manager {
     private:
         class Metric {
         public:
@@ -91,15 +90,15 @@ namespace constellation::metrics {
          *
          * @return Pointer to default CHIRP Manager (might be a nullptr)
          */
-        CNSTLN_API static Manager* getDefaultInstance();
+        static Manager* getDefaultInstance();
 
         /**
          * Set this CHIRP manager as the default instance
          */
-        CNSTLN_API void setAsDefaultInstance();
+        void setAsDefaultInstance();
 
     public:
-        CNSTLN_API Manager() : thread_(std::bind_front(&Manager::run, this)), logger_("STAT") {};
+        Manager(const std::string& name) : name_(name), logger_("STAT"), thread_(std::bind_front(&Manager::run, this)) {};
 
         // No copy/move constructor/assignment
         Manager(Manager& other) = delete;
@@ -107,7 +106,7 @@ namespace constellation::metrics {
         Manager(Manager&& other) = delete;
         Manager& operator=(Manager&& other) = delete;
 
-        CNSTLN_API virtual ~Manager() noexcept;
+        virtual ~Manager() noexcept;
 
         /**
          * Update the value cached for the given metric
@@ -115,21 +114,21 @@ namespace constellation::metrics {
          * \param topic Unique topic of the metric
          * \param value New value of the metric
          */
-        CNSTLN_API void setMetric(const std::string& topic, config::Value value);
+        void setMetric(const std::string& topic, config::Value value);
 
         /**
          * Unregister a previously registered metric from the manager
          *
          * @param topic Unique metric topic
          */
-        CNSTLN_API void unregisterMetric(std::string topic);
+        void unregisterMetric(std::string topic);
 
         /**
          * Unregisters all metrics registered in the manager
          *
          * Equivalent to calling `unregisterMetric` for every registered metric.
          */
-        CNSTLN_API void unregisterMetrics();
+        void unregisterMetrics();
 
         /**
          * Register a metric which will be emitted after having been triggered a given number of times
@@ -140,8 +139,7 @@ namespace constellation::metrics {
          * @retval true if the metric was registered
          * @retval false if the metric was already registered
          */
-        CNSTLN_API bool
-        registerTriggeredMetric(const std::string& topic, std::size_t triggers, Type type, config::Value value = {});
+        bool registerTriggeredMetric(const std::string& topic, std::size_t triggers, Type type, config::Value value = {});
 
         /**
          * Register a metric which will be emitted in regular intervals
@@ -152,8 +150,7 @@ namespace constellation::metrics {
          * @retval true if the metric was registered
          * @retval false if the metric was already registered
          */
-        CNSTLN_API bool
-        registerTimedMetric(const std::string& topic, Clock::duration interval, Type type, config::Value value = {});
+        bool registerTimedMetric(const std::string& topic, Clock::duration interval, Type type, config::Value value = {});
 
     private:
         /**
@@ -167,6 +164,9 @@ namespace constellation::metrics {
          */
         void run(const std::stop_token& stop_token);
 
+        const std::string name_;
+        log::Logger logger_;
+
         /** Map of registered metrics */
         std::map<std::string, std::shared_ptr<Metric>> metrics_;
 
@@ -179,10 +179,7 @@ namespace constellation::metrics {
         /** Conditions variable for waiting until the next metric emission */
         std::condition_variable cv_;
 
-        log::Logger logger_;
-
         // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
         inline static Manager* default_manager_instance_;
     };
-
 } // namespace constellation::metrics
