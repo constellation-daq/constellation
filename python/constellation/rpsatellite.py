@@ -429,6 +429,17 @@ class RedPitayaSatellite(DataSender):
         return utilization
 
     @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
+    def get_memory_load(self):
+        """Obtain current memory usage."""
+        # Obtain memory info from file
+        mem = self._get_val_from_file("/proc/meminfo").split("\n")
+        tot_mem = mem[0].split(" ")[9]
+        free_mem = mem[1].split(" ")[9]
+        used_mem = tot_mem - free_mem
+
+        return used_mem
+
+    @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_network_speeds(self):
         """Estimate current network speeds."""
         tx_bytes = int(
