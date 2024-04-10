@@ -9,7 +9,6 @@
 
 #include "CMDPSink.hpp"
 
-#include <algorithm>
 #include <filesystem>
 #include <string>
 
@@ -18,10 +17,12 @@
 #include <zmq.hpp>
 
 #include "constellation/core/logging/Level.hpp"
-#include "constellation/core/message/CMDP1Header.hpp"
+#include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace constellation::log;
+using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::string_literals;
 using namespace std::literals::chrono_literals;
@@ -52,18 +53,10 @@ void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
     // This way the socket can fetch already pending subscriptions
     std::call_once(setup_flag_, []() { std::this_thread::sleep_for(500ms); });
 
-    // Send topic
-    auto topic = "LOG/" + to_string(from_spdlog_level(msg.level));
-    if(msg.logger_name.size() > 0) {
-        topic += "/" + to_string(msg.logger_name);
-    }
-    std::transform(topic.begin(), topic.end(), topic.begin(), ::toupper);
-    publisher_.send(zmq::buffer(topic), zmq::send_flags::sndmore);
-
-    // Fill message header
-    auto msghead = message::CMDP1Header(asio::ip::host_name(), msg.time);
+    // Create message header
+    auto msghead = CMDP1Message::Header(asio::ip::host_name(), msg.time);
     // Add source and thread information only at TRACE level:
-    if(msg.level <= spdlog::level::trace) {
+    if(from_spdlog_level(msg.level) <= TRACE) {
         msghead.setTag("thread", static_cast<std::int64_t>(msg.thread_id));
         // Add log source if not empty
         if(!msg.source.empty()) {
@@ -72,12 +65,9 @@ void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
             msghead.setTag("funcname", msg.source.funcname);
         }
     }
-    // Send message header
-    msgpack::sbuffer sbuf {};
-    msgpack::pack(sbuf, msghead);
-    zmq::message_t header_frame {sbuf.data(), sbuf.size()};
-    publisher_.send(header_frame, zmq::send_flags::sndmore);
 
-    // Pack and send message
-    publisher_.send(zmq::const_buffer(msg.payload.data(), msg.payload.size()), zmq::send_flags::none);
+    // Create and send CMDP message
+    CMDP1LogMessage(from_spdlog_level(msg.level), to_string(msg.logger_name), std::move(msghead), to_string(msg.payload))
+        .assemble()
+        .send(publisher_);
 }

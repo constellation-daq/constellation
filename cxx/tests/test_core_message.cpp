@@ -13,14 +13,16 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <msgpack.hpp>
 
+#include "constellation/core/logging/Level.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
-#include "constellation/core/message/CMDP1Header.hpp"
+#include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/utils/casts.hpp"
 
 using namespace Catch::Matchers;
 using namespace constellation::config;
+using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::string_literals;
@@ -54,7 +56,7 @@ TEST_CASE("Header String Output", "[core][core::message]") {
     // Get fixed timepoint (unix epoch)
     auto tp = std::chrono::system_clock::from_time_t(std::time_t(0));
 
-    CMDP1Header cmdp1_header {"senderCMDP", tp};
+    CMDP1Message::Header cmdp1_header {"senderCMDP", tp};
 
     cmdp1_header.setTag("test_b", true);
     cmdp1_header.setTag("test_i", 7);
@@ -125,8 +127,8 @@ TEST_CASE("Header Packing / Unpacking (invalid protocol)", "[core][core::message
     msgpack::pack(sbuf, Dictionary {});
 
     // Check for wrong protocol to be picked up
-    REQUIRE_THROWS_AS(CMDP1Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}), InvalidProtocolError);
-    REQUIRE_THROWS_MATCHES(CMDP1Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}),
+    REQUIRE_THROWS_AS(CMDP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}), InvalidProtocolError);
+    REQUIRE_THROWS_MATCHES(CMDP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}),
                            InvalidProtocolError,
                            Message("Invalid protocol identifier \"INVALID\""));
     // CDTP1 has separate header implementation, also test this:
@@ -144,8 +146,8 @@ TEST_CASE("Header Packing / Unpacking (unexpected protocol)", "[core][core::mess
     msgpack::pack(sbuf, cscp1_header);
 
     // Check for wrong protocol to be picked up
-    REQUIRE_THROWS_AS(CMDP1Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}), UnexpectedProtocolError);
-    REQUIRE_THROWS_MATCHES(CMDP1Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}),
+    REQUIRE_THROWS_AS(CMDP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}), UnexpectedProtocolError);
+    REQUIRE_THROWS_MATCHES(CMDP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}),
                            UnexpectedProtocolError,
                            Message("Received protocol \"CSCP1\" does not match expected identifier \"CMDP1\""));
     // CDTP1 has separate header implementation, also test this:
@@ -153,6 +155,68 @@ TEST_CASE("Header Packing / Unpacking (unexpected protocol)", "[core][core::mess
     REQUIRE_THROWS_MATCHES(CDTP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}),
                            UnexpectedProtocolError,
                            Message("Received protocol \"CSCP1\" does not match expected identifier \"CDTP1\""));
+}
+
+TEST_CASE("Message Assembly / Disassembly (CMDP1)", "[core][core::message]") {
+    // Log message with logger topic
+    CMDP1LogMessage log_msg {Level::STATUS, "Logger_Topic", {"senderCMDP"}, "log message"};
+    auto log_frames = log_msg.assemble();
+
+    const auto log_msg2_raw = CMDP1Message::disassemble(log_frames);
+    REQUIRE(log_msg2_raw.isLogMessage());
+    REQUIRE_THAT(to_string(log_msg2_raw.getTopic()), Equals("LOG/STATUS/LOGGER_TOPIC"));
+
+    const auto log_msg2 = CMDP1LogMessage(log_msg2_raw);
+    REQUIRE_THAT(log_msg2.getHeader().to_string(), ContainsSubstring("Sender: senderCMDP"));
+    REQUIRE(log_msg2.isLogMessage());
+    REQUIRE(log_msg2.getLogLevel() == Level::STATUS);
+    REQUIRE_THAT(to_string(log_msg2.getLogTopic()), Equals("LOGGER_TOPIC"));
+    REQUIRE_THAT(to_string(log_msg2.getLogMessage()), Equals("log message"));
+
+    // Log message without logger topic (default logger)
+    CMDP1LogMessage dl_log_msg {Level::STATUS, "", {"senderCMDP"}, "log message"};
+    auto dl_log_frames = dl_log_msg.assemble();
+
+    auto dl_log_msg2 = CMDP1LogMessage::disassemble(dl_log_frames);
+    REQUIRE_THAT(to_string(dl_log_msg2.getLogTopic()), Equals(""));
+}
+
+TEST_CASE("Message Assembly / Disassembly (CMDP1, invalid number of frames)", "[core][core::message]") {
+    CMDP1LogMessage log_msg {Level::STATUS, "", {"senderCMDP"}, ""};
+    auto log_frames = log_msg.assemble();
+
+    // Add invalid fourth frame
+    log_frames.addstr("should not be here");
+
+    REQUIRE_THROWS_MATCHES(CMDP1Message::disassemble(log_frames),
+                           MessageDecodingError,
+                           Message("Error decoding message: Invalid number of message frames"));
+}
+
+TEST_CASE("Message Assembly / Disassembly (CMDP1, invalid topic)", "[core][core::message]") {
+    CMDP1LogMessage log_msg {Level::STATUS, "", {"senderCMDP"}, ""};
+    auto log_frames = log_msg.assemble();
+
+    // Add invalid fourth frame
+    zmq::message_t invalid_topic {"INVALID/TOPIC"s};
+    log_frames.at(0).swap(invalid_topic);
+
+    REQUIRE_THROWS_MATCHES(CMDP1Message::disassemble(log_frames),
+                           MessageDecodingError,
+                           Message("Error decoding message: Invalid message topic, neither log or statistics message"));
+}
+
+TEST_CASE("Message Assembly / Disassembly (CMDP1, invalid log level)", "[core][core::message]") {
+    CMDP1LogMessage log_msg {Level::STATUS, "", {"senderCMDP"}, ""};
+    auto log_frames = log_msg.assemble();
+
+    // Add invalid fourth frame
+    zmq::message_t invalid_topic {"LOG/ERROR"s};
+    log_frames.at(0).swap(invalid_topic);
+
+    REQUIRE_THROWS_MATCHES(CMDP1Message::disassemble(log_frames),
+                           MessageDecodingError,
+                           Message("Error decoding message: \"ERROR\" is not a valid log level"));
 }
 
 TEST_CASE("Message Assembly / Disassembly (CSCP1)", "[core][core::message]") {
@@ -176,6 +240,21 @@ TEST_CASE("Message Assembly / Disassembly (CDTP1)", "[core][core::message]") {
 
     REQUIRE_THAT(cdtp1_msg2.getHeader().to_string(), ContainsSubstring("Sender: senderCDTP"));
     REQUIRE(cdtp1_msg2.getPayload().empty());
+}
+
+TEST_CASE("Incorrect message type (CMDP1)", "[core][core::message]") {
+    auto tp = std::chrono::system_clock::now();
+
+    // Log message with logger topic
+    CMDP1LogMessage log_msg {Level::STATUS, "logger", {"senderCMDP", tp}, ""};
+    auto log_frames = log_msg.assemble();
+
+    // Actually a stat message TODO(stephan.lachnit): use CMDPStatMessage once implemented
+    zmq::message_t stat_topic {"STAT/STATI_TOPIC"s};
+    log_frames.at(0).swap(stat_topic);
+    REQUIRE_THROWS_MATCHES(CMDP1LogMessage::disassemble(log_frames),
+                           IncorrectMessageType,
+                           Message("Message type is incorrect: Not a log message"));
 }
 
 TEST_CASE("Message Payload (CSCP1)", "[core][core::message]") {

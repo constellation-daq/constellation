@@ -64,4 +64,19 @@ namespace constellation::message {
             error_message_ += "\"";
         }
     };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Incorrect message type
+     *
+     * The message type does not match the requested operation
+     */
+    class IncorrectMessageType : public utils::RuntimeError {
+    public:
+        explicit IncorrectMessageType(std::string_view why) {
+            error_message_ = "Message type is incorrect: ";
+            error_message_ += why;
+        }
+    };
+
 } // namespace constellation::message
