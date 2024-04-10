@@ -112,7 +112,7 @@ namespace constellation::metrics {
 
     class TriggeredMetric : public Metric {
     public:
-        TriggeredMetric(std::string_view unit, Type type, std::size_t triggers, config::Value value);
+        TriggeredMetric(std::string_view unit, Type type, std::size_t triggers, const config::Value& value);
 
         void set(const config::Value& value) override;
 
