@@ -415,7 +415,7 @@ class RedPitayaSatellite(DataSender):
         offset = int(self._get_val_from_file(paths[0]))
         raw = int(self._get_val_from_file(paths[1]))
         scale = float(self._get_val_from_file(paths[2]))
-        return ((float)(offset + raw)) * scale / 1000.0
+        return ((float)(offset + raw)) * scale / 1000.0, "C"
 
     @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_cpu_load(self):
@@ -426,7 +426,7 @@ class RedPitayaSatellite(DataSender):
         utilization = ((total_cpu_time2 - idle_cpu_time2) * 100) / total_cpu_time2
         self.prev_cpu_time = total_cpu_time
         self.prev_cpu_idle = idle_cpu_time
-        return utilization
+        return utilization, "%"
 
     @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_memory_load(self):
@@ -437,7 +437,7 @@ class RedPitayaSatellite(DataSender):
         free_mem = mem[1].split(" ")[9]
         used_mem = tot_mem - free_mem
 
-        return used_mem
+        return used_mem, "kb"
 
     @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_network_speeds(self):
@@ -455,7 +455,7 @@ class RedPitayaSatellite(DataSender):
         self.prev_tx = tx_bytes
         self.prev_rx = rx_bytes
 
-        return (tx_speed, rx_speed)
+        return (tx_speed, rx_speed), "kb/s"
 
     def _get_cpu_times(self):
         """Obtain idle time and active time of CPU."""
