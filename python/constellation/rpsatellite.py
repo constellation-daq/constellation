@@ -356,26 +356,42 @@ class RedPitayaSatellite(DataSender):
         if self._readpos == self._writepos:
             return None
 
-        # Calculate sample size
-        chunk = (self._writepos - self._readpos + BUFFER_SIZE) % BUFFER_SIZE
+        # Check if buffer has cycled
+        if self._writepos < self._readpos:
+            cycled = True
+        else:
+            cycled = False
 
         # Sample data for every channel and convert to list of numpy arrays
         data = []
-        # TODO: Fix magic indexation of channel
-        for idx, channel in enumerate(self._active_channels):
-            data.append(
-                self.sample_raw(
-                    channel,
-                    self._buffer[idx],
-                    chunk,
+        for _, channel in enumerate(self._active_channels):
+            # Buffer all appended data for channel before adding it together
+            buffer = []
+            # Append last part of buffer before resetting
+            if cycled:
+                buffer.append(
+                    self._sample_raw32(
+                        start=self._readpos,
+                        stop=BUFFER_SIZE,
+                        channel=channel,
+                    ),
                 )
+                self._readpos = 0
+
+            buffer.append(
+                self._sample_raw32(
+                    start=self._readpos,
+                    stop=self._writepos,
+                    channel=channel,
+                ),
             )
+            data.append(np.concatenate(buffer))
 
         # Update readpointer
         self._readpos = self._writepos
 
-        data = np.vstack(data, dtype=int).transpose().flatten()
-        return data
+        # data = np.vstack(data, dtype=int).transpose().flatten()
+        return np.array(data, dtype=np.int32)
 
     def _sample_raw32(self, start: int = 0, stop: int = 16384, channel: rp.RP_CHAN = 1):
         """Read out data in 32 bit form."""
