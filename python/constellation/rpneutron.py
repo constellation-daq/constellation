@@ -14,11 +14,8 @@ import time
 import numpy as np
 
 from .confighandler import ConfigError
-from .rpsatellite import (
-    RP_CHANNELS,
-    RedPitayaSatellite,
-    axi_gpio_regset_start_stop,
-)
+from .rpsatellite import RedPitayaSatellite, axi_gpio_regset_start_stop
+
 
 axi_gpio_regset_config = np.dtype(
     [
@@ -178,11 +175,6 @@ class RPNeutron(RedPitayaSatellite):
             axi_array_contents.active_channles = self.config[
                 "channels"
             ]  # Start Channels
-
-            # Track active channels
-            for idx, val in enumerate(format(self.config["channels"], "04b")):
-                if int(val):
-                    self._active_channels.append(RP_CHANNELS[idx])
 
             axi_array_contents.runnint_sum_Integration_time = self.config[
                 "running_sum_Integration_time"

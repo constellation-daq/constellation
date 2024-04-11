@@ -28,7 +28,7 @@ axi_gpio_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 axi_gpio_regset_reset = np.dtype([("data_type", "uint32")])
 
 BUFFER_SIZE = 16384
-RP_CHANNELS = [rp.RP_CH_4, rp.RP_CH_3, rp.RP_CH_2, rp.RP_CH_1]
+RP_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2, rp.RP_CH_3, rp.RP_CH_4]
 
 METRICS_PERIOD = 10
 
@@ -44,7 +44,6 @@ class RedPitayaSatellite(DataSender):
         super().__init__(*args, **kwargs)
         self.device = None
         self._regset_readout = None
-        self._active_channels = []
         self.prev_cpu_idle, self.prev_cpu_time = self._get_cpu_times()
         self.prev_tx = int(
             self._get_val_from_file("/sys/class/net/eth0/statistics/tx_bytes")
@@ -112,7 +111,7 @@ class RedPitayaSatellite(DataSender):
 
         # Sample data for every channel and convert to list of numpy arrays
         data = []
-        for _, channel in enumerate(self._active_channels):
+        for _, channel in enumerate(RP_CHANNELS):
             # Buffer all appended data for channel before adding it together
             buffer = []
             # Append last part of buffer before resetting
