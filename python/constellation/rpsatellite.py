@@ -178,6 +178,9 @@ class RedPitayaSatellite(DataSender):
         self.prev_rx = int(
             self._get_val_from_file("/sys/class/net/eth0/statistics/rx_bytes")
         )
+        self._readpos = None
+        self._writepos = None
+        self.master = False
 
     def do_initializing(self, payload: any) -> str:
         """Initialize satellite. Change the FPGA image and set register values."""
