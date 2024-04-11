@@ -12,9 +12,24 @@
 #include <cstdlib>
 #include <cxxabi.h>
 #include <memory>
+#include <source_location>
 #include <string>
 
 namespace constellation::utils {
+    struct dummy_type {};
+
+    template <typename T> auto embed_type() {
+        return std::string_view {std::source_location::current().function_name()};
+    }
+
+    template <typename T> inline std::string_view demangle(const T& = {}) {
+        auto dummy_sig = embed_type<dummy_type>();
+        auto start = dummy_sig.find("dummy_type");
+        auto embed_sig = embed_type<T>();
+        auto type_length = embed_sig.size() - dummy_sig.size() + 10;
+        return embed_sig.substr(start, type_length);
+    }
+
     /**
      * @brief Demangle the type to human-readable form if it is mangled
      * @param name The possibly mangled name
