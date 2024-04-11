@@ -316,6 +316,7 @@ class RedPitayaSatellite(DataSender):
 
     @cscp_requestable
     def get_device(self, _request: CSCPMessage):
+        """Get name of device."""
         return (
             "RedPitaya_125_14",
             None,
@@ -324,6 +325,7 @@ class RedPitayaSatellite(DataSender):
 
     @cscp_requestable
     def get_registers(self, _request: CSCPMessage):
+        """Get values stored in registers in axi_gpio_regset_readout."""
         return (
             str(self.read_registers()),
             None,
@@ -331,7 +333,7 @@ class RedPitayaSatellite(DataSender):
         )  # NOTE: Not sure if this is how we should do it
 
     def sample_raw(self, channel, buffer, chunk):
-        """Sample data from given channel"""
+        """Sample data from given channel."""
 
         rp.rp_AcqGetDataRaw(channel, self._readpos, chunk, buffer.cast())
 
@@ -345,7 +347,7 @@ class RedPitayaSatellite(DataSender):
     def get_data(
         self,
     ):  # TODO: Check performance. This was lifted from the redpitaya examples
-        """Sample every buffer channel and return raw data in numpy array"""
+        """Sample every buffer channel and return raw data in numpy array."""
 
         # Obtain to which point the buffer has written
         self._writepos = self.get_write_pointer()
