@@ -7,10 +7,12 @@ SPDX-License-Identifier: CC-BY-4.0
 This module provides an implementation for a Constellation Satellite on a RedPitaya device.
 """
 
+import logging
 import mmap
 import os
 import time
 
+import coloredlogs
 import numpy as np
 
 from .confighandler import ConfigError
@@ -140,3 +142,45 @@ class RPGamma(RedPitayaSatellite):
         for name, value in zip(names, axi_array_contents):
             ret[name] = value
         return ret
+
+
+# -------------------------------------------------------------------------
+
+
+def main(args=None):
+    "Start a RedPitaya satellite"
+    import argparse
+
+    parser = argparse.ArgumentParser(description=main.__doc__)
+    parser.add_argument("--log-level", default="info")
+    parser.add_argument("--cmd-port", type=int, default=23999)
+    parser.add_argument("--mon-port", type=int, default=55556)
+    parser.add_argument("--hb-port", type=int, default=61234)
+    parser.add_argument("--data-port", type=int, default=55557)
+    parser.add_argument("--interface", type=str, default="*")
+    parser.add_argument("--name", type=str, default="RedPitaya_gamma_sender")
+    parser.add_argument("--group", type=str, default="constellation")
+    args = parser.parse_args(args)
+
+    # set up logging
+    logger = logging.getLogger(args.name)
+    coloredlogs.install(level=args.log_level.upper(), logger=logger)
+
+    logger.info("Starting up satellite!")
+
+    # start server with remaining args
+    s = RPGamma(
+        name=args.name,
+        group=args.group,
+        cmd_port=args.cmd_port,
+        hb_port=args.hb_port,
+        mon_port=args.mon_port,
+        data_port=args.data_port,
+        interface=args.interface,
+    )
+
+    s.run_satellite()
+
+
+if __name__ == "__main__":
+    main()
