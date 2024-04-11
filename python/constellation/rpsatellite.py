@@ -19,138 +19,11 @@ import rp
 
 from .cmdp import MetricsType
 from .commandmanager import cscp_requestable
-from .confighandler import ConfigError
 from .cscp import CSCPMessage
 from .datasender import DataSender
 from .monitoring import schedule_metric
 
-axi_gpio_regset_config = np.dtype(
-    [
-        ("data_type", "uint32"),
-        ("active_channles", "uint32"),
-        ("use_test_pulser", "uint32"),
-        ("runnint_sum_Integration_time", "uint32"),
-        ("averaging_Integration_time", "uint32"),
-        ("trigger_level", "uint32"),
-        ("ToT_ch0_1", "uint32"),
-        ("ToT_ch2_3", "uint32"),
-        ("dist_ch0_1", "uint32"),
-        ("dist_ch2_3", "uint32"),
-        ("ratio", "uint32"),
-        ("trigger_per_s_ch0", "uint32"),
-        ("trigger_per_s_ch1", "uint32"),
-        ("trigger_per_s_ch2", "uint32"),
-        ("trigger_per_s_ch3", "uint32"),
-        ("mean_of_signal_ch0", "uint32"),
-        ("mean_of_signal_ch1", "uint32"),
-        ("mean_of_signal_ch2", "uint32"),
-        ("mean_of_signal_ch3", "uint32"),
-        ("mean_error_of_signal_ch0", "uint32"),
-        ("mean_error_of_signal_ch1", "uint32"),
-        ("mean_error_of_signal_ch2", "uint32"),
-        ("mean_error_of_signal_ch3", "uint32"),
-        ("total_number_of_triggers_ch0", "uint32"),
-        ("total_number_of_triggers_ch1", "uint32"),
-        ("total_number_of_triggers_ch2", "uint32"),
-        ("total_number_of_triggers_ch3", "uint32"),
-        ("total_numbers_of_over_threshold_triggers_ch0", "uint32"),
-        ("total_numbers_of_over_threshold_triggers_ch1", "uint32"),
-        ("total_numbers_of_over_threshold_triggers_ch2", "uint32"),
-        ("total_numbers_of_over_threshold_triggers_ch3", "uint32"),
-        ("total_numbers_of_over_ToT_triggers_ch0", "uint32"),
-        ("total_numbers_of_over_ToT_triggers_ch1", "uint32"),
-        ("total_numbers_of_over_ToT_triggers_ch2", "uint32"),
-        ("total_numbers_of_over_ToT_triggers_ch3", "uint32"),
-        ("total_numbers_of_over_ratio_triggers_ch0", "uint32"),
-        ("total_numbers_of_over_ratio_triggers_ch1", "uint32"),
-        ("total_numbers_of_over_ratio_triggers_ch2", "uint32"),
-        ("total_numbers_of_over_ratio_triggers_ch3", "uint32"),
-        ("total_numbers_of_over_distance_triggers_ch0", "uint32"),
-        ("total_numbers_of_over_distance_triggers_ch1", "uint32"),
-        ("total_numbers_of_over_distance_triggers_ch2", "uint32"),
-        ("total_numbers_of_over_distance_triggers_ch3", "uint32"),
-        ("minValueOut_ch0", "uint32"),
-        ("mintTOut_ch0", "uint32"),
-        ("totalTOut_ch0", "uint32"),
-        ("minValueOut_ch1", "uint32"),
-        ("mintTOut_ch1", "uint32"),
-        ("totalTOut_ch1", "uint32"),
-        ("minValueOut_ch2", "uint32"),
-        ("mintTOut_ch2", "uint32"),
-        ("totalTOut_ch2", "uint32"),
-        ("minValueOut_ch3", "uint32"),
-        ("mintTOut_ch3", "uint32"),
-        ("totalTOut_ch3", "uint32"),
-    ]
-)
-
-axi_gpio_regset_readout = np.dtype(
-    [
-        ("data_type", "uint32"),
-        ("active_channles", "uint32"),
-        ("use_test_pulser", "uint32"),
-        ("runnint_sum_Integration_time", "uint32"),
-        ("averaging_Integration_time", "uint32"),
-        ("trigger_level", "uint32"),
-        ("ToT_ch0_1", "uint32"),
-        ("ToT_ch2_3", "uint32"),
-        ("dist_ch0_1", "uint32"),
-        ("dist_ch2_3", "uint32"),
-        ("ratio", "uint32"),
-        ("trigger_per_s_ch0", "uint32"),
-        ("trigger_per_s_ch1", "uint32"),
-        ("trigger_per_s_ch2", "uint32"),
-        ("trigger_per_s_ch3", "uint32"),
-        ("mean_of_signal_ch0", "uint32"),
-        ("mean_of_signal_ch1", "uint32"),
-        ("mean_of_signal_ch2", "uint32"),
-        ("mean_of_signal_ch3", "uint32"),
-        ("mean_error_of_signal_ch0", "uint32"),
-        ("mean_error_of_signal_ch1", "uint32"),
-        ("mean_error_of_signal_ch2", "uint32"),
-        ("mean_error_of_signal_ch3", "uint32"),
-        ("total_number_of_triggers_ch0", "uint32"),
-        ("total_number_of_triggers_ch1", "uint32"),
-        ("total_number_of_triggers_ch2", "uint32"),
-        ("total_number_of_triggers_ch3", "uint32"),
-        ("total_numbers_of_over_threshold_triggers_ch0", "uint32"),
-        ("total_numbers_of_over_threshold_triggers_ch1", "uint32"),
-        ("total_numbers_of_over_threshold_triggers_ch2", "uint32"),
-        ("total_numbers_of_over_threshold_triggers_ch3", "uint32"),
-        ("total_numbers_of_over_ToT_triggers_ch0", "uint32"),
-        ("total_numbers_of_over_ToT_triggers_ch1", "uint32"),
-        ("total_numbers_of_over_ToT_triggers_ch2", "uint32"),
-        ("total_numbers_of_over_ToT_triggers_ch3", "uint32"),
-        ("total_numbers_of_over_ratio_triggers_ch0", "uint32"),
-        ("total_numbers_of_over_ratio_triggers_ch1", "uint32"),
-        ("total_numbers_of_over_ratio_triggers_ch2", "uint32"),
-        ("total_numbers_of_over_ratio_triggers_ch3", "uint32"),
-        ("total_numbers_of_over_distance_triggers_ch0", "uint32"),
-        ("total_numbers_of_over_distance_triggers_ch1", "uint32"),
-        ("total_numbers_of_over_distance_triggers_ch2", "uint32"),
-        ("total_numbers_of_over_distance_triggers_ch3", "uint32"),
-        ("minValueOut_ch0", "uint32"),
-        ("mintTOut_ch0", "uint32"),
-        ("totalTOut_ch0", "uint32"),
-        ("minValueOut_ch1", "uint32"),
-        ("mintTOut_ch1", "uint32"),
-        ("totalTOut_ch1", "uint32"),
-        ("minValueOut_ch2", "uint32"),
-        ("mintTOut_ch2", "uint32"),
-        ("totalTOut_ch2", "uint32"),
-        ("minValueOut_ch3", "uint32"),
-        ("mintTOut_ch3", "uint32"),
-        ("totalTOut_ch3", "uint32"),
-        ("Data_value_ch0", "uint32"),
-        ("Data_value_ch1", "uint32"),
-        ("Data_value_ch2", "uint32"),
-        ("Data_value_ch3", "uint32"),
-    ]
-)
-
-axi_gpio_regset_start = np.dtype([("Externaltrigger", "uint32")])
-
-axi_gpio_regset_stop = np.dtype([("Externaltrigger", "uint32")])
+axi_gpio_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 
 axi_gpio_regset_reset = np.dtype([("data_type", "uint32")])
 
@@ -169,8 +42,9 @@ class RedPitayaSatellite(DataSender):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        self.device = None
+        self._regset_readout = None
         self._active_channels = []
-        self._buffer = []
         self.prev_cpu_idle, self.prev_cpu_time = self._get_cpu_times()
         self.prev_tx = int(
             self._get_val_from_file("/sys/class/net/eth0/statistics/tx_bytes")
@@ -180,120 +54,13 @@ class RedPitayaSatellite(DataSender):
         )
         self._readpos = None
         self._writepos = None
-        self.master = False
-
-    def do_initializing(self, payload: any) -> str:
-        """Initialize satellite. Change the FPGA image and set register values."""
-        try:
-            # os.system('cat /root/Stopwatch.bit > /dev/xdevcfg')    # OS 1.04 or older
-
-            bin_file = self.config["bin_file"]
-            command = "/opt/redpitaya/bin/fpgautil -b " + bin_file
-            if os.system(command) != 0:  # OS 2.00 and above
-                msg = "System command failed."
-                raise ConfigError(msg)
-            time.sleep(5)
-
-            memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-            axi_mmap = mmap.mmap(
-                fileno=memory_file_handle,
-                length=mmap.PAGESIZE,
-                offset=self.config["offset"],
-            )
-            axi_numpy_array = np.recarray(1, axi_gpio_regset_config, buf=axi_mmap)
-            axi_array_contents = axi_numpy_array[0]
-
-            axi_array_contents.active_channles = self.config[
-                "channels"
-            ]  # Start Channels
-
-            # Track active channels
-            for idx, val in enumerate(format(self.config["channels"], "04b")):
-                if int(val):
-                    self._active_channels.append(RP_CHANNELS[idx])
-                    self._buffer.append(rp.i16Buffer(BUFFER_SIZE))
-
-            axi_array_contents.runnint_sum_Integration_time = self.config[
-                "running_sum_Integration_time"
-            ]  # Set 64 samples runnint_sum_Integration_time on all channels
-            axi_array_contents.averaging_Integration_time = self.config[
-                "averaging_Integration_time"
-            ]  # Sets averaging_Integration time To 16383 on all channels
-            axi_array_contents.trigger_level = self.config[
-                "trigger_level"
-            ]  # Sets trigger level =6 on all channels
-            axi_array_contents.ToT_ch0_1 = self.config[
-                "time_over_threshold_ch0_1"
-            ]  # Sets TOT=50 on channel 0-1
-            axi_array_contents.ToT_ch0_1 = self.config[
-                "time_over_threshold_ch2_3"
-            ]  # Sets TOT=50 on channel 2-3
-            axi_array_contents.dist_ch0_1 = self.config[
-                "dist_ch0_1"
-            ]  # Sets dist=625 on channel 0-1
-            axi_array_contents.dist_ch2_3 = self.config[
-                "dist_ch2_3"
-            ]  # Sets dist=625 on channel 2-3
-            axi_array_contents.ratio = self.config[
-                "ratio"
-            ]  # Sets ratio to 2 on all channels
-
-            axi_array_contents.use_test_pulser = self.config[
-                "test_pulser_rate"
-            ]  # Set test pulser active
-
-            axi_array_contents.data_type = self.config["data_type"]
-            self.master = self.config["master"]
-
-            rp.rp_Init()
-        except (ConfigError, OSError) as e:
-            self.log.error("Error configuring device. %s", e)
-        return super().do_initializing(payload)
-
-    def do_launching(self, payload: any) -> str:
-        """Callback method for the 'prepare' transition of the FSM."""
-        self.log.info("Launching RedPitaya satellite. Activating ACQ.")
-
-        return super().do_launching(payload)
-
-    def do_landing(self, payload: any) -> str:
-        self.log.info("Landing Red Pitaya satellite.")
-        return super().do_landing(payload)
-
-    def do_stopping(self, payload: any):
-        """Stop acquisition by writing to address."""
-        if self.master:
-            memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-            axi_mmap0 = mmap.mmap(
-                fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
-            )
-
-            axi_numpy_array0 = np.recarray(1, axi_gpio_regset_stop, buf=axi_mmap0)
-            axi_array_contents0 = axi_numpy_array0[0]
-            axi_array_contents0.Externaltrigger = (
-                0  # Don'tOverride GPIO_N_0 to output ADC or DAC trigger
-            )
-        return super().do_stopping(payload)
-
-    def do_starting(self, payload: any) -> str:
-        """Start acquisition by writing to address."""
-        if self.master:
-            memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-            axi_mmap0 = mmap.mmap(
-                fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
-            )
-            axi_numpy_array0 = np.recarray(1, axi_gpio_regset_start, buf=axi_mmap0)
-            axi_array_contents0 = axi_numpy_array0[0]
-            axi_array_contents0.Externaltrigger = (
-                3  # Override GPIO_N_0 to output ADC or DAC trigger
-            )
-        return super().do_starting(payload)
+        rp.rp_Init()
 
     def do_run(self, payload):
         """Run the satellite. Collect data from buffers and send it."""
         self.log.info("Red Pitaya satellite running, publishing events.")
 
-        self._readpos = self.get_write_pointer()
+        self._readpos = self._get_write_pointer()
         while not self._state_thread_evt.is_set():
             # Main DAQ-loop
             payload = self.get_data()
@@ -311,38 +78,19 @@ class RedPitayaSatellite(DataSender):
 
         return "Finished acquisition"
 
-    def do_interrupting(self):
-        return super().do_interrupting()
+    def reset(self):
+        """Reset DAQ."""
+        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
+        axi_mmap = mmap.mmap(
+            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
+        )
+        axi_numpy_array = np.recarray(1, axi_gpio_regset_reset, buf=axi_mmap)
+        axi_array_contents = axi_numpy_array[0]
 
-    @cscp_requestable
-    def get_device(self, _request: CSCPMessage):
-        """Get name of device."""
-        return (
-            "RedPitaya_125_14",
-            None,
-            None,
-        )  # NOTE: Placeholder: should be more detailed
+        axi_array_contents.data_type = 0x10  # Start Channels
 
-    @cscp_requestable
-    def get_registers(self, _request: CSCPMessage):
-        """Get values stored in registers in axi_gpio_regset_readout."""
-        return (
-            str(self.read_registers()),
-            None,
-            None,
-        )  # NOTE: Not sure if this is how we should do it
-
-    def sample_raw(self, channel, buffer, chunk):
-        """Sample data from given channel."""
-
-        rp.rp_AcqGetDataRaw(channel, self._readpos, chunk, buffer.cast())
-
-        data_raw = np.zeros(chunk, dtype=int)
-
-        for idx in range(0, chunk, 1):
-            data_raw[idx] = buffer[idx]
-
-        return data_raw
+        time.sleep(0.1)
+        axi_array_contents.data_type = 0x0  # Start Channels
 
     def get_data(
         self,
@@ -350,7 +98,7 @@ class RedPitayaSatellite(DataSender):
         """Sample every buffer channel and return raw data in numpy array."""
 
         # Obtain to which point the buffer has written
-        self._writepos = self.get_write_pointer()
+        self._writepos = self._get_write_pointer()
 
         # Skip sampling if we haven't moved
         if self._readpos == self._writepos:
@@ -393,61 +141,23 @@ class RedPitayaSatellite(DataSender):
         # data = np.vstack(data, dtype=int).transpose().flatten()
         return np.array(data, dtype=np.int32)
 
-    def _sample_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
-        """Read out data in 32 bit form."""
+    @cscp_requestable
+    def get_device(self, _request: CSCPMessage):
+        """Get name of device."""
+        return (
+            self.device,
+            None,
+            None,
+        )  # NOTE: Placeholder: should be more detailed
 
-        class Array(ctypes.Structure):
-            """Define the struct in Python"""
-
-            _fields_ = [("data", ctypes.POINTER(ctypes.c_uint32))]
-
-        # Load the shared library
-        lib = ctypes.CDLL("/root/read_data32.so")
-
-        # Define the argument and return types of the function
-        lib.readData.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
-        lib.readData.restype = Array
-
-        # Define register offset depending onc channel
-        if channel == rp.RP_CH_1:
-            offset = 1074855936
-        elif channel == rp.RP_CH_2:
-            offset = 1074921472
-        elif channel == rp.RP_CH_3:
-            offset = 1075904512
-        elif channel == rp.RP_CH_4:
-            offset = 1075970048
-
-        # Call the C function
-        result = lib.readData(0, 16384, offset)
-        lib.freeData(result.data)
-
-        # Convert the result to a NumPy array
-        data_array = np.ctypeslib.as_array(result.data, shape=(16384,))[start:stop]
-
-        return data_array
-
-    def get_write_pointer(self):
-        """Obtain write pointer"""
-        return rp.rp_AcqGetWritePointer()[1]
-
-    def read_registers(self):
-        """
-        Reads the stored values of the axi_gpio_regset and returns a
-        tuple of their respective names and values.
-        """
-        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-        axi_mmap = mmap.mmap(
-            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
-        )
-        axi_numpy_array = np.recarray(1, axi_gpio_regset_readout, buf=axi_mmap)
-        axi_array_contents = axi_numpy_array[0]
-        names = [field[0] for field in axi_gpio_regset_readout.descr]
-
-        ret = {}
-        for name, value in zip(names, axi_array_contents):
-            ret[name] = value
-        return ret
+    @cscp_requestable
+    def get_registers(self, _request: CSCPMessage):
+        """Get values stored in registers in _regset_readout."""
+        return (
+            str(self._read_registers()),
+            None,
+            None,
+        )  # NOTE: Not sure if this is how we should do it
 
     @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_cpu_temperature(self):
@@ -503,6 +213,79 @@ class RedPitayaSatellite(DataSender):
 
         return (tx_speed, rx_speed), "kb/s"
 
+    def _get_write_pointer(self):
+        """Obtain write pointer"""
+        return rp.rp_AcqGetWritePointer()[1]
+
+    def _read_registers(self):
+        """
+        Reads the stored values of the axi_gpio_regset and returns a
+        tuple of their respective names and values.
+
+        If no readout of axi_gpio_regset is specified the method returns None.
+        """
+        if not self._regset_readout:
+            return None
+
+        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
+        axi_mmap = mmap.mmap(
+            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
+        )
+        axi_numpy_array = np.recarray(1, self._regset_readout, buf=axi_mmap)
+        axi_array_contents = axi_numpy_array[0]
+        names = [field[0] for field in self._regset_readout.descr]
+
+        ret = {}
+        for name, value in zip(names, axi_array_contents):
+            ret[name] = value
+        return ret
+
+    def _sample_raw(self, channel, buffer, chunk):
+        """Sample data from given channel."""
+
+        rp.rp_AcqGetDataRaw(channel, self._readpos, chunk, buffer.cast())
+
+        data_raw = np.zeros(chunk, dtype=int)
+
+        for idx in range(0, chunk, 1):
+            data_raw[idx] = buffer[idx]
+
+        return data_raw
+
+    def _sample_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
+        """Read out data in 32 bit form."""
+
+        class Array(ctypes.Structure):
+            """Define the struct in Python"""
+
+            _fields_ = [("data", ctypes.POINTER(ctypes.c_uint32))]
+
+        # Load the shared library
+        lib = ctypes.CDLL("/root/read_data32.so")
+
+        # Define the argument and return types of the function
+        lib.readData.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
+        lib.readData.restype = Array
+
+        # Define register offset depending onc channel
+        if channel == rp.RP_CH_1:
+            offset = 1074855936
+        elif channel == rp.RP_CH_2:
+            offset = 1074921472
+        elif channel == rp.RP_CH_3:
+            offset = 1075904512
+        elif channel == rp.RP_CH_4:
+            offset = 1075970048
+
+        # Call the C function
+        result = lib.readData(0, 16384, offset)
+        lib.freeData(result.data)
+
+        # Convert the result to a NumPy array
+        data_array = np.ctypeslib.as_array(result.data, shape=(16384,))[start:stop]
+
+        return data_array
+
     def _get_cpu_times(self):
         """Obtain idle time and active time of CPU."""
         # Get the line containing total values of CPU time
@@ -532,6 +315,7 @@ class RedPitayaSatellite(DataSender):
 
 
 def main(args=None):
+    "Start a RedPitaya satellite"
     import argparse
 
     parser = argparse.ArgumentParser(description=main.__doc__)
