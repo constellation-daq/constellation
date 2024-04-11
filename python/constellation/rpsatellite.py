@@ -393,7 +393,7 @@ class RedPitayaSatellite(DataSender):
         # data = np.vstack(data, dtype=int).transpose().flatten()
         return np.array(data, dtype=np.int32)
 
-    def _sample_raw32(self, start: int = 0, stop: int = 16384, channel: rp.RP_CHAN = 1):
+    def _sample_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
         """Read out data in 32 bit form."""
 
         class Array(ctypes.Structure):
