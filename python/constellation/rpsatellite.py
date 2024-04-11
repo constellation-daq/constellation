@@ -289,7 +289,6 @@ class RedPitayaSatellite(DataSender):
         """Run the satellite. Collect data from buffers and send it."""
         self.log.info("Red Pitaya satellite running, publishing events.")
 
-        time_stamp = time.time_ns()
         self._readpos = self.get_write_pointer()
         while not self._state_thread_evt.is_set():
             # Main DAQ-loop
@@ -302,15 +301,6 @@ class RedPitayaSatellite(DataSender):
             meta = {
                 "dtype": f"{payload.dtype}",
             }
-
-            # Expanded meta data sent periodically
-            duration = (time.time_ns() - time_stamp) / 1000000000
-            if duration > METRICS_PERIOD:
-                # FIXME: Temporary solution! This data should be sent via CMDP and run from init/launch!
-                meta["temp"] = self.get_cpu_temperature()
-                meta["cpu_load"] = self.get_cpu_load()
-                meta["data_speeds"] = self.get_network_speeds()
-                time_stamp = time.time_ns()
 
             # Format payload to serializable
             self.data_queue.put((payload.tolist(), meta))
