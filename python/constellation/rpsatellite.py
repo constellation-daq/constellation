@@ -7,6 +7,7 @@ SPDX-License-Identifier: CC-BY-4.0
 This module provides an implementation for a Constellation Satellite on a RedPitaya device.
 """
 
+import ctypes
 import logging
 import mmap
 import os
@@ -370,6 +371,40 @@ class RedPitayaSatellite(DataSender):
 
         data = np.vstack(data, dtype=int).transpose().flatten()
         return data
+
+    def _sample_raw32(self, start: int = 0, stop: int = 16384, channel: rp.RP_CHAN = 1):
+        """Read out data in 32 bit form."""
+
+        class Array(ctypes.Structure):
+            """Define the struct in Python"""
+
+            _fields_ = [("data", ctypes.POINTER(ctypes.c_uint32))]
+
+        # Load the shared library
+        lib = ctypes.CDLL("/root/read_data32.so")
+
+        # Define the argument and return types of the function
+        lib.readData.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
+        lib.readData.restype = Array
+
+        # Define register offset depending onc channel
+        if channel == rp.RP_CH_1:
+            offset = 1074855936
+        elif channel == rp.RP_CH_2:
+            offset = 1074921472
+        elif channel == rp.RP_CH_3:
+            offset = 1075904512
+        elif channel == rp.RP_CH_4:
+            offset = 1075970048
+
+        # Call the C function
+        result = lib.readData(0, 16384, offset)
+        lib.freeData(result.data)
+
+        # Convert the result to a NumPy array
+        data_array = np.ctypeslib.as_array(result.data, shape=(16384,))[start:stop]
+
+        return data_array
 
     def get_write_pointer(self):
         """Obtain write pointer"""
