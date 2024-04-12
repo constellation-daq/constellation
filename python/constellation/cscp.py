@@ -167,13 +167,13 @@ class CommandTransmitter:
         stream.write(packer.pack(msg))
         flags = zmq.SNDMORE | flags
         self.msgheader.send(self.socket, meta=meta, flags=flags)
-        if not payload:
+        if payload is None:
             # invert+and: disable SNDMORE bit
             flags = flags & ~zmq.SNDMORE
         self.socket.send(
             stream.getbuffer(),
             flags=flags,
         )
-        if payload:
+        if payload is not None:
             flags = flags & ~zmq.SNDMORE
             self.socket.send(packer.pack(payload), flags)
