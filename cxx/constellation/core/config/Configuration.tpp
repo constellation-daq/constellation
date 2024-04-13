@@ -35,7 +35,7 @@ namespace constellation::config {
             throw MissingKeyError(key);
         } catch(const std::bad_variant_access&) {
             // Value held by the dictionary entry could not be cast to desired type
-            throw InvalidTypeError(key, config_.at(key).type(), typeid(T));
+            throw InvalidTypeError(key, config_.at(key).demangle(), utils::demangle<T>());
         } catch(const std::invalid_argument& error) {
             // Value held by the dictionary entry could not be converted to desired type
             throw InvalidValueError(config_.at(key).str(), key, error.what());
@@ -56,7 +56,7 @@ namespace constellation::config {
             config_[key] = {Value::set(val), mark_used};
         } catch(const std::bad_cast&) {
             // Value held by the dictionary entry could not be cast to desired type
-            throw InvalidTypeError(key, typeid(T), typeid(value_t));
+            throw InvalidTypeError(key, utils::demangle<T>(), utils::demangle<value_t>());
         } catch(const std::overflow_error& error) {
             // FIXME to_string utils need to be extended for us!
             throw InvalidValueError("std::to_string(val)", key, error.what());

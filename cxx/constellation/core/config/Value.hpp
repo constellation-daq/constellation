@@ -21,6 +21,7 @@
 #include <msgpack/sbuffer_decl.hpp>
 
 #include "constellation/build.hpp"
+#include "constellation/core/utils/type.hpp"
 
 namespace constellation::config {
 
@@ -71,6 +72,14 @@ namespace constellation::config {
          * @return String representation of the value
          */
         std::string str() const;
+
+        /**
+         * @brief Demangle type held by the Value
+         * @return Demangled name of the currently held type
+         */
+        inline std::string_view demangle() const {
+            return std::visit([&](auto&& arg) { return utils::demangle<std::decay_t<decltype(arg)>>(); }, *this);
+        }
 
         /**
          * @brief Get value in requested type

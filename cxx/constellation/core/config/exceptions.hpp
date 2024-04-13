@@ -49,18 +49,15 @@ namespace constellation::config {
          * @param type Type the value should have been converted to
          * @param reason Reason why the conversion failed
          */
-        InvalidTypeError(const std::string& key,
-                         const std::type_info& vtype,
-                         const std::type_info& type,
-                         const std::string& reason = "") {
+        InvalidTypeError(std::string_view key, std::string_view vtype, std::string_view type, std::string_view reason = "") {
             // FIXME wording
             error_message_ = "Could not convert value of type '";
-            error_message_ += utils::demangle(vtype);
+            error_message_ += std::string(vtype);
             error_message_ += "' to type '";
-            error_message_ += utils::demangle(type);
-            error_message_ += "' for key '" + key + "'";
+            error_message_ += std::string(type);
+            error_message_ += "' for key '" + std::string(key) + "'";
             if(!reason.empty()) {
-                error_message_ += ": " + reason;
+                error_message_ += ": " + std::string(reason);
             }
         }
     };
