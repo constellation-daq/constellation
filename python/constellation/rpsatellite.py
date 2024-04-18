@@ -73,7 +73,7 @@ class RedPitayaSatellite(DataSender):
             }
 
             # Format payload to serializable
-            self.data_queue.put((payload.tolist(), meta))
+            self.data_queue.put((payload.tobytes(), meta))
 
         return "Finished acquisition"
 
