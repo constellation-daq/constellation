@@ -51,8 +51,8 @@ class RedPitayaSatellite(DataSender):
         self.prev_rx = int(
             self._get_val_from_file("/sys/class/net/eth0/statistics/rx_bytes")
         )
-        self._readpos = None
-        self._writepos = None
+        self._readpos = 0
+        self._writepos = 0
         rp.rp_Init()
 
     def do_run(self, payload):
