@@ -123,22 +123,28 @@ class RedPitayaSatellite(DataSender):
                         channel=channel,
                     ),
                 )
-                self._readpos = 0
-
-            buffer.append(
-                self._sample_raw32(
-                    start=self._readpos,
-                    stop=self._writepos,
-                    channel=channel,
-                ),
-            )
+                buffer.append(
+                    self._sample_raw32(
+                        start=0,
+                        stop=self._writepos,
+                        channel=channel,
+                    )
+                )
+            else:
+                buffer.append(
+                    self._sample_raw32(
+                        start=self._readpos,
+                        stop=self._writepos,
+                        channel=channel,
+                    ),
+                )
             data.append(np.concatenate(buffer))
 
         # Update readpointer
         self._readpos = self._writepos
 
         # data = np.vstack(data, dtype=int).transpose().flatten()
-        return np.array(data, dtype=np.int32)
+        return np.asarray(data, dtype=np.int32)
 
     @cscp_requestable
     def get_device(self, _request: CSCPMessage):
