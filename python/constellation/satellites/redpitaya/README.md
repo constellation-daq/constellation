@@ -115,11 +115,8 @@ To launch the satellite on boot of the system, create a `.service`-file with the
 [Unit]
 Description=RedPitaya Satellite service
 After=multi-user.target
-# StartLimitIntervalSec = 0
 
 [Service]
-# Type should probably be exec (wait until fork() and execve() have been executed)
-# or notify (expect "READY=1" notification via sd_notify())
 Type=simple
 Restart=always
 RestartSec=1
