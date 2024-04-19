@@ -7,7 +7,7 @@ description: "Several satellites running on Red Pitaya systems"
 ---
 
 ## Red Pitaya Constellation Installation
-This how-to guide will walk through how to install a new satellite on a Red Pitaya SBC.
+Follow these instructions to install a new satellite on a Red Pitaya SBC.
 
 ### Background
 
