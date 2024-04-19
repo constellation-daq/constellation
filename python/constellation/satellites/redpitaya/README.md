@@ -1,4 +1,6 @@
-# RedPitaya Constellation Installation
+# Constellation on RedPitaya
+
+## RedPitaya Constellation Installation
 This how-to guide will walk through how to install a new satellite on a RedPitaya SBC.
 
 ## Background
@@ -104,3 +106,34 @@ python -m constellation.core.rpsatellite
 ## Known issues
 
 - When building constellation on the RedPitaya the process is very slow and has a risk of timing out.
+
+## Starting satellite on boot
+
+To launch the satellite on boot of the system, create a `.service`-file with the following service script.
+
+```bash
+[Unit]
+Description=RedPitaya Satellite service
+After=multi-user.target
+# StartLimitIntervalSec = 0
+
+[Service]
+# Type should probably be exec (wait until fork() and execve() have been executed)
+# or notify (expect "READY=1" notification via sd_notify())
+Type=simple
+Restart=always
+RestartSec=1
+ExecStart=/path/to/python -m constellation.<satellite_module> --<arguments>
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target
+```
+
+To enable the service, place the file in the `/etc/systemd/system/` directory and call:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable <SERVICE_NAME>.service
+sudo systemctl start <SERVICE_NAME>.service
+```
