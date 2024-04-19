@@ -1,6 +1,6 @@
 ---
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
-# SPDX-License-Identifier: CC-BY-4.0 OR EUPL1.2
+# SPDX-License-Identifier: CC-BY-4.0
 
 title: "Constellation on Red Pitaya"
 description: "Several satellites running on Red Pitaya systems"
