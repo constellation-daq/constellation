@@ -2,14 +2,16 @@
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC-BY-4.0 OR EUPL1.2
 
-title: "Red Pitaya Satellites"
+title: "Constellation on Red Pitaya"
 description: "Several satellites running on Red Pitaya systems"
 ---
 
+## Red Pitaya Constellation Installation
+This how-to guide will walk through how to install a new satellite on a Red Pitaya SBC.
 
 ### Background
 
-In order to run the constellation framework on a RedPitaya we need `python 3.11` or higher. At the time of writing most RedPitaya boards only have `python 3.10` installed and, due to the 32-bit CPU, options like [Anaconda](https://www.anaconda.com/) or [Miniforge](https://github.com/conda-forge/miniforge) are limited. A possible solution is to use [pyenv](https://github.com/pyenv/pyenv) which similarly lets you install and build any python version to use on a per-project basis.
+In order to run the constellation framework on a Red Pitaya we need `python 3.11` or higher. At the time of writing most Red Pitaya boards only have `python 3.10` installed and, due to the 32-bit CPU, options like [Anaconda](https://www.anaconda.com/) or [Miniforge](https://github.com/conda-forge/miniforge) are limited. A possible solution is to use [pyenv](https://github.com/pyenv/pyenv) which similarly lets you install and build any python version to use on a per-project basis.
 
 ### Install potential dependencies for `pyenv`
 
@@ -95,10 +97,10 @@ pip install -e . --no-build-isolation
 ```
 
 *Note: if ninja is instead installed on a system level, then `pip install -e .` is enough.*
-### Set `python` path in `.bashrc` (necessary for RedPitaya API)
+### Set `python` path in `.bashrc` (necessary for Red Pitaya API)
 
 ```bash
-echo 'PYTHONPATH=/opt/redpitaya/lib/python/:$PYTHONPATH' >> ~/.bashrc
+echo 'PYTHONPATH=/opt/Red Pitaya/lib/python/:$PYTHONPATH' >> ~/.bashrc
 ```
 
 ### Launch satellite
@@ -109,7 +111,7 @@ python -m constellation.core.rpsatellite
 
 ### Known issues
 
-- When building constellation on the RedPitaya the process is very slow and has a risk of timing out.
+- When building constellation on the Red Pitaya the process is very slow and has a risk of timing out.
 
 ## Starting satellite on boot
 
@@ -117,7 +119,7 @@ To launch the satellite on boot of the system, create a `.service`-file with the
 
 ```bash
 [Unit]
-Description=RedPitaya Satellite service
+Description=Red Pitaya Satellite service
 After=multi-user.target
 
 [Service]
