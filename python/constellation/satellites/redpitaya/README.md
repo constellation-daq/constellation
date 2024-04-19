@@ -1,7 +1,11 @@
-# Constellation on RedPitaya
+---
+# SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+# SPDX-License-Identifier: CC-BY-4.0 OR EUPL1.2
 
-## RedPitaya Constellation Installation
-This how-to guide will walk through how to install a new satellite on a RedPitaya SBC.
+title: "Red Pitaya Satellites"
+description: "Several satellites running on Red Pitaya systems"
+---
+
 
 ### Background
 
