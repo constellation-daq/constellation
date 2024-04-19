@@ -16,6 +16,10 @@ The five Constellation communication protocols are described in the following, o
 (cscp)=
 ## Command & Controlling
 
+Commands from controller instances to satellites are transmitted via the Constellation Satellite Control Protocol (CSCP). It
+resembles a client-server architecture with the typical request-reply pattern. Here, the satellite acts as the server while
+the controller assumes the role of the client.
+
 (cdtp)=
 ## Data Transmission
 

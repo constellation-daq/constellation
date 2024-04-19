@@ -166,7 +166,8 @@ class HeartbeatChecker:
 
     def stop(self) -> None:
         """Stop heartbeat checking."""
-        self._stop_threads.set()
+        if self._stop_threads:
+            self._stop_threads.set()
         for thread in self._threads.values():
             thread.join(1)
         for tm in self._transmitters.values():

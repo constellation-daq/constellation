@@ -49,16 +49,16 @@ namespace constellation::config {
             /**
              * @brief Explicit copy constructor to allow copying of the map keys
              */
-            AccessMarker(const AccessMarker& rhs);
+            AccessMarker(const AccessMarker& other);
 
             /**
              * @brief Explicit copy assignment operator to allow copying of the map keys
              */
-            AccessMarker& operator=(const AccessMarker& rhs);
+            AccessMarker& operator=(const AccessMarker& other);
 
             // Default move constructor/assignment
-            AccessMarker(AccessMarker&&) noexcept = default;
-            AccessMarker& operator=(AccessMarker&&) = default;
+            AccessMarker(AccessMarker&& other) noexcept = default;
+            AccessMarker& operator=(AccessMarker&& other) = default;
 
             /**
              * @brief Method to register a key for a new access marker
@@ -102,10 +102,10 @@ namespace constellation::config {
         Configuration(const Dictionary& dict);
 
         // Default copy/move constructor/assignment
-        Configuration(const Configuration&) = default;
-        Configuration& operator=(const Configuration&) = default;
-        Configuration(Configuration&&) noexcept = default;
-        Configuration& operator=(Configuration&&) = default;
+        Configuration(const Configuration& other) = default;
+        Configuration& operator=(const Configuration& other) = default;
+        Configuration(Configuration&& other) noexcept = default;
+        Configuration& operator=(Configuration&& other) = default;
 
         /**
          * @brief Check if key is defined

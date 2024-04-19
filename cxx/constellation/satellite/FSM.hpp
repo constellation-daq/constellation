@@ -50,8 +50,8 @@ namespace constellation::satellite {
         CNSTLN_API ~FSM();
 
         // No copy/move constructor/assignment
-        FSM(FSM& other) = delete;
-        FSM& operator=(FSM other) = delete;
+        FSM(const FSM& other) = delete;
+        FSM& operator=(const FSM& other) = delete;
         FSM(FSM&& other) = delete;
         FSM& operator=(FSM&& other) = delete;
 

@@ -37,10 +37,11 @@ namespace constellation::log {
                 : logger_(logger), level_(level), src_loc_(src_loc) {}
             inline ~log_stream() final { logger_.log(level_, this->view(), src_loc_); }
 
-            log_stream(log_stream const&) = delete;
-            log_stream& operator=(log_stream const&) = delete;
-            log_stream(log_stream&&) = delete;
-            log_stream& operator=(log_stream&&) = delete;
+            // No copy/move constructor/assignment
+            log_stream(const log_stream& other) = delete;
+            log_stream& operator=(const log_stream& other) = delete;
+            log_stream(log_stream&& other) = delete;
+            log_stream& operator=(log_stream&& other) = delete;
 
         private:
             Logger& logger_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -64,9 +65,9 @@ namespace constellation::log {
 
         CNSTLN_API virtual ~Logger();
 
-        // No copy/move constructor/assignment
-        Logger(Logger& other) = delete;
-        Logger& operator=(Logger other) = delete;
+        // No copy constructor/assignment
+        Logger(const Logger& other) = delete;
+        Logger& operator=(const Logger& other) = delete;
         Logger(Logger&& other) = delete;
         Logger& operator=(Logger&& other) = delete;
 

@@ -7,7 +7,7 @@ SPDX-License-Identifier: CC-BY-4.0
 import pytest
 from unittest.mock import patch
 
-from constellation.chirp import (
+from constellation.core.chirp import (
     CHIRPBeaconTransmitter,
     CHIRPServiceIdentifier,
     CHIRPMessageType,
@@ -45,7 +45,7 @@ def test_chirp_beacon_send_recv(mock_chirp_socket):
 
     # send package, then let the test for header fail
     sender.broadcast(CHIRPServiceIdentifier.DATA, CHIRPMessageType.OFFER, 666)
-    with patch("constellation.chirp.CHIRP_HEADER"):
+    with patch("constellation.core.chirp.CHIRP_HEADER"):
         with pytest.raises(RuntimeError) as e:
             res = receiver.listen()
         assert "malformed message" in str(

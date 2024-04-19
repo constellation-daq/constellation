@@ -117,10 +117,9 @@ The log message payload frame SHALL consist of the log message encoded as a UTF8
 The metrics data payload frame MUST be encoded according to the [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) specification.
 It SHALL contain, in this order
 
-* The description of the metrics, as string
-* The unit of the metrics, as string
-* The metric type
 * The metrics value, which MAY be any of the types supported by the [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) specification.
+* The metric type
+* The unit of the metrics, as string
 
 The metrics type SHALL be encoded as 1-OCTET integer variable with the following possible values:
 

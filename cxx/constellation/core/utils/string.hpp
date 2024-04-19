@@ -10,6 +10,9 @@
 #pragma once
 
 #include <cctype>
+#include <concepts>
+#include <ranges>
+#include <span>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -27,17 +30,24 @@ namespace constellation::utils {
         return out;
     }
 
-    template <typename E>
-        requires std::is_enum_v<E>
-    inline std::string list_enum_names() {
+    template <typename R>
+        requires std::ranges::range<R> && std::convertible_to<std::ranges::range_value_t<R>, std::string_view>
+    inline std::string list_strings(R strings) {
         std::string out {};
-        constexpr auto enum_names = magic_enum::enum_names<E>();
-        for(const auto enum_name : enum_names) {
-            out += transform(enum_name, ::tolower) + ", ";
+        for(std::string_view string : strings) {
+            out += string;
+            out += ", ";
         }
         // Remove last ", "
         out.erase(out.size() - 2);
         return out;
+    }
+
+    template <typename E>
+        requires std::is_enum_v<E>
+    inline std::string list_enum_names() {
+        constexpr auto enum_names = magic_enum::enum_names<E>();
+        return list_strings(enum_names);
     }
 
 } // namespace constellation::utils

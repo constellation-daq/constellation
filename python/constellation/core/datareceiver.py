@@ -14,6 +14,7 @@ import threading
 import time
 from queue import Empty, Queue, Full
 from typing import Optional
+import pathlib
 
 import h5py
 import numpy as np
@@ -225,42 +226,16 @@ class H5DataReceiverWriter(DataReceiver):
         # Tracker for which satellites have joined the current data run.
         self.running_sats = []
         # NOTE: Necessary because of .replace() in _open_file() overwriting the string, thus losing format
-        self.file_name_pattern = None
+        self.file_name_pattern = ""
+        self.directroy_name = ""
 
     def do_initializing(self, payload: any) -> str:
         """Initialize the satellite. Set pattern for file name."""
         self.file_name_pattern = self.config.setdefault(
             "file_name_pattern", "default_name_{run_number}_{date}.h5"
         )
+        self.directroy_name = self.config.setdefault("directory_name", "H5_file_dir")
         return "Initializing"
-
-    def write_data(self, h5file: h5py.File, item: CDTPMessage):
-        """Write data to HDF5 format
-
-        Current format: File -> Grp (name) -> Dataset (event_{eventid)
-
-        Writes data to file by adding new dataset to group name.
-
-        # TODO add a call to a "write_data" method that can be
-        # overloaded by inheriting classes
-        """
-        # Check if group already exists
-        if item.name not in h5file.keys():
-            grp = h5file.create_group(item.name)
-        else:
-            grp = h5file[item.name]
-
-        # Create dataset and write data (item) to it
-        dset = grp.create_dataset(
-            f"event_{item.meta['eventid']}",
-            data=np.frombuffer(item.payload, dtype=item.meta["dtype"]),
-            chunks=True,
-            dtype=item.meta["dtype"],
-        )
-        dset.attrs["CLASS"] = "DETECTOR_DATA"
-        for key, val in item.meta.items():
-            dset.attrs[key] = val
-        self.log.debug(f"Processing data packet {item.meta['packet_num']}")
 
     def write_data_concat(self, h5file: h5py.File, item: CDTPMessage):
         """Write data into HDF5 format
@@ -298,11 +273,15 @@ class H5DataReceiverWriter(DataReceiver):
 
                 # Create dataset if it doesn't already exist
                 if title not in grp:
+
                     dset = grp.create_dataset(
                         title,
-                        data=item.payload,
+                        data=np.frombuffer(
+                            item.payload,
+                            dtype=np.dtype(item.meta.get("dtype", None)),
+                        ),
                         chunks=True,
-                        dtype=item.meta.get("dtype", None),
+                        dtype=np.dtype(item.meta.get("dtype", None)),
                         maxshape=(None,),
                     )
 
@@ -312,9 +291,12 @@ class H5DataReceiverWriter(DataReceiver):
 
                 else:
                     # Extend current dataset with data obtained from item
-                    new_data = item.payload
-                    grp[title].resize((grp[title].shape[0] + len(new_data)), axis=0)
-                    grp[title][-len(new_data) :] = new_data
+                    new_data = np.frombuffer(
+                        item.payload, dtype=np.dtype(item.meta.get("dtype", None))
+                    )
+                    self.log.info("new_data is %s", new_data)
+                    grp[title].resize((grp[title].shape[0] + new_data.shape[0]), axis=0)
+                    grp[title][-new_data.shape[0] :] = new_data
 
             except Exception as e:
                 self.log.error("Failed to write to file. Exception occurred: %s", e)
@@ -344,53 +326,6 @@ class H5DataReceiverWriter(DataReceiver):
         self.log.debug(
             f"Processing data packet {item.sequence_number} from {item.name}"
         )
-
-    def write_data_virtual(self, h5file: h5py.File, item: CDTPMessage):
-        """Write data to HDF5 format
-
-        Format: h5file -> Group (name) -> Multiple Datasets (item) + Virtual Dataset
-
-        Writes data by adding a dataset containing item.payload to group name. Also builds
-        a virtual dataset from the group. This allows each data package to be kept in a separate
-        dataset along with the virtual dataset containing all other datasets concatenated.
-
-        # TODO add a call to a "write_data" method that can be
-        # overloaded by inheriting classes
-        """
-        # Check if group already exists
-        if item.name not in h5file.keys():
-            grp = h5file.create_group(item.name)
-        else:
-            grp = h5file[item.name]
-
-        dset = grp.create_dataset(
-            f"event_{item.meta['eventid']}",
-            data=np.frombuffer(item.payload, dtype=item.meta["dtype"]),
-            chunks=True,
-            dtype=item.meta["dtype"],
-        )
-        dset.attrs["CLASS"] = "DETECTOR_DATA"
-        for key, val in item.meta.items():
-            dset.attrs[key] = val
-        self.log.debug(f"Processing data packet {item.meta['packet_num']}")
-
-        # Create a virtual layout with the datasets in group
-        # TODO: this method will result in index-variable overflow, make it so only the latest X datasets are shown
-        #       or split into multiple virtual datasets at a certain point
-        layout = h5py.VirtualLayout(
-            shape=(50000,), dtype="i4"  # TODO: Replace 50000 w/ something appropriate
-        )
-        last_index = 0
-        p = re.compile(r"(\d+)")
-        for data_name in sorted(list(grp.keys()), key=lambda s: extract_num(s, p)):
-            if data_name != "vdata":
-                data_file = h5file[item.name][data_name]
-                vsource = h5py.VirtualSource(data_file)
-                layout[last_index : last_index + len(data_file)] = vsource
-                last_index += len(data_file) + 1
-        if "vdata" in grp.keys():
-            del h5file[item.name]["vdata"]
-        grp.create_virtual_dataset("vdata", layout, fillvalue=-1)
 
     def do_run(self, payload: any) -> str:
         """Handle the data enqueued by the pull threads.
@@ -440,20 +375,23 @@ class H5DataReceiverWriter(DataReceiver):
     def _open_file(self):
         """Open the hdf5 file and return the file object."""
         h5file = None
-        filename = self.file_name_pattern.format(
-            run_number=self.run_number,
-            date=datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S"),
+        filename = pathlib.Path(
+            self.file_name_pattern.format(
+                run_number=self.run_number,
+                date=datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S"),
+            )
         )
         if os.path.isfile(filename):
-            self.log.error(f"file already exists: {filename}")
+            self.log.error("file already exists: %s", filename)
             raise RuntimeError(f"file already exists: {filename}")
 
         self.log.debug("Creating file %s", filename)
         # Create directory path.
-        directory = os.path.dirname(filename)
+        directory = pathlib.Path(self.directroy_name)  # os.path.dirname(filename)
         try:
             os.makedirs(directory)
         except (FileExistsError, FileNotFoundError):
+            self.log.info("Directory %s already exists", directory)
             pass
         except Exception as exception:
             raise RuntimeError(
@@ -461,7 +399,7 @@ class H5DataReceiverWriter(DataReceiver):
                 {type(exception)} {str(exception)}"
             ) from exception
         try:
-            h5file = h5py.File(filename, "w")
+            h5file = h5py.File(directory / filename, "w")
         except Exception as exception:
             self.log.error("Unable to open %s: %s", filename, str(exception))
             raise RuntimeError(
@@ -476,21 +414,20 @@ class H5DataReceiverWriter(DataReceiver):
 def main(args=None):
     """Start the Constellation data receiver satellite."""
     import argparse
+    import coloredlogs
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument("--log-level", default="info")
     parser.add_argument("--cmd-port", type=int, default=23989)
-    parser.add_argument("--mon-port", type=int, default=55556)
+    parser.add_argument("--mon-port", type=int, default=55566)
     parser.add_argument("--hb-port", type=int, default=61244)
     parser.add_argument("--interface", type=str, default="*")
     parser.add_argument("--name", type=str, default="h5_data_receiver")
     parser.add_argument("--group", type=str, default="constellation")
     args = parser.parse_args(args)
-    logging.basicConfig(
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        level=args.log_level.upper(),
-    )
-
+    # set up logging
+    logger = logging.getLogger(args.name)
+    coloredlogs.install(level=args.log_level.upper(), logger=logger)
     # start server with remaining args
     s = H5DataReceiverWriter(
         cmd_port=args.cmd_port,

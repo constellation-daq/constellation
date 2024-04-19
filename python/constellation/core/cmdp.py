@@ -27,13 +27,11 @@ class Metric:
     def __init__(
         self,
         name: str,
-        description: str,
         unit: str,
         handling: MetricsType,
         value: any = None,
     ):
         self.name = name
-        self.description = description
         self.unit = unit
         self.handling = handling
         self.value = value
@@ -43,14 +41,14 @@ class Metric:
 
     def as_list(self):
         """Convert metric to list."""
-        return [self.description, self.unit, self.handling.value, self.value]
+        return [self.value, self.handling.value, self.unit]
 
     def __str__(self):
         """Convert to string."""
         t = ""
         if self.time:
             t = f" at {self.time}"
-        return f"{self.name} ({self.description}): {self.value} [{self.unit}]{t}"
+        return f"{self.name}: {self.value} [{self.unit}]{t}"
 
 
 class CMDPTransmitter:
@@ -167,8 +165,8 @@ class CMDPTransmitter:
         name = topic.split("/")[1]
         # Read header
         sender, time, record = self.msgheader.decode(msg[1])
-        description, unit, handling, value = msgpack.unpackb(msg[2])
-        m = Metric(name, description, unit, MetricsType(handling), value)
+        value, handling, unit = msgpack.unpackb(msg[2])
+        m = Metric(name, unit, MetricsType(handling), value)
         m.sender = sender
         m.time = time
         m.meta = record

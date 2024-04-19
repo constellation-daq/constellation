@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cstddef>
 #include <span>
+#include <string>
 #include <string_view>
 
 #include <msgpack/pack_decl.hpp>
@@ -27,10 +28,12 @@ namespace constellation::message {
     class CNSTLN_API BaseHeader {
     public:
         virtual ~BaseHeader() = default;
-        BaseHeader(const BaseHeader&) = default;
-        BaseHeader(BaseHeader&&) = default;
-        BaseHeader& operator=(const BaseHeader&) = delete;
-        BaseHeader& operator=(BaseHeader&&) = delete;
+
+        // Default copy/move constructor/assignment
+        BaseHeader(const BaseHeader& other) = default;
+        BaseHeader& operator=(const BaseHeader& other) = default;
+        BaseHeader(BaseHeader&& other) noexcept = default;
+        BaseHeader& operator=(BaseHeader&& other) = default;
 
         /** Return message protocol */
         constexpr Protocol getProtocol() const { return protocol_; }
@@ -80,7 +83,7 @@ namespace constellation::message {
         CNSTLN_API static BaseHeader disassemble(Protocol protocol, std::span<const std::byte> data);
 
     private:
-        const Protocol protocol_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+        Protocol protocol_;
         std::string sender_;
         std::chrono::system_clock::time_point time_;
         config::Dictionary tags_;

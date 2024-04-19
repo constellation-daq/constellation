@@ -7,6 +7,8 @@ import time
 import logging
 import zmq
 import threading
+import os
+import pathlib
 from queue import Empty
 from functools import wraps
 from datetime import datetime
@@ -32,7 +34,6 @@ def schedule_metric(handling: MetricsType, interval: float):
             val, unit = func(*args, **kwargs)
             m = Metric(
                 name=func.__name__,
-                description=func.__doc__,
                 unit=unit,
                 handling=handling,
                 value=val,
@@ -127,6 +128,7 @@ class MonitoringSender(BaseSatelliteFrame):
                     last_update[metric] = datetime.now()
 
             time.sleep(0.1)
+        self.log.info("Monitoring metrics thread shutting down.")
         # clean up
         self.close()
 
@@ -171,18 +173,40 @@ class ZeroMQSocketLogListener(QueueListener):
 class MonitoringListener(CHIRPBroadcaster):
     """Simple monitor class to receive logs and metrics from a Constellation."""
 
-    def __init__(self, name: str, group: str, interface: str):
+    def __init__(self, name: str, group: str, interface: str, output_path: str = None):
         """Initialize values.
 
         Arguments:
         - name ::  name of this Monitor
         - group ::  group of controller
         - interface :: the interface to connect to
+        - output_path :: the directory to write logs and metric data to
         """
         super().__init__(name=name, group=group, interface=interface)
 
         self._log_listeners: dict[str, ZeroMQSocketLogListener] = {}
         self._metric_transmitters: dict[str, CMDPTransmitter] = {}
+
+        # create output directories and configure file writer logger
+        if output_path:
+            self.output_path = pathlib.Path(output_path)
+            try:
+                os.makedirs(self.output_path)
+                self.log.info("Created path %s", output_path)
+            except FileExistsError:
+                pass
+            try:
+                os.mkdir(self.output_path / "logs")
+                os.mkdir(self.output_path / "stats")
+            except FileExistsError:
+                pass
+            handler = logging.handlers.RotatingFileHandler(
+                self.output_path / f"logs/{group}.log",
+                maxBytes=10**7,
+                backupCount=10,
+            )
+            handler.setLevel(logging.DEBUG)
+            self.log.addHandler(handler)
 
         super()._add_com_thread()
         super()._start_com_threads()
@@ -217,7 +241,9 @@ class MonitoringListener(CHIRPBroadcaster):
         socket.connect(address)
         socket.setsockopt_string(zmq.SUBSCRIBE, "LOG/")
         listener = ZeroMQSocketLogListener(
-            CMDPTransmitter(self.name, socket), self.log.handlers[0]
+            CMDPTransmitter(self.name, socket),
+            *self.log.handlers,
+            respect_handler_level=True,  # handlers can have different log lvls
         )
         self._log_listeners[uuid] = listener
         listener.start()
@@ -252,12 +278,18 @@ class MonitoringListener(CHIRPBroadcaster):
             time.sleep(0.1)
             for uuid, tm in self._metric_transmitters.items():
                 try:
-                    metric = tm.recv(flags=zmq.NOBLOCK)
+                    m = tm.recv(flags=zmq.NOBLOCK)
                 except Exception as e:
                     self.log.error("Error receiving metric: %s", repr(e))
-                if not metric:
+                if not m:
                     continue
-                print(metric)
+                if self.output_path:
+                    # append to file
+                    path = self.output_path / f"stats/{m.sender}_{m.name.lower()}.csv"
+                    with open(path, "a") as csv:
+                        csv.write(f"{m.time.to_unix()}, {m.value}, '{m.unit}'\n")
+                else:
+                    print(m)
 
     def _run_task_handler(self):
         """Event loop for task handler-routine"""
@@ -294,6 +326,9 @@ def main(args=None):
     parser.add_argument("--name", type=str, default="simple_monitor")
     parser.add_argument("--group", type=str, default="constellation")
     parser.add_argument("--interface", type=str, default="*")
+    parser.add_argument(
+        "-o", "--output", type=str, help="The path to write log and metric data to."
+    )
 
     args = parser.parse_args(args)
 
@@ -301,7 +336,12 @@ def main(args=None):
     logger = logging.getLogger(args.name)
     coloredlogs.install(level=args.log_level.upper(), logger=logger)
 
-    mon = MonitoringListener(name=args.name, group=args.group, interface=args.interface)
+    mon = MonitoringListener(
+        name=args.name,
+        group=args.group,
+        interface=args.interface,
+        output_path=args.output,
+    )
     mon.receive_metrics()
 
 

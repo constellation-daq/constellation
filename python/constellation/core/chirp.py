@@ -153,12 +153,12 @@ class CHIRPBeaconTransmitter:
         #
         # NOTE: this only works for IPv4
         #
-        # Only bind the interface matching a given IP.
-        # Otherwise, we risk announcing services that do not bind to the
-        # interface they are announced on.
-        if interface == "*":
-            # ZMQ's "*" -> socket's '' (i.e. INADDR_ANY for IPv4)
-            interface = ""
+        # Preferably, we would bind only to the specified interface; however, we
+        # would have to determine the correct broadcast address and would need
+        # to know the netmask. For now, broadcast services on all interfaces:
+        #
+        # INADDR_ANY for IPv4
+        interface = ""
         self._sock.bind((interface, CHIRP_PORT))
 
     @property

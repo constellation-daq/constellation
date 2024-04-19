@@ -30,8 +30,8 @@ namespace constellation::exec {
         CNSTLN_API virtual ~DSOLoader();
 
         // No copy/move constructor/assignment
-        DSOLoader(DSOLoader& other) = delete;
-        DSOLoader& operator=(DSOLoader other) = delete;
+        DSOLoader(const DSOLoader& other) = delete;
+        DSOLoader& operator=(const DSOLoader& other) = delete;
         DSOLoader(DSOLoader&& other) = delete;
         DSOLoader& operator=(DSOLoader&& other) = delete;
 

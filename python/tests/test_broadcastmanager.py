@@ -8,9 +8,9 @@ import pytest
 import time
 from unittest.mock import MagicMock
 
-from constellation.broadcastmanager import CHIRPBroadcaster, chirp_callback
+from constellation.core.broadcastmanager import CHIRPBroadcaster, chirp_callback
 
-from constellation.chirp import CHIRPServiceIdentifier
+from constellation.core.chirp import CHIRPServiceIdentifier
 
 from conftest import mock_chirp_packet_queue
 

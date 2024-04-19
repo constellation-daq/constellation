@@ -275,6 +275,8 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
         # shutdown
         self.log.info("BroadcastManager thread shutting down.")
         self.broadcast_depart()
+        # it can take a moment for the network buffers to be flushed
+        time.sleep(0.5)
         self._beacon.close()
 
 

@@ -10,9 +10,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from conftest import mocket
-from constellation.confighandler import Configuration, get_config
-from constellation.cscp import CSCPMessageVerb
-from constellation.satellite import Satellite
+from constellation.core.confighandler import Configuration, get_config
+from constellation.core.cscp import CSCPMessageVerb
+from constellation.core.satellite import Satellite
 
 
 @pytest.fixture
@@ -44,7 +44,7 @@ def mock_example_satellite(mock_chirp_socket):
             self.voltage = self.config.setdefault("voltage", 10)
             return "finished with mock initialization"
 
-    with patch("constellation.base.zmq.Context") as mock:
+    with patch("constellation.core.base.zmq.Context") as mock:
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context

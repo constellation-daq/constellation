@@ -11,7 +11,10 @@ stages:
 
 workflow:
   rules:
-    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      variables:
+        CCACHE_DISABLE: 1
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"
       when: never
     - when: always
 
@@ -20,6 +23,24 @@ variables:
   PIP_CACHE_DIR: $CI_PROJECT_DIR/.cache/pip
 
 # C++ templates
+
+# Files that should trigger C++ jobs when changed
+.cpp-rules-changes: &cpp-rules-changes
+  changes:
+    - .gitlab-ci.yml
+    - meson.build
+    - cxx/**/*
+    - subprojects/**/*
+    - .clang-tidy
+    - gcovr.cfg
+    - docs/Doxyfile
+
+# In MRs only run if above mentioned files are changed, otherwise always
+.cpp-rules: &cpp-rules
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      <<: *cpp-rules-changes
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
 
 .meson-wrap-cache: &meson-wrap-cache
   key: meson-wrap-cache
@@ -49,18 +70,18 @@ variables:
 .debian-clang:
   image: gitlab.desy.de:5555/constellation/build-images/debian-clang:latest
   variables:
-    CXX: clang++
+    CXX: ccache clang++
     CXX_LD: mold
 
 .debian-gcc:
   image: gitlab.desy.de:5555/constellation/build-images/debian-gcc:latest
   variables:
-    CXX: g++
+    CXX: ccache g++
 
 .fedora-latest:
   image: gitlab.desy.de:5555/constellation/build-images/fedora-latest:latest
   variables:
-    CXX: clang++
+    CXX: ccache clang++
 
 .fedora-sphinx:
   image: gitlab.desy.de:5555/constellation/build-images/fedora-sphinx:latest
@@ -75,9 +96,24 @@ variables:
 .ubuntu-24.04:
   image: gitlab.desy.de:5555/constellation/build-images/ubuntu-24.04:latest
   variables:
-    CXX: g++
+    CXX: ccache g++
 
 # Python templates
+
+# Files that should trigger Python jobs when changed
+.python-rules-changes: &python-rules-changes
+  changes:
+    - .gitlab-ci.yml
+    - meson.build
+    - python/**/*
+    - pyproject.toml
+
+# In MRs only run if above mentioned files are changed, otherwise always
+.python-rules: &python-rules
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      <<: *python-rules-changes
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
 
 .python-venv:
   cache:
@@ -95,12 +131,24 @@ variables:
 .python-3.12:
   image: python:3.12
 
+# Combined Python / C++ templates
+
+# In MRs run only if either C++ or Python files are changed
+.cpp-python-rules: &cpp-python-rules
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      <<: *cpp-rules-changes
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      <<: *python-rules-changes
+    - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+
 # build stage
 
 .build-cpp:
   stage: build
   cache:
     - *meson-wrap-cache
+    - *ccache
   script:
     - meson setup build -Dimpl_cxx=enabled -Dcxx_tests=enabled ${BUILD_OPTIONS}
     - meson compile -C build
@@ -108,12 +156,14 @@ variables:
     paths:
       - build
     expire_in: 24 hour
+  <<: *cpp-rules
 
 .build-py:
   stage: build
   script:
     - pip install --no-build-isolation -e .[dev]
     - python3 -m build
+  <<: *python-rules
 
 build:alma9-cern:
   extends:
@@ -139,6 +189,7 @@ build:debian-gcc:
     - .debian-gcc
   variables:
     BUILD_OPTIONS: "-Dbuildtype=debug -Db_coverage=true -Dcpp_std=c++23"
+  <<: *cpp-python-rules # Run on both C++ and Python changes for correct coverage reporting
 
 build:fedora-latest:
   extends:
@@ -151,9 +202,6 @@ build:ubuntu-22.04:
   extends:
     - .build-cpp
     - .ubuntu-22.04
-  cache:
-    - *meson-wrap-cache
-    - *ccache
   variables:
     BUILD_OPTIONS: "-Dbuildtype=release"
 
@@ -185,6 +233,7 @@ build:python-3.12:
   artifacts:
     reports:
       junit: build/meson-logs/testlog.junit.xml
+  <<: *cpp-rules
 
 .test-py:
   stage: test
@@ -194,6 +243,7 @@ build:python-3.12:
   artifacts:
     reports:
       junit: junit.xml
+  <<: *python-rules
 
 test:alma9-cern:
   extends:
@@ -222,6 +272,7 @@ test:debian-gcc:
     paths:
       - build
     expire_in: 24 hour
+  <<: *cpp-python-rules # Run on both C++ and Python changes for correct coverage reporting
 
 test:fedora-latest:
   extends:
@@ -278,6 +329,7 @@ lint:coverage-py:
   needs:
     - job: test:python-3.11
       artifacts: false
+      optional: true
   script:
     - pip install --no-build-isolation -e .[test]
     - pytest --force-sugar --cov --cov-report term --cov-report xml:coverage.xml
@@ -287,6 +339,7 @@ lint:coverage-py:
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
+  <<: *cpp-python-rules # Run on both C++ and Python changes for correct coverage reporting
 
 lint:coverage-cpp:
   extends:
@@ -303,6 +356,7 @@ lint:coverage-cpp:
       coverage_report:
         coverage_format: cobertura
         path: build/meson-logs/coverage.xml
+  <<: *cpp-python-rules # Run on both C++ and Python changes for correct coverage reporting
 
 lint:clang-tidy:
   extends:
@@ -330,6 +384,7 @@ lint:clang-tidy-diff:
       grep -qzv ": error: " clang-tidy-diff.log
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      <<: *cpp-rules-changes
 
 lint:clang-scan-build:
   extends:
@@ -349,8 +404,9 @@ lint:clang-scan-build:
     paths:
       - build/meson-logs/scanbuild
     when: on_failure
-    expose_as: 'clang-scan-build'
     expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "schedule"
 
 lint:coverity-scan:
   extends:
@@ -372,7 +428,7 @@ lint:coverity-scan:
         --form file=@cov-int.tgz --form version="$CI_COMMIT_REF_NAME"
         --form description="$CI_COMMIT_REF_NAME / $CI_COMMIT_SHA / $CI_PIPELINE_ID"
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE=="schedule"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "schedule"
 
 # format stage
 
@@ -439,6 +495,6 @@ deploy:docs:
   needs:
     - job: docs:doxygen
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   trigger:
     project: constellation/constellation.pages.desy.de

@@ -195,3 +195,12 @@ class CommandReceiver(BaseSatelliteFrame):
 
         """
         return type(self).__name__, None, None
+
+    @cscp_requestable
+    def get_name(self, _request: CSCPMessage = None):
+        """Return the canonical name of the Satellite.
+
+        No payload argument.
+
+        """
+        return self.name, None, None

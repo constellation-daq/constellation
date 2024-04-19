@@ -36,11 +36,11 @@ dependencies = [
 ]
 
 [project.scripts]
-Satellite = "constellation.satellite:main"
-Controller = "constellation.controller:main"
-Monitor = "constellation.monitoring:main"
-DemoHeartbeatChecker = "constellation.heartbeatchecker:main"
-DemoHeartbeatSender = "constellation.heartbeater:main"
+Controller = "constellation.core.controller:main"
+Monitor = "constellation.core.monitoring:main"
+DemoSatellite = "constellation.core.satellite:main"
+DemoHeartbeatChecker = "constellation.core.heartbeatchecker:main"
+DemoHeartbeatSender = "constellation.core.heartbeater:main"
 
 [project.urls]
 Homepage = "https://constellation.pages.desy.de/"

@@ -7,6 +7,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 import logging
 import threading
+import time
 from queue import Empty
 from typing import Dict
 from functools import partial
@@ -150,13 +151,16 @@ class BaseController(CHIRPBroadcaster):
         super()._add_com_thread()
         super()._start_com_threads()
 
-        self.request(CHIRPServiceIdentifier.CONTROL)
         # set up thread to handle incoming tasks (e.g. CHIRP discoveries)
         self._task_handler_event = threading.Event()
         self._task_handler_thread = threading.Thread(
             target=self._run_task_handler, daemon=True
         )
         self._task_handler_thread.start()
+
+        # wait for threads to be ready
+        time.sleep(0.2)
+        self.request(CHIRPServiceIdentifier.CONTROL)
 
     @debug_log
     @chirp_callback(CHIRPServiceIdentifier.CONTROL)
@@ -312,10 +316,12 @@ class BaseController(CHIRPBroadcaster):
     def reentry(self):
         """Stop the controller."""
         self.log.info("Stopping controller.")
-        self._task_handler_event.set()
+        if getattr(self, "_task_handler_event", None):
+            self._task_handler_event.set()
         for _name, cmd_tm in self._transmitters.items():
             cmd_tm.socket.close()
-        self._task_handler_thread.join()
+        if getattr(self, "_task_handler_event", None):
+            self._task_handler_thread.join()
         super().reentry()
 
 
@@ -340,17 +346,17 @@ def main():
     logger.debug("Starting up CLI Controller!")
 
     # start server with args
-    ctrl = BaseController(  # noqa
-        name=args.name, group=args.group, interface=args.interface
-    )
+    ctrl = BaseController(name=args.name, group=args.group, interface=args.interface)
+
+    constellation = ctrl.constellation  # noqa
 
     print("\nWelcome to the Constellation CLI IPython Controller!\n")
     print(
-        "You can interact with the discovered Satellites via the `ctrl.constellation` array:"
+        "You can interact with the discovered Satellites via the `constellation` array:"
     )
-    print("          ctrl.constellation.get_state()\n")
+    print("          constellation.get_state()\n")
     print("To get help for any of its methods, call it with a question mark:")
-    print("          ctrl.constellation.get_state?\n")
+    print("          constellation.get_state?\n")
     print("Happy hacking! :)\n")
 
     # start IPython console

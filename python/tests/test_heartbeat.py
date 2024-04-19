@@ -9,9 +9,9 @@ from unittest.mock import MagicMock, patch
 
 from conftest import mocket, mock_packet_queue_recv, mock_packet_queue_sender
 
-from constellation.heartbeatchecker import HeartbeatChecker
-from constellation.heartbeater import HeartbeatSender
-from constellation.fsm import SatelliteState
+from constellation.core.heartbeatchecker import HeartbeatChecker
+from constellation.core.heartbeater import HeartbeatSender
+from constellation.core.fsm import SatelliteState
 
 
 HB_PORT = 33333
@@ -27,7 +27,7 @@ def mock_heartbeat_sender():
         m.endpoint = 0
         return m
 
-    with patch("constellation.base.zmq.Context") as mock:
+    with patch("constellation.core.base.zmq.Context") as mock:
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context
@@ -53,7 +53,7 @@ def mock_heartbeat_checker():
         m.endpoint = 1
         return m
 
-    with patch("constellation.heartbeatchecker.zmq.Context") as mock:
+    with patch("constellation.core.heartbeatchecker.zmq.Context") as mock:
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context

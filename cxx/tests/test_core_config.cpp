@@ -336,7 +336,7 @@ TEST_CASE("Invalid Key Access", "[core][core::config]") {
     REQUIRE_THROWS_AS(config.get<MyEnum>("myenum"), InvalidValueError);
     REQUIRE_THROWS_MATCHES(config.get<MyEnum>("myenum"),
                            InvalidValueError,
-                           Message("Value THREE of key 'myenum' is not valid: possible values are one, two"));
+                           Message("Value THREE of key 'myenum' is not valid: possible values are ONE, TWO"));
 }
 
 TEST_CASE("Merge Configurations", "[core][core::config]") {

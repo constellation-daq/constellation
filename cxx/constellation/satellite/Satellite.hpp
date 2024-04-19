@@ -27,8 +27,8 @@ namespace constellation::satellite {
         virtual ~Satellite() = default;
 
         // No copy/move constructor/assignment
-        Satellite(Satellite& other) = delete;
-        Satellite& operator=(Satellite other) = delete;
+        Satellite(const Satellite& other) = delete;
+        Satellite& operator=(const Satellite& other) = delete;
         Satellite(Satellite&& other) = delete;
         Satellite& operator=(Satellite&& other) = delete;
 
@@ -109,6 +109,9 @@ namespace constellation::satellite {
 
         /** Return the canonical satellite name (type_name.satellite_name) */
         std::string getCanonicalName() const;
+
+        /** Return a reference to the satellite logger */
+        log::Logger& getLogger() { return logger_; }
 
     protected:
         Satellite(std::string_view type_name, std::string_view satellite_name);

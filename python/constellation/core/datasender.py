@@ -152,20 +152,20 @@ class RandomDataSender(DataSender):
         """Example implementation that generates random values."""
         samples = np.linspace(0, 2 * np.pi, 1024, endpoint=False)
         fs = random.uniform(0, 3)
-        payload = np.sin(2 * np.pi * fs * samples).tolist()
+        data_load = np.sin(2 * np.pi * fs * samples)
 
         t0 = time.time_ns()
 
         num = 0
         while not self._state_thread_evt.is_set():
-            self.data_queue.put((payload, {}))
+            self.data_queue.put((data_load.tobytes(), {"dtype": f"{data_load.dtype}"}))
             self.log.debug(f"Queueing data packet {num}")
             num += 1
             time.sleep(0.5)
 
         t1 = time.time_ns()
         self.log.info(
-            f"total time for {num} evt / {num * len(payload) / 1024 / 1024}MB: {(t1 - t0)/1000000000}s"
+            f"total time for {num} evt / {num * len(data_load) / 1024 / 1024}MB: {(t1 - t0)/1000000000}s"
         )
         return "Finished acquisition"
 
@@ -176,8 +176,9 @@ class RandomDataSender(DataSender):
 def main(args=None):
     """Start the Constellation data sender satellite."""
     import argparse
+    import coloredlogs
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument("--log-level", default="info")
     parser.add_argument("--cmd-port", type=int, default=23999)
     parser.add_argument("--mon-port", type=int, default=55556)
@@ -187,10 +188,9 @@ def main(args=None):
     parser.add_argument("--name", type=str, default="random_data_sender")
     parser.add_argument("--group", type=str, default="constellation")
     args = parser.parse_args(args)
-    logging.basicConfig(
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        level=args.log_level.upper(),
-    )
+    # set up logging
+    logger = logging.getLogger(args.name)
+    coloredlogs.install(level=args.log_level.upper(), logger=logger)
 
     # start server with remaining args
     s = RandomDataSender(

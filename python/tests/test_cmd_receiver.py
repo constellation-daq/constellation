@@ -9,9 +9,9 @@ import time
 from unittest.mock import MagicMock, patch
 import zmq
 
-from constellation.cscp import CSCPMessageVerb, CommandTransmitter
+from constellation.core.cscp import CSCPMessageVerb, CommandTransmitter
 
-from constellation.commandmanager import cscp_requestable, CommandReceiver
+from constellation.core.commandmanager import cscp_requestable, CommandReceiver
 
 
 mock_packet_queue_recv = []
@@ -94,7 +94,7 @@ def mock_cmdreceiver(mock_socket_recv):
         def _fcnnotallowed_is_allowed(self, msg):
             return False
 
-    with patch("constellation.commandmanager.zmq.Context") as mock:
+    with patch("constellation.core.commandmanager.zmq.Context") as mock:
         mock_context = MagicMock()
         mock_context.socket.return_value = mock_socket_recv
         mock.return_value = mock_context
@@ -185,7 +185,7 @@ def test_cmd_unique_commands(mock_cmdreceiver):
         def get_unique_value(self, msg):
             return 42, None, None
 
-    with patch("constellation.commandmanager.zmq.Context"):
+    with patch("constellation.core.commandmanager.zmq.Context"):
         cr = MockOtherCommandReceiver(
             "mock_other_satellite", cmd_port=22222, interface="127.0.0.1"
         )

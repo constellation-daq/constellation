@@ -57,11 +57,13 @@ namespace constellation::log {
     public:
         CNSTLN_API static SinkManager& getInstance();
 
-        SinkManager(SinkManager const&) = delete;
-        SinkManager& operator=(SinkManager const&) = delete;
-        SinkManager(SinkManager&&) = default;
-        SinkManager& operator=(SinkManager&&) = default;
         ~SinkManager() = default;
+
+        // No copy/move constructor/assignment
+        SinkManager(const SinkManager& other) = delete;
+        SinkManager& operator=(const SinkManager& other) = delete;
+        SinkManager(SinkManager&& other) = delete;
+        SinkManager& operator=(SinkManager&& other) = delete;
 
         /**
          * Set the global (default) console log level

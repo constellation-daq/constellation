@@ -32,19 +32,19 @@ Configuration::Configuration(const Dictionary& dict) : config_(dict) {
     }
 };
 
-Configuration::AccessMarker::AccessMarker(const Configuration::AccessMarker& rhs) {
-    for(const auto& [key, value] : rhs.markers_) {
+Configuration::AccessMarker::AccessMarker(const Configuration::AccessMarker& other) {
+    for(const auto& [key, value] : other.markers_) {
         registerMarker(key);
         markers_.at(key).store(value.load());
     }
 }
 
-Configuration::AccessMarker& Configuration::AccessMarker::operator=(const Configuration::AccessMarker& rhs) {
-    if(this == &rhs) {
+Configuration::AccessMarker& Configuration::AccessMarker::operator=(const Configuration::AccessMarker& other) {
+    if(this == &other) {
         return *this;
     }
 
-    for(const auto& [key, value] : rhs.markers_) {
+    for(const auto& [key, value] : other.markers_) {
         registerMarker(key);
         markers_.at(key).store(value.load());
     }

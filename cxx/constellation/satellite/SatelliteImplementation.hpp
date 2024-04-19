@@ -35,8 +35,8 @@ namespace constellation::satellite {
         CNSTLN_API ~SatelliteImplementation();
 
         // No copy/move constructor/assignment
-        SatelliteImplementation(SatelliteImplementation& other) = delete;
-        SatelliteImplementation& operator=(SatelliteImplementation other) = delete;
+        SatelliteImplementation(const SatelliteImplementation& other) = delete;
+        SatelliteImplementation& operator=(const SatelliteImplementation& other) = delete;
         SatelliteImplementation(SatelliteImplementation&& other) = delete;
         SatelliteImplementation& operator=(SatelliteImplementation&& other) = delete;
 

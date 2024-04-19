@@ -14,11 +14,11 @@ building
 ```{toctree}
 :caption: Concepts
 
-constellation
-satellite
-controller
-listener
-protocols
+concepts/constellation
+concepts/logging
+concepts/satellite
+concepts/controller
+concepts/listener
 ```
 
 ```{toctree}
@@ -27,4 +27,8 @@ protocols
 
 ```{toctree}
 :caption: How-To Guides
+
+howtos/satellite_cxx
+howtos/satellite_py
+howtos/port_eudaq
 ```

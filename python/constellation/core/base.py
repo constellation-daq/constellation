@@ -71,7 +71,7 @@ class BaseSatelliteFrame:
             self.log.debug("Starting thread for %s communication", component)
             thread.start()
 
-    def _stop_com_threads(self, timeout: int = 1):
+    def _stop_com_threads(self, timeout: int = 1.5):
         """Stop all background communication threads within timeout [s]."""
         if self._com_thread_evt:
             self._com_thread_evt.set()

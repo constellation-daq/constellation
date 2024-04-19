@@ -9,16 +9,16 @@ import time
 import threading
 from unittest.mock import MagicMock, patch
 
-from constellation.cscp import CSCPMessageVerb, CommandTransmitter
+from constellation.core.cscp import CSCPMessageVerb, CommandTransmitter
 
-from constellation.satellite import Satellite
+from constellation.core.satellite import Satellite
 
-from constellation.broadcastmanager import (
+from constellation.core.broadcastmanager import (
     chirp_callback,
     DiscoveredService,
 )
 
-from constellation.chirp import (
+from constellation.core.chirp import (
     CHIRPMessageType,
     CHIRPServiceIdentifier,
 )
@@ -51,7 +51,7 @@ def mock_device_satellite(mock_chirp_socket):
         def ready(self):
             self.KEEP_WAITING = False
 
-    with patch("constellation.base.zmq.Context") as mock:
+    with patch("constellation.core.base.zmq.Context") as mock:
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context

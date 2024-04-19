@@ -136,7 +136,6 @@ SatelliteImplementation::handleGetCommand(std::string_view command) {
         break;
     }
     case get_commands: {
-        // TODO(stephan.lachnit): return list of commands
         return_verb = {CSCP1Message::Type::SUCCESS, "Commands attached in payload"};
         auto command_dict = Dictionary();
         // FSM commands

@@ -126,8 +126,8 @@ namespace constellation::chirp {
         CNSTLN_API virtual ~Manager();
 
         // No copy/move constructor/assignment
-        Manager(Manager& other) = delete;
-        Manager& operator=(Manager other) = delete;
+        Manager(const Manager& other) = delete;
+        Manager& operator=(const Manager& other) = delete;
         Manager(Manager&& other) = delete;
         Manager& operator=(Manager&& other) = delete;
 
