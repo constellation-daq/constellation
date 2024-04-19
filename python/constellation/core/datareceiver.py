@@ -294,7 +294,6 @@ class H5DataReceiverWriter(DataReceiver):
                     new_data = np.frombuffer(
                         item.payload, dtype=np.dtype(item.meta.get("dtype", None))
                     )
-                    self.log.info("new_data is %s", new_data)
                     grp[title].resize((grp[title].shape[0] + new_data.shape[0]), axis=0)
                     grp[title][-new_data.shape[0] :] = new_data
 
