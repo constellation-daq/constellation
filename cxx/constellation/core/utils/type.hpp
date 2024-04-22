@@ -25,9 +25,8 @@ namespace constellation::utils {
 
     /**
      * @brief Demangle the type to human-readable form if it is mangled
-     * @param type Type info of the mangled name
      */
-    template <typename T> inline std::string_view demangle(const T& = {}) {
+    template <typename T> inline std::string_view demangle(const T& /*unused*/ = {}) {
         auto dummy_sig = embed_type<dummy_type>();
         auto start = dummy_sig.find("dummy_type");
         auto embed_sig = embed_type<T>();
