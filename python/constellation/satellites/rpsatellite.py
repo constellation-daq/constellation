@@ -17,11 +17,11 @@ import coloredlogs
 import numpy as np
 import rp
 
-from .cmdp import MetricsType
-from .commandmanager import cscp_requestable
-from .cscp import CSCPMessage
-from .datasender import DataSender
-from .monitoring import schedule_metric
+from constellation.core.cmdp import MetricsType
+from constellation.core.commandmanager import cscp_requestable
+from constellation.core.cscp import CSCPMessage
+from constellation.core.datasender import DataSender
+from constellation.core.monitoring import schedule_metric
 
 axi_gpio_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 

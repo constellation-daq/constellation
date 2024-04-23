@@ -16,7 +16,7 @@ import coloredlogs
 import numpy as np
 import rp
 
-from .confighandler import ConfigError
+from constellation.core.confighandler import ConfigError
 from .rpsatellite import RedPitayaSatellite, axi_gpio_regset_start_stop, RP_CHANNELS
 
 axi_gpio_regset_config = np.dtype(
