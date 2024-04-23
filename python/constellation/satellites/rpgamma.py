@@ -14,9 +14,10 @@ import time
 
 import coloredlogs
 import numpy as np
+import rp
 
 from .confighandler import ConfigError
-from .rpsatellite import RedPitayaSatellite, axi_gpio_regset_start_stop
+from .rpsatellite import RedPitayaSatellite, axi_gpio_regset_start_stop, RP_CHANNELS
 
 axi_gpio_regset_config = np.dtype(
     [
@@ -96,6 +97,12 @@ class RPGamma(RedPitayaSatellite):
                 "trigger_level"
             ]  # Sets trigger level =0 on all channels
 
+            for ch in RP_CHANNELS:
+                rp.rp_AcqSetAC_DC(ch, rp.RP_DC)  # NOTE: Beware of RedPitaya functions.
+                rp.rp_AcqSetGain(
+                    ch, rp.RP_LOW
+                )  # They are not well documented and easy to confuse.
+                # I believe these are the correct values set.
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
 
