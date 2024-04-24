@@ -21,7 +21,7 @@ from .cscp import CSCPMessage
 from .chirp import CHIRPServiceIdentifier
 from .broadcastmanager import CHIRPBroadcaster
 from .commandmanager import CommandReceiver, cscp_requestable
-from .confighandler import Configuration
+from .configuration import Configuration
 from .monitoring import MonitoringSender
 from .error import debug_log, handle_error
 
@@ -140,7 +140,7 @@ class Satellite(
 
     @handle_error
     @debug_log
-    def _wrap_initialize(self, payload: any) -> str:
+    def _wrap_initialize(self, config: dict) -> str:
         """Wrapper for the 'initializing' transitional state of the FSM.
 
         This method performs the basic Satellite transition before passing
@@ -159,16 +159,18 @@ class Satellite(
         self._state_thread_evt = None
         self._state_thread_fut = None
 
-        self.config = Configuration(payload)
-        init_msg = self.do_initializing(payload)
+        self.config = Configuration(config)
+        init_msg = self.do_initializing(self.config)
 
         if self.config.has_unused_values():
             for key in self.config.get_unused_keys():
                 self.log.warning("Satellite ignored configuration value: '%s'", key)
+            init_msg += " IGNORED parameters: "
+            init_msg += ",".join(self.config.get_unused_keys())
         return init_msg
 
     @debug_log
-    def do_initializing(self, payload: any) -> str:
+    def do_initializing(self, config: Configuration) -> str:
         """Method for the device-specific code of 'initializing' transition.
 
         This should set configuration variables.
@@ -234,18 +236,18 @@ class Satellite(
 
     @handle_error
     @debug_log
-    def _wrap_start(self, payload: any) -> str:
+    def _wrap_start(self, run_number: int) -> str:
         """Wrapper for the 'run' state of the FSM.
 
         This method performs the basic Satellite transition before passing
         control to the device-specific public method.
 
         """
-        res = self.do_starting(payload)
+        res = self.do_starting(run_number)
         # complete transitional state
         self.fsm.complete(res)
         # continue to execute DAQ in this thread
-        return self.do_run(payload)
+        return self.do_run(run_number)
 
     @debug_log
     def do_starting(self, payload: any) -> str:

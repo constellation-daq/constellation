@@ -28,6 +28,10 @@ class Configuration:
         """Return all unused configuration keys"""
         return set(self._config.keys()).difference(self._requested_keys)
 
+    def get_applied(self) -> dict:
+        """Return a dictionary of all used configuration items."""
+        return {k: self._config[k] for k in self._requested_keys}
+
     def setdefault(self, key: str, default: any = None):
         """
         Return value from requested key in config with default value if specified.
@@ -49,34 +53,52 @@ class Configuration:
         return list(self._config.keys())
 
 
-def get_config(
-    config_path: str,
-    category: str,
-    host_class: str,
-    host_device: str | None = None,
-):
-    """Get configuration of satellite. Specify category to only get part of config."""
+def load_config(path: str) -> dict:
+    """Load a TOML configuration from file."""
     try:
-        with open(config_path, "rb") as f:
+        with open(path, "rb") as f:
             config = tomllib.load(f)
     # TODO: Handle errors FileNotFoundError, TypeError, tomllibDecodeError
     except tomllib.TOMLDecodeError:
         raise
         # TODO: Handle TOMLDecodeError
+    return config
 
-    ret_config = {}
-    # Set system configurations
-    for key, value in config[category].items():
-        if not isinstance(value, dict):
-            ret_config[key] = value
 
-    for key, value in config[category][host_class].items():
-        if not isinstance(value, dict):
-            ret_config[key] = value
+def flatten_config(
+    config: dict,
+    host_class: str,
+    host_device: str | None = None,
+):
+    """Get configuration of satellite. Specify category to only get part of config."""
+
+    res = {}
+
+    # set global values
+    for category in ["constellation", "satellites"]:
+        try:
+            for key, value in config[category].items():
+                if not isinstance(value, dict):
+                    res[key] = value
+        except KeyError:
+            pass
+
+    # set class values
+    for category in ["constellation", "satellites"]:
+        try:
+            for key, value in config[category][host_class].items():
+                if not isinstance(value, dict):
+                    res[key] = value
+        except KeyError:
+            pass
 
     if host_device:
-        for key, value in config[category][host_class][host_device].items():
-            if not isinstance(value, dict):
-                ret_config[key] = value
+        for category in ["constellation", "satellites"]:
+            try:
+                for key, value in config[category][host_class][host_device].items():
+                    if not isinstance(value, dict):
+                        res[key] = value
+            except KeyError:
+                pass
 
-    return ret_config
+    return res

@@ -17,13 +17,11 @@ libzmq_dep = dependency('libzmq',
     'drafts=true',
     'websockets=disabled',
     'curve=false',
-    'tls=disabled',
-    'nss=disabled',
     'openpgm=disabled',
     'norm=disabled',
     'warning_level=0',
 ])
-cppzmq_dep = dependency('cppzmq', default_options: ['catch2=disabled'])
+cppzmq_dep = dependency('cppzmq', default_options: ['examples=false', 'tests=disabled'])
 
 # magic_enum
 magic_enum_dep = dependency('magic_enum', default_options: ['test=false'])

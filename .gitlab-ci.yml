@@ -378,7 +378,7 @@ lint:clang-tidy-diff:
     - job: build:debian-clang
       artifacts: true
   script:
-    - git fetch origin
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
     - git diff -U0 origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME -- | clang-tidy-diff -p 1 -path build -j $(nproc) | tee clang-tidy-diff.log
     - | # Until LLVM 18 we need to check the output for errors
       grep -qzv ": error: " clang-tidy-diff.log
@@ -473,7 +473,7 @@ format:codespell:
     - .format
     - .debian-gcc
   script:
-    - codespell --ignore-words .ci/codespell_ignored_words.txt --quiet-level 2 --skip ".git,.ci,subprojects,AUTHORS.md"
+    - codespell
 
 # docs stage
 

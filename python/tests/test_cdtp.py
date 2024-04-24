@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 import h5py
 import numpy as np
 import pytest
-from conftest import mocket
+from conftest import mocket, wait_for_state
 from constellation.core.broadcastmanager import DiscoveredService
 from constellation.core.cdtp import CDTPMessageIdentifier, DataTransmitter
 from constellation.core.chirp import CHIRPServiceIdentifier, get_uuid
@@ -149,11 +149,11 @@ def test_sending_package(
     rx = mock_data_receiver
 
     commander.send_request("initialize", {"mock key": "mock argument string"})
-    time.sleep(0.5)
+    wait_for_state(transmitter.fsm, "INIT")
     commander.send_request("launch")
-    time.sleep(0.5)
-    commander.send_request("start")
-    time.sleep(0.5)
+    wait_for_state(transmitter.fsm, "ORBIT")
+    commander.send_request("start", 100102)
+    wait_for_state(transmitter.fsm, "RUN")
     assert (
         transmitter.fsm.current_state.id == "RUN"
     ), "Could not set up test environment"
@@ -196,19 +196,20 @@ def test_receive_writing_package(
     receiver, tmpdir = mock_receiver_satellite
     tx = mock_data_transmitter
     commander.send_request("initialize", {"mock key": "mock argument string"})
-    time.sleep(0.5)
+    wait_for_state(receiver.fsm, "INIT", 1)
     receiver._add_sender(service)
     commander.send_request("launch")
-    time.sleep(0.5)
+    wait_for_state(receiver.fsm, "ORBIT", 1)
 
-    payload = np.array([1234], dtype=np.int16)
+    payload = np.array(np.arange(1000), dtype=np.int16)
     assert receiver.run_number == 0
 
     for run_num in range(1, 3):
         # Send new data to handle
         tx.send_start(["mock_start"])
+        # send once as byte array with and once w/o dtype
         tx.send_data(payload.tobytes(), {"dtype": f"{payload.dtype}"})
-        tx.send_data(payload.tobytes(), {"dtype": f"{payload.dtype}"})
+        tx.send_data(payload.tobytes())
         tx.send_end(["mock_end"])
         time.sleep(0.1)
 
@@ -216,29 +217,38 @@ def test_receive_writing_package(
         assert receiver.data_queue.qsize() == 4, "Could not receive all data packets."
 
         # Running satellite
-        commander.send_request("start")
-        time.sleep(1)
+        commander.send_request("start", run_num)
+        wait_for_state(receiver.fsm, "RUN", 1)
         assert (
             receiver.fsm.current_state.id == "RUN"
         ), "Could not set up test environment"
         commander.send_request("stop")
-        time.sleep(0.5)
+        wait_for_state(receiver.fsm, "ORBIT", 1)
         assert receiver.run_number == run_num
 
         # Does file exist and has it been written to?
-        bor = f"BOR_{run_num}"
-        eor = f"EOR_{run_num}"
-        dat = f"data_run_{run_num}"
+        bor = "BOR"
+        eor = "EOR"
+        dat = [f"data_{run_num}_{i}" for i in range(1, 3)]
 
         file = FILE_NAME.format(run_number=run_num)
         assert os.path.exists(os.path.join(tmpdir, file))
         h5file = h5py.File(tmpdir / pathlib.Path(file))
         assert "mock_sender" in h5file.keys()
         assert bor in h5file["mock_sender"].keys()
-        assert "mock_start" in str(h5file["mock_sender"][bor][0], encoding="utf-8")
+        assert "mock_start" in str(
+            h5file["mock_sender"][bor]["payload"][0], encoding="utf-8"
+        )
         assert eor in h5file["mock_sender"].keys()
-        assert "mock_end" in str(h5file["mock_sender"][eor][0], encoding="utf-8")
-        assert dat in h5file["mock_sender"].keys()
-        assert payload == h5file["mock_sender"][dat][0]
-        assert payload == h5file["mock_sender"][dat][1]
+        assert "mock_end" in str(
+            h5file["mock_sender"][eor]["payload"][0], encoding="utf-8"
+        )
+        assert set(dat).issubset(
+            h5file["mock_sender"].keys()
+        ), "Data packets missing in file"
+        assert (payload == h5file["mock_sender"][dat[0]]).all()
+        # interpret the uint8 values again as uint16:
+        assert (
+            payload == np.array(h5file["mock_sender"][dat[1]]).view(np.uint16)
+        ).all()
         h5file.close()

@@ -35,7 +35,7 @@ class CDTPMessage:
     timestamp: msgpack.Timestamp = None
     msgtype: CDTPMessageIdentifier = None
     sequence_number: int = None
-    meta: dict[str, any]
+    meta: dict[str, any] = {}
     payload: any = None
 
     def set_header(self, name, timestamp, meta):
@@ -53,7 +53,7 @@ class CDTPMessage:
             self.timestamp,
             self.msgtype,
             self.sequence_number,
-            "with a" if self.payload else "without a",
+            "with a" if self.payload is not None else "without a",
             self.meta,
         )
 

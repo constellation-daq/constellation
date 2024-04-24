@@ -31,7 +31,12 @@ def schedule_metric(handling: MetricsType, interval: float):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            val, unit = func(*args, **kwargs)
+            res = func(*args, **kwargs)
+            if isinstance(res, tuple):
+                val, unit = res
+            else:
+                val = res
+                unit = ""
             m = Metric(
                 name=func.__name__,
                 unit=unit,
@@ -63,7 +68,7 @@ def get_scheduled_metrics(cls):
 
 
 class MonitoringSender(BaseSatelliteFrame):
-    """Sender class for Constellation Monitoring Distribution Protocol.
+    """Sender mixin class for Constellation Monitoring Distribution Protocol.
 
     Any method of inheriting classes that has the @schedule_metric decorator,
     will be regularly polled for new values and a corresponding Metric be sent
@@ -93,6 +98,39 @@ class MonitoringSender(BaseSatelliteFrame):
 
         # dict to keep scheduled intervals for fcn polling
         self._metrics_callbacks = get_scheduled_metrics(self)
+
+    def schedule_metric(
+        self,
+        name: str,
+        callback: callable,
+        interval: float,
+        handling: MetricsType = MetricsType.LAST_VALUE,
+    ):
+        """Schedule a callback at regular intervals.
+
+        The callable needs to return a value [any] and a unit [str] and take no
+        arguments. If you have a callable that requires arguments, consider
+        using functools.partial to fill in the necessary information at
+        scheduling time.
+
+        """
+
+        def wrapper():
+            res = callback()
+            if isinstance(res, tuple):
+                val, unit = res
+            else:
+                val = res
+                unit = ""
+            m = Metric(
+                name=name,
+                unit=unit,
+                handling=handling,
+                value=val,
+            )
+            return m
+
+        self._metrics_callbacks[name] = {"function": wrapper, "interval": interval}
 
     def send_metric(self, metric: Metric):
         """Send a single metric via ZMQ."""

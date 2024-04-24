@@ -4,58 +4,11 @@ SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 """
 
-import threading
 import time
-from unittest.mock import MagicMock, patch
 
 import pytest
-from conftest import mocket
-from constellation.core.confighandler import Configuration, get_config
+from constellation.core.configuration import flatten_config
 from constellation.core.cscp import CSCPMessageVerb
-from constellation.core.satellite import Satellite
-
-
-@pytest.fixture
-def config():
-    """Fixture for specific configuration"""
-    config = {}
-    for category in ["constellation", "satellites"]:
-        config.update(
-            get_config(
-                "python/constellation/configs/example.toml",
-                category,
-                "example_satellite",
-                "example_device2",
-            )
-        )
-    yield Configuration(config)
-
-
-@pytest.fixture
-def mock_example_satellite(mock_chirp_socket):
-    """Mock a Satellite for a specific device, ie. a class inheriting from Satellite."""
-
-    def mocket_factory(*args, **kwargs):
-        m = mocket()
-        return m
-
-    class MockExampleSatellite(Satellite):
-        def do_initializing(self, payload):
-            self.voltage = self.config.setdefault("voltage", 10)
-            return "finished with mock initialization"
-
-    with patch("constellation.core.base.zmq.Context") as mock:
-        mock_context = MagicMock()
-        mock_context.socket = mocket_factory
-        mock.return_value = mock_context
-        s = MockExampleSatellite(
-            "mock_satellite", "mockstellation", 11111, 22222, 33333, "127.0.0.1"
-        )
-        t = threading.Thread(target=s.run_satellite)
-        t.start()
-        # give the threads a chance to start
-        time.sleep(0.1)
-        yield s
 
 
 @pytest.mark.forked
@@ -81,5 +34,34 @@ def test_sending_config(config, mock_example_satellite, mock_cmd_transmitter):
     req = sender.get_message()
     assert "transitioning" in req.msg.lower()
     assert req.msg_verb == CSCPMessageVerb.SUCCESS
-
+    assert (
+        "mode" in satellite.config._config
+    ), "Default value added by Satellite not found"
+    satellite.config._config.pop("mode")
     assert satellite.config._config == config._config
+
+
+@pytest.mark.forked
+def test_config_flattening(rawconfig):
+    """Test that config flattening works"""
+    assert "ampere" in flatten_config(
+        rawconfig, "mocksat"
+    ), "Parameter missing from class part of config"
+    assert "importance" in flatten_config(
+        rawconfig, "mocksat"
+    ), "Parameter missing from constellation part of cfg"
+    val = flatten_config(rawconfig, "mocksat", "device2")["importance"]
+    assert val == "essential", "Parameter incorrect from constellation part of cfg"
+    val = flatten_config(rawconfig, "mocksat", "device1")["voltage"]
+    assert val == 5000, "Error flattening cfg for Satellite"
+    val = flatten_config(rawconfig, "mocksat", "device2")["voltage"]
+    assert val == 3000, "Error flattening cfg for Satellite"
+    assert flatten_config(
+        rawconfig, "nonsatellite"
+    ), "Missing dict for non-existing class"
+    assert "verbosity" in flatten_config(
+        rawconfig, "nonsatellite"
+    ), "Missing value for non-existing class"
+    assert flatten_config(
+        rawconfig, "mocksat", "device3"
+    ), "Missing dict for not explicitly-defined sat"

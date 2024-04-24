@@ -20,9 +20,13 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
+#include "constellation/core/utils/casts.hpp"
+
+using namespace std::literals::string_view_literals;
 
 using namespace Catch::Matchers;
 using namespace constellation::config;
+using namespace constellation::utils;
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
 
@@ -40,6 +44,8 @@ TEST_CASE("Set & Get Values", "[core][core::config]") {
     config.set("float", float(3.14));
 
     config.set("string", std::string("a"));
+    config.set("string_view", "b"sv);
+    config.set("char_array", "c");
 
     enum MyEnum {
         ONE,
@@ -65,6 +71,8 @@ TEST_CASE("Set & Get Values", "[core][core::config]") {
     REQUIRE(config.get<float>("float") == 3.14F);
 
     REQUIRE(config.get<std::string>("string") == "a");
+    REQUIRE(config.get<std::string>("string_view") == "b");
+    REQUIRE(config.get<std::string>("char_array") == "c");
 
     REQUIRE(config.get<MyEnum>("myenum") == MyEnum::ONE);
 
@@ -87,6 +95,8 @@ TEST_CASE("Set & Get Array Values", "[core][core::config]") {
     config.setArray<double>("double", {1.3, 3.1});
     config.setArray<float>("float", {3.14F, 1.43F});
 
+    config.setArray<char>("binary", {0x1, 0x2, 0x3});
+
     config.setArray<std::string>("string", {"a", "b", "c"});
 
     enum MyEnum {
@@ -97,6 +107,9 @@ TEST_CASE("Set & Get Array Values", "[core][core::config]") {
 
     auto tp = std::chrono::system_clock::now();
     config.setArray<std::chrono::system_clock::time_point>("time", {tp, tp, tp});
+
+    // Empty vector:
+    config.setArray<double>("empty", {});
 
     // Read values back
     REQUIRE(config.getArray<bool>("bool") == std::vector<bool>({true, false, true}));
@@ -109,10 +122,30 @@ TEST_CASE("Set & Get Array Values", "[core][core::config]") {
     REQUIRE(config.getArray<double>("double") == std::vector<double>({1.3, 3.1}));
     REQUIRE(config.getArray<float>("float") == std::vector<float>({3.14F, 1.43F}));
 
+    REQUIRE(config.getArray<char>("binary") == std::vector<char>({0x1, 0x2, 0x3}));
+
     REQUIRE(config.getArray<std::string>("string") == std::vector<std::string>({"a", "b", "c"}));
 
     REQUIRE(config.getArray<std::chrono::system_clock::time_point>("time") ==
             std::vector<std::chrono::system_clock::time_point>({tp, tp, tp}));
+
+    REQUIRE(config.getArray<double>("empty").empty());
+}
+
+TEST_CASE("Handle monostate", "[core][core::config]") {
+    Configuration config;
+
+    config.set<std::monostate>("monostate", {});
+
+    REQUIRE(config.get<std::monostate>("monostate") == std::monostate {});
+    REQUIRE(config.get<std::vector<double>>("monostate").empty());
+
+    REQUIRE_THROWS_AS(config.get<double>("monostate"), InvalidTypeError);
+    REQUIRE_THROWS_MATCHES(config.get<double>("monostate"),
+                           InvalidTypeError,
+                           Message("Could not convert value of type 'std::monostate' to type 'double' for key 'monostate'"));
+
+    REQUIRE(config.getText("monostate") == "NIL");
 }
 
 TEST_CASE("Set & Get Path Values", "[core][core::config]") {
@@ -147,6 +180,12 @@ TEST_CASE("Set & Get Path Values", "[core][core::config]") {
     // Read path array without canonicalization
     REQUIRE(config.getPathArray("patharray") ==
             std::vector<std::filesystem::path>({"/tmp/somefile.txt", "/tmp/someotherfile.txt"}));
+
+    // Read path array with check for existence
+    REQUIRE_THROWS_MATCHES(config.getPathArray("patharray", true),
+                           InvalidValueError,
+                           Message("Value [/tmp/somefile.txt,/tmp/someotherfile.txt,] of key 'patharray' is not valid: path "
+                                   "/tmp/somefile.txt not found"));
 
     // Attempt to read value that is not a string:
     REQUIRE_THROWS_AS(config.getPathArray("tisnotapatharray"), InvalidTypeError);
@@ -207,6 +246,8 @@ TEST_CASE("Access Arrays as Text", "[core][core::config]") {
     config.setArray<double>("double", {1.3, 3.1});
     config.setArray<float>("float", {3.14F, 1.43F});
 
+    config.setArray<char>("binary", {0x1, 0x2, 0x3});
+
     config.setArray<std::string>("string", {"a", "b", "c"});
 
     enum MyEnum {
@@ -225,6 +266,7 @@ TEST_CASE("Access Arrays as Text", "[core][core::config]") {
     REQUIRE(config.getText("uint8") == "[8,7,6,]");
     REQUIRE(config.getText("double") == "[1.3,3.1,]");
     REQUIRE(config.getText("float") == "[3.14,1.43,]");
+    REQUIRE(config.getText("binary") == "[0x1,0x2,0x3,]");
     REQUIRE(config.getText("string") == "[a,b,c,]");
     REQUIRE(config.getText("time") ==
             "[1970-01-01 00:00:00.000000000,1970-01-01 00:00:00.000000000,1970-01-01 00:00:00.000000000,]");
@@ -337,6 +379,19 @@ TEST_CASE("Invalid Key Access", "[core][core::config]") {
     REQUIRE_THROWS_MATCHES(config.get<MyEnum>("myenum"),
                            InvalidValueError,
                            Message("Value THREE of key 'myenum' is not valid: possible values are ONE, TWO"));
+
+    // Check for setting of invalid types
+    REQUIRE_THROWS_AS(config.set("key", std::array<int, 5> {1, 2, 3, 4, 5}), InvalidTypeError);
+}
+
+TEST_CASE("Value Overflow", "[core][core::config]") {
+
+    const std::size_t val = std::numeric_limits<std::size_t>::max();
+    REQUIRE_THROWS_AS(Value::set(val), std::overflow_error);
+    REQUIRE_THROWS_AS(Value::set(std::vector<std::size_t>({val})), std::overflow_error);
+
+    Configuration config;
+    REQUIRE_THROWS_AS(config.set("size", val), InvalidValueError);
 }
 
 TEST_CASE("Merge Configurations", "[core][core::config]") {
@@ -386,6 +441,12 @@ TEST_CASE("Pack & Unpack List to MsgPack", "[core][core::config]") {
     list.push_back(std::vector<std::string>({"a", "b", "c"}));
     list.push_back(std::vector<std::chrono::system_clock::time_point>({tp, tp, tp}));
 
+    // Empty vector
+    list.push_back(std::vector<double> {});
+
+    // MsgPack NIL
+    list.push_back(std::monostate {});
+
     // Pack to MsgPack
     msgpack::sbuffer sbuf {};
     msgpack::pack(sbuf, list);
@@ -394,17 +455,19 @@ TEST_CASE("Pack & Unpack List to MsgPack", "[core][core::config]") {
     auto unpacked = msgpack::unpack(sbuf.data(), sbuf.size());
     auto list_unpacked = unpacked->as<List>();
 
-    REQUIRE(std::get<bool>(list_unpacked.at(0)) == true);
-    REQUIRE(std::get<std::int64_t>(list_unpacked.at(1)) == std::int64_t(63));
-    REQUIRE(std::get<double>(list_unpacked.at(2)) == double(1.3));
-    REQUIRE(std::get<std::string>(list_unpacked.at(3)) == std::string("a"));
-    REQUIRE(std::get<std::chrono::system_clock::time_point>(list_unpacked.at(4)) == tp);
-    REQUIRE(std::get<std::vector<bool>>(list_unpacked.at(5)) == std::vector<bool>({true, false, true}));
-    REQUIRE(std::get<std::vector<std::int64_t>>(list_unpacked.at(6)) == std::vector<std::int64_t>({63, 62, 61}));
-    REQUIRE(std::get<std::vector<double>>(list_unpacked.at(7)) == std::vector<double>({1.3, 3.1}));
-    REQUIRE(std::get<std::vector<std::string>>(list_unpacked.at(8)) == std::vector<std::string>({"a", "b", "c"}));
-    REQUIRE(std::get<std::vector<std::chrono::system_clock::time_point>>(list_unpacked.at(9)) ==
+    REQUIRE(list_unpacked.at(0).get<bool>() == true);
+    REQUIRE(list_unpacked.at(1).get<std::int64_t>() == std::int64_t(63));
+    REQUIRE(list_unpacked.at(2).get<double>() == double(1.3));
+    REQUIRE(list_unpacked.at(3).get<std::string>() == std::string("a"));
+    REQUIRE(list_unpacked.at(4).get<std::chrono::system_clock::time_point>() == tp);
+    REQUIRE(list_unpacked.at(5).get<std::vector<bool>>() == std::vector<bool>({true, false, true}));
+    REQUIRE(list_unpacked.at(6).get<std::vector<std::int64_t>>() == std::vector<std::int64_t>({63, 62, 61}));
+    REQUIRE(list_unpacked.at(7).get<std::vector<double>>() == std::vector<double>({1.3, 3.1}));
+    REQUIRE(list_unpacked.at(8).get<std::vector<std::string>>() == std::vector<std::string>({"a", "b", "c"}));
+    REQUIRE(list_unpacked.at(9).get<std::vector<std::chrono::system_clock::time_point>>() ==
             std::vector<std::chrono::system_clock::time_point>({tp, tp, tp}));
+    REQUIRE(list_unpacked.at(10).get<std::vector<double>>().empty());
+    REQUIRE(list_unpacked.at(11).get<std::monostate>() == std::monostate());
 }
 
 TEST_CASE("Pack & Unpack Dictionary to MsgPack", "[core][core::config]") {
@@ -420,6 +483,7 @@ TEST_CASE("Pack & Unpack Dictionary to MsgPack", "[core][core::config]") {
     dict["array_bool"] = std::vector<bool>({true, false, true});
     dict["array_int64"] = std::vector<std::int64_t>({63, 62, 61});
     dict["array_double"] = std::vector<double>({1.3, 3.1});
+    dict["array_binary"] = std::vector<char>({0x1, 0x2, 0x3});
     dict["array_string"] = std::vector<std::string>({"a", "b", "c"});
     dict["array_time"] = std::vector<std::chrono::system_clock::time_point>({tp, tp, tp});
 
@@ -431,16 +495,17 @@ TEST_CASE("Pack & Unpack Dictionary to MsgPack", "[core][core::config]") {
     auto unpacked = msgpack::unpack(sbuf.data(), sbuf.size());
     auto dict_unpacked = unpacked->as<Dictionary>();
 
-    REQUIRE(std::get<bool>(dict_unpacked["bool"]) == true);
-    REQUIRE(std::get<std::int64_t>(dict_unpacked["int64"]) == std::int64_t(63));
-    REQUIRE(std::get<double>(dict_unpacked["double"]) == double(1.3));
-    REQUIRE(std::get<std::string>(dict_unpacked["string"]) == std::string("a"));
-    REQUIRE(std::get<std::chrono::system_clock::time_point>(dict_unpacked["time"]) == tp);
-    REQUIRE(std::get<std::vector<bool>>(dict_unpacked["array_bool"]) == std::vector<bool>({true, false, true}));
-    REQUIRE(std::get<std::vector<std::int64_t>>(dict_unpacked["array_int64"]) == std::vector<std::int64_t>({63, 62, 61}));
-    REQUIRE(std::get<std::vector<double>>(dict_unpacked["array_double"]) == std::vector<double>({1.3, 3.1}));
-    REQUIRE(std::get<std::vector<std::string>>(dict_unpacked["array_string"]) == std::vector<std::string>({"a", "b", "c"}));
-    REQUIRE(std::get<std::vector<std::chrono::system_clock::time_point>>(dict_unpacked["array_time"]) ==
+    REQUIRE(dict_unpacked["bool"].get<bool>() == true);
+    REQUIRE(dict_unpacked["int64"].get<std::int64_t>() == std::int64_t(63));
+    REQUIRE(dict_unpacked["double"].get<double>() == double(1.3));
+    REQUIRE(dict_unpacked["string"].get<std::string>() == std::string("a"));
+    REQUIRE(dict_unpacked["time"].get<std::chrono::system_clock::time_point>() == tp);
+    REQUIRE(dict_unpacked["array_bool"].get<std::vector<bool>>() == std::vector<bool>({true, false, true}));
+    REQUIRE(dict_unpacked["array_int64"].get<std::vector<std::int64_t>>() == std::vector<std::int64_t>({63, 62, 61}));
+    REQUIRE(dict_unpacked["array_double"].get<std::vector<double>>() == std::vector<double>({1.3, 3.1}));
+    REQUIRE(dict_unpacked["array_binary"].get<std::vector<char>>() == std::vector<char>({0x1, 0x2, 0x3}));
+    REQUIRE(dict_unpacked["array_string"].get<std::vector<std::string>>() == std::vector<std::string>({"a", "b", "c"}));
+    REQUIRE(dict_unpacked["array_time"].get<std::vector<std::chrono::system_clock::time_point>>() ==
             std::vector<std::chrono::system_clock::time_point>({tp, tp, tp}));
 }
 
@@ -454,6 +519,30 @@ TEST_CASE("Generate Configurations from Dictionary", "[core][core::config]") {
 
     REQUIRE(config.get<double>("key") == 3.12);
     REQUIRE(config.getArray<std::string>("array") == std::vector<std::string>({"one", "two", "three"}));
+}
+
+TEST_CASE("Assemble ZMQ Message from Configuration", "[core][core::config]") {
+    Configuration config;
+    config.set("bool", true);
+    config.set("int64", std::int64_t(63));
+    config.set("size", std::size_t(1));
+
+    // Mark one key as used:
+    REQUIRE(config.get<std::int64_t>("int64") == std::int64_t(63));
+
+    // Assemble & disassemble with all keys:
+    auto msg_all = config.assemble();
+    const auto msg_all_payload = msgpack::unpack(to_char_ptr(msg_all->data()), msg_all->size());
+    const auto dict_all = msg_all_payload->as<Dictionary>();
+    REQUIRE(dict_all.size() == 3);
+    REQUIRE(dict_all.at("bool").get<bool>() == true);
+
+    // Assemble & disassemble with used keys only:
+    auto msg_used = config.assemble(true);
+    const auto msg_used_payload = msgpack::unpack(to_char_ptr(msg_used->data()), msg_used->size());
+    const auto dict_used = msg_used_payload->as<Dictionary>();
+    REQUIRE(dict_used.size() == 1);
+    REQUIRE_THROWS_AS(dict_used.at("bool"), std::out_of_range);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace)

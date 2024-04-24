@@ -1,0 +1,58 @@
+# SPDX-FileCopyrightText: 2023 DESY and the Constellation authors
+# SPDX-License-Identifier: CC0-1.0
+
+# This is an example of the configuration layout in TOML-file-format.
+# Used for testing configuration setup
+
+# The layers of a configuration file should consist of:
+# [Category] -> [Class] -> [Device]
+
+[constellation]
+# General system settings for network
+name = "myconstellation"
+
+[constellation.mocksat]
+# Class-specific system settings for network
+importance = "low"
+
+[constellation.mocksat.device2]
+# Device-specific system settings for network
+importance = "essential"
+start_after = "mocksat.device1"
+parameter1 = "nothing"
+
+[constellation.H5DataReceiverWriter]
+some_key = "some_value"
+
+[controller]
+# General system settings for controller
+constellation_name = "myconstellation"
+show_extra_stuff = true
+scan = "something"
+
+
+[satellites]
+# General system settings for satellites
+verbosity = "DEBUG"
+
+[satellites.mocksat]
+# Class-specific system settings for satellites
+current_limit = 5
+ampere = 2
+
+[satellites.mocksat.device1]
+# Device-specific system settings for satellites
+voltage = 5000
+
+[satellites.mocksat.device2]
+# Device-specific system settings for satelli
+voltage = 3000
+parameter1 = "a lot"
+
+[satellites.H5DataReceiverWriter]
+name_format = "test_data_{date}.h5"
+
+[satellites.MockExampleSatellite]
+magic = "True"
+mode = "passionate"
+voltage = 10

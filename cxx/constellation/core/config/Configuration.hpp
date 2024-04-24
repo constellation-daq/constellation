@@ -156,7 +156,7 @@ namespace constellation::config {
          * @throws InvalidKeyError If the conversion to the requested type did not succeed
          * @throws InvalidKeyError If an overflow happened while converting the key
          */
-        template <typename T> std::vector<T> getArray(const std::string& key) const;
+        template <typename T> std::vector<T> getArray(const std::string& key) const { return get<std::vector<T>>(key); }
 
         /**
          * @brief Get values for a key containing an array or default array if it does not exists
@@ -234,7 +234,9 @@ namespace constellation::config {
          * @param val List of values to assign to the key
          * @param mark_used Flag whether key should be marked as "used" directly
          */
-        template <typename T> void setArray(const std::string& key, const std::vector<T>& val, bool mark_used = false);
+        template <typename T> void setArray(const std::string& key, const std::vector<T>& val, bool mark_used = false) {
+            set<std::vector<T>>(key, val, mark_used);
+        }
 
         /**
          * @brief Set default value for a key only if it is not defined yet
@@ -295,8 +297,9 @@ namespace constellation::config {
          * @brief Assemble configuration via msgpack for ZeroMQ
          *
          * @note This does not embedded the used keys, just the tag / value pairs
+         * @param used_only Select whether to only include keys that have been used
          */
-        std::shared_ptr<zmq::message_t> assemble() const;
+        std::shared_ptr<zmq::message_t> assemble(bool used_only = false) const;
 
     private:
         /**
@@ -306,6 +309,12 @@ namespace constellation::config {
          * @throws std::invalid_argument If the path does not exists
          */
         static std::filesystem::path path_to_absolute(std::filesystem::path path, bool canonicalize_path);
+
+        /**
+         * @brief Get all key value pairs which have been used
+         * @return List of all used key value pairs, including internal ones
+         */
+        Dictionary get_used_entries() const;
 
         Dictionary config_;
         mutable AccessMarker used_keys_;

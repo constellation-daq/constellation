@@ -195,7 +195,7 @@ def test_monitoring_file_writing(
     # start metric sender thread
     ms._add_com_thread()
     ms._start_com_threads()
-    time.sleep(0.5)
+    time.sleep(1)
     assert len(ml._log_listeners) == 1
     assert len(ml._metric_transmitters) == 1
     assert os.path.exists(

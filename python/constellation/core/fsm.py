@@ -147,7 +147,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
     @debug_log
     @cscp_requestable
     def initialize(self, request: CSCPMessage):
-        """Initiate initialize state transition via a CSCP request.
+        """Initiate 'initialize' state transition via a CSCP request.
 
         Takes dictionary with configuration values as argument.
 
@@ -155,6 +155,9 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         the FSM.
 
         """
+        if not isinstance(request.payload, dict):
+            # missing payload
+            return None
         return self._transition("initialize", request, thread=False)
 
     @debug_log
@@ -188,12 +191,15 @@ class SatelliteStateHandler(BaseSatelliteFrame):
     def start(self, request: CSCPMessage):
         """Initiate start state transition via a CSCP request.
 
-        No payload argument.
+        Payload: run number [int].
 
         If the transition is not allowed, TransitionNotAllowed will be thrown by
         the FSM.
 
         """
+        if not isinstance(request.payload, int):
+            # missing payload
+            return None
         return self._transition("start", request, thread=True)
 
     @debug_log

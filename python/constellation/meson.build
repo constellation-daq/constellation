@@ -12,7 +12,7 @@ core_files = files(
   'core/cscp.py',
   'core/cdtp.py',
   'core/controller.py',
-  'core/confighandler.py',
+  'core/configuration.py',
   'core/datareceiver.py',
   'core/datasender.py',
   'core/error.py',
@@ -22,7 +22,6 @@ core_files = files(
   'core/monitoring.py',
   'core/protocol.py',
   'core/satellite.py',
-  'core/confighandler.py',
 )
 
 satellites_files = files(

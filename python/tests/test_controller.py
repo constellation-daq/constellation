@@ -6,6 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 import pytest
 import time
+from constellation.core.configuration import flatten_config
 
 
 # %%%%%%%%%%%%%%%
@@ -25,3 +26,21 @@ def test_satellite_access_via_array(mock_controller, mock_satellite):
     time.sleep(0.1)
     res = mock_controller.constellation.Satellite.mock_satellite.get_state()
     assert res["msg"] == "new"
+
+
+@pytest.mark.forked
+def test_satellite_init_w_fullcfg(mock_controller, mock_example_satellite, rawconfig):
+    """Test cmd reception."""
+    satellite = mock_example_satellite
+    time.sleep(0.1)
+    res = mock_controller.constellation.MockExampleSatellite.mock_satellite.initialize(
+        rawconfig
+    )
+    assert res["msg"] == "transitioning"
+    time.sleep(0.1)
+    assert satellite.config._config == flatten_config(
+        rawconfig, "MockExampleSatellite", "mock_satellite"
+    )
+    assert (
+        "current_limit" not in satellite.config._config
+    ), "Found unexpected item in Satellite cfg after init"

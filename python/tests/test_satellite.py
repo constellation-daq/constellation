@@ -23,7 +23,7 @@ from constellation.core.chirp import (
     CHIRPServiceIdentifier,
 )
 
-from conftest import mock_chirp_packet_queue, mocket
+from conftest import mock_chirp_packet_queue, mocket, wait_for_state
 
 
 @pytest.fixture
@@ -199,21 +199,23 @@ def test_satellite_fsm_transition_walk(mock_cmd_transmitter, mock_satellite):
         "stop": "ORBIT",
         "land": "INIT",
     }
-    payload = {"mock key": "mock argument string"}
     sender = mock_cmd_transmitter
     for cmd, state in transitions.items():
+        if cmd == "initialize":
+            payload = {"mock_cfg_key": "mock config string"}
+        elif cmd == "start":
+            payload = 5001
+        else:
+            # send a dict, why not?
+            payload = {"mock key": "mock argument string"}
         sender.send_request(cmd, payload)
         time.sleep(0.2)
         req = sender.get_message()
         assert "transitioning" in req.msg.lower()
         assert req.msg_verb == CSCPMessageVerb.SUCCESS
         # wait for state transition
-        timeout = 4.0
-        while timeout > 0:
-            if mock_satellite.fsm.current_state.id.lower() == state.lower():
-                break
-            time.sleep(0.05)
-            timeout -= 0.05
+
+        wait_for_state(mock_satellite.fsm, state, 4.0)
         # check state
         sender.send_request("get_state")
         time.sleep(0.2)

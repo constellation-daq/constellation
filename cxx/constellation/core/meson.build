@@ -7,6 +7,7 @@ core_src = files(
   'chirp/Manager.cpp',
   'config/Configuration.cpp',
   'config/Dictionary.cpp',
+  'config/Value.cpp',
   'config/exceptions.cpp',
   'logging/CMDPSink.cpp',
   'logging/Logger.cpp',
@@ -54,6 +55,8 @@ install_headers(
   'config/Configuration.hpp',
   'config/Configuration.tpp',
   'config/Dictionary.hpp',
+  'config/Value.hpp',
+  'config/Value.tpp',
   'config/exceptions.hpp',
   subdir: 'constellation/core/config',
 )

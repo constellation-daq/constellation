@@ -9,7 +9,7 @@ This module provides the class for a Constellation Satellite.
 from .satellite import Satellite
 import time
 import logging
-from .confighandler import ConfigError, Configuration
+from .configuration import ConfigError, Configuration
 
 
 class Example_Device1:
