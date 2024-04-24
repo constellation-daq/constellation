@@ -35,6 +35,9 @@ axi_gpio_regset_pins = np.dtype(
         ("dummy_3", "uint32"),
         ("dummy_4", "uint32"),
         ("dummy_5", "uint32"),
+        ("dummy_6", "uint32"),
+        ("dummy_7", "uint32"),
+        ("dummy_8", "uint32"),
         ("n_pins", "uint32"),
         ("p_pins", "uint32"),
     ]
