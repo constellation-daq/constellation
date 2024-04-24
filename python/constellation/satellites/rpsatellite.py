@@ -13,6 +13,7 @@ import mmap
 import os
 import time
 
+import re
 import coloredlogs
 import numpy as np
 import rp
@@ -206,8 +207,8 @@ class RedPitayaSatellite(DataSender):
         """Obtain current memory usage."""
         # Obtain memory info from file
         mem = self._get_val_from_file("/proc/meminfo").split("\n")
-        tot_mem = mem[0].split(" ")[9]
-        free_mem = mem[1].split(" ")[9]
+        tot_mem = int(re.search(r"\d+", mem[0]).group())
+        free_mem = int(re.search(r"\d+", mem[1]).group())
         used_mem = tot_mem - free_mem
 
         return used_mem, "kb"
