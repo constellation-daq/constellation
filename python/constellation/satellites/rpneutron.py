@@ -209,6 +209,18 @@ class RPNeutron(RedPitayaSatellite):
             axi_array_contents.data_type = self.config["data_type"]
             self.master = self.config["master"]
 
+            if self.config["read_gpio"]:
+                self.schedule_metric(
+                    self.get_analog_gpio_pins.__name__,
+                    self.get_analog_gpio_pins,
+                    self.config["gpio_poll_rate"],
+                )
+                self.schedule_metric(
+                    self.get_digital_gpio_pins.__name__,
+                    self.get_digital_gpio_pins,
+                    self.config["gpio_poll_rate"],
+                )
+
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
 

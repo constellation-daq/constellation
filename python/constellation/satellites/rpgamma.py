@@ -103,6 +103,19 @@ class RPGamma(RedPitayaSatellite):
                     ch, rp.RP_LOW
                 )  # They are not well documented and easy to confuse.
                 # I believe these are the correct values set.
+
+            if self.config["read_gpio"]:
+                self.schedule_metric(
+                    self.get_analog_gpio_pins.__name__,
+                    self.get_analog_gpio_pins,
+                    self.config["gpio_poll_rate"],
+                )
+                self.schedule_metric(
+                    self.get_digital_gpio_pins.__name__,
+                    self.get_digital_gpio_pins,
+                    self.config["gpio_poll_rate"],
+                )
+
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
 
