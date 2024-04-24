@@ -46,7 +46,7 @@ axi_gpio_regset_pins = np.dtype(
 BUFFER_SIZE = 16384
 RP_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2, rp.RP_CH_3, rp.RP_CH_4]
 
-METRICS_PERIOD = 10
+METRICS_PERIOD = 10.0
 
 
 class RedPitayaSatellite(DataSender):
