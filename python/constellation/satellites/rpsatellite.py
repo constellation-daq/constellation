@@ -251,6 +251,7 @@ class RedPitayaSatellite(DataSender):
         pins = [p_pins, n_pins]
         return pins, "bits"
 
+    @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_analog_gpio_pins(self):
         """Read out values at analog gpio ports."""
         pins = []
