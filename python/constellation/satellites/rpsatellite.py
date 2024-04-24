@@ -235,8 +235,8 @@ class RedPitayaSatellite(DataSender):
         return (tx_speed, rx_speed), "kb/s"
 
     @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
-    def get_gpio_pins(self):
-        """Read out values at gpio P and N ports."""
+    def get_digital_gpio_pins(self):
+        """Read out values at digital gpio P and N ports."""
         memory_file_handle = os.open("/dev/mem", os.O_RDWR)
 
         axi_mmap = mmap.mmap(
@@ -249,6 +249,13 @@ class RedPitayaSatellite(DataSender):
         n_pins = axi_array_contents.n_pins.astype(dtype=np.uint8).item()
 
         pins = [p_pins, n_pins]
+        return pins, "bits"
+
+    def get_analog_gpio_pins(self):
+        """Read out values at analog gpio ports."""
+        pins = []
+        for pin in range(4):
+            pins.append(rp.rp_AIpinGetValue(pin)[1])
         return pins, "bits"
 
     def _get_write_pointer(self):
