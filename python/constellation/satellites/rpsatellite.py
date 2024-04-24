@@ -242,8 +242,8 @@ class RedPitayaSatellite(DataSender):
         axi_numpy_array = np.recarray(1, axi_gpio_regset_pins, buf=axi_mmap)
         axi_array_contents = axi_numpy_array[0]
 
-        p_pins = np.array([axi_array_contents.p_pins], dtype=np.uint8)
-        n_pins = np.array([axi_array_contents.n_pins], dtype=np.uint8)
+        p_pins = axi_array_contents.p_pins.astype(dtype=np.uint8).item()
+        n_pins = axi_array_contents.n_pins.astype(dtype=np.uint8).item()
 
         pins = [p_pins, n_pins]
         return pins, "bits"
