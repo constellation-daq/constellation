@@ -27,6 +27,9 @@ axi_gpio_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 
 axi_gpio_regset_reset = np.dtype([("data_type", "uint32")])
 
+axi_gpio_regset_p_pins = np.dtype([("p_pins", "uint32")])
+axi_gpio_regset_n_pins = np.dtype([("n_pins", "uint32")])
+
 BUFFER_SIZE = 16384
 RP_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2, rp.RP_CH_3, rp.RP_CH_4]
 
@@ -217,6 +220,28 @@ class RedPitayaSatellite(DataSender):
         self.prev_rx = rx_bytes
 
         return (tx_speed, rx_speed), "kb/s"
+
+    @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
+    def get_gpio_pins(self):
+        """Read out values at gpio P and N ports."""
+        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
+
+        p_axi_mmap = mmap.mmap(
+            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40000020
+        )
+        p_axi_numpy_array = np.recarray(1, axi_gpio_regset_p_pins, buf=p_axi_mmap)
+        p_axi_array_contents = p_axi_numpy_array[0]
+        p_pins = np.array([p_axi_array_contents.p_pins], dtype=np.uint8)
+
+        n_axi_mmap = mmap.mmap(
+            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40000024
+        )
+        n_axi_numpy_array = np.recarray(1, axi_gpio_regset_n_pins, buf=n_axi_mmap)
+        n_axi_array_contents = n_axi_numpy_array[0]
+        n_pins = np.array([n_axi_array_contents.n_pins], dtype=np.uint8)
+
+        pins = [p_pins, n_pins]
+        return pins, "bits"
 
     def _get_write_pointer(self):
         """Obtain write pointer"""
