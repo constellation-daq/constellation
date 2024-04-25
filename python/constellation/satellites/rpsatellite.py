@@ -24,9 +24,9 @@ from constellation.core.cscp import CSCPMessage
 from constellation.core.datasender import DataSender
 from constellation.core.monitoring import schedule_metric
 
-axi_gpio_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
+axi_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 
-axi_gpio_regset_reset = np.dtype([("data_type", "uint32")])
+axi_regset_reset = np.dtype([("data_type", "uint32")])
 
 axi_gpio_regset_pins = np.dtype(
     [

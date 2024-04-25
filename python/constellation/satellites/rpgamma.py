@@ -17,20 +17,20 @@ import numpy as np
 import rp
 
 from constellation.core.configuration import ConfigError
-from .rpsatellite import RedPitayaSatellite, axi_gpio_regset_start_stop, RP_CHANNELS
+from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop, RP_CHANNELS
 
-axi_gpio_regset_config = np.dtype(
+axi_regset_config = np.dtype(
     [
         ("data_type", "uint32"),
         ("active_channles", "uint32"),
         ("use_test_pulser", "uint32"),
-        ("runnint_sum_Integration_time", "uint32"),
+        ("running_sum_Integration_time", "uint32"),
         ("averaging_Integration_time", "uint32"),
         ("trigger_level", "uint32"),
     ]
 )
 
-axi_gpio_regset_readout = np.dtype(
+axi_regset_readout = np.dtype(
     [
         ("data_type", "uint32"),
         ("active_channles", "uint32"),
@@ -56,7 +56,7 @@ class RPGamma(RedPitayaSatellite):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.device = "RedPitaya_250_14"
-        self._regset_readout = axi_gpio_regset_readout
+        self._regset_readout = axi_regset_readout
 
     def do_initializing(self, payload: any) -> str:
         """Initialize satellite. Change the FPGA image and set register values."""
@@ -67,9 +67,7 @@ class RPGamma(RedPitayaSatellite):
             if os.system(command) != 0:  # OS 2.00 and above
                 msg = "System command failed."
                 raise ConfigError(msg)
-            time.sleep(5)
-            # os.system('cat /root/Stopwatch.bit > /dev/xdevcfg')    # OS 1.04 or older
-            # os.system('/opt/redpitaya/bin/fpgautil -b red_pitaya_top_4ADC.bit.bin')    # OS 2.00 and above
+            time.sleep(2)
 
             memory_file_handle = os.open("/dev/mem", os.O_RDWR)
             axi_mmap = mmap.mmap(
@@ -77,7 +75,7 @@ class RPGamma(RedPitayaSatellite):
                 length=mmap.PAGESIZE,
                 offset=self.config["offset"],
             )
-            axi_numpy_array = np.recarray(1, axi_gpio_regset_config, buf=axi_mmap)
+            axi_numpy_array = np.recarray(1, axi_regset_config, buf=axi_mmap)
             axi_array_contents = axi_numpy_array[0]
 
             axi_array_contents.data_type = self.config["data_type"]  # Data type
@@ -89,13 +87,13 @@ class RPGamma(RedPitayaSatellite):
             ]  # Set test pulser active
             axi_array_contents.running_sum_Integration_time = self.config[
                 "running_sum_Integration_time"
-            ]  # Set 64 samples shift all channels
+            ]  # Set samples shift all channels
             axi_array_contents.averaging_Integration_time = self.config[
                 "averaging_Integration_time"
-            ]  # Sets averaging_Integration time To 64 on all channels
+            ]  # Sets averaging_Integration timeon all channels
             axi_array_contents.trigger_level = self.config[
                 "trigger_level"
-            ]  # Sets trigger level =0 on all channels
+            ]  # Sets trigger level on all channels
 
             for ch in RP_CHANNELS:
                 rp.rp_AcqSetAC_DC(ch, rp.RP_DC)  # NOTE: Beware of RedPitaya functions.
@@ -152,7 +150,7 @@ class RPGamma(RedPitayaSatellite):
         axi_mmap0 = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
         )
-        axi_numpy_array0 = np.recarray(1, axi_gpio_regset_start_stop, buf=axi_mmap0)
+        axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
         axi_array_contents0 = axi_numpy_array0[0]
 
         axi_array_contents0.Externaltrigger = 32
@@ -163,7 +161,7 @@ class RPGamma(RedPitayaSatellite):
         axi_mmap0 = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
         )
-        axi_numpy_array0 = np.recarray(1, axi_gpio_regset_start_stop, buf=axi_mmap0)
+        axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
         axi_array_contents0 = axi_numpy_array0[0]
 
         axi_array_contents0.Externaltrigger = 0
@@ -178,10 +176,10 @@ class RPGamma(RedPitayaSatellite):
         axi_mmap = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
         )
-        axi_numpy_array = np.recarray(1, axi_gpio_regset_readout, buf=axi_mmap)
+        axi_numpy_array = np.recarray(1, axi_regset_readout, buf=axi_mmap)
         axi_array_contents = axi_numpy_array[0]
 
-        names = [field[0] for field in axi_gpio_regset_readout.descr]
+        names = [field[0] for field in axi_regset_readout.descr]
 
         ret = {}
         for name, value in zip(names, axi_array_contents):
