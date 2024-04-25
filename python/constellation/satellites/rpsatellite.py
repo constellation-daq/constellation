@@ -117,7 +117,7 @@ class RedPitayaSatellite(DataSender):
         axi_mmap = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
         )
-        axi_numpy_array = np.recarray(1, axi_gpio_regset_reset, buf=axi_mmap)
+        axi_numpy_array = np.recarray(1, axi_regset_reset, buf=axi_mmap)
         axi_array_contents = axi_numpy_array[0]
 
         axi_array_contents.data_type = 0x10  # Start Channels
