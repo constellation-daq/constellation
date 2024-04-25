@@ -22,9 +22,9 @@ from constellation.core.commandmanager import cscp_requestable
 from constellation.core.cscp import CSCPMessage
 from constellation.core.datasender import DataSender
 
-axi_gpio_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
+axi_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 
-axi_gpio_regset_reset = np.dtype([("data_type", "uint32")])
+axi_regset_reset = np.dtype([("data_type", "uint32")])
 
 axi_gpio_regset_pins = np.dtype(
     [
@@ -117,7 +117,7 @@ class RedPitayaSatellite(DataSender):
         axi_mmap = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
         )
-        axi_numpy_array = np.recarray(1, axi_gpio_regset_reset, buf=axi_mmap)
+        axi_numpy_array = np.recarray(1, axi_regset_reset, buf=axi_mmap)
         axi_array_contents = axi_numpy_array[0]
 
         axi_array_contents.data_type = 0x10  # Start Channels

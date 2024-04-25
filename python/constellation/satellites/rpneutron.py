@@ -16,9 +16,9 @@ import coloredlogs
 import numpy as np
 
 from constellation.core.configuration import ConfigError
-from .rpsatellite import RedPitayaSatellite, axi_gpio_regset_start_stop
+from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
 
-axi_gpio_regset_config = np.dtype(
+axi_regset_config = np.dtype(
     [
         ("data_type", "uint32"),
         ("active_channles", "uint32"),
@@ -78,7 +78,7 @@ axi_gpio_regset_config = np.dtype(
     ]
 )
 
-axi_gpio_regset_readout = np.dtype(
+axi_regset_readout = np.dtype(
     [
         ("data_type", "uint32"),
         ("active_channles", "uint32"),
@@ -149,13 +149,13 @@ class RPNeutron(RedPitayaSatellite):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.device = "RedPitaya_125_12"
-        self._regset_readout = axi_gpio_regset_readout
+        self._regset_readout = axi_regset_readout
         self.master = False
 
     def do_initializing(self, payload: any) -> str:
         """Initialize satellite. Change the FPGA image and set register values."""
         try:
-            # os.system('cat /root/Stopwatch.bit > /dev/xdevcfg')    # OS 1.04 or older
+    
 
             bin_file = self.config["bin_file"]
             command = "/opt/redpitaya/bin/fpgautil -b " + bin_file
@@ -170,7 +170,7 @@ class RPNeutron(RedPitayaSatellite):
                 length=mmap.PAGESIZE,
                 offset=self.config["offset"],
             )
-            axi_numpy_array = np.recarray(1, axi_gpio_regset_config, buf=axi_mmap)
+            axi_numpy_array = np.recarray(1, axi_regset_config, buf=axi_mmap)
             axi_array_contents = axi_numpy_array[0]
 
             axi_array_contents.active_channles = self.config[
@@ -179,28 +179,28 @@ class RPNeutron(RedPitayaSatellite):
 
             axi_array_contents.runnint_sum_Integration_time = self.config[
                 "running_sum_Integration_time"
-            ]  # Set 64 samples runnint_sum_Integration_time on all channels
+            ]  # Set running_sum_Integration_time on all channels
             axi_array_contents.averaging_Integration_time = self.config[
                 "averaging_Integration_time"
-            ]  # Sets averaging_Integration time To 16383 on all channels
+            ]  # Sets averaging_Integration time on all channels
             axi_array_contents.trigger_level = self.config[
                 "trigger_level"
-            ]  # Sets trigger level =6 on all channels
+            ]  # Sets trigger level  all channels
             axi_array_contents.ToT_ch0_1 = self.config[
                 "time_over_threshold_ch0_1"
-            ]  # Sets TOT=50 on channel 0-1
+            ]  # Sets ToT on channel 0-1
             axi_array_contents.ToT_ch0_1 = self.config[
                 "time_over_threshold_ch2_3"
-            ]  # Sets TOT=50 on channel 2-3
+            ]  # Sets TOT on channel 2-3
             axi_array_contents.dist_ch0_1 = self.config[
                 "dist_ch0_1"
-            ]  # Sets dist=625 on channel 0-1
+            ]  # Sets dist on channel 0-1
             axi_array_contents.dist_ch2_3 = self.config[
                 "dist_ch2_3"
-            ]  # Sets dist=625 on channel 2-3
+            ]  # Sets dist on channel 2-3
             axi_array_contents.ratio = self.config[
                 "ratio"
-            ]  # Sets ratio to 2 on all channels
+            ]  # Sets ratio on all channels
 
             axi_array_contents.use_test_pulser = self.config[
                 "test_pulser_rate"
@@ -259,7 +259,7 @@ class RPNeutron(RedPitayaSatellite):
                 fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
             )
 
-            axi_numpy_array0 = np.recarray(1, axi_gpio_regset_start_stop, buf=axi_mmap0)
+            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
             axi_array_contents0 = axi_numpy_array0[0]
             axi_array_contents0.Externaltrigger = (
                 0  # Don'tOverride GPIO_N_0 to output ADC or DAC trigger
@@ -273,7 +273,7 @@ class RPNeutron(RedPitayaSatellite):
             axi_mmap0 = mmap.mmap(
                 fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
             )
-            axi_numpy_array0 = np.recarray(1, axi_gpio_regset_start_stop, buf=axi_mmap0)
+            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
             axi_array_contents0 = axi_numpy_array0[0]
             axi_array_contents0.Externaltrigger = (
                 3  # Override GPIO_N_0 to output ADC or DAC trigger

@@ -1,0 +1,84 @@
+# This is a first draft of the configuration for the RedPitaya satellite
+
+[constellation]
+# Config for system specific options
+
+[constellation.RPNeutron]
+# Class specific config, will apply if nothing else is specified
+master=false
+read_gpio = false
+gpio_poll_rate = 5.0
+
+# NOTE: One poll rate or many?
+cpu_temp_poll_rate = 10.0
+cpu_load_poll_rate = 10.0
+memory_load_poll_rate = 10.0
+network_poll_rate = 10.0
+
+[constellation.RPGamma]
+# Class specific config, will apply if nothing else is specified
+master=true
+read_gpio = false
+gpio_poll_rate = 5.0
+
+# NOTE: One poll rate or many?
+cpu_temp_poll_rate = 10.0
+cpu_load_poll_rate = 10.0
+memory_load_poll_rate = 10.0
+network_poll_rate = 10.0
+
+
+[constellation.RPNeutron.rp-XXXXXX]
+# Unit/Device specific config, only applies to one unit
+master=true
+read_gpio = true
+
+[constellation.H5DataReceiverWriter]
+# Unit/Device specific config, only applies to one unit
+
+[controller]
+# Add controller config here
+
+[satellites]
+# Config for satellite specific options
+
+[satellites.RPGamma]
+# Class specific config, will apply if nothing else is specified
+bin_file = "red_pitaya_top_gamma.bit.bin"
+offset=0x40600000
+data_type = 0
+channels=0x3
+running_sum_Integration_time=0x066
+averaging_Integration_time=0x0C6
+trigger_level=0x79E
+test_pulser_rate = 3
+
+
+
+
+
+[satellites.RPNeutron]
+# Class specific config, will apply if nothing else is specified
+bin_file = "red_pitaya_top.bit.bin"
+offset=0x40600000
+channels=0x3
+running_sum_Integration_time=0x06666
+averaging_Integration_time=0x0739CE
+trigger_level=0x6666
+time_over_threshold_ch0_1=0x320032
+time_over_threshold_ch2_3=0x320032
+dist_ch0_1=0x2710271
+dist_ch2_3=0x2710271
+ratio=0x40404040
+test_pulser_rate = 26
+data_type = 0
+
+
+[satellites.RPNeutron.rp-XXXXXX]
+# Unit/Device specific config, only applies to one unit
+channels=0xf
+
+[satellites.H5DataReceiverWriter]
+# Class specific config, will apply if nothing else is specified
+file_name_pattern = "big_data_{run_number}_{date}.h5"
+directory_name = "RP_dir"
