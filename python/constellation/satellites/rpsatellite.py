@@ -286,7 +286,7 @@ class RedPitayaSatellite(DataSender):
 
         ret = {}
         for name, value in zip(names, axi_array_contents):
-            ret[name] = value
+            ret[name] = value.item()
         return ret, "uint32"
 
     def _sample_raw(self, channel, buffer, chunk):
