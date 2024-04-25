@@ -167,25 +167,6 @@ class RPGamma(RedPitayaSatellite):
         axi_array_contents0.Externaltrigger = 0
         return super().do_stopping(payload)
 
-    def read_registers(self):
-        """
-        Reads the stored values of the axi_gpio_regset and returns a
-        tuple of their respective names and values.
-        """
-        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-        axi_mmap = mmap.mmap(
-            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
-        )
-        axi_numpy_array = np.recarray(1, axi_regset_readout, buf=axi_mmap)
-        axi_array_contents = axi_numpy_array[0]
-
-        names = [field[0] for field in axi_regset_readout.descr]
-
-        ret = {}
-        for name, value in zip(names, axi_array_contents):
-            ret[name] = value
-        return ret
-
 
 # -------------------------------------------------------------------------
 
