@@ -69,6 +69,16 @@ class RedPitayaSatellite(DataSender):
         )
         self._readpos = 0
         self._writepos = 0
+        self.schedule_metric(
+            self.get_cpu_load.__name__,
+            self.get_cpu_load,
+            interval=METRICS_PERIOD,
+        )
+        self.schedule_metric(
+            self.get_network_speeds.__name__,
+            self.get_network_speeds,
+            interval=METRICS_PERIOD,
+        )
         rp.rp_Init()
 
     def do_run(self, payload):
@@ -171,15 +181,6 @@ class RedPitayaSatellite(DataSender):
             None,
         )  # NOTE: Placeholder: should be more detailed
 
-    @cscp_requestable
-    def get_registers(self, _request: CSCPMessage):
-        """Get values stored in registers in _regset_readout."""
-        return (
-            str(self._read_registers()),
-            None,
-            None,
-        )  # NOTE: Not sure if this is how we should do it
-
     @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_cpu_temperature(self):
         """Obtain temperature of CPU."""
@@ -194,7 +195,6 @@ class RedPitayaSatellite(DataSender):
         scale = float(self._get_val_from_file(paths[2]))
         return ((float)(offset + raw)) * scale / 1000.0, "C"
 
-    @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_cpu_load(self):
         """Estimate current CPU load and update previously saved CPU times."""
         idle_cpu_time, total_cpu_time = self._get_cpu_times()
@@ -216,7 +216,6 @@ class RedPitayaSatellite(DataSender):
 
         return used_mem, "kb"
 
-    @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_network_speeds(self):
         """Estimate current network speeds."""
         tx_bytes = int(
@@ -261,7 +260,7 @@ class RedPitayaSatellite(DataSender):
         """Obtain write pointer"""
         return rp.rp_AcqGetWritePointer()[1]
 
-    def _read_registers(self):
+    def read_registers(self):
         """
         Reads the stored values of the axi_gpio_regset and returns a
         tuple of their respective names and values.

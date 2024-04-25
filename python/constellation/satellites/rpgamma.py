@@ -104,6 +104,7 @@ class RPGamma(RedPitayaSatellite):
                 )  # They are not well documented and easy to confuse.
                 # I believe these are the correct values set.
 
+            # Setup metrics
             if self.config["read_gpio"]:
                 self.schedule_metric(
                     self.get_analog_gpio_pins.__name__,
@@ -115,7 +116,31 @@ class RPGamma(RedPitayaSatellite):
                     self.get_digital_gpio_pins,
                     self.config["gpio_poll_rate"],
                 )
-
+            self.schedule_metric(
+                self.get_cpu_temperature.__name__,
+                self.get_cpu_temperature,
+                self.config["metrics_poll_rate"],
+            )
+            self.schedule_metric(
+                self.get_cpu_load.__name__,
+                self.get_cpu_load,
+                self.config["metrics_poll_rate"],
+            )
+            self.schedule_metric(
+                self.get_memory_load.__name__,
+                self.get_memory_load,
+                self.config["metrics_poll_rate"],
+            )
+            self.schedule_metric(
+                self.get_network_speeds.__name__,
+                self.get_network_speeds,
+                self.config["metrics_poll_rate"],
+            )
+            self.schedule_metric(
+                self.read_registers.__name__,
+                self.read_registers,
+                self.config["metrics_poll_rate"],
+            )
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
 
