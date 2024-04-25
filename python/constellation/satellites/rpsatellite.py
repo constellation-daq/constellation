@@ -18,11 +18,9 @@ import coloredlogs
 import numpy as np
 import rp
 
-from constellation.core.cmdp import MetricsType
 from constellation.core.commandmanager import cscp_requestable
 from constellation.core.cscp import CSCPMessage
 from constellation.core.datasender import DataSender
-from constellation.core.monitoring import schedule_metric
 
 axi_gpio_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 
@@ -70,8 +68,18 @@ class RedPitayaSatellite(DataSender):
         self._readpos = 0
         self._writepos = 0
         self.schedule_metric(
+            self.get_cpu_temperature.__name__,
+            self.get_cpu_temperature,
+            interval=METRICS_PERIOD,
+        )
+        self.schedule_metric(
             self.get_cpu_load.__name__,
             self.get_cpu_load,
+            interval=METRICS_PERIOD,
+        )
+        self.schedule_metric(
+            self.get_memory_load.__name__,
+            self.get_memory_load,
             interval=METRICS_PERIOD,
         )
         self.schedule_metric(
@@ -181,7 +189,6 @@ class RedPitayaSatellite(DataSender):
             None,
         )  # NOTE: Placeholder: should be more detailed
 
-    @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_cpu_temperature(self):
         """Obtain temperature of CPU."""
         paths = (
@@ -205,7 +212,6 @@ class RedPitayaSatellite(DataSender):
         self.prev_cpu_idle = idle_cpu_time
         return utilization, "%"
 
-    @schedule_metric(handling=MetricsType.LAST_VALUE, interval=METRICS_PERIOD)
     def get_memory_load(self):
         """Obtain current memory usage."""
         # Obtain memory info from file
@@ -281,7 +287,7 @@ class RedPitayaSatellite(DataSender):
         ret = {}
         for name, value in zip(names, axi_array_contents):
             ret[name] = value
-        return ret
+        return ret, "uint32"
 
     def _sample_raw(self, channel, buffer, chunk):
         """Sample data from given channel."""
