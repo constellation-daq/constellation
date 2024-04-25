@@ -56,17 +56,18 @@ class RedPitayaSatellite(DataSender):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.device = None
-        self._regset_readout = None
-        self.prev_cpu_idle, self.prev_cpu_time = self._get_cpu_times()
-        self.prev_tx = int(
-            self._get_val_from_file("/sys/class/net/eth0/statistics/tx_bytes")
-        )
-        self.prev_rx = int(
-            self._get_val_from_file("/sys/class/net/eth0/statistics/rx_bytes")
-        )
         self._readpos = 0
         self._writepos = 0
+        self._prev_cpu_idle, self._prev_cpu_time = self._get_cpu_times()
+        self._prev_tx = int(
+            self._get_val_from_file("/sys/class/net/eth0/statistics/tx_bytes")
+        )
+        self._prev_rx = int(
+            self._get_val_from_file("/sys/class/net/eth0/statistics/rx_bytes")
+        )
+        self.regset_readout = None
+        self.active_channels = RP_CHANNELS
+        self.device = None
         self.schedule_metric(
             self.get_cpu_temperature.__name__,
             self.get_cpu_temperature,
@@ -145,7 +146,7 @@ class RedPitayaSatellite(DataSender):
 
         # Sample data for every channel and convert to list of numpy arrays
         data = []
-        for _, channel in enumerate(RP_CHANNELS):
+        for _, channel in enumerate(self.active_channels):
             # Buffer all appended data for channel before adding it together
             buffer = []
             # Append last part of buffer before resetting
@@ -205,11 +206,11 @@ class RedPitayaSatellite(DataSender):
     def get_cpu_load(self):
         """Estimate current CPU load and update previously saved CPU times."""
         idle_cpu_time, total_cpu_time = self._get_cpu_times()
-        total_cpu_time2 = total_cpu_time - self.prev_cpu_time
-        idle_cpu_time2 = idle_cpu_time - self.prev_cpu_idle
+        total_cpu_time2 = total_cpu_time - self._prev_cpu_time
+        idle_cpu_time2 = idle_cpu_time - self._prev_cpu_idle
         utilization = ((total_cpu_time2 - idle_cpu_time2) * 100) / total_cpu_time2
-        self.prev_cpu_time = total_cpu_time
-        self.prev_cpu_idle = idle_cpu_time
+        self._prev_cpu_time = total_cpu_time
+        self._prev_cpu_idle = idle_cpu_time
         return utilization, "%"
 
     def get_memory_load(self):
@@ -231,11 +232,11 @@ class RedPitayaSatellite(DataSender):
             self._get_val_from_file("/sys/class/net/eth0/statistics/rx_bytes")
         )
 
-        tx_speed = (tx_bytes - self.prev_tx) / METRICS_PERIOD
-        rx_speed = (rx_bytes - self.prev_rx) / METRICS_PERIOD
+        tx_speed = (tx_bytes - self._prev_tx) / METRICS_PERIOD
+        rx_speed = (rx_bytes - self._prev_rx) / METRICS_PERIOD
 
-        self.prev_tx = tx_bytes
-        self.prev_rx = rx_bytes
+        self._prev_tx = tx_bytes
+        self._prev_rx = rx_bytes
 
         return (tx_speed, rx_speed), "kb/s"
 
@@ -273,16 +274,16 @@ class RedPitayaSatellite(DataSender):
 
         If no readout of axi_gpio_regset is specified the method returns None.
         """
-        if not self._regset_readout:
+        if not self.regset_readout:
             return None
 
         memory_file_handle = os.open("/dev/mem", os.O_RDWR)
         axi_mmap = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
         )
-        axi_numpy_array = np.recarray(1, self._regset_readout, buf=axi_mmap)
+        axi_numpy_array = np.recarray(1, self.regset_readout, buf=axi_mmap)
         axi_array_contents = axi_numpy_array[0]
-        names = [field[0] for field in self._regset_readout.descr]
+        names = [field[0] for field in self.regset_readout.descr]
 
         ret = {}
         for name, value in zip(names, axi_array_contents):
