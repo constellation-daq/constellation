@@ -149,13 +149,12 @@ class RPNeutron(RedPitayaSatellite):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.device = "RedPitaya_125_12"
-        self._regset_readout = axi_regset_readout
+        self.regset_readout = axi_regset_readout
         self.master = False
 
     def do_initializing(self, payload: any) -> str:
         """Initialize satellite. Change the FPGA image and set register values."""
         try:
-    
 
             bin_file = self.config["bin_file"]
             command = "/opt/redpitaya/bin/fpgautil -b " + bin_file

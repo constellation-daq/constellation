@@ -17,7 +17,9 @@ import numpy as np
 import rp
 
 from constellation.core.configuration import ConfigError
-from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop, RP_CHANNELS
+from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
+
+RPG_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2]
 
 axi_regset_config = np.dtype(
     [
@@ -56,7 +58,8 @@ class RPGamma(RedPitayaSatellite):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.device = "RedPitaya_250_14"
-        self._regset_readout = axi_regset_readout
+        self.regset_readout = axi_regset_readout
+        self.active_channels = RPG_CHANNELS
 
     def do_initializing(self, payload: any) -> str:
         """Initialize satellite. Change the FPGA image and set register values."""
@@ -95,7 +98,7 @@ class RPGamma(RedPitayaSatellite):
                 "trigger_level"
             ]  # Sets trigger level on all channels
 
-            for ch in RP_CHANNELS:
+            for ch in RPG_CHANNELS:
                 rp.rp_AcqSetAC_DC(ch, rp.RP_DC)  # NOTE: Beware of RedPitaya functions.
                 rp.rp_AcqSetGain(
                     ch, rp.RP_LOW
