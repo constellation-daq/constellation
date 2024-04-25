@@ -243,6 +243,10 @@ class MonitoringListener(CHIRPBroadcaster):
                 maxBytes=10**7,
                 backupCount=10,
             )
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
+            handler.setFormatter(formatter)
             handler.setLevel(logging.DEBUG)
             self.log.addHandler(handler)
 
