@@ -309,8 +309,11 @@ class RedPitayaSatellite(DataSender):
 
             _fields_ = [("data", ctypes.POINTER(ctypes.c_uint32))]
 
-        # Load the shared library
-        lib = ctypes.CDLL("/root/read_data32.so")
+        # Load the shared library.
+        # NOTE: I don't think this path will work well when packaging
+        # NOTE: This might have some answers when the time comes:
+        # https://stackoverflow.com/questions/51468432/refer-to-a-file-within-python-package
+        lib = ctypes.CDLL("/root/constellation/python/satellites/read_data32.so")
 
         # Define the argument and return types of the function
         lib.readData.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
