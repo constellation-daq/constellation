@@ -41,7 +41,7 @@ void MetricsManager::setMetric(std::string_view topic, const config::Value& valu
 
     auto it = metrics_.find(topic);
     if(it != metrics_.end()) {
-        it->second->set(value);
+        it->second->update(value);
 
         // Notify if this is a triggered metric:
         if(std::dynamic_pointer_cast<TriggeredMetric>(it->second)) {

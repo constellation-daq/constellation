@@ -103,8 +103,13 @@ namespace constellation::metrics {
         bool check();
         virtual Clock::time_point next_trigger() const { return Clock::time_point::max(); }
 
+        virtual void update(const config::Value& value);
+
     protected:
         virtual bool condition() = 0;
+
+    private:
+        bool changed_ {true};
     };
 
     class TimedMetric : public MetricTimer {
@@ -124,7 +129,7 @@ namespace constellation::metrics {
     public:
         TriggeredMetric(std::string_view unit, Type type, std::size_t triggers, const config::Value& value);
 
-        void set(const config::Value& value) override;
+        void update(const config::Value& value) override;
 
         bool condition() override;
 
