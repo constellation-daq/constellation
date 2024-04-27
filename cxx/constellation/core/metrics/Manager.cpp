@@ -58,11 +58,15 @@ void MetricsManager::unregisterMetric(std::string_view topic) {
     }
 }
 
-void MetricsManager::registerTriggeredMetric(
-    std::string_view topic, std::string_view unit, Type type, std::size_t triggers, const config::Value& value) {
+void MetricsManager::registerTriggeredMetric(std::string_view topic,
+                                             std::string_view unit,
+                                             Type type,
+                                             std::size_t triggers,
+                                             std::initializer_list<constellation::message::State> states,
+                                             const config::Value& value) {
     const std::lock_guard lock {mt_};
     const auto [it, success] =
-        metrics_.emplace(topic, std::make_shared<TriggeredMetric>(unit, type, triggers, std::move(value)));
+        metrics_.emplace(topic, std::make_shared<TriggeredMetric>(unit, type, triggers, states, std::move(value)));
 
     if(!success) {
         throw utils::LogicError("Metric \"" + std::string(topic) + "\" is already registered");
@@ -71,11 +75,15 @@ void MetricsManager::registerTriggeredMetric(
     cv_.notify_all();
 }
 
-void MetricsManager::registerTimedMetric(
-    std::string_view topic, std::string_view unit, Type type, Clock::duration interval, const config::Value& value) {
+void MetricsManager::registerTimedMetric(std::string_view topic,
+                                         std::string_view unit,
+                                         Type type,
+                                         Clock::duration interval,
+                                         std::initializer_list<constellation::message::State> states,
+                                         const config::Value& value) {
     const std::lock_guard lock {mt_};
     const auto [it, success] =
-        metrics_.emplace(topic, std::make_shared<TimedMetric>(unit, type, interval, std::move(value)));
+        metrics_.emplace(topic, std::make_shared<TimedMetric>(unit, type, interval, states, std::move(value)));
 
     if(!success) {
         throw utils::LogicError("Metric \"" + std::string(topic) + "\" is already registered");

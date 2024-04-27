@@ -101,8 +101,12 @@ Clock::time_point TimedMetric::next_trigger() const {
     return last_trigger_ + interval_;
 }
 
-TriggeredMetric::TriggeredMetric(std::string_view unit, Type type, std::size_t triggers, const config::Value& value)
-    : MetricTimer(unit, type, value), triggers_(triggers) {
+TriggeredMetric::TriggeredMetric(std::string_view unit,
+                                 Type type,
+                                 std::size_t triggers,
+                                 std::initializer_list<constellation::message::State> states,
+                                 const config::Value& value)
+    : MetricTimer(unit, type, states, value), triggers_(triggers) {
     // We have an initial value, let's log it directly
     if(!std::holds_alternative<std::monostate>(value)) {
         current_triggers_ = triggers_;

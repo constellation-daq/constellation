@@ -58,23 +58,28 @@ void Satellite::register_timed_metric(std::string_view name,
                                       std::string_view unit,
                                       metrics::Type type,
                                       metrics::Clock::duration interval,
+                                      std::initializer_list<State> states,
                                       config::Value value) const {
     auto* metrics_manager = MetricsManager::getDefaultInstance();
     if(metrics_manager == nullptr) {
         metrics_manager = new MetricsManager(getCanonicalName());
         metrics_manager->setAsDefaultInstance();
     }
-    metrics_manager->registerTimedMetric(name, unit, type, interval, std::move(value));
+    metrics_manager->registerTimedMetric(name, unit, type, interval, states, std::move(value));
 }
 
-void Satellite::register_triggered_metric(
-    std::string_view name, std::string_view unit, metrics::Type type, std::size_t triggers, config::Value value) const {
+void Satellite::register_triggered_metric(std::string_view name,
+                                          std::string_view unit,
+                                          metrics::Type type,
+                                          std::size_t triggers,
+                                          std::initializer_list<State> states,
+                                          config::Value value) const {
     auto* metrics_manager = MetricsManager::getDefaultInstance();
     if(metrics_manager == nullptr) {
         metrics_manager = new MetricsManager(getCanonicalName());
         metrics_manager->setAsDefaultInstance();
     }
-    metrics_manager->registerTriggeredMetric(name, unit, type, triggers, std::move(value));
+    metrics_manager->registerTriggeredMetric(name, unit, type, triggers, states, std::move(value));
 }
 
 void Satellite::set_metric(const std::string& topic, const config::Value& value) {

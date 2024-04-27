@@ -88,11 +88,15 @@ namespace constellation::metrics {
          * @param unit Unit of the provided metric value
          * @param type Type of the metric
          * @param triggers Minimum number of triggers between consecutive emissions
+         * @param states States in which this metric will be emitted, empty list will always broadcast this metric
          * @param value Initial value of the metric
-         * @retval true if the metric was registered
          */
-        void registerTriggeredMetric(
-            std::string_view topic, std::string_view unit, Type type, std::size_t triggers, const config::Value& value = {});
+        void registerTriggeredMetric(std::string_view topic,
+                                     std::string_view unit,
+                                     Type type,
+                                     std::size_t triggers,
+                                     std::initializer_list<constellation::message::State> states,
+                                     const config::Value& value = {});
 
         /**
          * Register a metric which will be emitted in regular intervals
@@ -101,13 +105,14 @@ namespace constellation::metrics {
          * @param unit Unit of the provided value
          * @param type Type of the metric
          * @param interval Minimum interval between consecutive emissions
+         * @param states States in which this metric will be emitted, empty list will always broadcast this metric
          * @param value Initial value of the metric
-         * @retval true if the metric was registered
          */
         void registerTimedMetric(std::string_view topic,
                                  std::string_view unit,
                                  Type type,
                                  Clock::duration interval,
+                                 std::initializer_list<constellation::message::State> states,
                                  const config::Value& value = {});
 
     private:

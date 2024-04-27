@@ -155,12 +155,14 @@ namespace constellation::satellite {
          * @param unit Unit of the provided value
          * @param type Type of the metric
          * @param interval Minimum interval between consecutive emissions
+         * @param states States in which this metric will be emitted, empty list will always broadcast this metric
          * @param value Initial value of the metric
          */
         void register_timed_metric(std::string_view name,
                                    std::string_view unit,
                                    metrics::Type type,
                                    metrics::Clock::duration interval,
+                                   std::initializer_list<State> states = {},
                                    config::Value value = {}) const;
 
         /**
@@ -170,12 +172,14 @@ namespace constellation::satellite {
          * @param unit Unit of the provided value
          * @param type Type of the metric
          * @param triggers Minimum number of triggers between consecutive emissions
+         * @param states States in which this metric will be emitted, empty list will always broadcast this metric
          * @param value Initial value of the metric
          */
         void register_triggered_metric(std::string_view name,
                                        std::string_view unit,
                                        metrics::Type type,
                                        std::size_t triggers,
+                                       std::initializer_list<State> states = {},
                                        config::Value value = {}) const;
 
         /**
