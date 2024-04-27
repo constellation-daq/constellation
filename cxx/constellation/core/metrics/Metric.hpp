@@ -98,20 +98,62 @@ namespace constellation::metrics {
 
     using Clock = std::chrono::high_resolution_clock;
 
+    /**
+     * @class MetricTimer
+     * @brief Helper class for the controlled emission of the metric
+     * @details This class provides check on whether the value has changed or the condition for an distribution is met. The
+     * condition method is purely virtual and needs to be implemented by derived timers with a specific behavior. This class
+     * also allows to limit the distribution of the metric to certain states of the FSM.
+     */
     class MetricTimer : public Metric {
     public:
+        /**
+         * @brief MetricTimer constructor
+         *
+         * @param unit Unit of the metric
+         * @param type Type of the metric
+         * @param states List of states in which this metric should be distributed
+         * @param value Initial metric value
+         */
         MetricTimer(std::string_view unit,
                     const Type type,
                     std::initializer_list<message::State> states,
                     const config::Value& value = {})
             : Metric(unit, type, value), states_(states) {}
 
+        /**
+         * @brief Checks if this metric should be distributed now
+         * @details This method checks if the value has changed since the last distribution, if the current state matches the
+         * states in which the metric should be distributed, and if the condition for distribution is fulfilled.
+         *
+         * @param state Current state of the FSM
+         * @return True if the metric should be sent now, false otherwise
+         */
         bool check(message::State state);
+
+        /**
+         * @brief Helper to check when the next time of distribution is expected
+         * @details This method can overwritten by derived timer classes to give an estimate when their next distribution
+         * condition is met. This helps the sending thread to sleep until the next metric is sent
+         * @return Time point in the future when the next metric distribution is expected
+         */
         virtual Clock::time_point next_trigger() const { return Clock::time_point::max(); }
 
+        /**
+         * @brief Update method for the metric value
+         * @details This sets the new value of the metric and marks it as changed if the new value is different from the old
+         *
+         * @param value Metric value
+         */
         virtual void update(const config::Value& value);
 
     protected:
+        /**
+         * @brief Purely virtual method to be overwritten by derived classes for defining distribution conditions
+         * @details Derived classes can use this interface to define conditions such as a specific time interval or a number
+         * of updates of the metric before it is sent.
+         * @return True if the condition is met, false otherwise
+         */
         virtual bool condition() = 0;
 
     private:
@@ -119,6 +161,11 @@ namespace constellation::metrics {
         std::set<message::State> states_;
     };
 
+    /**
+     * @class TimedMetric
+     * @brief Metric timer to send metric values in regular intervals
+     * @details This timer is configured with a time interval, and metrics will be sent every time this interval has passed.
+     */
     class TimedMetric : public MetricTimer {
     public:
         TimedMetric(std::string_view unit,
@@ -136,6 +183,13 @@ namespace constellation::metrics {
         Clock::time_point last_trigger_;
     };
 
+    /**
+     * @class TriggeredMetric
+     * @brief Metric timer so send metric values after N updates or update attempts
+     * @details This timer is configured with a trigger number, and the metric is distributed every time the update method of
+     * this timer has been called N times. This can be useful to e.g. send a metric for data quality monitoring not at
+     * regular time intervals but after every 100 data recordings.
+     */
     class TriggeredMetric : public MetricTimer {
     public:
         TriggeredMetric(std::string_view unit,
