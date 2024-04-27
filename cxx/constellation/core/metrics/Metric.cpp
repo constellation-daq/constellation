@@ -64,10 +64,20 @@ void MetricTimer::update(const config::Value& value) {
         changed_ = true;
     }
 }
-bool MetricTimer::check() {
+
+bool MetricTimer::check(State state) {
+
+    // If the metric has not been changed, there is no need to send it again
     if(!changed_) {
         return false;
     }
+
+    // Check if we are supposed to distribute this metric from the current state:
+    // Note: empty state list means that it is always distributed.
+    if(!states_.empty() && !states_.contains(state)) {
+        return false;
+    }
+
     if(condition()) {
         changed_ = false;
         return true;

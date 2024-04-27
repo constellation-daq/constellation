@@ -18,6 +18,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/logging/Logger.hpp"
+#include "constellation/core/message/satellite_definitions.hpp"
 #include "constellation/core/metrics/Metric.hpp"
 
 namespace constellation::metrics {
@@ -48,6 +49,15 @@ namespace constellation::metrics {
         MetricsManager& operator=(MetricsManager&& other) = delete;
 
         virtual ~MetricsManager() noexcept;
+
+        /**
+         * @brief Update the current state of the sender
+         * @details This method will update the state of the FSM such that metrics with designated states are only broadcast
+         * when appropriate.
+         *
+         * @param state New state
+         */
+        CNSTLN_API void updateState(message::State state) { current_state_ = state; }
 
         /**
          * Update the value cached for the given metric
@@ -114,6 +124,7 @@ namespace constellation::metrics {
 
         std::string name_;
         log::Logger logger_;
+        message::State current_state_ {message::State::NEW};
 
         /** Map of registered metrics */
         std::map<std::string, std::shared_ptr<MetricTimer>, std::less<>> metrics_;

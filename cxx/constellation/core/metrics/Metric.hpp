@@ -96,11 +96,13 @@ namespace constellation::metrics {
         config::Value value_ {};
     };
 
+    using Clock = std::chrono::high_resolution_clock;
+
     class MetricTimer : public Metric {
     public:
         MetricTimer(std::string_view unit, const Type type, config::Value value = {}) : Metric(unit, type, value) {}
 
-        bool check();
+        bool check(message::State state);
         virtual Clock::time_point next_trigger() const { return Clock::time_point::max(); }
 
         virtual void update(const config::Value& value);
@@ -110,6 +112,7 @@ namespace constellation::metrics {
 
     private:
         bool changed_ {true};
+        std::set<message::State> states_;
     };
 
     class TimedMetric : public MetricTimer {

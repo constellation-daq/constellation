@@ -91,7 +91,7 @@ void MetricsManager::run(const std::stop_token& stop_token) {
 
         auto next = Clock::time_point::max();
         for(auto& [key, metric] : metrics_) {
-            if(metric->check()) {
+            if(metric->check(current_state_)) {
                 // Create message header
                 auto msghead = CMDP1Message::Header("test", Clock::now());
 
