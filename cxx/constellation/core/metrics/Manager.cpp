@@ -66,7 +66,7 @@ void MetricsManager::registerTriggeredMetric(std::string_view topic,
                                              const config::Value& value) {
     const std::lock_guard lock {mt_};
     const auto [it, success] =
-        metrics_.emplace(topic, std::make_shared<TriggeredMetric>(unit, type, triggers, states, std::move(value)));
+        metrics_.emplace(topic, std::make_shared<TriggeredMetric>(unit, type, triggers, states, value));
 
     if(!success) {
         throw utils::LogicError("Metric \"" + std::string(topic) + "\" is already registered");
@@ -82,8 +82,7 @@ void MetricsManager::registerTimedMetric(std::string_view topic,
                                          std::initializer_list<constellation::message::State> states,
                                          const config::Value& value) {
     const std::lock_guard lock {mt_};
-    const auto [it, success] =
-        metrics_.emplace(topic, std::make_shared<TimedMetric>(unit, type, interval, states, std::move(value)));
+    const auto [it, success] = metrics_.emplace(topic, std::make_shared<TimedMetric>(unit, type, interval, states, value));
 
     if(!success) {
         throw utils::LogicError("Metric \"" + std::string(topic) + "\" is already registered");

@@ -59,13 +59,12 @@ void Satellite::register_timed_metric(std::string_view name,
                                       metrics::Type type,
                                       metrics::Clock::duration interval,
                                       std::initializer_list<State> states,
-                                      config::Value value) const {
-    auto* metrics_manager = MetricsManager::getDefaultInstance();
-    if(metrics_manager == nullptr) {
-        metrics_manager = new MetricsManager(getCanonicalName());
-        metrics_manager->setAsDefaultInstance();
+                                      const config::Value& value) {
+    if(metrics_manager_ == nullptr) {
+        metrics_manager_ = std::make_shared<MetricsManager>(getCanonicalName());
+        metrics_manager_->setAsDefaultInstance();
     }
-    metrics_manager->registerTimedMetric(name, unit, type, interval, states, std::move(value));
+    metrics_manager_->registerTimedMetric(name, unit, type, interval, states, value);
 }
 
 void Satellite::register_triggered_metric(std::string_view name,
@@ -73,13 +72,12 @@ void Satellite::register_triggered_metric(std::string_view name,
                                           metrics::Type type,
                                           std::size_t triggers,
                                           std::initializer_list<State> states,
-                                          config::Value value) const {
-    auto* metrics_manager = MetricsManager::getDefaultInstance();
-    if(metrics_manager == nullptr) {
-        metrics_manager = new MetricsManager(getCanonicalName());
-        metrics_manager->setAsDefaultInstance();
+                                          const config::Value& value) {
+    if(metrics_manager_ == nullptr) {
+        metrics_manager_ = std::make_shared<MetricsManager>(getCanonicalName());
+        metrics_manager_->setAsDefaultInstance();
     }
-    metrics_manager->registerTriggeredMetric(name, unit, type, triggers, states, std::move(value));
+    metrics_manager_->registerTriggeredMetric(name, unit, type, triggers, states, value);
 }
 
 void Satellite::set_metric(const std::string& topic, const config::Value& value) {

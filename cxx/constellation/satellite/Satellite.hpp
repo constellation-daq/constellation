@@ -163,7 +163,7 @@ namespace constellation::satellite {
                                    metrics::Type type,
                                    metrics::Clock::duration interval,
                                    std::initializer_list<State> states = {},
-                                   config::Value value = {}) const;
+                                   const config::Value& value = {});
 
         /**
          * Register a metric which will be emitted after having been triggered a given number of times
@@ -180,7 +180,7 @@ namespace constellation::satellite {
                                        metrics::Type type,
                                        std::size_t triggers,
                                        std::initializer_list<State> states = {},
-                                       config::Value value = {}) const;
+                                       const config::Value& value = {});
 
         /**
          * Update the value cached for the given metric
