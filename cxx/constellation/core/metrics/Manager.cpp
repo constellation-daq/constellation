@@ -20,15 +20,15 @@
 using namespace constellation::message;
 using namespace constellation::metrics;
 
-Manager* Manager::getDefaultInstance() {
-    return Manager::default_manager_instance_;
+MetricsManager* MetricsManager::getDefaultInstance() {
+    return MetricsManager::default_manager_instance_;
 }
 
-void Manager::setAsDefaultInstance() {
-    Manager::default_manager_instance_ = this;
+void MetricsManager::setAsDefaultInstance() {
+    MetricsManager::default_manager_instance_ = this;
 }
 
-Manager::~Manager() noexcept {
+MetricsManager::~MetricsManager() noexcept {
     thread_.request_stop();
     cv_.notify_all();
 
@@ -37,7 +37,7 @@ Manager::~Manager() noexcept {
     }
 }
 
-void Manager::setMetric(std::string_view topic, const config::Value& value) {
+void MetricsManager::setMetric(std::string_view topic, const config::Value& value) {
 
     auto it = metrics_.find(topic);
     if(it != metrics_.end()) {
@@ -50,7 +50,7 @@ void Manager::setMetric(std::string_view topic, const config::Value& value) {
     }
 }
 
-void Manager::unregisterMetric(std::string_view topic) {
+void MetricsManager::unregisterMetric(std::string_view topic) {
     const std::lock_guard lock {mt_};
     auto it = metrics_.find(topic);
     if(it != metrics_.end()) {
@@ -58,7 +58,7 @@ void Manager::unregisterMetric(std::string_view topic) {
     }
 }
 
-void Manager::registerTriggeredMetric(
+void MetricsManager::registerTriggeredMetric(
     std::string_view topic, std::string_view unit, Type type, std::size_t triggers, config::Value value) {
     const std::lock_guard lock {mt_};
     const auto [it, success] =
@@ -71,7 +71,7 @@ void Manager::registerTriggeredMetric(
     cv_.notify_all();
 }
 
-void Manager::registerTimedMetric(
+void MetricsManager::registerTimedMetric(
     std::string_view topic, std::string_view unit, Type type, Clock::duration interval, config::Value value) {
     const std::lock_guard lock {mt_};
     const auto [it, success] =
@@ -84,7 +84,7 @@ void Manager::registerTimedMetric(
     cv_.notify_all();
 }
 
-void Manager::run(const std::stop_token& stop_token) {
+void MetricsManager::run(const std::stop_token& stop_token) {
     std::unique_lock<std::mutex> lock {mt_};
 
     while(!stop_token.stop_requested()) {

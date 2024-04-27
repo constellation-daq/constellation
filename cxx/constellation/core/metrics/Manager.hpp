@@ -15,7 +15,7 @@
 #include <string_view>
 #include <thread>
 
-#include "constellation/core/config.hpp"
+#include "constellation/build.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/metrics/Metric.hpp"
@@ -23,14 +23,14 @@
 namespace constellation::metrics {
 
     /** Manager for Metrics handling & transmission */
-    class CNSTLN_API Manager {
+    class CNSTLN_API MetricsManager {
     public:
         /**
          * Return the default CHIRP Manager (requires to be set via `setAsDefaultInstance`)
          *
          * @return Pointer to default CHIRP Manager (might be a nullptr)
          */
-        static Manager* getDefaultInstance();
+        static MetricsManager* getDefaultInstance();
 
         /**
          * Set this CHIRP manager as the default instance
@@ -38,15 +38,16 @@ namespace constellation::metrics {
         void setAsDefaultInstance();
 
     public:
-        Manager(std::string_view name) : name_(name), logger_("STAT"), thread_(std::bind_front(&Manager::run, this)) {};
+        MetricsManager(std::string_view name)
+            : name_(name), logger_("STAT"), thread_(std::bind_front(&MetricsManager::run, this)) {};
 
         // No copy/move constructor/assignment
-        Manager(Manager& other) = delete;
-        Manager& operator=(Manager other) = delete;
-        Manager(Manager&& other) = delete;
-        Manager& operator=(Manager&& other) = delete;
+        MetricsManager(MetricsManager& other) = delete;
+        MetricsManager& operator=(MetricsManager other) = delete;
+        MetricsManager(MetricsManager&& other) = delete;
+        MetricsManager& operator=(MetricsManager&& other) = delete;
 
-        virtual ~Manager() noexcept;
+        virtual ~MetricsManager() noexcept;
 
         /**
          * Update the value cached for the given metric
@@ -124,6 +125,6 @@ namespace constellation::metrics {
         std::condition_variable cv_;
 
         // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-        inline static Manager* default_manager_instance_;
+        inline static MetricsManager* default_manager_instance_;
     };
 } // namespace constellation::metrics

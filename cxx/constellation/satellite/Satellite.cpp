@@ -18,6 +18,7 @@
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
 
+using namespace constellation::metrics;
 using namespace constellation::protocol::CSCP;
 using namespace constellation::satellite;
 using namespace constellation::utils;
@@ -58,9 +59,9 @@ void Satellite::register_timed_metric(std::string_view name,
                                       metrics::Type type,
                                       metrics::Clock::duration interval,
                                       config::Value value) const {
-    auto* metrics_manager = metrics::Manager::getDefaultInstance();
+    auto* metrics_manager = MetricsManager::getDefaultInstance();
     if(metrics_manager == nullptr) {
-        metrics_manager = new metrics::Manager(getCanonicalName());
+        metrics_manager = new MetricsManager(getCanonicalName());
         metrics_manager->setAsDefaultInstance();
     }
     metrics_manager->registerTimedMetric(name, unit, type, interval, std::move(value));
@@ -68,16 +69,16 @@ void Satellite::register_timed_metric(std::string_view name,
 
 void Satellite::register_triggered_metric(
     std::string_view name, std::string_view unit, metrics::Type type, std::size_t triggers, config::Value value) const {
-    auto* metrics_manager = metrics::Manager::getDefaultInstance();
+    auto* metrics_manager = MetricsManager::getDefaultInstance();
     if(metrics_manager == nullptr) {
-        metrics_manager = new metrics::Manager(getCanonicalName());
+        metrics_manager = new MetricsManager(getCanonicalName());
         metrics_manager->setAsDefaultInstance();
     }
     metrics_manager->registerTriggeredMetric(name, unit, type, triggers, std::move(value));
 }
 
 void Satellite::set_metric(const std::string& topic, config::Value value) {
-    auto* metrics_manager = metrics::Manager::getDefaultInstance();
+    auto* metrics_manager = MetricsManager::getDefaultInstance();
     if(metrics_manager != nullptr) {
         metrics_manager->setMetric(topic, std::move(value));
     }
