@@ -82,7 +82,7 @@ namespace constellation::metrics {
          * @retval true if the metric was registered
          */
         void registerTriggeredMetric(
-            std::string_view topic, std::string_view unit, Type type, std::size_t triggers, config::Value value = {});
+            std::string_view topic, std::string_view unit, Type type, std::size_t triggers, const config::Value& value = {});
 
         /**
          * Register a metric which will be emitted in regular intervals
@@ -94,8 +94,11 @@ namespace constellation::metrics {
          * @param value Initial value of the metric
          * @retval true if the metric was registered
          */
-        void registerTimedMetric(
-            std::string_view topic, std::string_view unit, Type type, Clock::duration interval, config::Value value = {});
+        void registerTimedMetric(std::string_view topic,
+                                 std::string_view unit,
+                                 Type type,
+                                 Clock::duration interval,
+                                 const config::Value& value = {});
 
     private:
         /**
@@ -113,7 +116,7 @@ namespace constellation::metrics {
         log::Logger logger_;
 
         /** Map of registered metrics */
-        std::map<std::string, std::shared_ptr<Metric>, std::less<>> metrics_;
+        std::map<std::string, std::shared_ptr<MetricTimer>, std::less<>> metrics_;
 
         /** Main loop thread of the metrics manager */
         std::jthread thread_;

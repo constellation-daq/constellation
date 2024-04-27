@@ -96,11 +96,21 @@ namespace constellation::metrics {
         config::Value value_ {};
     };
 
+    class MetricTimer : public Metric {
+    public:
+        MetricTimer(std::string_view unit, const Type type, config::Value value = {}) : Metric(unit, type, value) {}
 
-    class TimedMetric : public Metric {
+        bool check();
+        virtual Clock::time_point next_trigger() const { return Clock::time_point::max(); }
+
+    protected:
+        virtual bool condition() = 0;
+    };
+
+    class TimedMetric : public MetricTimer {
     public:
         TimedMetric(std::string_view unit, Type type, Clock::duration interval, config::Value value = {})
-            : Metric(unit, type, std::move(value)), interval_(interval), last_trigger_(Clock::now()) {}
+            : MetricTimer(unit, type, std::move(value)), interval_(interval), last_trigger_(Clock::now()) {}
 
         bool condition() override;
         Clock::time_point next_trigger() const override;
@@ -110,7 +120,7 @@ namespace constellation::metrics {
         Clock::time_point last_trigger_;
     };
 
-    class TriggeredMetric : public Metric {
+    class TriggeredMetric : public MetricTimer {
     public:
         TriggeredMetric(std::string_view unit, Type type, std::size_t triggers, const config::Value& value);
 

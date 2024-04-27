@@ -58,6 +58,16 @@ Metric Metric::disassemble(const message::PayloadBuffer& message) {
     return {unit, type.value(), std::move(value)};
 }
 
+bool MetricTimer::check() {
+    if(!changed()) {
+        return false;
+    }
+    if(condition()) {
+        changed_ = false;
+        return true;
+    }
+    return false;
+}
 
 bool TimedMetric::condition() {
 

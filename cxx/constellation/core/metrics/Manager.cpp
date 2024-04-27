@@ -59,7 +59,7 @@ void MetricsManager::unregisterMetric(std::string_view topic) {
 }
 
 void MetricsManager::registerTriggeredMetric(
-    std::string_view topic, std::string_view unit, Type type, std::size_t triggers, config::Value value) {
+    std::string_view topic, std::string_view unit, Type type, std::size_t triggers, const config::Value& value) {
     const std::lock_guard lock {mt_};
     const auto [it, success] =
         metrics_.emplace(topic, std::make_shared<TriggeredMetric>(unit, type, triggers, std::move(value)));
@@ -72,7 +72,7 @@ void MetricsManager::registerTriggeredMetric(
 }
 
 void MetricsManager::registerTimedMetric(
-    std::string_view topic, std::string_view unit, Type type, Clock::duration interval, config::Value value) {
+    std::string_view topic, std::string_view unit, Type type, Clock::duration interval, const config::Value& value) {
     const std::lock_guard lock {mt_};
     const auto [it, success] =
         metrics_.emplace(topic, std::make_shared<TimedMetric>(unit, type, interval, std::move(value)));

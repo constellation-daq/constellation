@@ -77,9 +77,9 @@ void Satellite::register_triggered_metric(
     metrics_manager->registerTriggeredMetric(name, unit, type, triggers, std::move(value));
 }
 
-void Satellite::set_metric(const std::string& topic, config::Value value) {
+void Satellite::set_metric(const std::string& topic, const config::Value& value) {
     auto* metrics_manager = MetricsManager::getDefaultInstance();
     if(metrics_manager != nullptr) {
-        metrics_manager->setMetric(topic, std::move(value));
+        metrics_manager->setMetric(topic, value);
     }
 }
