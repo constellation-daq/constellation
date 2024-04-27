@@ -203,3 +203,16 @@ void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
         .assemble()
         .send(pub_socket_);
 }
+
+void CMDPSink::sink_stats(const std::string& key, const std::shared_ptr<metrics::Metric>& metric) {
+
+    // At the very beginning we wait 500ms before starting the async logging.
+    // This way the socket can fetch already pending subscriptions
+    std::call_once(setup_flag_, []() { std::this_thread::sleep_for(500ms); });
+
+    // Create message header
+    auto msghead = CMDP1Message::Header(asio::ip::host_name(), std::chrono::system_clock::now());
+
+    // Create and send CMDP message
+    CMDP1StatMessage(key, std::move(msghead), metric).assemble().send(publisher_);
+}
