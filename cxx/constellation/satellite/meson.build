@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: CC0-1.0
 
 satellite_src = files(
+  'data/DataReceiver.cpp',
+  'data/DataSender.cpp',
   'CommandRegistry.cpp',
   'FSM.cpp',
   'Satellite.cpp',
@@ -22,6 +24,13 @@ satellite_dep = declare_dependency(
   link_with: satellite_lib,
   include_directories: constellation_inc,
   dependencies: [core_dep, cppzmq_dep, magic_enum_dep],
+)
+
+install_headers(
+  'data/DataReceiver.hpp',
+  'data/DataSender.hpp',
+  'data/exceptions.hpp',
+  subdir: 'constellation/satellite/data',
 )
 
 install_headers(
