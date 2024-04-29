@@ -59,13 +59,23 @@ class RedPitayaSatellite(DataSender):
         super().__init__(*args, **kwargs)
         self._readpos = 0
         self._writepos = 0
+
+                    #Define file readers for monetoring from file
+        try:
+            self.cpu_temperature_offset_file_reader=open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_offset", "r")
+            self.cpu_temperature_raw_file_reader=open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_raw", "r")
+            self.cpu_temperature_scale_file_reader=open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_scale", "r")
+            self.cpu_times_file_reader=open("/proc/stat","r")
+            self.memor_load_file_reader=open("/proc/meminfo","r")
+            self.network_tx_file_reader=open("/sys/class/net/eth0/statistics/tx_bytes","r")
+            self.network_rx_file_reader=open("/sys/class/net/eth0/statistics/rx_bytes","r")
+        except FileNotFoundError:
+            self.log.warning("Failed to find path")
+
         self._prev_cpu_idle, self._prev_cpu_time = self._get_cpu_times()
-        self._prev_tx = int(
-            self._get_val_from_file("/sys/class/net/eth0/statistics/tx_bytes")
-        )
-        self._prev_rx = int(
-            self._get_val_from_file("/sys/class/net/eth0/statistics/rx_bytes")
-        )
+
+        self._prev_tx = int(self.network_tx_file_reader.read())
+        self._prev_rx = int(self.network_rx_file_reader.read())
         self.regset_readout = None
         self.active_channels = RP_CHANNELS
         self.device = None
@@ -182,7 +192,7 @@ class RedPitayaSatellite(DataSender):
         self.log.info("Red Pitaya satellite running, publishing events.")
 
         self._readpos = self._get_write_pointer()
-        self._prevout=0
+        
         while not self._state_thread_evt.is_set():
             # Main DAQ-loop
             payload = self.get_data()
@@ -215,8 +225,6 @@ class RedPitayaSatellite(DataSender):
         self,
     ):  # TODO: Check performance. This was lifted from the redpitaya examples
         """Sample every buffer channel and return raw data in numpy array."""
-
-        prevout=self._prevout
 
 
         # Obtain to which point the buffer has written
@@ -265,7 +273,7 @@ class RedPitayaSatellite(DataSender):
 
         # Update readpointer
         self._readpos = self._writepos
-        self._prevout=prevout
+
         # data = np.vstack(data, dtype=int).transpose().flatten()
         return data
 
@@ -280,16 +288,14 @@ class RedPitayaSatellite(DataSender):
 
     def get_cpu_temperature(self):
         """Obtain temperature of CPU."""
-        paths = (
-            "/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_offset",
-            "/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_raw",
-            "/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_scale",
-        )
-
-        offset = int(self._get_val_from_file(paths[0]))
-        raw = int(self._get_val_from_file(paths[1]))
-        scale = float(self._get_val_from_file(paths[2]))
-        return ((float)(offset + raw)) * scale / 1000.0, "C"
+        
+        self.cpu_temperature_offset_file_reader.seek(0)
+        offset = int(self.cpu_temperature_offset_file_reader.read())
+        self.cpu_temperature_raw_file_reader.seek(0)
+        raw = int(self.cpu_temperature_raw_file_reader.read())
+        self.cpu_temperature_scale_file_reader.seek(0)
+        scale = float(self.cpu_temperature_scale_file_reader.read())
+        return (round(((float)(offset + raw)) * scale / 1000.0,1)), "C"
 
     def get_cpu_load(self):
         """Estimate current CPU load and update previously saved CPU times."""
@@ -299,26 +305,25 @@ class RedPitayaSatellite(DataSender):
         utilization = ((total_cpu_time2 - idle_cpu_time2) * 100) / total_cpu_time2
         self._prev_cpu_time = total_cpu_time
         self._prev_cpu_idle = idle_cpu_time
-        return utilization, "%"
+        return round(utilization,1), "%"
 
     def get_memory_load(self):
         """Obtain current memory usage."""
         # Obtain memory info from file
-        mem = self._get_val_from_file("/proc/meminfo").split("\n")
+        self.memor_load_file_reader.seek(0)
+        mem = self.memor_load_file_reader.read().split("\n")
         tot_mem = int(re.search(r"\d+", mem[0]).group())
         free_mem = int(re.search(r"\d+", mem[1]).group())
         used_mem = tot_mem - free_mem
 
-        return used_mem, "kb"
+        return round(used_mem/tot_mem*100,1), "%"
 
     def get_network_speeds(self):
         """Estimate current network speeds."""
-        tx_bytes = int(
-            self._get_val_from_file("/sys/class/net/eth0/statistics/tx_bytes")
-        )
-        rx_bytes = int(
-            self._get_val_from_file("/sys/class/net/eth0/statistics/rx_bytes")
-        )
+        self.network_tx_file_reader.seek(0)
+        tx_bytes = int(self.network_tx_file_reader.read())
+        self.network_rx_file_reader.seek(0)
+        rx_bytes = int(self.network_rx_file_reader.read())
 
         tx_speed = (tx_bytes - self._prev_tx) / METRICS_PERIOD
         rx_speed = (rx_bytes - self._prev_rx) / METRICS_PERIOD
@@ -326,7 +331,7 @@ class RedPitayaSatellite(DataSender):
         self._prev_tx = tx_bytes
         self._prev_rx = rx_bytes
 
-        return (tx_speed, rx_speed), "kb/s"
+        return ("tx",round(tx_speed/1000.0,1),'rx',round(rx_speed/1000,1)), "kb/s"
 
     def get_digital_gpio_pins(self):
         """Read out values at digital gpio P and N ports."""
@@ -416,7 +421,8 @@ class RedPitayaSatellite(DataSender):
     def _get_cpu_times(self):
         """Obtain idle time and active time of CPU."""
         # Get the line containing total values of CPU time
-        stat = self._get_val_from_file("/proc/stat").split("\n")[0].split(" ")[2:]
+        self.cpu_times_file_reader.seek(0)
+        stat = self.cpu_times_file_reader.read().split("\n")[0].split(" ")[2:]
 
         idle_cpu_time = 0
         total_cpu_time = 0
@@ -427,15 +433,6 @@ class RedPitayaSatellite(DataSender):
 
         return idle_cpu_time, total_cpu_time
 
-    def _get_val_from_file(self, path: str):
-        """Fetch all information stored in file from path."""
-        try:
-            with open(path, "r") as f:
-                var = f.read()
-                     
-            return var
-        except FileNotFoundError:
-            self.log.warning("Failed to find path %s", path)
 
 
 # -------------------------------------------------------------------------
