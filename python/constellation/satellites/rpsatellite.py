@@ -185,7 +185,7 @@ class RedPitayaSatellite(DataSender):
             self.log.error("Error configuring device. %s", e)
         return super().do_initializing(payload)
 
-
+    
         
     def do_run(self, payload):
         """Run the satellite. Collect data from buffers and send it."""
@@ -216,10 +216,11 @@ class RedPitayaSatellite(DataSender):
 
         # Reset Channels
 
-        self.reset_axi_array_contents.data_type = 0x10  
+        self.reset_axi_array_contents.data_type = 16  
 
         time.sleep(0.1)
         self.reset_axi_array_contents.data_type = self.config["data_type"]  # Data type
+
 
     def get_data(
         self,
@@ -230,6 +231,7 @@ class RedPitayaSatellite(DataSender):
         # Obtain to which point the buffer has written
         self._writepos = self._get_write_pointer()
 
+        #time.sleep(0.01)
         # Skip sampling if we haven't moved
         if self._readpos == self._writepos:
             return None
@@ -243,7 +245,7 @@ class RedPitayaSatellite(DataSender):
         data = np.empty(len(self.active_channels), dtype=object)
         for i, channel in enumerate(self.active_channels):
             # Buffer all data for channel before adding it together
-            
+
             # Append last part of buffer before resetting
             if cycled:
                 buffer = np.concatenate((
@@ -277,6 +279,10 @@ class RedPitayaSatellite(DataSender):
         # data = np.vstack(data, dtype=int).transpose().flatten()
         return data
 
+
+
+
+   
     @cscp_requestable
     def get_device(self, _request: CSCPMessage):
         """Get name of device."""
@@ -401,22 +407,24 @@ class RedPitayaSatellite(DataSender):
 
         # Define register offset depending onc channel
         if channel == rp.RP_CH_1:
-            offset = 1074855936
+            offset = 0x40110000
         elif channel == rp.RP_CH_2:
-            offset = 1074921472
+            offset = 0x40120000
         elif channel == rp.RP_CH_3:
-            offset = 1075904512
+            offset = 0x40130000
         elif channel == rp.RP_CH_4:
-            offset = 1075970048
+            offset = 0x40140000
 
         # Call the C function
-        result = lib.readData(0, 16384, offset)
-        lib.freeData(result.data)
-
+        result= lib.readData(0, 16384, offset)
+        
+        
         # Convert the result to a NumPy array
-        data_array = np.ctypeslib.as_array(result.data, shape=(16384,))[start:stop]
 
-        return data_array
+        data_array = np.ctypeslib.as_array(result.data, shape=(16384,))[start:stop]
+        stored_data = data_array.copy()
+        lib.freeData(result.data)
+        return stored_data
 
     def _get_cpu_times(self):
         """Obtain idle time and active time of CPU."""

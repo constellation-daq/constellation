@@ -129,6 +129,9 @@ class RPNeutron(RedPitayaSatellite):
 
     def do_starting(self, payload: any) -> str:
         """Start acquisition by writing to address."""
+        self.reset()
+
+
         if self.master:
             memory_file_handle = os.open("/dev/mem", os.O_RDWR)
             axi_mmap0 = mmap.mmap(

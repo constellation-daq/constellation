@@ -81,6 +81,8 @@ class RPGamma(RedPitayaSatellite):
 
     def do_starting(self, payload: any) -> str:
 
+        self.reset()
+
         memory_file_handle = os.open("/dev/mem", os.O_RDWR)
         axi_mmap0 = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
@@ -88,7 +90,7 @@ class RPGamma(RedPitayaSatellite):
         axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
         axi_array_contents0 = axi_numpy_array0[0]
 
-        axi_array_contents0.Externaltrigger = 32
+        axi_array_contents0.Externaltrigger = self.config["data_type"] +32 
         return super().do_starting(payload)
 
     def do_stopping(self, payload: any):

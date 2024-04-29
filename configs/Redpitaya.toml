@@ -40,7 +40,7 @@ active_channles=0x3
 running_sum_Integration_time=0x066
 averaging_Integration_time=0x0C6
 trigger_level=0x79E
-use_test_pulser = 10
+use_test_pulser = 0
 
 
 
@@ -57,7 +57,7 @@ ToT_ch2_3=0x320032
 dist_ch0_1=0x2710271
 dist_ch2_3=0x2710271
 ratio=0x40404040
-use_test_pulser = 26
+use_test_pulser = 20
 data_type = 0
 
 
