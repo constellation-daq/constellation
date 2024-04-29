@@ -21,6 +21,7 @@ import rp
 from constellation.core.commandmanager import cscp_requestable
 from constellation.core.cscp import CSCPMessage
 from constellation.core.datasender import DataSender
+from constellation.core.configuration import ConfigError
 
 axi_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 
@@ -88,13 +89,100 @@ class RedPitayaSatellite(DataSender):
             self.get_network_speeds,
             interval=METRICS_PERIOD,
         )
-        rp.rp_Init()
 
+
+        #Define the axi array for GPIO pins
+        memory_file_handle_gpio = os.open("/dev/mem", os.O_RDWR)
+
+        axi_mmap_gpio = mmap.mmap(
+            fileno=memory_file_handle_gpio, length=mmap.PAGESIZE, offset=0x40000000
+        )
+        axi_numpy_array_gpio = np.recarray(1, axi_gpio_regset_pins, buf=axi_mmap_gpio)
+        self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
+
+        rp.rp_Init()
+    def do_initializing(self, payload: any) -> str:
+        try:
+            # Change the FPGA image ##
+            bin_file = self.config["bin_file"]
+            command = "/opt/redpitaya/bin/fpgautil -b " + bin_file
+            if os.system(command) != 0:  # OS 2.00 and above
+                msg = "System command failed."
+                raise ConfigError(msg)
+            time.sleep(2)
+
+            #Define axi array for custom registers
+            memory_file_handle_custom_registers = os.open("/dev/mem", os.O_RDWR)
+            axi_mmap_custom_registers= mmap.mmap(
+                fileno=memory_file_handle_custom_registers, length=mmap.PAGESIZE, offset=self.config["offset"]
+            )
+            axi_numpy_array_reset = np.recarray(1, axi_regset_reset, buf=axi_mmap_custom_registers)
+            self.reset_axi_array_contents = axi_numpy_array_reset[0]
+            
+            # Setting configuration values to FPGA registers
+            axi_numpy_array_config = np.recarray(1, self.axi_regset_config, buf=axi_mmap_custom_registers)
+            config_axi_array_contents = axi_numpy_array_config[0]
+
+    
+            names = [field[0] for field in self.axi_regset_config.descr]
+            for name, value in zip(names, config_axi_array_contents):
+                setattr(config_axi_array_contents, name, self.config[name])
+ 
+            #Define the axi array for parameters and status
+
+            axi_numpy_array_param = np.recarray(1, self.regset_readout, buf=axi_mmap_custom_registers)
+            self.axi_array_contents_param = axi_numpy_array_param[0]
+
+            # Setup metrics
+            if self.config["read_gpio"]:
+                self.schedule_metric(
+                    self.get_analog_gpio_pins.__name__,
+                    self.get_analog_gpio_pins,
+                    self.config["gpio_poll_rate"],
+                )
+                self.schedule_metric(
+                    self.get_digital_gpio_pins.__name__,
+                    self.get_digital_gpio_pins,
+                    self.config["gpio_poll_rate"],
+                )
+            self.schedule_metric(
+                self.get_cpu_temperature.__name__,
+                self.get_cpu_temperature,
+                self.config["metrics_poll_rate"],
+            )
+            self.schedule_metric(
+                self.get_cpu_load.__name__,
+                self.get_cpu_load,
+                self.config["metrics_poll_rate"],
+            )
+            self.schedule_metric(
+                self.get_memory_load.__name__,
+                self.get_memory_load,
+                self.config["metrics_poll_rate"],
+            )
+            self.schedule_metric(
+                self.get_network_speeds.__name__,
+                self.get_network_speeds,
+                self.config["metrics_poll_rate"],
+            )
+            self.schedule_metric(
+                self.read_registers.__name__,
+                self.read_registers,
+                self.config["metrics_poll_rate"],
+            )
+
+        except (ConfigError, OSError) as e:
+            self.log.error("Error configuring device. %s", e)
+        return super().do_initializing(payload)
+
+
+        
     def do_run(self, payload):
         """Run the satellite. Collect data from buffers and send it."""
         self.log.info("Red Pitaya satellite running, publishing events.")
 
         self._readpos = self._get_write_pointer()
+        self._prevout=0
         while not self._state_thread_evt.is_set():
             # Main DAQ-loop
             payload = self.get_data()
@@ -114,22 +202,22 @@ class RedPitayaSatellite(DataSender):
 
     def reset(self):
         """Reset DAQ."""
-        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-        axi_mmap = mmap.mmap(
-            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
-        )
-        axi_numpy_array = np.recarray(1, axi_regset_reset, buf=axi_mmap)
-        axi_array_contents = axi_numpy_array[0]
 
-        axi_array_contents.data_type = 0x10  # Start Channels
+
+        # Reset Channels
+
+        self.reset_axi_array_contents.data_type = 0x10  
 
         time.sleep(0.1)
-        axi_array_contents.data_type = 0x0  # Start Channels
+        self.reset_axi_array_contents.data_type = self.config["data_type"]  # Data type
 
     def get_data(
         self,
     ):  # TODO: Check performance. This was lifted from the redpitaya examples
         """Sample every buffer channel and return raw data in numpy array."""
+
+        prevout=self._prevout
+
 
         # Obtain to which point the buffer has written
         self._writepos = self._get_write_pointer()
@@ -144,42 +232,42 @@ class RedPitayaSatellite(DataSender):
         else:
             cycled = False
 
-        # Sample data for every channel and convert to list of numpy arrays
-        data = []
-        for _, channel in enumerate(self.active_channels):
-            # Buffer all appended data for channel before adding it together
-            buffer = []
+        data = np.empty(len(self.active_channels), dtype=object)
+        for i, channel in enumerate(self.active_channels):
+            # Buffer all data for channel before adding it together
+            
             # Append last part of buffer before resetting
             if cycled:
-                buffer.append(
+                buffer = np.concatenate((
                     self._sample_raw32(
                         start=self._readpos,
                         stop=BUFFER_SIZE,
                         channel=channel,
                     ),
-                )
-                buffer.append(
+                
                     self._sample_raw32(
                         start=0,
                         stop=self._writepos,
                         channel=channel,
                     )
-                )
+                ))
             else:
-                buffer.append(
-                    self._sample_raw32(
+                buffer=self._sample_raw32(
                         start=self._readpos,
                         stop=self._writepos,
                         channel=channel,
-                    ),
-                )
-            data.append(np.concatenate(buffer))
+                    )
+
+            if(i==0):
+                data = np.empty((len(self.active_channels), len(buffer)), dtype=np.uint32)
+    
+            data[i]=(buffer)
 
         # Update readpointer
         self._readpos = self._writepos
-
+        self._prevout=prevout
         # data = np.vstack(data, dtype=int).transpose().flatten()
-        return np.asarray(data, dtype=np.int32)
+        return data
 
     @cscp_requestable
     def get_device(self, _request: CSCPMessage):
@@ -242,16 +330,8 @@ class RedPitayaSatellite(DataSender):
 
     def get_digital_gpio_pins(self):
         """Read out values at digital gpio P and N ports."""
-        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-
-        axi_mmap = mmap.mmap(
-            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40000000
-        )
-        axi_numpy_array = np.recarray(1, axi_gpio_regset_pins, buf=axi_mmap)
-        axi_array_contents = axi_numpy_array[0]
-
-        p_pins = axi_array_contents.p_pins.astype(dtype=np.uint8).item()
-        n_pins = axi_array_contents.n_pins.astype(dtype=np.uint8).item()
+        p_pins = self.axi_array_contents_gpio.p_pins.astype(dtype=np.uint8).item()
+        n_pins = self.axi_array_contents_gpio.n_pins.astype(dtype=np.uint8).item()
 
         pins = [p_pins, n_pins]
         return pins, "bits"
@@ -269,24 +349,18 @@ class RedPitayaSatellite(DataSender):
 
     def read_registers(self):
         """
-        Reads the stored values of the axi_gpio_regset and returns a
+        Reads the stored values of the axi_regset and returns a
         tuple of their respective names and values.
 
-        If no readout of axi_gpio_regset is specified the method returns None.
+        If no readout of axi_regset is specified the method returns None.
         """
         if not self.regset_readout:
             return None
 
-        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-        axi_mmap = mmap.mmap(
-            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
-        )
-        axi_numpy_array = np.recarray(1, self.regset_readout, buf=axi_mmap)
-        axi_array_contents = axi_numpy_array[0]
         names = [field[0] for field in self.regset_readout.descr]
 
         ret = {}
-        for name, value in zip(names, axi_array_contents):
+        for name, value in zip(names, self.axi_array_contents_param):
             ret[name] = value.item()
         return ret, "uint32"
 
@@ -356,9 +430,9 @@ class RedPitayaSatellite(DataSender):
     def _get_val_from_file(self, path: str):
         """Fetch all information stored in file from path."""
         try:
-            f = open(path, "r")
-            var = f.read()
-            f.close()
+            with open(path, "r") as f:
+                var = f.read()
+                     
             return var
         except FileNotFoundError:
             self.log.warning("Failed to find path %s", path)

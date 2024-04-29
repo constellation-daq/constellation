@@ -19,7 +19,7 @@ import rp
 from constellation.core.configuration import ConfigError
 from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
 
-RPG_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2]
+RPG_CHANNELS = [rp.RP_CH_1,rp.RP_CH_2]
 
 axi_regset_config = np.dtype(
     [
@@ -58,46 +58,14 @@ class RPGamma(RedPitayaSatellite):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.device = "RedPitaya_250_14"
+        self.axi_regset_config=axi_regset_config
         self.regset_readout = axi_regset_readout
         self.active_channels = RPG_CHANNELS
+
 
     def do_initializing(self, payload: any) -> str:
         """Initialize satellite. Change the FPGA image and set register values."""
         try:
-            # Change the FPGA image ##
-            bin_file = self.config["bin_file"]
-            command = "/opt/redpitaya/bin/fpgautil -b " + bin_file
-            if os.system(command) != 0:  # OS 2.00 and above
-                msg = "System command failed."
-                raise ConfigError(msg)
-            time.sleep(2)
-
-            memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-            axi_mmap = mmap.mmap(
-                fileno=memory_file_handle,
-                length=mmap.PAGESIZE,
-                offset=self.config["offset"],
-            )
-            axi_numpy_array = np.recarray(1, axi_regset_config, buf=axi_mmap)
-            axi_array_contents = axi_numpy_array[0]
-
-            axi_array_contents.data_type = self.config["data_type"]  # Data type
-            axi_array_contents.active_channles = self.config[
-                "channels"
-            ]  # Active Channels
-            axi_array_contents.use_test_pulser = self.config[
-                "test_pulser_rate"
-            ]  # Set test pulser active
-            axi_array_contents.running_sum_Integration_time = self.config[
-                "running_sum_Integration_time"
-            ]  # Set samples shift all channels
-            axi_array_contents.averaging_Integration_time = self.config[
-                "averaging_Integration_time"
-            ]  # Sets averaging_Integration timeon all channels
-            axi_array_contents.trigger_level = self.config[
-                "trigger_level"
-            ]  # Sets trigger level on all channels
-
             for ch in RPG_CHANNELS:
                 rp.rp_AcqSetAC_DC(ch, rp.RP_DC)  # NOTE: Beware of RedPitaya functions.
                 rp.rp_AcqSetGain(
@@ -105,46 +73,10 @@ class RPGamma(RedPitayaSatellite):
                 )  # They are not well documented and easy to confuse.
                 # I believe these are the correct values set.
 
-            # Setup metrics
-            if self.config["read_gpio"]:
-                self.schedule_metric(
-                    self.get_analog_gpio_pins.__name__,
-                    self.get_analog_gpio_pins,
-                    self.config["gpio_poll_rate"],
-                )
-                self.schedule_metric(
-                    self.get_digital_gpio_pins.__name__,
-                    self.get_digital_gpio_pins,
-                    self.config["gpio_poll_rate"],
-                )
-            self.schedule_metric(
-                self.get_cpu_temperature.__name__,
-                self.get_cpu_temperature,
-                self.config["metrics_poll_rate"],
-            )
-            self.schedule_metric(
-                self.get_cpu_load.__name__,
-                self.get_cpu_load,
-                self.config["metrics_poll_rate"],
-            )
-            self.schedule_metric(
-                self.get_memory_load.__name__,
-                self.get_memory_load,
-                self.config["metrics_poll_rate"],
-            )
-            self.schedule_metric(
-                self.get_network_speeds.__name__,
-                self.get_network_speeds,
-                self.config["metrics_poll_rate"],
-            )
-            self.schedule_metric(
-                self.read_registers.__name__,
-                self.read_registers,
-                self.config["metrics_poll_rate"],
-            )
+
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
-
+        
         return super().do_initializing(payload)
 
     def do_starting(self, payload: any) -> str:
