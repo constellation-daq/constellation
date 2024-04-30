@@ -67,11 +67,11 @@ namespace constellation::log {
          */
         void enableSending(std::string sender_name);
 
+        void sinkStats(const std::string& key, const std::shared_ptr<metrics::Metric>& metric);
+
     protected:
         void sink_it_(const spdlog::details::log_msg& msg) final;
         void flush_() final {}
-
-        void sink_stats(const std::string& key, const std::shared_ptr<metrics::Metric>& metric);
 
     private:
         void subscription_loop(const std::stop_token& stop_token);

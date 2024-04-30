@@ -14,9 +14,11 @@
 #include <map>
 #include <thread>
 
+#include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 
+using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::metrics;
 
@@ -99,13 +101,8 @@ void MetricsManager::run(const std::stop_token& stop_token) {
         auto next = Clock::time_point::max();
         for(auto& [key, metric] : metrics_) {
             if(metric->check(current_state_)) {
-                // Create message header
-                auto msghead = CMDP1Message::Header("test", Clock::now());
-
-                // Create and send CMDP message
-                auto msg = CMDP1StatMessage(key, std::move(msghead), metric).assemble();
-
-                // FIXME .send(publisher)
+                // Send this metric into the CMDP sink:
+                SinkManager::getInstance().sendCMDPMetric(key, metric);
             }
 
             // Update time point until we can wait:
