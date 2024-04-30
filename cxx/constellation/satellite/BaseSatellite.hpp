@@ -210,7 +210,7 @@ namespace constellation::satellite {
     protected:
         log::Logger logger_; // NOLINT(misc-non-private-member-variables-in-classes)
 
-        std::shared_ptr<metrics::MetricsManager> metrics_manager_;
+        metrics::MetricsManager metrics_manager_;
 
     private:
         zmq::socket_t cscp_rep_socket_;

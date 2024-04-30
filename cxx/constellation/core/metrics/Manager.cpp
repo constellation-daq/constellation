@@ -23,14 +23,6 @@ using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::metrics;
 
-MetricsManager* MetricsManager::getDefaultInstance() {
-    return MetricsManager::default_manager_instance_;
-}
-
-void MetricsManager::setAsDefaultInstance() {
-    MetricsManager::default_manager_instance_ = this;
-}
-
 MetricsManager::~MetricsManager() noexcept {
     thread_.request_stop();
     cv_.notify_all();

@@ -26,19 +26,6 @@ namespace constellation::metrics {
     /** Manager for Metrics handling & transmission */
     class CNSTLN_API MetricsManager {
     public:
-        /**
-         * Return the default CHIRP Manager (requires to be set via `setAsDefaultInstance`)
-         *
-         * @return Pointer to default CHIRP Manager (might be a nullptr)
-         */
-        static MetricsManager* getDefaultInstance();
-
-        /**
-         * Set this CHIRP manager as the default instance
-         */
-        void setAsDefaultInstance();
-
-    public:
         MetricsManager(std::string_view name)
             : name_(name), logger_("STAT"), thread_(std::bind_front(&MetricsManager::run, this)) {};
 
@@ -142,8 +129,5 @@ namespace constellation::metrics {
 
         /** Conditions variable for waiting until the next metric emission */
         std::condition_variable cv_;
-
-        // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-        inline static MetricsManager* default_manager_instance_;
     };
 } // namespace constellation::metrics
