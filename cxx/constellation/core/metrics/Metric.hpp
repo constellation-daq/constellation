@@ -173,7 +173,8 @@ namespace constellation::metrics {
                     Clock::duration interval,
                     std::initializer_list<message::State> states,
                     const config::Value& value = {})
-            : MetricTimer(unit, type, states, value), interval_(interval), last_trigger_(Clock::now()) {}
+            : MetricTimer(unit, type, states, value), interval_(interval), last_trigger_(Clock::now()),
+              last_check_(Clock::now()) {}
 
         bool condition() override;
         Clock::time_point next_trigger() const override;
@@ -181,6 +182,7 @@ namespace constellation::metrics {
     private:
         Clock::duration interval_;
         Clock::time_point last_trigger_;
+        Clock::time_point last_check_;
     };
 
     /**

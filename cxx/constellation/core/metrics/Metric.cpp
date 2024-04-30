@@ -67,6 +67,11 @@ void MetricTimer::update(const config::Value& value) {
 
 bool MetricTimer::check(State state) {
 
+    // First check the metric condition to update internals
+    if(!condition()) {
+        return false;
+    }
+
     // If the metric has not been changed, there is no need to send it again
     if(!changed_) {
         return false;
@@ -78,11 +83,9 @@ bool MetricTimer::check(State state) {
         return false;
     }
 
-    if(condition()) {
-        changed_ = false;
-        return true;
-    }
-    return false;
+    // All checks passed, send metric
+    changed_ = false;
+    return true;
 }
 
 bool TimedMetric::condition() {
@@ -94,11 +97,12 @@ bool TimedMetric::condition() {
         return true;
     }
 
+    last_check_ = Clock::now();
     return false;
 }
 
 Clock::time_point TimedMetric::next_trigger() const {
-    return last_trigger_ + interval_;
+    return last_check_ + interval_;
 }
 
 TriggeredMetric::TriggeredMetric(std::string_view unit,
