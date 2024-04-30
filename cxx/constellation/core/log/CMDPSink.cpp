@@ -207,7 +207,7 @@ void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
 void CMDPSink::sinkStats(const std::string& key, const std::shared_ptr<metrics::Metric>& metric) {
 
     // Lock the mutex - automatically done for regular logging:
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::lock_guard<std::mutex> lock(mutex_);
 
     // At the very beginning we wait 500ms before starting the async logging.
     // This way the socket can fetch already pending subscriptions
