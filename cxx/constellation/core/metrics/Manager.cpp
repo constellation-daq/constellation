@@ -14,6 +14,7 @@
 #include <map>
 #include <thread>
 
+#include "constellation/core/logging/log.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/exceptions.hpp"
@@ -94,13 +95,17 @@ void MetricsManager::registerTimedMetric(std::string_view topic,
 }
 
 void MetricsManager::run(const std::stop_token& stop_token) {
-    std::unique_lock<std::mutex> lock {mt_};
 
+    LOG(logger_, TRACE) << "Started metric dispatch thread";
+
+    std::unique_lock<std::mutex> lock {mt_};
     while(!stop_token.stop_requested()) {
 
         auto next = Clock::time_point::max();
         for(auto& [key, metric] : metrics_) {
             if(metric->check(current_state_)) {
+                LOG(logger_, TRACE) << "Timer of metric \"" << key << "\" expired, sending...";
+
                 // Send this metric into the CMDP sink:
                 SinkManager::getInstance().sendCMDPMetric(key, metric);
             }
