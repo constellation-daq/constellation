@@ -46,9 +46,12 @@ namespace constellation::controller {
     public:
         void registerSatellite(constellation::chirp::DiscoveredService service, bool depart, std::any user_data);
 
-        message::CSCP1Message sendCommand(std::string_view satellite_name, const message::CSCP1Message& cmd);
+        message::CSCP1Message sendCommand(std::string_view satellite_name, message::CSCP1Message& cmd);
 
-        std::map<std::string, message::CSCP1Message> sendCommand(const message::CSCP1Message& cmd);
+        std::map<std::string, message::CSCP1Message> sendCommand(message::CSCP1Message& cmd);
+
+    private:
+        message::CSCP1Message send_receive(Connection& conn, message::CSCP1Message& cmd);
 
     protected:
         Controller(std::string_view controller_name);
@@ -59,7 +62,7 @@ namespace constellation::controller {
     private:
         std::string controller_name_;
         zmq::context_t context_ {};
-        std::map<std::string, Connection> satellite_connections_;
+        std::map<std::string, Connection, std::less<>> satellite_connections_;
     };
 
 } // namespace constellation::controller

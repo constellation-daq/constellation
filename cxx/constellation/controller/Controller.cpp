@@ -62,3 +62,27 @@ void Controller::registerSatellite(constellation::chirp::DiscoveredService servi
         }
     }
 }
+
+CSCP1Message Controller::send_receive(Connection& conn, CSCP1Message& cmd) {
+    cmd.assemble().send(conn.req);
+    zmq::multipart_t recv_zmq_msg {};
+    recv_zmq_msg.recv(conn.req);
+    return CSCP1Message::disassemble(recv_zmq_msg);
+}
+
+CSCP1Message Controller::sendCommand(std::string_view satellite_name, CSCP1Message& cmd) {
+    const auto sat = satellite_connections_.find(satellite_name);
+    if(sat == satellite_connections_.end()) {
+        throw;
+    }
+
+    return send_receive(sat->second, cmd);
+}
+
+std::map<std::string, CSCP1Message> Controller::sendCommand(CSCP1Message& cmd) {
+    std::map<std::string, CSCP1Message> replies;
+    for(auto& sat : satellite_connections_) {
+        replies.emplace(sat.first, send_receive(sat.second, cmd));
+    }
+    return replies;
+}
