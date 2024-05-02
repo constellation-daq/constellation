@@ -51,5 +51,5 @@ executable('cmdp_log_send',
 
 executable('dummy_controller',
   sources: 'dummy_controller.cpp',
-  dependencies: [core_dep, cppzmq_dep],
+  dependencies: [core_dep, cppzmq_dep, controller_dep],
 )
