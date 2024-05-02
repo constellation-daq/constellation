@@ -52,7 +52,7 @@ namespace constellation::controller {
     private:
         message::CSCP1Message send_receive(Connection& conn, message::CSCP1Message& cmd);
 
-        void callback_impl(constellation::chirp::DiscoveredService service, bool depart);
+        void callback_impl(const constellation::chirp::DiscoveredService& service, bool depart);
 
         static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
 

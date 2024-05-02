@@ -32,7 +32,7 @@ void Controller::callback(chirp::DiscoveredService service, bool depart, std::an
     instance->callback_impl(std::move(service), depart);
 }
 
-void Controller::callback_impl(constellation::chirp::DiscoveredService service, bool depart) {
+void Controller::callback_impl(const constellation::chirp::DiscoveredService& service, bool depart) {
     // Check service.identifier == CONTROL
     if(service.identifier != chirp::ServiceIdentifier::CONTROL) {
         LOG(logger_, DEBUG) << "Wrong service " << magic_enum::enum_name(service.identifier) << " offered, ignoring";
