@@ -10,12 +10,8 @@ This module provides an implementation for a Constellation Satellite on a RedPit
 import logging
 import mmap
 import os
-import time
-
 import coloredlogs
 import numpy as np
-
-from constellation.core.configuration import ConfigError
 from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
 
 axi_regset_config = np.dtype(
@@ -144,7 +140,6 @@ class RPNeutron(RedPitayaSatellite):
             )
         return super().do_starting(payload)
 
-
 # -------------------------------------------------------------------------
 
 
@@ -159,7 +154,7 @@ def main(args=None):
     parser.add_argument("--hb-port", type=int, default=61234)
     parser.add_argument("--data-port", type=int, default=55557)
     parser.add_argument("--interface", type=str, default="*")
-    parser.add_argument("--name", type=str, default="RedPitaya_neutron_sender")
+    parser.add_argument("--name", type=str, default="RedPitaya_Neutron_"+str(os.uname().nodename))
     parser.add_argument("--group", type=str, default="constellation")
     args = parser.parse_args(args)
 

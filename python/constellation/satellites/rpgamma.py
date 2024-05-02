@@ -10,8 +10,6 @@ This module provides an implementation for a Constellation Satellite on a RedPit
 import logging
 import mmap
 import os
-import time
-
 import coloredlogs
 import numpy as np
 import rp
@@ -19,7 +17,7 @@ import rp
 from constellation.core.configuration import ConfigError
 from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
 
-RPG_CHANNELS = [rp.RP_CH_1,rp.RP_CH_2]
+RPG_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2]
 
 axi_regset_config = np.dtype(
     [
@@ -52,16 +50,15 @@ axi_regset_readout = np.dtype(
 )
 
 
-class RPGamma(RedPitayaSatellite):
+class  RPGamma(RedPitayaSatellite):
     """Constellation Satellite to control a RedPitaya for gamma event detection."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.device = "RedPitaya_250_14"
-        self.axi_regset_config=axi_regset_config
+        self.axi_regset_config = axi_regset_config
         self.regset_readout = axi_regset_readout
         self.active_channels = RPG_CHANNELS
-
 
     def do_initializing(self, payload: any) -> str:
         """Initialize satellite. Change the FPGA image and set register values."""
@@ -72,7 +69,6 @@ class RPGamma(RedPitayaSatellite):
                     ch, rp.RP_LOW
                 )  # They are not well documented and easy to confuse.
                 # I believe these are the correct values set.
-
 
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
@@ -103,8 +99,7 @@ class RPGamma(RedPitayaSatellite):
 
         axi_array_contents0.Externaltrigger = 0
         return super().do_stopping(payload)
-
-
+    
 # -------------------------------------------------------------------------
 
 
@@ -119,7 +114,7 @@ def main(args=None):
     parser.add_argument("--hb-port", type=int, default=61234)
     parser.add_argument("--data-port", type=int, default=55557)
     parser.add_argument("--interface", type=str, default="*")
-    parser.add_argument("--name", type=str, default="RedPitaya_gamma_sender")
+    parser.add_argument("--name", type=str, default="RedPitaya_Gamma_"+str(os.uname().nodename))
     parser.add_argument("--group", type=str, default="constellation")
     args = parser.parse_args(args)
 

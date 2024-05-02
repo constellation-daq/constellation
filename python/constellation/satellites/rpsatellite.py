@@ -60,15 +60,15 @@ class RedPitayaSatellite(DataSender):
         self._readpos = 0
         self._writepos = 0
 
-                    #Define file readers for monetoring from file
+        # Define file readers for monitoring from file
         try:
-            self.cpu_temperature_offset_file_reader=open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_offset", "r")
-            self.cpu_temperature_raw_file_reader=open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_raw", "r")
-            self.cpu_temperature_scale_file_reader=open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_scale", "r")
-            self.cpu_times_file_reader=open("/proc/stat","r")
-            self.memor_load_file_reader=open("/proc/meminfo","r")
-            self.network_tx_file_reader=open("/sys/class/net/eth0/statistics/tx_bytes","r")
-            self.network_rx_file_reader=open("/sys/class/net/eth0/statistics/rx_bytes","r")
+            self.cpu_temperature_offset_file_reader = open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_offset", "r")
+            self.cpu_temperature_raw_file_reader = open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_raw", "r")
+            self.cpu_temperature_scale_file_reader = open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_scale", "r")
+            self.cpu_times_file_reader = open("/proc/stat","r")
+            self.memor_load_file_reader = open("/proc/meminfo","r")
+            self.network_tx_file_reader = open("/sys/class/net/eth0/statistics/tx_bytes","r")
+            self.network_rx_file_reader = open("/sys/class/net/eth0/statistics/rx_bytes","r")
         except FileNotFoundError:
             self.log.warning("Failed to find path")
 
@@ -95,22 +95,29 @@ class RedPitayaSatellite(DataSender):
             interval=METRICS_PERIOD,
         )
         self.schedule_metric(
-            self.get_network_speeds.__name__,
-            self.get_network_speeds,
+            self.get_network_rx.__name__,
+            self.get_network_rx,
+            interval=METRICS_PERIOD,
+        )
+        self.schedule_metric(
+            self.get_network_tx.__name__,
+            self.get_network_tx,
             interval=METRICS_PERIOD,
         )
 
-
-        #Define the axi array for GPIO pins
+        # Define the axi array for GPIO pins
         memory_file_handle_gpio = os.open("/dev/mem", os.O_RDWR)
 
         axi_mmap_gpio = mmap.mmap(
-            fileno=memory_file_handle_gpio, length=mmap.PAGESIZE, offset=0x40000000
+            fileno=memory_file_handle_gpio, length=mmap.PAGESIZE,
+            offset=0x40000000
         )
-        axi_numpy_array_gpio = np.recarray(1, axi_gpio_regset_pins, buf=axi_mmap_gpio)
+        axi_numpy_array_gpio = np.recarray(1, axi_gpio_regset_pins,
+                                           buf=axi_mmap_gpio)
         self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
 
         rp.rp_Init()
+
     def do_initializing(self, payload: any) -> str:
         try:
             # Change the FPGA image ##
@@ -121,26 +128,30 @@ class RedPitayaSatellite(DataSender):
                 raise ConfigError(msg)
             time.sleep(2)
 
-            #Define axi array for custom registers
-            memory_file_handle_custom_registers = os.open("/dev/mem", os.O_RDWR)
-            axi_mmap_custom_registers= mmap.mmap(
-                fileno=memory_file_handle_custom_registers, length=mmap.PAGESIZE, offset=self.config["offset"]
+            # Define axi array for custom registers
+            memory_file_handle_custom_registers = os.open("/dev/mem",
+                                                          os.O_RDWR)
+            axi_mmap_custom_registers = mmap.mmap(
+                fileno=memory_file_handle_custom_registers,
+                length=mmap.PAGESIZE, offset=self.config["offset"]
             )
-            axi_numpy_array_reset = np.recarray(1, axi_regset_reset, buf=axi_mmap_custom_registers)
+            axi_numpy_array_reset = np.recarray(1, axi_regset_reset,
+                                                buf=axi_mmap_custom_registers)
             self.reset_axi_array_contents = axi_numpy_array_reset[0]
             
             # Setting configuration values to FPGA registers
-            axi_numpy_array_config = np.recarray(1, self.axi_regset_config, buf=axi_mmap_custom_registers)
+            axi_numpy_array_config = np.recarray(1, self.axi_regset_config,
+                                                 buf=axi_mmap_custom_registers)
             config_axi_array_contents = axi_numpy_array_config[0]
 
-    
             names = [field[0] for field in self.axi_regset_config.descr]
             for name, value in zip(names, config_axi_array_contents):
                 setattr(config_axi_array_contents, name, self.config[name])
  
-            #Define the axi array for parameters and status
+            # Define the axi array for parameters and status
 
-            axi_numpy_array_param = np.recarray(1, self.regset_readout, buf=axi_mmap_custom_registers)
+            axi_numpy_array_param = np.recarray(1, self.regset_readout,
+                                                buf=axi_mmap_custom_registers)
             self.axi_array_contents_param = axi_numpy_array_param[0]
 
             # Setup metrics
@@ -171,8 +182,13 @@ class RedPitayaSatellite(DataSender):
                 self.config["metrics_poll_rate"],
             )
             self.schedule_metric(
-                self.get_network_speeds.__name__,
-                self.get_network_speeds,
+                self.get_network_rx.__name__,
+                self.get_network_rx,
+                self.config["metrics_poll_rate"],
+            )
+            self.schedule_metric(
+                self.get_network_tx.__name__,
+                self.get_network_tx,
                 self.config["metrics_poll_rate"],
             )
             self.schedule_metric(
@@ -185,14 +201,12 @@ class RedPitayaSatellite(DataSender):
             self.log.error("Error configuring device. %s", e)
         return super().do_initializing(payload)
 
-    
-        
     def do_run(self, payload):
         """Run the satellite. Collect data from buffers and send it."""
         self.log.info("Red Pitaya satellite running, publishing events.")
 
         self._readpos = self._get_write_pointer()
-        
+
         while not self._state_thread_evt.is_set():
             # Main DAQ-loop
             payload = self.get_data()
@@ -212,26 +226,19 @@ class RedPitayaSatellite(DataSender):
 
     def reset(self):
         """Reset DAQ."""
-
-
-        # Reset Channels
-
         self.reset_axi_array_contents.data_type = 16  
 
         time.sleep(0.1)
-        self.reset_axi_array_contents.data_type = self.config["data_type"]  # Data type
-
+        self.reset_axi_array_contents.data_type = self.config["data_type"]
 
     def get_data(
         self,
-    ):  # TODO: Check performance. This was lifted from the redpitaya examples
+    ):
         """Sample every buffer channel and return raw data in numpy array."""
-
 
         # Obtain to which point the buffer has written
         self._writepos = self._get_write_pointer()
 
-        #time.sleep(0.01)
         # Skip sampling if we haven't moved
         if self._readpos == self._writepos:
             return None
@@ -254,7 +261,6 @@ class RedPitayaSatellite(DataSender):
                         stop=BUFFER_SIZE,
                         channel=channel,
                     ),
-                
                     self._sample_raw32(
                         start=0,
                         stop=self._writepos,
@@ -262,16 +268,16 @@ class RedPitayaSatellite(DataSender):
                     )
                 ))
             else:
-                buffer=self._sample_raw32(
+                buffer = self._sample_raw32(
                         start=self._readpos,
                         stop=self._writepos,
                         channel=channel,
                     )
 
-            if(i==0):
-                data = np.empty((len(self.active_channels), len(buffer)), dtype=np.uint32)
+            if (i == 0):
+                data = np.empty((len(self.active_channels), len(buffer)), dtype = np.uint32)
     
-            data[i]=(buffer)
+            data[i] = (buffer)
 
         # Update readpointer
         self._readpos = self._writepos
@@ -279,10 +285,6 @@ class RedPitayaSatellite(DataSender):
         # data = np.vstack(data, dtype=int).transpose().flatten()
         return data
 
-
-
-
-   
     @cscp_requestable
     def get_device(self, _request: CSCPMessage):
         """Get name of device."""
@@ -311,7 +313,7 @@ class RedPitayaSatellite(DataSender):
         utilization = ((total_cpu_time2 - idle_cpu_time2) * 100) / total_cpu_time2
         self._prev_cpu_time = total_cpu_time
         self._prev_cpu_idle = idle_cpu_time
-        return round(utilization,1), "%"
+        return round(utilization, 1), "%"
 
     def get_memory_load(self):
         """Obtain current memory usage."""
@@ -322,27 +324,31 @@ class RedPitayaSatellite(DataSender):
         free_mem = int(re.search(r"\d+", mem[1]).group())
         used_mem = tot_mem - free_mem
 
-        return round(used_mem/tot_mem*100,1), "%"
+        return round(used_mem/tot_mem*100, 1), "%"
 
-    def get_network_speeds(self):
-        """Estimate current network speeds."""
+    def get_network_tx(self):
+        """Estimate current tx network speeds."""
         self.network_tx_file_reader.seek(0)
         tx_bytes = int(self.network_tx_file_reader.read())
+        tx_speed = (tx_bytes - self._prev_tx) / METRICS_PERIOD
+        self._prev_tx = tx_bytes
+        return (round(tx_speed/1000.0, 1)), "kb/s"
+    
+    def get_network_rx(self):
+        """Estimate current rx network speeds."""
         self.network_rx_file_reader.seek(0)
         rx_bytes = int(self.network_rx_file_reader.read())
-
-        tx_speed = (tx_bytes - self._prev_tx) / METRICS_PERIOD
         rx_speed = (rx_bytes - self._prev_rx) / METRICS_PERIOD
-
-        self._prev_tx = tx_bytes
         self._prev_rx = rx_bytes
 
-        return ("tx",round(tx_speed/1000.0,1),'rx',round(rx_speed/1000,1)), "kb/s"
+        return (round(rx_speed/1000,1)), "kb/s"
 
     def get_digital_gpio_pins(self):
         """Read out values at digital gpio P and N ports."""
-        p_pins = self.axi_array_contents_gpio.p_pins.astype(dtype=np.uint8).item()
-        n_pins = self.axi_array_contents_gpio.n_pins.astype(dtype=np.uint8).item()
+        p_pins = self.axi_array_contents_gpio.p_pins.astype(
+            dtype=np.uint8).item()
+        n_pins = self.axi_array_contents_gpio.n_pins.astype(
+            dtype=np.uint8).item()
 
         pins = [p_pins, n_pins]
         return pins, "bits"
@@ -416,8 +422,7 @@ class RedPitayaSatellite(DataSender):
             offset = 0x40140000
 
         # Call the C function
-        result= lib.readData(0, 16384, offset)
-        
+        result = lib.readData(0, 16384, offset)
         
         # Convert the result to a NumPy array
 
@@ -440,9 +445,7 @@ class RedPitayaSatellite(DataSender):
                 idle_cpu_time = int(val)
 
         return idle_cpu_time, total_cpu_time
-
-
-
+    
 # -------------------------------------------------------------------------
 
 
