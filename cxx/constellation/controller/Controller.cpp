@@ -22,9 +22,17 @@ using namespace constellation::controller;
 using namespace constellation::message;
 using namespace constellation::utils;
 
-Controller::Controller(std::string_view controller_name) : logger_("CONTROLLER"), controller_name_(controller_name) {}
+Controller::Controller(std::string_view controller_name) : logger_("CONTROLLER"), controller_name_(controller_name) {
+    LOG(logger_, DEBUG) << "Registering controller callback";
+    chirp::Manager::getDefaultInstance()->registerDiscoverCallback(&Controller::callback, chirp::CONTROL, this);
+}
 
-void Controller::registerSatellite(constellation::chirp::DiscoveredService service, bool depart, std::any /*unused*/) {
+void Controller::callback(chirp::DiscoveredService service, bool depart, std::any user_data) {
+    auto* instance = std::any_cast<Controller*>(user_data);
+    instance->callback_impl(std::move(service), depart);
+}
+
+void Controller::callback_impl(constellation::chirp::DiscoveredService service, bool depart) {
     // Check service.identifier == CONTROL
     if(service.identifier != chirp::ServiceIdentifier::CONTROL) {
         LOG(logger_, DEBUG) << "Wrong service " << magic_enum::enum_name(service.identifier) << " offered, ignoring";

@@ -36,6 +36,7 @@ namespace constellation::controller {
 
     public:
         virtual ~Controller() = default;
+        Controller(std::string_view controller_name);
 
         // No copy/move constructor/assignment
         Controller(const Controller& other) = delete;
@@ -44,8 +45,6 @@ namespace constellation::controller {
         Controller& operator=(Controller&& other) = delete;
 
     public:
-        void registerSatellite(constellation::chirp::DiscoveredService service, bool depart, std::any user_data);
-
         message::CSCP1Message sendCommand(std::string_view satellite_name, message::CSCP1Message& cmd);
 
         std::map<std::string, message::CSCP1Message> sendCommand(message::CSCP1Message& cmd);
@@ -53,9 +52,11 @@ namespace constellation::controller {
     private:
         message::CSCP1Message send_receive(Connection& conn, message::CSCP1Message& cmd);
 
-    protected:
-        Controller(std::string_view controller_name);
+        void callback_impl(constellation::chirp::DiscoveredService service, bool depart);
 
+        static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
+
+    protected:
         /** Logger to use */
         log::Logger logger_; // NOLINT(*-non-private-member-variables-in-classes)
 
