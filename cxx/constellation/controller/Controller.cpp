@@ -42,11 +42,12 @@ void Controller::callback_impl(constellation::chirp::DiscoveredService service, 
     // Add or drop, depending on message:
     const auto uri = "tcp://" + service.address.to_string() + ":" + std::to_string(service.port);
     if(depart) {
-        for(auto it = satellite_connections_.begin(); it != satellite_connections_.end(); ++it) {
-            if(it->second.host_id == service.host_id) {
-                satellite_connections_.erase(it);
-                LOG(logger_, INFO) << "Satellite at " << uri << " departed";
-            }
+        const auto it = std::find_if(satellite_connections_.begin(), satellite_connections_.end(), [&](const auto& sat) {
+            return sat.second.host_id == service.host_id;
+        });
+        if(it != satellite_connections_.end()) {
+            satellite_connections_.erase(it);
+            LOG(logger_, INFO) << "Satellite at " << uri << " departed";
         }
     } else {
         // New satellite connection
