@@ -23,6 +23,7 @@
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
+#include "constellation/core/message/CSCP1Message.hpp"
 
 namespace constellation::controller {
 
@@ -30,8 +31,7 @@ namespace constellation::controller {
     protected:
         struct Connection {
             zmq::socket_t req;
-            std::string uri;
-            std::string name;
+            message::MD5Hash host_id;
         };
 
     public:
@@ -46,6 +46,10 @@ namespace constellation::controller {
     public:
         void registerSatellite(constellation::chirp::DiscoveredService service, bool depart, std::any user_data);
 
+        message::CSCP1Message sendCommand(std::string_view satellite_name, const message::CSCP1Message& cmd);
+
+        std::map<std::string, message::CSCP1Message> sendCommand(const message::CSCP1Message& cmd);
+
     protected:
         Controller(std::string_view controller_name);
 
@@ -53,9 +57,9 @@ namespace constellation::controller {
         log::Logger logger_; // NOLINT(*-non-private-member-variables-in-classes)
 
     private:
-        std::string_view controller_name_;
+        std::string controller_name_;
         zmq::context_t context_ {};
-        std::map<message::MD5Hash, Connection> satellite_connections_;
+        std::map<std::string, Connection> satellite_connections_;
     };
 
 } // namespace constellation::controller
