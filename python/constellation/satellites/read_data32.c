@@ -5,6 +5,13 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+/*
+SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+SPDX-License-Identifier: CC-BY-4.0
+
+This module reads the redpitaya data registers
+*/
+
 typedef struct {
     uint32_t* data;
 } Array;
