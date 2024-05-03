@@ -277,9 +277,9 @@ class RedPitayaSatellite(DataSender):
                 ))
             else:
                 buffer = self._sample_raw32(
-                        start=self._readpos,
-                        stop=self._writepos,
-                        channel=channel,
+                    start=self._readpos,
+                    stop=self._writepos,
+                    channel=channel,
                     )
 
             if (i == 0):
@@ -319,8 +319,8 @@ class RedPitayaSatellite(DataSender):
         idle_cpu_time, total_cpu_time = self._get_cpu_times()
         total_cpu_time2 = total_cpu_time - self._prev_cpu_time
         idle_cpu_time2 = idle_cpu_time - self._prev_cpu_idle
-        utilization = ((total_cpu_time2 -
-                        idle_cpu_time2) * 100) / total_cpu_time2
+        utilization = ((
+            total_cpu_time2 - idle_cpu_time2) * 100) / total_cpu_time2
         self._prev_cpu_time = total_cpu_time
         self._prev_cpu_idle = idle_cpu_time
         return round(utilization, 1), "%"
@@ -334,7 +334,7 @@ class RedPitayaSatellite(DataSender):
         free_mem = int(re.search(r"\d+", mem[1]).group())
         used_mem = tot_mem - free_mem
 
-        return round(used_mem/tot_mem*100, 1), "%"
+        return round(used_mem / tot_mem * 100, 1), "%"
 
     def get_network_tx(self):
         """Estimate current tx network speeds."""
@@ -342,7 +342,7 @@ class RedPitayaSatellite(DataSender):
         tx_bytes = int(self.network_tx_file_reader.read())
         tx_speed = (tx_bytes - self._prev_tx) / METRICS_PERIOD
         self._prev_tx = tx_bytes
-        return (round(tx_speed/1000.0, 1)), "kb/s"
+        return (round(tx_speed / 1000.0, 1)), "kb/s"
 
     def get_network_rx(self):
         """Estimate current rx network speeds."""
@@ -351,7 +351,7 @@ class RedPitayaSatellite(DataSender):
         rx_speed = (rx_bytes - self._prev_rx) / METRICS_PERIOD
         self._prev_rx = rx_bytes
 
-        return (round(rx_speed/1000, 1)), "kb/s"
+        return (round(rx_speed / 1000, 1)), "kb/s"
 
     def get_digital_gpio_pins(self):
         """Read out values at digital gpio P and N ports."""
