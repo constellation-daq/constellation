@@ -4,7 +4,8 @@
 SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 
-This module provides an implementation for a Constellation Satellite on a RedPitaya device.
+This module provides an implementation for a Constellation Satellite on a
+RedPitaya device.
 """
 
 import logging
@@ -50,21 +51,23 @@ axi_regset_readout = np.dtype(
 )
 
 
-class  RPGamma(RedPitayaSatellite):
-    """Constellation Satellite to control a RedPitaya for gamma event detection."""
+class RPGamma(RedPitayaSatellite):
+    """Constellation Satellite to control a RedPitaya for gamma event
+    detection."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.device = "RedPitaya_250_14"
+        self.device = "RedPitaya_250_12"
         self.axi_regset_config = axi_regset_config
         self.regset_readout = axi_regset_readout
         self.active_channels = RPG_CHANNELS
 
     def do_initializing(self, payload: any) -> str:
-        """Initialize satellite. Change the FPGA image and set register values."""
+        """Initialize satellite. Change the FPGA image and set register
+        values."""
         try:
             for ch in RPG_CHANNELS:
-                rp.rp_AcqSetAC_DC(ch, rp.RP_DC)  # NOTE: Beware of RedPitaya functions.
+                rp.rp_AcqSetAC_DC(ch, rp.RP_DC)
                 rp.rp_AcqSetGain(
                     ch, rp.RP_LOW
                 )  # They are not well documented and easy to confuse.
@@ -72,8 +75,7 @@ class  RPGamma(RedPitayaSatellite):
 
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
-        
-        return super().do_initializing(payload)
+            return super().do_initializing(payload)
 
     def do_starting(self, payload: any) -> str:
 
@@ -86,7 +88,7 @@ class  RPGamma(RedPitayaSatellite):
         axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
         axi_array_contents0 = axi_numpy_array0[0]
 
-        axi_array_contents0.Externaltrigger = self.config["data_type"] +32 
+        axi_array_contents0.Externaltrigger = self.config["data_type"] + 32
         return super().do_starting(payload)
 
     def do_stopping(self, payload: any):
@@ -99,7 +101,7 @@ class  RPGamma(RedPitayaSatellite):
 
         axi_array_contents0.Externaltrigger = 0
         return super().do_stopping(payload)
-    
+
 # -------------------------------------------------------------------------
 
 
@@ -114,7 +116,8 @@ def main(args=None):
     parser.add_argument("--hb-port", type=int, default=61234)
     parser.add_argument("--data-port", type=int, default=55557)
     parser.add_argument("--interface", type=str, default="*")
-    parser.add_argument("--name", type=str, default="RedPitaya_Gamma_"+str(os.uname().nodename))
+    parser.add_argument("--name", type=str, default="RedPitaya_Gamma_"+str(
+        os.uname().nodename))
     parser.add_argument("--group", type=str, default="constellation")
     args = parser.parse_args(args)
 

@@ -4,7 +4,8 @@
 SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 
-This module provides an implementation for a Constellation Satellite on a RedPitaya device.
+This module provides an implementation for a Constellation Satellite on a
+RedPitaya device.
 """
 
 import logging
@@ -96,11 +97,13 @@ axi_regset_readout = np.dtype(
 
 
 class RPNeutron(RedPitayaSatellite):
-    """Constellation Satellite to control a RedPitaya for neutron event detection."""
+    """Constellation Satellite to control a RedPitaya for neutron event
+    detection."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.device = "RedPitaya_125_12"
+        self.device = "RedPitaya_125_14"
+        self.axi_regset_config = axi_regset_config
         self.regset_readout = axi_regset_readout
         self.master = False
 
@@ -113,10 +116,12 @@ class RPNeutron(RedPitayaSatellite):
         if self.master:
             memory_file_handle = os.open("/dev/mem", os.O_RDWR)
             axi_mmap0 = mmap.mmap(
-                fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
+                fileno=memory_file_handle, length=mmap.PAGESIZE,
+                offset=0x40001000
             )
 
-            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
+            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop,
+                                           buf=axi_mmap0)
             axi_array_contents0 = axi_numpy_array0[0]
             axi_array_contents0.Externaltrigger = (
                 0  # Don'tOverride GPIO_N_0 to output ADC or DAC trigger
@@ -127,13 +132,14 @@ class RPNeutron(RedPitayaSatellite):
         """Start acquisition by writing to address."""
         self.reset()
 
-
         if self.master:
             memory_file_handle = os.open("/dev/mem", os.O_RDWR)
             axi_mmap0 = mmap.mmap(
-                fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
+                fileno=memory_file_handle, length=mmap.PAGESIZE,
+                offset=0x40001000
             )
-            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
+            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop,
+                                           buf=axi_mmap0)
             axi_array_contents0 = axi_numpy_array0[0]
             axi_array_contents0.Externaltrigger = (
                 3  # Override GPIO_N_0 to output ADC or DAC trigger
@@ -154,7 +160,8 @@ def main(args=None):
     parser.add_argument("--hb-port", type=int, default=61234)
     parser.add_argument("--data-port", type=int, default=55557)
     parser.add_argument("--interface", type=str, default="*")
-    parser.add_argument("--name", type=str, default="RedPitaya_Neutron_"+str(os.uname().nodename))
+    parser.add_argument("--name", type=str,
+                        default="RedPitaya_Neutron_"+str(os.uname().nodename))
     parser.add_argument("--group", type=str, default="constellation")
     args = parser.parse_args(args)
 

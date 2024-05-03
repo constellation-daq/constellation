@@ -4,7 +4,8 @@
 SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 
-This module provides an implementation for a Constellation Satellite on a RedPitaya device.
+This module provides an implementation for a Constellation Satellite on a
+RedPitaya device.
 """
 
 import ctypes
@@ -62,13 +63,21 @@ class RedPitayaSatellite(DataSender):
 
         # Define file readers for monitoring from file
         try:
-            self.cpu_temperature_offset_file_reader = open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_offset", "r")
-            self.cpu_temperature_raw_file_reader = open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_raw", "r")
-            self.cpu_temperature_scale_file_reader = open("/sys/devices/soc0/axi/83c00000.xadc_wiz/iio:device1/in_temp0_scale", "r")
-            self.cpu_times_file_reader = open("/proc/stat","r")
-            self.memor_load_file_reader = open("/proc/meminfo","r")
-            self.network_tx_file_reader = open("/sys/class/net/eth0/statistics/tx_bytes","r")
-            self.network_rx_file_reader = open("/sys/class/net/eth0/statistics/rx_bytes","r")
+            self.cpu_temperature_offset_file_reader = open(
+                "/sys/devices/soc0/axi/83c00000.xadc_wiz/"
+                "iio:device1/in_temp0_offset", "r")
+            self.cpu_temperature_raw_file_reader = open(
+                "/sys/devices/soc0/axi/83c00000.xadc_wiz/"
+                "iio:device1/in_temp0_raw", "r")
+            self.cpu_temperature_scale_file_reader = open(
+                "/sys/devices/soc0/axi/83c00000.xadc_wiz/"
+                "iio:device1/in_temp0_scale", "r")
+            self.cpu_times_file_reader = open("/proc/stat", "r")
+            self.memor_load_file_reader = open("/proc/meminfo", "r")
+            self.network_tx_file_reader = open(
+                "/sys/class/net/eth0/statistics/tx_bytes", "r")
+            self.network_rx_file_reader = open(
+                "/sys/class/net/eth0/statistics/rx_bytes", "r")
         except FileNotFoundError:
             self.log.warning("Failed to find path")
 
@@ -138,7 +147,7 @@ class RedPitayaSatellite(DataSender):
             axi_numpy_array_reset = np.recarray(1, axi_regset_reset,
                                                 buf=axi_mmap_custom_registers)
             self.reset_axi_array_contents = axi_numpy_array_reset[0]
-            
+
             # Setting configuration values to FPGA registers
             axi_numpy_array_config = np.recarray(1, self.axi_regset_config,
                                                  buf=axi_mmap_custom_registers)
@@ -147,7 +156,7 @@ class RedPitayaSatellite(DataSender):
             names = [field[0] for field in self.axi_regset_config.descr]
             for name, value in zip(names, config_axi_array_contents):
                 setattr(config_axi_array_contents, name, self.config[name])
- 
+
             # Define the axi array for parameters and status
 
             axi_numpy_array_param = np.recarray(1, self.regset_readout,
@@ -226,8 +235,7 @@ class RedPitayaSatellite(DataSender):
 
     def reset(self):
         """Reset DAQ."""
-        self.reset_axi_array_contents.data_type = 16  
-
+        self.reset_axi_array_contents.data_type = 16
         time.sleep(0.1)
         self.reset_axi_array_contents.data_type = self.config["data_type"]
 
@@ -275,8 +283,9 @@ class RedPitayaSatellite(DataSender):
                     )
 
             if (i == 0):
-                data = np.empty((len(self.active_channels), len(buffer)), dtype = np.uint32)
-    
+                data = np.empty((len(self.active_channels), len(buffer)),
+                                dtype=np.uint32)
+
             data[i] = (buffer)
 
         # Update readpointer
@@ -296,21 +305,22 @@ class RedPitayaSatellite(DataSender):
 
     def get_cpu_temperature(self):
         """Obtain temperature of CPU."""
-        
+
         self.cpu_temperature_offset_file_reader.seek(0)
         offset = int(self.cpu_temperature_offset_file_reader.read())
         self.cpu_temperature_raw_file_reader.seek(0)
         raw = int(self.cpu_temperature_raw_file_reader.read())
         self.cpu_temperature_scale_file_reader.seek(0)
         scale = float(self.cpu_temperature_scale_file_reader.read())
-        return (round(((float)(offset + raw)) * scale / 1000.0,1)), "C"
+        return (round(((float)(offset + raw)) * scale / 1000.0, 1)), "C"
 
     def get_cpu_load(self):
         """Estimate current CPU load and update previously saved CPU times."""
         idle_cpu_time, total_cpu_time = self._get_cpu_times()
         total_cpu_time2 = total_cpu_time - self._prev_cpu_time
         idle_cpu_time2 = idle_cpu_time - self._prev_cpu_idle
-        utilization = ((total_cpu_time2 - idle_cpu_time2) * 100) / total_cpu_time2
+        utilization = ((total_cpu_time2 -
+                        idle_cpu_time2) * 100) / total_cpu_time2
         self._prev_cpu_time = total_cpu_time
         self._prev_cpu_idle = idle_cpu_time
         return round(utilization, 1), "%"
@@ -333,7 +343,7 @@ class RedPitayaSatellite(DataSender):
         tx_speed = (tx_bytes - self._prev_tx) / METRICS_PERIOD
         self._prev_tx = tx_bytes
         return (round(tx_speed/1000.0, 1)), "kb/s"
-    
+
     def get_network_rx(self):
         """Estimate current rx network speeds."""
         self.network_rx_file_reader.seek(0)
@@ -341,7 +351,7 @@ class RedPitayaSatellite(DataSender):
         rx_speed = (rx_bytes - self._prev_rx) / METRICS_PERIOD
         self._prev_rx = rx_bytes
 
-        return (round(rx_speed/1000,1)), "kb/s"
+        return (round(rx_speed/1000, 1)), "kb/s"
 
     def get_digital_gpio_pins(self):
         """Read out values at digital gpio P and N ports."""
@@ -393,7 +403,8 @@ class RedPitayaSatellite(DataSender):
 
         return data_raw
 
-    def _sample_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
+    def _sample_raw32(self, start: int = 0, stop: int = 16384,
+                      channel: int = 1):
         """Read out data in 32 bit form."""
 
         class Array(ctypes.Structure):
@@ -405,7 +416,7 @@ class RedPitayaSatellite(DataSender):
         # NOTE: I don't think this path will work well when packaging
         # NOTE: This might have some answers when the time comes:
         # https://stackoverflow.com/questions/51468432/refer-to-a-file-within-python-package
-        lib = ctypes.CDLL("python/constellation/satellites/read_data32.so")
+        lib = ctypes.CDLL("python/constellation/satellites/read_data32bit.so")
 
         # Define the argument and return types of the function
         lib.readData.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
@@ -423,10 +434,11 @@ class RedPitayaSatellite(DataSender):
 
         # Call the C function
         result = lib.readData(0, 16384, offset)
-        
+
         # Convert the result to a NumPy array
 
-        data_array = np.ctypeslib.as_array(result.data, shape=(16384,))[start:stop]
+        data_array = np.ctypeslib.as_array(result.data,
+                                           shape=(16384,))[start:stop]
         stored_data = data_array.copy()
         lib.freeData(result.data)
         return stored_data
@@ -445,7 +457,7 @@ class RedPitayaSatellite(DataSender):
                 idle_cpu_time = int(val)
 
         return idle_cpu_time, total_cpu_time
-    
+
 # -------------------------------------------------------------------------
 
 
