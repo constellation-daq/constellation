@@ -293,7 +293,8 @@ class Satellite(
             # stop state thread
             if self._state_thread_evt:
                 self._state_thread_evt.set()
-                self._state_thread.join(1)
+                if self._state_thread_fut:
+                    self._state_thread_fut.result(timeout=1)
             return self.fail_gracefully()
         # NOTE: we cannot have a non-handled exception disallow the state
         # transition to failure state!

@@ -18,10 +18,10 @@
 
 #include <asio.hpp>
 
+#include "constellation/build.hpp"
 #include "constellation/core/chirp/BroadcastRecv.hpp"
 #include "constellation/core/chirp/BroadcastSend.hpp"
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
-#include "constellation/core/config.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/utils/ports.hpp"

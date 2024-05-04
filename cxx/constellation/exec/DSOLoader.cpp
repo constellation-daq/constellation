@@ -17,7 +17,7 @@
 // Note: for now, we only support glibc
 #include <dlfcn.h>
 
-#include "constellation/core/config.hpp"
+#include "constellation/build.hpp"
 #include "constellation/core/logging/log.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/exec/exceptions.hpp"

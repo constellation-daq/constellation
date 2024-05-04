@@ -90,7 +90,7 @@ Level CMDP1Message::getLogLevelFromTopic(std::string_view topic) {
     // Search for second slash after "LOG/" to get substring with log level
     const auto level_endpos = topic.find_first_of('/', 4);
     const auto level_str = topic.substr(4, level_endpos - 4);
-    const auto level_opt = magic_enum::enum_cast<Level>(level_str);
+    const auto level_opt = magic_enum::enum_cast<Level>(level_str, magic_enum::case_insensitive);
     if(!level_opt.has_value()) {
         throw MessageDecodingError("\"" + to_string(level_str) + "\" is not a valid log level");
     }

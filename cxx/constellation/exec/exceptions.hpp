@@ -12,7 +12,7 @@
 #include <string>
 #include <string_view>
 
-#include "constellation/core/config.hpp"
+#include "constellation/build.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 
 namespace constellation::exec {

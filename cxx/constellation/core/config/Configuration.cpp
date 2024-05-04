@@ -12,48 +12,20 @@
 #include <cstddef>
 #include <filesystem>
 #include <initializer_list>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-#include <msgpack.hpp>
-#include <zmq.hpp>
 
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
 
 using namespace constellation::config;
 
-Configuration::Configuration(const Dictionary& dict) : config_(dict) {
-    // Register all markers:
+Configuration::Configuration(const Dictionary& dict, bool mark_used) {
     for(const auto& [key, val] : dict) {
-        used_keys_.registerMarker(key);
+        config_.emplace(key, ConfigValue(val, mark_used));
     }
 };
-
-Configuration::AccessMarker::AccessMarker(const Configuration::AccessMarker& other) {
-    for(const auto& [key, value] : other.markers_) {
-        registerMarker(key);
-        markers_.at(key).store(value.load());
-    }
-}
-
-Configuration::AccessMarker& Configuration::AccessMarker::operator=(const Configuration::AccessMarker& other) {
-    if(this == &other) {
-        return *this;
-    }
-
-    for(const auto& [key, value] : other.markers_) {
-        registerMarker(key);
-        markers_.at(key).store(value.load());
-    }
-    return *this;
-}
-
-void Configuration::AccessMarker::registerMarker(const std::string& key) {
-    markers_.emplace(key, false);
-}
 
 std::size_t Configuration::count(std::initializer_list<std::string> keys) const {
     if(keys.size() == 0) {
@@ -67,6 +39,16 @@ std::size_t Configuration::count(std::initializer_list<std::string> keys) const 
         }
     }
     return found;
+}
+
+std::string Configuration::getText(const std::string& key) const {
+    try {
+        const auto& dictval = config_.at(key);
+        dictval.markUsed();
+        return dictval.str();
+    } catch(std::out_of_range& e) {
+        throw MissingKeyError(key);
+    }
 }
 
 /**
@@ -110,6 +92,22 @@ std::vector<std::filesystem::path> Configuration::getPathArray(const std::string
     return path_array;
 }
 
+/**
+ *  The alias is only used if new key does not exist but old key does. The old key is automatically marked as used.
+ */
+void Configuration::setAlias(const std::string& new_key, const std::string& old_key, bool warn) {
+    if(!has(old_key) || has(new_key)) {
+        return;
+    }
+
+    config_[new_key] = config_.at(old_key);
+
+    if(warn) {
+        // FIXME logging
+        // LOG(WARNING) << "Parameter \"" << old_key << "\" is deprecated and superseded by \"" << new_key << "\"";
+    }
+}
+
 std::filesystem::path Configuration::path_to_absolute(std::filesystem::path path, bool canonicalize_path) {
     // If not a absolute path, make it an absolute path
     if(!path.is_absolute()) {
@@ -129,97 +127,21 @@ std::filesystem::path Configuration::path_to_absolute(std::filesystem::path path
     return path;
 }
 
-/**
- *  The alias is only used if new key does not exist but old key does. The old key is automatically marked as used.
- */
-void Configuration::setAlias(const std::string& new_key, const std::string& old_key, bool warn) {
-    if(!has(old_key) || has(new_key)) {
-        return;
-    }
-
-    config_[new_key] = config_.at(old_key);
-    used_keys_.registerMarker(new_key);
-    used_keys_.markUsed(old_key);
-
-    if(warn) {
-        // FIXME logging
-        // LOG(WARNING) << "Parameter \"" << old_key << "\" is deprecated and superseded by \"" << new_key << "\"";
-    }
+std::size_t Configuration::size(Group group, Usage usage) const {
+    std::size_t size = 0;
+    for_each(group, usage, [&](const std::string&, const Value&) { ++size; });
+    return size;
 }
 
-std::string Configuration::getText(const std::string& key) const {
-    try {
-        used_keys_.markUsed(key);
-        return config_.at(key).str();
-    } catch(std::out_of_range& e) {
-        throw MissingKeyError(key);
-    }
-}
-std::string Configuration::getText(const std::string& key, const std::string& def) const {
-    if(!has(key)) {
-        return def;
-    }
-    return getText(key);
-}
-
-/**
- * All keys that are already defined earlier in this configuration will be overridden.
- */
-void Configuration::merge(const Configuration& other) {
-    for(const auto& [key, value] : other.config_) {
-        set(key, value);
-    }
-}
-
-Dictionary Configuration::getAll() const {
+Dictionary Configuration::getDictionary(Group group, Usage usage) const {
     Dictionary result {};
-
-    // Loop over all configuration keys
-    for(const auto& key_value : config_) {
-        // Skip internal keys starting with an underscore
-        if(!key_value.first.empty() && key_value.first.front() == '_') {
-            continue;
-        }
-
-        result.emplace(key_value);
-    }
-
+    for_each(group, usage, [&](const std::string& key, const Value& val) { result.emplace(key, val); });
     return result;
 }
 
-Dictionary Configuration::get_used_entries() const {
-    Dictionary result {};
-
-    // Loop over all configuration keys
-    for(const auto& key_value : config_) {
-        // Skip all unused keys
-        if(!used_keys_.isUsed(key_value.first)) {
-            continue;
-        }
-
-        result.emplace(key_value);
+void Configuration::update(const Configuration& other) {
+    // We only update the used keys from the other configuration
+    for(const auto& [key, value] : other.getDictionary(Group::ALL, Usage::USED)) {
+        set(key, value, true);
     }
-
-    return result;
-}
-
-std::vector<std::string> Configuration::getUnusedKeys() const {
-    std::vector<std::string> result {};
-
-    // Loop over all configuration keys, excluding internal ones
-    for(const auto& key_value : getAll()) {
-        // Add those to result that have not been accessed:
-        if(!used_keys_.isUsed(key_value.first)) {
-            result.emplace_back(key_value.first);
-        }
-    }
-
-    return result;
-}
-
-std::shared_ptr<zmq::message_t> Configuration::assemble(bool used_only) const {
-    const auto dict = (used_only ? get_used_entries() : config_);
-    msgpack::sbuffer sbuf {};
-    msgpack::pack(sbuf, dict);
-    return std::make_shared<zmq::message_t>(sbuf.data(), sbuf.size());
 }

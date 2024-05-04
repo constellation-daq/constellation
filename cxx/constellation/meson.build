@@ -1,41 +1,16 @@
 # SPDX-FileCopyrightText: 2023 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
-# argparse
-argparse_dep = dependency('argparse')
+build_hpp_data = configuration_data()
+build_hpp_data.set('version', meson.project_version())
+build_hpp_data.set('libdir', get_option('prefix') / get_option('libdir'))
+build_hpp_data.set('builddir', meson.project_build_root())
+build_hpp = configure_file(
+  input: 'build.hpp',
+  output: 'build.hpp',
+  configuration: build_hpp_data, )
 
-# Asio
-asio_raw_dep = dependency('asio')
-asio_dep = declare_dependency(
-  dependencies: asio_raw_dep,
-  compile_args: ['-DASIO_STANDALONE=1'],
-)
-
-# ZeroMQ
-libzmq_dep = dependency('libzmq',
-  default_options: [
-    'drafts=true',
-    'websockets=disabled',
-    'curve=false',
-    'openpgm=disabled',
-    'norm=disabled',
-    'warning_level=0',
-])
-cppzmq_dep = dependency('cppzmq', default_options: ['examples=false', 'tests=disabled'])
-
-# magic_enum
-magic_enum_dep = dependency('magic_enum', default_options: ['test=false'])
-
-# msgpack-cxx
-msgpack_cxx_dep = dependency('msgpack-cxx', default_options: ['boost=disabled', 'tests=disabled'])
-
-# spdlog
-spdlog_dep = dependency('spdlog', default_options: ['tests=disabled'])
-
-constellation_inc = include_directories('..')
-
-# RPATH for non-default install locations
-constellation_rpath = get_option('prefix') / get_option('libdir')
+install_headers(build_hpp, subdir: 'constellation', )
 
 subdir('core')
 subdir('satellite')

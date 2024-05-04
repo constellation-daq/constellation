@@ -12,7 +12,7 @@
 #include <filesystem>
 #include <string>
 
-#include "constellation/core/config.hpp"
+#include "constellation/build.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/satellite/Satellite.hpp"
 

@@ -10,14 +10,16 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include <msgpack/object_decl.hpp>
 #include <msgpack/pack_decl.hpp>
 #include <msgpack/sbuffer_decl.hpp>
+#include <zmq.hpp>
 
-#include "constellation/core/config.hpp"
+#include "constellation/build.hpp"
 #include "constellation/core/config/Value.hpp"
 
 namespace constellation::config {
@@ -35,7 +37,7 @@ namespace constellation::config {
     };
 
     /**
-     * Dictionary type with serialization functions for MessagePack
+     * Dictionary type with serialization functions for MessagePack and ZeroMQ
      */
     class Dictionary final : public std::map<std::string, Value> {
     public:
@@ -44,6 +46,19 @@ namespace constellation::config {
 
         /** Unpack dictionary with msgpack */
         CNSTLN_API void msgpack_unpack(const msgpack::object& msgpack_object);
+
+        /** Assemble dictionary via msgpack for ZeroMQ */
+        CNSTLN_API std::shared_ptr<zmq::message_t> assemble() const;
+
+        /** Disassemble dictionary from ZeroMQ */
+        CNSTLN_API static Dictionary disassemble(const zmq::message_t& message);
+
+        /**
+         * @brief Convert dictionary to human readable string
+         *
+         * @return String with one line for each key-value pair starting `\n `
+         */
+        CNSTLN_API std::string to_string() const;
     };
 
 } // namespace constellation::config

@@ -18,6 +18,7 @@
 #include <zmq.hpp>
 
 #include "constellation/core/config/Configuration.hpp"
+#include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 #include "constellation/satellite/FSM.hpp"
@@ -36,7 +37,7 @@ public:
     DummySatellite() : Satellite("Dummy", "sat1") { support_reconfigure(); }
     void dummy_support_reconfigure(bool support_reconfigure) { Satellite::support_reconfigure(support_reconfigure); }
     void dummy_throw_transitional() { throw_transitional_ = true; }
-    void initializing(const Configuration& config) override {
+    void initializing(Configuration& config) override {
         Satellite::initializing(config);
         transitional_state();
     }
@@ -180,7 +181,7 @@ TEST_CASE("React via CSCP", "[satellite][satellite::fsm][cscp]") {
     auto fsm = FSM(satellite);
     using constellation::message::CSCP1Message;
 
-    auto payload_frame = Configuration().assemble();
+    auto payload_frame = Dictionary().assemble();
     auto ret = std::pair<constellation::message::CSCP1Message::Type, std::string>();
 
     // Initialize requires frame

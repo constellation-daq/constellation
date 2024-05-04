@@ -23,7 +23,7 @@
 #include <spdlog/pattern_formatter.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-#include "constellation/core/config.hpp"
+#include "constellation/build.hpp"
 #include "constellation/core/logging/CMDPSink.hpp"
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/utils/ports.hpp"
@@ -80,9 +80,11 @@ namespace constellation::log {
         utils::Port getCMDPPort() const { return cmdp_sink_->getPort(); }
 
         /**
-         * Register monitoring service in CHIRP
+         * Register monitoring service in CHIRP and set sender name for CMDP
+         *
+         * @param sender_name Canonical name of the satellite
          */
-        CNSTLN_API void registerService() const;
+        CNSTLN_API void registerService(std::string sender_name);
 
         /**
          * Create a new asynchronous spdlog logger

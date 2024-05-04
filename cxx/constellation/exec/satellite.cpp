@@ -26,8 +26,8 @@
 #include <asio.hpp>
 #include <magic_enum.hpp>
 
+#include "constellation/build.hpp"
 #include "constellation/core/chirp/Manager.hpp"
-#include "constellation/core/config.hpp"
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/log.hpp"
 #include "constellation/core/logging/Logger.hpp"
@@ -137,8 +137,7 @@ int constellation::exec::satellite_main(int argc,
     }
 
     // Set log level
-    const auto default_level_str = transform(get_arg(parser, "level"), ::toupper);
-    const auto default_level = magic_enum::enum_cast<Level>(default_level_str);
+    const auto default_level = magic_enum::enum_cast<Level>(get_arg(parser, "level"), magic_enum::case_insensitive);
     if(!default_level.has_value()) {
         LOG(logger, CRITICAL) << "Log level \"" << get_arg(parser, "level") << "\" is not valid"
                               << ", possible values are: " << utils::list_enum_names<Level>();
@@ -171,6 +170,20 @@ int constellation::exec::satellite_main(int argc,
     // Log the version after all the basic checks are done
     LOG(logger, STATUS) << "Constellation v" << CNSTLN_VERSION;
 
+    // Create CHIRP manager and set as default
+    std::unique_ptr<chirp::Manager> chirp_manager {};
+    try {
+        chirp_manager = std::make_unique<chirp::Manager>(brd_addr, any_addr, parser.get("group"), canonical_name);
+        chirp_manager->setAsDefaultInstance();
+        chirp_manager->start();
+    } catch(const std::exception& error) {
+        LOG(logger, CRITICAL) << "Failed to initiate network discovery: " << error.what();
+        // TODO(stephan.lachnit): should we continue anyway or abort?
+    }
+
+    // Register CMDP in CHIRP and set sender name for CMDP
+    SinkManager::getInstance().registerService(canonical_name);
+
     // Load satellite DSO
     std::unique_ptr<DSOLoader> loader {};
     Generator* satellite_generator {};
@@ -192,20 +205,6 @@ int constellation::exec::satellite_main(int argc,
         LOG(logger, CRITICAL) << "Failed to create satellite: " << error.what();
         return 1;
     }
-
-    // Create CHIRP manager and set as default
-    std::unique_ptr<chirp::Manager> chirp_manager {};
-    try {
-        chirp_manager = std::make_unique<chirp::Manager>(brd_addr, any_addr, get_arg(parser, "group"), canonical_name);
-        chirp_manager->setAsDefaultInstance();
-        chirp_manager->start();
-    } catch(const std::exception& error) {
-        LOG(logger, CRITICAL) << "Failed to initiate network discovery: " << error.what();
-        // TODO(stephan.lachnit): should we continue anyway or abort?
-    }
-
-    // Register CMDP in CHIRP
-    SinkManager::getInstance().registerService();
 
     // Start satellite
     SatelliteImplementation satellite_implementation {std::move(satellite)};

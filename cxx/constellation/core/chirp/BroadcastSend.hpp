@@ -15,7 +15,7 @@
 
 #include <asio.hpp>
 
-#include "constellation/core/config.hpp"
+#include "constellation/build.hpp"
 
 namespace constellation::chirp {
 

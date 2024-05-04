@@ -45,7 +45,7 @@ namespace constellation::config {
 
         } else if constexpr(std::is_enum_v<T>) {
             const auto& str = std::get<std::string>(*this);
-            const auto enum_val = magic_enum::enum_cast<T>(utils::transform(str, ::toupper));
+            const auto enum_val = magic_enum::enum_cast<T>(str, magic_enum::case_insensitive);
 
             if(!enum_val.has_value()) {
                 throw std::invalid_argument("possible values are " + utils::list_enum_names<T>());
@@ -75,7 +75,7 @@ namespace constellation::config {
                 result.reserve(vec.size());
 
                 std::for_each(vec.begin(), vec.end(), [&](const auto& str) {
-                    const auto enum_val = magic_enum::enum_cast<T>(utils::transform(str, ::toupper));
+                    const auto enum_val = magic_enum::enum_cast<T>(str, magic_enum::case_insensitive);
                     if(!enum_val.has_value()) {
                         throw std::invalid_argument("possible values are " + utils::list_enum_names<T>());
                     }

@@ -18,7 +18,6 @@
 #include <zmq_addon.hpp>
 
 #include "constellation/core/chirp/Manager.hpp"
-#include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
@@ -67,7 +66,7 @@ int main(int argc, char* argv[]) {
         // Send command
         auto send_msg = CSCP1Message({"dummy_controller"}, {CSCP1Message::Type::REQUEST, command});
         if(command == "initialize" || command == "reconfigure") {
-            send_msg.addPayload(Configuration().assemble());
+            send_msg.addPayload(Dictionary().assemble());
             std::cout << "Added empty configuration to message" << std::endl;
         } else if(command == "start") {
             const std::uint32_t run_nr = 1234U;
@@ -90,8 +89,7 @@ int main(int argc, char* argv[]) {
         // Print payload if dict
         if(recv_msg.hasPayload()) {
             try {
-                const auto dict = msgpack::unpack(to_char_ptr(recv_msg.getPayload()->data()), recv_msg.getPayload()->size())
-                                      ->as<Dictionary>();
+                const auto dict = Dictionary::disassemble(*recv_msg.getPayload());
                 if(!dict.empty()) {
                     std::cout << "Payload:";
                     for(const auto& [key, value] : dict) {

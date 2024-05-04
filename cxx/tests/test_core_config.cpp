@@ -57,7 +57,7 @@ TEST_CASE("Set & Get Values", "[core][core::config]") {
     config.set("time", tp);
 
     // Check that keys are unused
-    REQUIRE(config.size() == config.getUnusedKeys().size());
+    REQUIRE(config.size() == config.size(Configuration::Group::ALL, Configuration::Usage::UNUSED));
 
     // Read values back
     REQUIRE(config.get<bool>("bool") == true);
@@ -79,7 +79,25 @@ TEST_CASE("Set & Get Values", "[core][core::config]") {
     REQUIRE(config.get<std::chrono::system_clock::time_point>("time") == tp);
 
     // Check that all keys have been marked as used
-    REQUIRE(config.getUnusedKeys().empty());
+    REQUIRE(config.size(Configuration::Group::ALL, Configuration::Usage::UNUSED) == 0);
+}
+
+TEST_CASE("Enum Values Are Case-Insensitive", "[core][core::config]") {
+    Configuration config;
+
+    enum MyEnum {
+        ONE,
+        TWO,
+    };
+    config.set("myenum", MyEnum::ONE);
+    // Enum from string
+    config.set("myenumstr", "ONE");
+    // Enum case-insensitive from string
+    config.set("myenumstr2", "oNe");
+
+    REQUIRE(config.get<MyEnum>("myenum") == MyEnum::ONE);
+    REQUIRE(config.get<MyEnum>("myenumstr") == MyEnum::ONE);
+    REQUIRE(config.get<MyEnum>("myenumstr2") == MyEnum::ONE);
 }
 
 TEST_CASE("Set & Get Array Values", "[core][core::config]") {
@@ -226,11 +244,6 @@ TEST_CASE("Access Values as Text", "[core][core::config]") {
     REQUIRE(config.getText("string") == "a");
     REQUIRE(config.getText("myenum") == "ONE");
     REQUIRE(config.getText("time") == "1970-01-01 00:00:00.000000000");
-
-    // Get text with default for existing key:
-    REQUIRE(config.getText("bool", "false") == "true");
-    // Get text with default for non-existent key:
-    REQUIRE(config.getText("foo", "false") == "false");
 }
 
 TEST_CASE("Access Arrays as Text", "[core][core::config]") {
@@ -292,23 +305,79 @@ TEST_CASE("Set Value & Mark Used", "[core][core::config]") {
     config.set("myval", 3.14, true);
 
     // Check that the key is marked as used
-    REQUIRE(config.getUnusedKeys().empty());
+    REQUIRE(config.size(Configuration::Group::ALL, Configuration::Usage::UNUSED) == 0);
     REQUIRE(config.get<double>("myval") == 3.14);
 }
 
-TEST_CASE("Get all Values", "[core][core::config]") {
+TEST_CASE("Configuration size", "[core][core::config]") {
+    using enum Configuration::Group;
+    using enum Configuration::Usage;
+
     Configuration config {};
 
-    config.set("myval", 3.14);
-    config.set("_internal", 1);
+    config.set("myval1", 1);
+    config.set("myval2", 2);
+    config.set("myval3", 3);
+    config.set("_internal1", 4);
+    config.set("_internal2", 5);
+    config.set("_internal3", 6);
+    config.set("_internal4", 7);
 
-    auto keys = config.getAll();
+    REQUIRE(config.size(ALL, ANY) == 7);
+    REQUIRE(config.size(ALL, USED) == 0);
+    REQUIRE(config.size(ALL, UNUSED) == 7);
+    REQUIRE(config.size(USER, ANY) == 3);
+    REQUIRE(config.size(USER, USED) == 0);
+    REQUIRE(config.size(USER, UNUSED) == 3);
+    REQUIRE(config.size(INTERNAL, ANY) == 4);
+    REQUIRE(config.size(INTERNAL, USED) == 0);
+    REQUIRE(config.size(INTERNAL, UNUSED) == 4);
 
-    // Check that we have "myval"
-    REQUIRE(std::get<double>(keys.at("myval")) == 3.14);
+    config.get<int>("myval1");
+    config.get<int>("myval2");
+    config.get<int>("_internal1");
+    config.get<int>("_internal2");
+    config.get<int>("_internal3");
 
-    // Check that only one key was returned and the internal withheld:
-    REQUIRE(keys.size() == 1);
+    REQUIRE(config.size(ALL, ANY) == 7);
+    REQUIRE(config.size(ALL, USED) == 5);
+    REQUIRE(config.size(ALL, UNUSED) == 2);
+    REQUIRE(config.size(USER, ANY) == 3);
+    REQUIRE(config.size(USER, USED) == 2);
+    REQUIRE(config.size(USER, UNUSED) == 1);
+    REQUIRE(config.size(INTERNAL, ANY) == 4);
+    REQUIRE(config.size(INTERNAL, USED) == 3);
+    REQUIRE(config.size(INTERNAL, UNUSED) == 1);
+}
+
+TEST_CASE("Get key-value pairs", "[core][core::config]") {
+    using enum Configuration::Group;
+    using enum Configuration::Usage;
+
+    Configuration config {};
+
+    config.set("myval1", 3.14);
+    config.set("myval2", 1234);
+    config.set("myval3", false);
+    config.set("_internal1", true);
+    config.set("_internal2", 0.739);
+    config.set("_internal3", 6);
+
+    // Test that value are kept
+    REQUIRE(std::get<double>(config.getDictionary().at("myval1")) == 3.14);
+    REQUIRE(std::get<bool>(config.getDictionary().at("_internal1")) == true);
+    REQUIRE(std::get<std::int64_t>(config.getDictionary(USER).at("myval2")) == 1234);
+    REQUIRE_FALSE(config.getDictionary(USER).contains("_internal2"));
+    REQUIRE_FALSE(config.getDictionary(INTERNAL).contains("myval3"));
+    REQUIRE(std::get<std::int64_t>(config.getDictionary(INTERNAL).at("_internal3")) == 6);
+
+    config.get<double>("myval1");
+    config.get<bool>("_internal1");
+
+    // Test that used / unused keys are filtered properly
+    REQUIRE(config.getDictionary(ALL, USED).size() == 2);
+    REQUIRE(config.getDictionary(USER, UNUSED).size() == 2);
+    REQUIRE(config.getDictionary(INTERNAL, USED).size() == 1);
 }
 
 TEST_CASE("Set Default Value", "[core][core::config]") {
@@ -394,24 +463,27 @@ TEST_CASE("Value Overflow", "[core][core::config]") {
     REQUIRE_THROWS_AS(config.set("size", val), InvalidValueError);
 }
 
-TEST_CASE("Merge Configurations", "[core][core::config]") {
-    Configuration config_a {};
-    Configuration config_b {};
+TEST_CASE("Update Configuration", "[core][core::config]") {
+    Configuration config_base {};
+    Configuration config_update {};
 
-    config_a.set("bool", true);
-    config_a.set("int64", std::int64_t(63));
+    config_base.set("bool", true);
+    config_base.set("int64", std::int64_t(63));
+    config_base.set("string", std::string("unchanged"));
 
-    config_b.set("bool", false);
-    config_b.set("uint64", std::uint64_t(64));
+    config_update.set("bool", false, false);                      // exists but not used
+    config_update.set("uint64", std::uint64_t(64), true);         // exists and used
+    config_update.set("string2", std::string("new_value"), true); // new and used
 
-    // Merge configurations
-    config_a.merge(config_b);
+    // Update configuration
+    config_base.update(config_update);
 
-    // Check that keys from config_b have been transferred:
-    REQUIRE(config_a.get<std::uint64_t>("uint64") == 64);
+    // Check that used keys from config_update were updated in config_base
+    REQUIRE(config_base.get<std::uint64_t>("uint64") == 64);
+    REQUIRE(config_base.get<std::string>("string2") == "new_value");
 
-    // Check that existing keys in config_a have been overwritten
-    REQUIRE(config_a.get<bool>("bool") == false);
+    // Check that unused key from config_update were not updated in config_base
+    REQUIRE(config_base.get<bool>("bool") == true);
 }
 
 TEST_CASE("Copy & Move Configurations", "[core][core::config]") {
@@ -530,19 +602,11 @@ TEST_CASE("Assemble ZMQ Message from Configuration", "[core][core::config]") {
     // Mark one key as used:
     REQUIRE(config.get<std::int64_t>("int64") == std::int64_t(63));
 
-    // Assemble & disassemble with all keys:
-    auto msg_all = config.assemble();
-    const auto msg_all_payload = msgpack::unpack(to_char_ptr(msg_all->data()), msg_all->size());
-    const auto dict_all = msg_all_payload->as<Dictionary>();
-    REQUIRE(dict_all.size() == 3);
-    REQUIRE(dict_all.at("bool").get<bool>() == true);
-
-    // Assemble & disassemble with used keys only:
-    auto msg_used = config.assemble(true);
-    const auto msg_used_payload = msgpack::unpack(to_char_ptr(msg_used->data()), msg_used->size());
-    const auto dict_used = msg_used_payload->as<Dictionary>();
-    REQUIRE(dict_used.size() == 1);
-    REQUIRE_THROWS_AS(dict_used.at("bool"), std::out_of_range);
+    // Assemble & disassemble with all used keys:
+    const auto config_zmq = config.getDictionary(Configuration::Group::ALL, Configuration::Usage::USED).assemble();
+    const auto config_unpacked = Configuration(Dictionary::disassemble(*config_zmq));
+    REQUIRE(config_unpacked.size() == 1);
+    REQUIRE(config_unpacked.get<std::int64_t>("int64") == 63);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace)

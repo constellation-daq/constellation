@@ -19,7 +19,7 @@
 
 #include <zmq.hpp>
 
-#include "constellation/core/config.hpp"
+#include "constellation/build.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/utils/ports.hpp"

@@ -15,8 +15,8 @@
 #include <string>
 #include <string_view>
 
+#include "constellation/build.hpp"
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
-#include "constellation/core/config.hpp"
 #include "constellation/core/utils/ports.hpp"
 
 namespace constellation::message {

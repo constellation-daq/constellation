@@ -32,7 +32,7 @@ namespace constellation::utils {
 
     template <typename R>
         requires std::ranges::range<R> && std::convertible_to<std::ranges::range_value_t<R>, std::string_view>
-    inline std::string list_strings(R strings) {
+    inline std::string list_strings(const R& strings) {
         std::string out {};
         for(std::string_view string : strings) {
             out += string;
@@ -46,8 +46,7 @@ namespace constellation::utils {
     template <typename E>
         requires std::is_enum_v<E>
     inline std::string list_enum_names() {
-        constexpr auto enum_names = magic_enum::enum_names<E>();
-        return list_strings(enum_names);
+        return list_strings(magic_enum::enum_names<E>());
     }
 
 } // namespace constellation::utils

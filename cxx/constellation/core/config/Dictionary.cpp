@@ -10,14 +10,17 @@
 #include "Dictionary.hpp"
 
 #include <msgpack.hpp>
+#include <zmq.hpp>
 
+#include <memory>
 #include <span>
 #include <string>
 #include <utility>
 
-#include "constellation/core/utils/std23.hpp"
+#include "constellation/core/utils/casts.hpp"
 
 using namespace constellation::config;
+using namespace constellation::utils;
 
 void List::msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpack_packer) const {
     msgpack_packer.pack_array(this->size());
@@ -75,4 +78,23 @@ void Dictionary::msgpack_unpack(const msgpack::object& msgpack_object) {
         // Insert / overwrite in the map
         this->insert_or_assign(key, std::move(value));
     }
+}
+
+std::shared_ptr<zmq::message_t> Dictionary::assemble() const {
+    msgpack::sbuffer sbuf {};
+    msgpack::pack(sbuf, *this);
+    return std::make_shared<zmq::message_t>(sbuf.data(), sbuf.size());
+}
+
+Dictionary Dictionary::disassemble(const zmq::message_t& message) {
+    const auto msgpack_dict = msgpack::unpack(utils::to_char_ptr(message.data()), message.size());
+    return msgpack_dict->as<Dictionary>();
+}
+
+std::string Dictionary::to_string() const {
+    std::string out {};
+    for(const auto& [key, value] : *this) {
+        out += "\n " + key + " = " + value.str();
+    }
+    return out;
 }

@@ -20,6 +20,7 @@ import h5py
 import numpy as np
 import zmq
 
+from . import __version__
 from .broadcastmanager import chirp_callback, DiscoveredService
 from .cdtp import CDTPMessage, CDTPMessageIdentifier, DataTransmitter
 from .chirp import CHIRPServiceIdentifier
@@ -220,22 +221,21 @@ class H5DataReceiverWriter(DataReceiver):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.run_number = 0
-
         # Tracker for which satellites have joined the current data run.
         self.running_sats = []
-        # NOTE: Necessary because of .replace() in _open_file() overwriting the string, thus losing format
-        self.file_name_pattern = ""
-        self.directroy_name = ""
 
     def do_initializing(self, payload: any) -> str:
-        """Initialize the satellite. Set pattern for file name."""
+        """Initialize and configure the satellite."""
+        # what pattern to use for the file names?
         self.file_name_pattern = self.config.setdefault(
             "file_name_pattern", "default_name_{run_number}_{date}.h5"
         )
-        self.directroy_name = self.config.setdefault("directory_name", "H5_file_dir")
-        return "Initializing"
+        # what directory to store files in?
+        self.output_path = self.config.setdefault("output_path", "data")
+        # how often will the file be flushed? Negative values for 'at the end of the run'
+        self.flush_interval = self.config.setdefault("flush_interval", 10.0)
+        return "Configured all values"
 
     def _write_data(self, h5file: h5py.File, item: CDTPMessage):
         """Write data into HDF5 format
@@ -254,72 +254,57 @@ class H5DataReceiverWriter(DataReceiver):
         # Check if group already exists.
         if item.msgtype == CDTPMessageIdentifier.BOR and item.name not in h5file.keys():
             self.running_sats.append(item.name)
-            try:
-                grp = h5file.create_group(item.name).create_group("BOR")
-                # add meta information as attributes
-                grp.update(item.meta)
+            grp = h5file.create_group(item.name).create_group("BOR")
+            # add meta information as attributes
+            grp.update(item.meta)
 
-                if item.payload:
-                    dset = grp.create_dataset(
-                        "payload",
-                        data=item.payload,
-                        dtype=item.meta.get("dtype", None),
-                    )
-                self.log.info(
-                    "Wrote BOR packet from %s on run %s",
-                    item.name,
-                    self.run_number,
+            if item.payload:
+                dset = grp.create_dataset(
+                    "payload",
+                    data=item.payload,
+                    dtype=item.meta.get("dtype", None),
                 )
-
-            except Exception as e:
-                self.log.exception(
-                    "Failed to create group for dataset. Exception occurred: %s", e
-                )
+            self.log.info(
+                "Wrote BOR packet from %s on run %s",
+                item.name,
+                self.run_number,
+            )
 
         elif item.msgtype == CDTPMessageIdentifier.DAT:
-            try:
-                grp = h5file[item.name]
-                title = f"data_{self.run_number}_{item.sequence_number}"
+            grp = h5file[item.name]
+            title = f"data_{self.run_number}_{item.sequence_number}"
 
-                # interpret bytes as array of uint8 if nothing else was specified in the meta
-                payload = np.frombuffer(
-                    item.payload, dtype=item.meta.get("dtype", np.uint8)
-                )
+            # interpret bytes as array of uint8 if nothing else was specified in the meta
+            payload = np.frombuffer(
+                item.payload, dtype=item.meta.get("dtype", np.uint8)
+            )
 
-                dset = grp.create_dataset(
-                    title,
-                    data=payload,
-                    chunks=True,
-                )
+            dset = grp.create_dataset(
+                title,
+                data=payload,
+                chunks=True,
+            )
 
-                dset.attrs["CLASS"] = "DETECTOR_DATA"
-                dset.attrs.update(item.meta)
-
-            except Exception as e:
-                self.log.error("Failed to write to file. Exception occurred: %s", e)
+            dset.attrs["CLASS"] = "DETECTOR_DATA"
+            dset.attrs.update(item.meta)
 
         elif item.msgtype == CDTPMessageIdentifier.EOR:
-            try:
-                grp = h5file[item.name].create_group("EOR")
-                # add meta information as attributes
-                grp.update(item.meta)
+            grp = h5file[item.name].create_group("EOR")
+            # add meta information as attributes
+            grp.update(item.meta)
 
-                if item.payload:
-                    dset = grp.create_dataset(
-                        "payload",
-                        data=item.payload,
-                        dtype=item.meta.get("dtype", None),
-                    )
+            if item.payload:
+                dset = grp.create_dataset(
+                    "payload",
+                    data=item.payload,
+                    dtype=item.meta.get("dtype", None),
+                )
 
-                self.log.info(
-                    "Wrote EOR packet from %s on run %s",
-                    item.name,
-                    self.run_number,
-                )
-            except Exception as e:
-                self.log.error(
-                    "Failed to access group for EOR. Exception occurred: %s", e
-                )
+            self.log.info(
+                "Wrote EOR packet from %s on run %s",
+                item.name,
+                self.run_number,
+            )
 
     def do_run(self, run_number: int) -> str:
         """Handle the data enqueued by the pull threads.
@@ -332,39 +317,40 @@ class H5DataReceiverWriter(DataReceiver):
 
         self.run_number = run_number
         h5file = self._open_file()
+        self._add_version(h5file)
+        last_flush = datetime.datetime.now()
         try:
             # processing loop
             while not self._state_thread_evt.is_set() or not self.data_queue.empty():
                 try:
                     # blocking call but with timeout to prevent deadlocks
-                    item = self.data_queue.get(block=True, timeout=0.5)
+                    item = self.data_queue.get(block=True, timeout=0.1)
 
                     # if we have data, write it
-                    if isinstance(item, CDTPMessage):
-                        if (
-                            item.msgtype != CDTPMessageIdentifier.BOR
-                            and item.name not in self.running_sats
-                        ):
-                            self.log.warning(
-                                f"Received item from {item.name} that is not part of current run"
-                            )
-                            continue
-                        self._write_data(
-                            h5file, item
-                        )  # NOTE: Could be replaced w/ write_data_concat or write_data_virtual
-                    else:
-                        raise RuntimeError(f"Unable to handle queue item: {type(item)}")
+                    self._write_data(h5file, item)
                     self.data_queue.task_done()
 
                 except Empty:
                     # nothing to process
                     pass
+                # time to flush data to file?
+                # NOTE: could instead move this into
+                # the 'except Empty' above (and reduce the timeout); this would
+                # not guarantee a flush but only flush when there is nothing
+                # else to do
+                if (
+                    self.flush_interval > 0
+                    and (datetime.datetime.now() - last_flush).total_seconds()
+                    > self.flush_interval
+                ):
+                    h5file.flush()
+                    last_flush = datetime.datetime.now()
         finally:
             h5file.close()
             self.running_sats = []
             return "Finished Acquisition"
 
-    def _open_file(self):
+    def _open_file(self) -> h5py.File:
         """Open the hdf5 file and return the file object."""
         h5file = None
         filename = pathlib.Path(
@@ -379,7 +365,7 @@ class H5DataReceiverWriter(DataReceiver):
 
         self.log.debug("Creating file %s", filename)
         # Create directory path.
-        directory = pathlib.Path(self.directroy_name)  # os.path.dirname(filename)
+        directory = pathlib.Path(self.output_path)  # os.path.dirname(filename)
         try:
             os.makedirs(directory)
         except (FileExistsError, FileNotFoundError):
@@ -398,6 +384,11 @@ class H5DataReceiverWriter(DataReceiver):
                 f"Unable to open {filename}: {str(exception)}",
             ) from exception
         return h5file
+
+    def _add_version(self, h5file: h5py.File):
+        """Add version information to file."""
+        grp = h5file.create_group(self.name)
+        grp["constellation_version"] = __version__
 
 
 # -------------------------------------------------------------------------

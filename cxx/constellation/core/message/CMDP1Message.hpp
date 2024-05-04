@@ -18,7 +18,7 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
-#include "constellation/core/config.hpp"
+#include "constellation/build.hpp"
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/message/BaseHeader.hpp"
 #include "constellation/core/message/Protocol.hpp"

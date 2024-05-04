@@ -128,7 +128,7 @@ SinkManager::SinkManager() : cmdp_global_level_(OFF) {
     setCMDPLevelsCustom(TRACE, {});
 }
 
-void SinkManager::registerService() const {
+void SinkManager::registerService(std::string sender_name) {
     // Register service in CHIRP
     // Note: cannot be done in constructor since CHIRP also does logging
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
@@ -139,6 +139,8 @@ void SinkManager::registerService() const {
                                   "Failed to advertise logging on the network, satellite might not be discovered");
     }
     cmdp_console_logger_->log(to_spdlog_level(INFO), "Starting to log on port " + std::to_string(cmdp_sink_->getPort()));
+    // Set name in CMDP sink
+    cmdp_sink_->setSender(std::move(sender_name));
 }
 
 std::shared_ptr<spdlog::async_logger> SinkManager::createLogger(std::string topic, std::optional<Level> console_level) {

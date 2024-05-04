@@ -102,7 +102,7 @@ TEST_CASE("Register Service via CHIRP", "[logging]") {
     using namespace constellation::chirp;
     auto manager = Manager("255.255.255.255", "0.0.0.0", "cnstln1", "sat1");
     manager.setAsDefaultInstance();
-    SinkManager::getInstance().registerService();
+    SinkManager::getInstance().registerService("satname");
     REQUIRE(manager.getRegisteredServices().size() == 1);
     REQUIRE(manager.getRegisteredServices().contains({MONITORING, SinkManager::getInstance().getCMDPPort()}));
 }

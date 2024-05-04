@@ -21,6 +21,7 @@ from constellation.core.chirp import CHIRPServiceIdentifier, get_uuid
 from constellation.core.cscp import CommandTransmitter
 from constellation.core.datareceiver import H5DataReceiverWriter
 from constellation.core.datasender import DataSender
+from constellation.core import __version__
 
 DATA_PORT = 50101
 CMD_PORT = 10101
@@ -89,35 +90,25 @@ def mock_receiver_satellite(mock_socket_sender: mocket, mock_socket_receiver: mo
         return m
 
     class MockReceiverSatellite(H5DataReceiverWriter):
-        def __init__(self, temp_dir, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.temp_dir = temp_dir
-
-        def do_initializing(self, payload: any) -> str:
-            super().do_initializing(payload)
-            self.directroy_name = self.temp_dir
-            self.file_name_pattern = FILE_NAME
-            return "Initializing"
+        pass
 
     with patch("constellation.core.base.zmq.Context") as mock:
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context
-        with TemporaryDirectory() as tmpdirname:
-            s = MockReceiverSatellite(
-                name="mock_receiver",
-                group="mockstellation",
-                cmd_port=CMD_PORT,
-                mon_port=22222,
-                hb_port=33333,
-                interface="127.0.0.1",
-                temp_dir=tmpdirname,
-            )
-            t = threading.Thread(target=s.run_satellite)
-            t.start()
-            # give the threads a chance to start
-            time.sleep(0.1)
-            yield s, tmpdirname
+        s = MockReceiverSatellite(
+            name="mock_receiver",
+            group="mockstellation",
+            cmd_port=CMD_PORT,
+            mon_port=22222,
+            hb_port=33333,
+            interface="127.0.0.1",
+        )
+        t = threading.Thread(target=s.run_satellite)
+        t.start()
+        # give the threads a chance to start
+        time.sleep(0.1)
+        yield s
 
 
 @pytest.mark.forked
@@ -193,62 +184,73 @@ def test_receive_writing_package(
         port=DATA_PORT,
     )
 
-    receiver, tmpdir = mock_receiver_satellite
+    receiver = mock_receiver_satellite
     tx = mock_data_transmitter
-    commander.send_request("initialize", {"mock key": "mock argument string"})
-    wait_for_state(receiver.fsm, "INIT", 1)
-    receiver._add_sender(service)
-    commander.send_request("launch")
-    wait_for_state(receiver.fsm, "ORBIT", 1)
-
-    payload = np.array(np.arange(1000), dtype=np.int16)
-    assert receiver.run_number == 0
-
-    for run_num in range(1, 3):
-        # Send new data to handle
-        tx.send_start(["mock_start"])
-        # send once as byte array with and once w/o dtype
-        tx.send_data(payload.tobytes(), {"dtype": f"{payload.dtype}"})
-        tx.send_data(payload.tobytes())
-        tx.send_end(["mock_end"])
-        time.sleep(0.1)
-
-        # Have we received all packages?
-        assert receiver.data_queue.qsize() == 4, "Could not receive all data packets."
-
-        # Running satellite
-        commander.send_request("start", run_num)
-        wait_for_state(receiver.fsm, "RUN", 1)
-        assert (
-            receiver.fsm.current_state.id == "RUN"
-        ), "Could not set up test environment"
-        commander.send_request("stop")
+    with TemporaryDirectory() as tmpdir:
+        commander.send_request(
+            "initialize", {"file_name_pattern": FILE_NAME, "output_path": tmpdir}
+        )
+        wait_for_state(receiver.fsm, "INIT", 1)
+        receiver._add_sender(service)
+        commander.send_request("launch")
         wait_for_state(receiver.fsm, "ORBIT", 1)
-        assert receiver.run_number == run_num
 
-        # Does file exist and has it been written to?
-        bor = "BOR"
-        eor = "EOR"
-        dat = [f"data_{run_num}_{i}" for i in range(1, 3)]
+        payload = np.array(np.arange(1000), dtype=np.int16)
+        assert receiver.run_number == 0
 
-        file = FILE_NAME.format(run_number=run_num)
-        assert os.path.exists(os.path.join(tmpdir, file))
-        h5file = h5py.File(tmpdir / pathlib.Path(file))
-        assert "mock_sender" in h5file.keys()
-        assert bor in h5file["mock_sender"].keys()
-        assert "mock_start" in str(
-            h5file["mock_sender"][bor]["payload"][0], encoding="utf-8"
-        )
-        assert eor in h5file["mock_sender"].keys()
-        assert "mock_end" in str(
-            h5file["mock_sender"][eor]["payload"][0], encoding="utf-8"
-        )
-        assert set(dat).issubset(
-            h5file["mock_sender"].keys()
-        ), "Data packets missing in file"
-        assert (payload == h5file["mock_sender"][dat[0]]).all()
-        # interpret the uint8 values again as uint16:
-        assert (
-            payload == np.array(h5file["mock_sender"][dat[1]]).view(np.uint16)
-        ).all()
-        h5file.close()
+        for run_num in range(1, 3):
+            # Send new data to handle
+            tx.send_start(["mock_start"])
+            # send once as byte array with and once w/o dtype
+            tx.send_data(payload.tobytes(), {"dtype": f"{payload.dtype}"})
+            tx.send_data(payload.tobytes())
+            tx.send_end(["mock_end"])
+            time.sleep(0.1)
+
+            # Have we received all packages?
+            assert (
+                receiver.data_queue.qsize() == 4
+            ), "Could not receive all data packets."
+
+            # Running satellite
+            commander.send_request("start", run_num)
+            wait_for_state(receiver.fsm, "RUN", 1)
+            assert (
+                receiver.fsm.current_state.id == "RUN"
+            ), "Could not set up test environment"
+            commander.send_request("stop")
+            wait_for_state(receiver.fsm, "ORBIT", 1)
+            assert receiver.run_number == run_num
+
+            # Does file exist and has it been written to?
+            bor = "BOR"
+            eor = "EOR"
+            dat = [f"data_{run_num}_{i}" for i in range(1, 3)]
+
+            file = FILE_NAME.format(run_number=run_num)
+            assert os.path.exists(os.path.join(tmpdir, file))
+            h5file = h5py.File(tmpdir / pathlib.Path(file))
+            assert "mock_sender" in h5file.keys()
+            assert bor in h5file["mock_sender"].keys()
+            assert "mock_start" in str(
+                h5file["mock_sender"][bor]["payload"][0], encoding="utf-8"
+            )
+            assert eor in h5file["mock_sender"].keys()
+            assert "mock_end" in str(
+                h5file["mock_sender"][eor]["payload"][0], encoding="utf-8"
+            )
+            assert set(dat).issubset(
+                h5file["mock_sender"].keys()
+            ), "Data packets missing in file"
+            assert (payload == h5file["mock_sender"][dat[0]]).all()
+            # interpret the uint8 values again as uint16:
+            assert (
+                payload == np.array(h5file["mock_sender"][dat[1]]).view(np.uint16)
+            ).all()
+            assert (
+                h5file["MockReceiverSatellite.mock_receiver"]["constellation_version"][
+                    ()
+                ]
+                == __version__.encode()
+            )
+            h5file.close()

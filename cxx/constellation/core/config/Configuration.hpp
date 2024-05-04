@@ -13,11 +13,8 @@
 #include <filesystem>
 #include <initializer_list>
 #include <map>
-#include <memory>
 #include <string>
 #include <vector>
-
-#include <zmq.hpp>
 
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
@@ -29,62 +26,35 @@ namespace constellation::config {
      *
      * The configuration holds a set of keys with arbitrary values that are internally stored as std::variant.
      */
-    class CNSTLN_API Configuration {
-
+    class Configuration {
+    private:
         /**
-         * @brief Helper class to keep track of key access
-         *
-         * This class holds all configuration keys in a map together with an atomic boolean marking whether they have been
-         * accessed already. This allows to find out which keys have not been accessed at all. This wrapper allows to use
-         * atomics for non-locking access but requires to register all keys beforehand.
+         * @brief Helper class to keep track of key-value pair access
          */
-        class AccessMarker {
+        class ConfigValue : public Value {
         public:
-            /**
-             * Default constructor
-             */
-            AccessMarker() = default;
-            ~AccessMarker() = default;
+            using Value::Value;
+            using Value::operator=;
 
             /**
-             * @brief Explicit copy constructor to allow copying of the map keys
+             * @brief Construct ConfigValue from Value with predefined usage
              */
-            AccessMarker(const AccessMarker& other);
+            ConfigValue(Value value, bool used = false) : Value(std::move(value)), used_(used) {}
 
             /**
-             * @brief Explicit copy assignment operator to allow copying of the map keys
+             * @brief Method to mark ConfigValue as used/unused
+             * @param used If the key-value pair should be marked used or unused
              */
-            AccessMarker& operator=(const AccessMarker& other);
-
-            // Default move constructor/assignment
-            AccessMarker(AccessMarker&& other) noexcept = default;
-            AccessMarker& operator=(AccessMarker&& other) = default;
+            void markUsed(bool used = true) const { used_ = used; }
 
             /**
-             * @brief Method to register a key for a new access marker
-             * @param key Key of the marker
-             * @warning This operation is not thread-safe
+             * @brief Method to retrieve of ConfigValue is used/unused
+             * @return true if used, false if unused
              */
-            void registerMarker(const std::string& key);
-
-            /**
-             * @brief Method to mark existing marker as accessed/used.
-             * @param key Key of the marker
-             * @note This is an atomic operation and thread-safe.
-             * @throws std::out_of_range if the key has not been registered beforehand
-             */
-            void markUsed(const std::string& key) { markers_.at(key).store(true); };
-
-            /**
-             * @brief Method to retrieve access status of an existing marker.
-             * @param key Key of the marker
-             * @note This is an atomic operation and thread-safe.
-             * @throws std::out_of_range if the key has not been registered beforehand
-             */
-            bool isUsed(const std::string& key) { return markers_.at(key).load(); }
+            bool isUsed() const { return used_; }
 
         private:
-            std::map<std::string, std::atomic_bool> markers_;
+            mutable bool used_ {false};
         };
 
     public:
@@ -98,14 +68,33 @@ namespace constellation::config {
          * @brief Construct a configuration object from a dictionary
          *
          * @param dict Dictionary to construct config object from
+         * @param mark_used Whether to mark the key-value pairs in the dict as used
          */
-        Configuration(const Dictionary& dict);
+        CNSTLN_API Configuration(const Dictionary& dict, bool mark_used = false);
 
         // Default copy/move constructor/assignment
         Configuration(const Configuration& other) = default;
         Configuration& operator=(const Configuration& other) = default;
         Configuration(Configuration&& other) noexcept = default;
         Configuration& operator=(Configuration&& other) = default;
+
+        enum class Group : std::uint8_t {
+            /** All configuration key-value pairs, both user and internal */
+            ALL,
+            /** Configuration key-value pairs intended for framework users */
+            USER,
+            /** Configuration key-value paris intended for internal framework usage */
+            INTERNAL,
+        };
+
+        enum class Usage : std::uint8_t {
+            /** Both used and unused key-value pairs */
+            ANY,
+            /** Only used key-value pairs */
+            USED,
+            /** Only unused key-value paris */
+            UNUSED,
+        };
 
         /**
          * @brief Check if key is defined
@@ -122,7 +111,7 @@ namespace constellation::config {
          * @param keys Keys to check for existence
          * @return number of existing keys from the given list
          */
-        std::size_t count(std::initializer_list<std::string> keys) const;
+        CNSTLN_API std::size_t count(std::initializer_list<std::string> keys) const;
 
         /**
          * @brief Get value of a key in requested type
@@ -138,14 +127,14 @@ namespace constellation::config {
         /**
          * @brief Get value of a key in requested type or default value if it does not exists
          * @param key Key to get value of
-         * @param def Default value to use if key is not defined
+         * @param def Default value to set if key is not defined
          * @return Value of the key in the type of the requested template parameter
          *         or the default value if the key does not exists
          *
          * @throws InvalidKeyError If the conversion to the requested type did not succeed
          * @throws InvalidKeyError If an overflow happened while converting the key
          */
-        template <typename T> T get(const std::string& key, const T& def) const;
+        template <typename T> T get(const std::string& key, const T& def);
 
         /**
          * @brief Get values for a key containing an array
@@ -161,14 +150,14 @@ namespace constellation::config {
         /**
          * @brief Get values for a key containing an array or default array if it does not exists
          * @param key Key to get values of
-         * @param def Default value array to use if key is not defined
+         * @param def Default value array to set if key is not defined
          * @return List of values in the array in the requested template parameter
          *         or the default array if the key does not exist
          *
          * @throws InvalidKeyError If the conversion to the requested type did not succeed
          * @throws InvalidKeyError If an overflow happened while converting the key
          */
-        template <typename T> std::vector<T> getArray(const std::string& key, const std::vector<T>& def) const;
+        template <typename T> std::vector<T> getArray(const std::string& key, const std::vector<T>& def);
 
         /**
          * @brief Get literal value of a key as string
@@ -176,16 +165,7 @@ namespace constellation::config {
          * @return Literal value of the key
          * @note This function does also not remove quotation marks in strings
          */
-        std::string getText(const std::string& key) const;
-
-        /**
-         * @brief Get literal value of a key as string or a default if it does not exists
-         * @param key Key to get values of
-         * @param def Default value to use if key is not defined
-         * @return Literal value of the key or the default value if the key does not exists
-         * @note This function does also not remove quotation marks in strings
-         */
-        std::string getText(const std::string& key, const std::string& def) const;
+        CNSTLN_API std::string getText(const std::string& key) const;
 
         /**
          * @brief Get absolute path to file with paths relative to the configuration
@@ -195,7 +175,7 @@ namespace constellation::config {
          *
          * @throws InvalidValueError If the path did not exists while the check_exists parameter is given
          */
-        std::filesystem::path getPath(const std::string& key, bool check_exists = false) const;
+        CNSTLN_API std::filesystem::path getPath(const std::string& key, bool check_exists = false) const;
 
         /**
          * @brief Get absolute path to file with paths relative to the configuration
@@ -206,9 +186,9 @@ namespace constellation::config {
          *
          * @throws InvalidValueError If the path did not exists while the check_exists parameter is given
          */
-        std::filesystem::path getPathWithExtension(const std::string& key,
-                                                   const std::string& extension,
-                                                   bool check_exists = false) const;
+        CNSTLN_API std::filesystem::path getPathWithExtension(const std::string& key,
+                                                              const std::string& extension,
+                                                              bool check_exists = false) const;
 
         /**
          * @brief Get array of absolute paths to files with paths relative to the configuration
@@ -218,7 +198,7 @@ namespace constellation::config {
          *
          * @throws InvalidValueError If the path did not exists while the check_exists parameter is given
          */
-        std::vector<std::filesystem::path> getPathArray(const std::string& key, bool check_exists = false) const;
+        CNSTLN_API std::vector<std::filesystem::path> getPathArray(const std::string& key, bool check_exists = false) const;
 
         /**
          * @brief Set value for a key in a given type
@@ -261,45 +241,32 @@ namespace constellation::config {
          * @param warn Optionally print a warning message to notify of deprecation
          * @note This marks the old key as "used" automatically
          */
-        void setAlias(const std::string& new_key, const std::string& old_key, bool warn = false);
+        CNSTLN_API void setAlias(const std::string& new_key, const std::string& old_key, bool warn = false);
 
         /**
-         * @brief Return total number of key / value pairs
+         * @brief Get number of key-value pairs for specific group and usage setting
          *
-         * This also counts internal keys.
+         * @param group Enum to restrict group of key-value pairs to include
+         * @param usage Enum to restrict uasge of key-value pairs to include
          *
-         * @return Number of settings
+         * @return Number of key-value pairs
          */
-        std::size_t size() const { return config_.size(); }
+        CNSTLN_API std::size_t size(Group group = Group::ALL, Usage usage = Usage::ANY) const;
+
+        /**
+         * @brief Get dictionary with key-value pairs for specific group and usage setting
+         * @return Dictionary containing the key-value pairs
+         */
+        CNSTLN_API Dictionary getDictionary(Group group = Group::ALL, Usage usage = Usage::ANY) const;
 
         /**
          * @brief Update with keys from another configuration, potentially overriding keys in this configuration
-         * @param other Configuration to merge this one with
-         */
-        void merge(const Configuration& other);
-
-        /**
-         * @brief Get all key value pairs
-         * @return List of all key value pairs
-         */
-        // FIXME Better name for this function
-        Dictionary getAll() const;
-
-        /**
-         * @brief Obtain all keys which have not been accessed yet
          *
-         * This method returns all keys from the configuration object which have not yet been accessed, Default values as
-         * well as aliases are marked as used automatically and are therefore never returned.
-         */
-        std::vector<std::string> getUnusedKeys() const;
-
-        /**
-         * @brief Assemble configuration via msgpack for ZeroMQ
+         * @note This function only updates values that are actually used
          *
-         * @note This does not embedded the used keys, just the tag / value pairs
-         * @param used_only Select whether to only include keys that have been used
+         * @param other Configuration with updated values
          */
-        std::shared_ptr<zmq::message_t> assemble(bool used_only = false) const;
+        CNSTLN_API void update(const Configuration& other);
 
     private:
         /**
@@ -311,13 +278,16 @@ namespace constellation::config {
         static std::filesystem::path path_to_absolute(std::filesystem::path path, bool canonicalize_path);
 
         /**
-         * @brief Get all key value pairs which have been used
-         * @return List of all used key value pairs, including internal ones
+         * @brief Calls a function for every key-value pair matching group and usage criteria
+         *
+         * @param group Enum to restrict group of key-value pairs to include
+         * @param usage Enum to restrict usage of key-value pairs to include
+         * @param f Function taking a string ref and a Value ref
+         *
          */
-        Dictionary get_used_entries() const;
+        template <typename F> void for_each(Group group, Usage usage, F f) const;
 
-        Dictionary config_;
-        mutable AccessMarker used_keys_;
+        std::map<std::string, ConfigValue> config_;
     };
 
 } // namespace constellation::config
