@@ -263,24 +263,20 @@ class RedPitayaSatellite(DataSender):
 
             # Append last part of buffer before resetting
             if cycled:
-                buffer = np.concatenate((
+                buffer = np.concatenate(
                     self._sample_raw32(
                         start=self._readpos,
                         stop=BUFFER_SIZE,
-                        channel=channel,
-                    ),
+                        channel=channel),
                     self._sample_raw32(
                         start=0,
                         stop=self._writepos,
-                        channel=channel,
-                    )
-                ))
+                        channel=channel))
             else:
                 buffer = self._sample_raw32(
                     start=self._readpos,
                     stop=self._writepos,
-                    channel=channel,
-                    )
+                    channel=channel)
 
             if (i == 0):
                 data = np.empty((len(self.active_channels), len(buffer)),
