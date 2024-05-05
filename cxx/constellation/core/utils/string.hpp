@@ -9,10 +9,10 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cctype>
 #include <concepts>
 #include <ranges>
-#include <span>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -30,23 +30,54 @@ namespace constellation::utils {
         return out;
     }
 
-    template <typename R>
-        requires std::ranges::range<R> && std::convertible_to<std::ranges::range_value_t<R>, std::string_view>
-    inline std::string list_strings(const R& strings) {
-        std::string out {};
-        for(std::string_view string : strings) {
-            out += string;
-            out += ", ";
+    template <typename T>
+        requires std::convertible_to<T, std::string_view>
+    inline std::string to_string(T string_like) {
+        const std::string_view string_view {string_like};
+        return {string_view.data(), string_view.size()};
+    }
+
+    template <typename T>
+        requires std::is_arithmetic_v<T>
+    inline std::string to_string(T number) {
+        if constexpr(std::same_as<T, bool>) {
+            return number ? "true" : "false";
         }
-        // Remove last ", "
-        out.erase(out.size() - 2);
-        return out;
+        return std::to_string(number);
     }
 
     template <typename E>
         requires std::is_enum_v<E>
+    inline std::string to_string(E enum_val) {
+        return to_string(magic_enum::enum_name<E>(enum_val));
+    }
+
+    template <typename T>
+    concept convertible_to_string = requires(T t) {
+        { to_string(t) } -> std::same_as<std::string>;
+    };
+
+    template <typename R>
+        requires std::ranges::range<R> && convertible_to_string<std::ranges::range_value_t<R>>
+    inline std::string list_to_string(const R& range) {
+        std::string out {};
+        if(!std::ranges::empty(range)) {
+            std::ranges::for_each(std::ranges::subrange(std::cbegin(range), std::ranges::prev(std::ranges::cend(range))),
+                                  [&out](const auto& element) { out += to_string(element) + ", "; });
+            out += to_string(*std::ranges::crbegin(range));
+        }
+        return out;
+    }
+
+    template <typename T>
+    concept convertible_list_to_string = requires(T t) {
+        { list_to_string(t) } -> std::same_as<std::string>;
+    };
+
+    template <typename E>
+        requires std::is_enum_v<E>
     inline std::string list_enum_names() {
-        return list_strings(magic_enum::enum_names<E>());
+        return list_to_string(magic_enum::enum_names<E>());
     }
 
 } // namespace constellation::utils
