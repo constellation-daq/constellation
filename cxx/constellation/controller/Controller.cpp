@@ -51,10 +51,7 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
 
         // Obtain canonical name:
         auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "get_name"});
-        send_msg.assemble().send(conn.req);
-        zmq::multipart_t recv_zmq_msg {};
-        recv_zmq_msg.recv(conn.req);
-        const auto recv_msg = CSCP1Message::disassemble(recv_zmq_msg);
+        const auto recv_msg = send_receive(conn, send_msg);
         const auto name = recv_msg.getVerb().second;
 
         const auto [it, success] = satellite_connections_.emplace(name, std::move(conn));
