@@ -15,15 +15,8 @@ controller_lib = library('ConstellationController',
   install_rpath: constellation_rpath,
 )
 
-# We do not provide a C ABI, so we are fine with exporting C++ symbols via extern C
-controller_compiler_args = []
-if meson.get_compiler('cpp').has_argument('-Wno-return-type-c-linkage')
-  controller_compiler_args += '-Wno-return-type-c-linkage'
-endif
-
 controller_dep = declare_dependency(
   link_with: controller_lib,
-  compile_args: controller_compiler_args,
   include_directories: constellation_inc,
   dependencies: [core_dep, cppzmq_dep, magic_enum_dep],
 )
