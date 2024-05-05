@@ -22,6 +22,8 @@
 #include "constellation/core/metrics/Manager.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
+#include "constellation/core/metrics/Manager.hpp"
+#include "constellation/satellite/CommandRegistry.hpp"
 
 namespace constellation::satellite {
 
