@@ -87,3 +87,33 @@ std::map<std::string, CSCP1Message> Controller::sendCommand(CSCP1Message& cmd) {
     }
     return replies;
 }
+
+CSCP1Message Controller::initialize(std::string_view satellite_name) {
+    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "initialize"});
+    return sendCommand(satellite_name, send_msg);
+}
+
+CSCP1Message Controller::launch(std::string_view satellite_name) {
+    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "launch"});
+    return sendCommand(satellite_name, send_msg);
+}
+
+CSCP1Message Controller::land(std::string_view satellite_name) {
+    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "land"});
+    return sendCommand(satellite_name, send_msg);
+}
+
+CSCP1Message Controller::reconfigure(std::string_view satellite_name) {
+    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "reconfigure"});
+    return sendCommand(satellite_name, send_msg);
+}
+
+CSCP1Message Controller::start(std::string_view satellite_name) {
+    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "start"});
+    return sendCommand(satellite_name, send_msg);
+}
+
+CSCP1Message Controller::stop(std::string_view satellite_name) {
+    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "stop"});
+    return sendCommand(satellite_name, send_msg);
+}

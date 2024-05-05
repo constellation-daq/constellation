@@ -49,6 +49,13 @@ namespace constellation::controller {
 
         std::map<std::string, message::CSCP1Message> sendCommand(message::CSCP1Message& cmd);
 
+        message::CSCP1Message initialize(std::string_view satellite_name);
+        message::CSCP1Message launch(std::string_view satellite_name);
+        message::CSCP1Message land(std::string_view satellite_name);
+        message::CSCP1Message reconfigure(std::string_view satellite_name);
+        message::CSCP1Message start(std::string_view satellite_name);
+        message::CSCP1Message stop(std::string_view satellite_name);
+
     private:
         message::CSCP1Message send_receive(Connection& conn, message::CSCP1Message& cmd);
 
