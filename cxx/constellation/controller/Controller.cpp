@@ -33,14 +33,9 @@ void Controller::callback(chirp::DiscoveredService service, bool depart, std::an
 }
 
 void Controller::callback_impl(const constellation::chirp::DiscoveredService& service, bool depart) {
-    // Check service.identifier == CONTROL
-    if(service.identifier != chirp::ServiceIdentifier::CONTROL) {
-        LOG(logger_, DEBUG) << "Wrong service " << magic_enum::enum_name(service.identifier) << " offered, ignoring";
-        return;
-    }
 
     // Add or drop, depending on message:
-    const auto uri = "tcp://" + service.address.to_string() + ":" + std::to_string(service.port);
+    const auto uri = service.to_uri();
     if(depart) {
         const auto it = std::find_if(satellite_connections_.begin(), satellite_connections_.end(), [&](const auto& sat) {
             return sat.second.host_id == service.host_id;
