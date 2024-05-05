@@ -24,6 +24,7 @@
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/ports.hpp"
+#include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/Satellite.hpp"
 #include "constellation/satellite/SatelliteImplementation.hpp"
 
@@ -57,9 +58,7 @@ public:
 
 class CSCPSender {
 public:
-    CSCPSender(Port port) : req_(context_, zmq::socket_type::req) {
-        req_.connect("tcp://127.0.0.1:" + std::to_string(port));
-    }
+    CSCPSender(Port port) : req_(context_, zmq::socket_type::req) { req_.connect("tcp://127.0.0.1:" + to_string(port)); }
     void send(std::span<const std::byte> message, zmq::send_flags send_flags = zmq::send_flags::none) {
         zmq::message_t zmq_msg {message.data(), message.size()};
         req_.send(zmq_msg, send_flags);

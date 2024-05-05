@@ -18,7 +18,6 @@
 
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/logging/log.hpp"
-#include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
@@ -82,8 +81,8 @@ void Satellite::store_config(config::Configuration&& config) {
     // Check for unused KVPs
     const auto unused_kvps = config.getDictionary(ALL, UNUSED);
     if(!unused_kvps.empty()) {
-        LOG(logger_, WARNING) << unused_kvps.size()
-                              << " keys of the configuration were not used: " << list_strings(std::views::keys(unused_kvps));
+        LOG(logger_, WARNING) << unused_kvps.size() << " keys of the configuration were not used: "
+                              << list_to_string(std::views::keys(unused_kvps));
         // Only store used keys
         config_ = {config.getDictionary(ALL, USED), true};
     } else {
@@ -104,8 +103,8 @@ void Satellite::update_config(const config::Configuration& partial_config) {
     // Check for unused KVPs
     const auto unused_kvps = partial_config.getDictionary(ALL, UNUSED);
     if(!unused_kvps.empty()) {
-        LOG(logger_, WARNING) << unused_kvps.size()
-                              << " keys of the configuration were not used: " << list_strings(std::views::keys(unused_kvps));
+        LOG(logger_, WARNING) << unused_kvps.size() << " keys of the configuration were not used: "
+                              << list_to_string(std::views::keys(unused_kvps));
     }
 
     // Update configuration (only updates used values of partial config)

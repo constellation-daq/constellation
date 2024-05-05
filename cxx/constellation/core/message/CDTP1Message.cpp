@@ -16,7 +16,6 @@
 #include <stdexcept>
 #include <string>
 
-#include <magic_enum.hpp>
 #include <msgpack.hpp>
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
@@ -27,6 +26,7 @@
 #include "constellation/core/message/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std23.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
 using namespace constellation::message;
@@ -97,8 +97,8 @@ void CDTP1Message::Header::msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpa
 std::string CDTP1Message::Header::to_string() const {
     // Insert type and sequence number into string from base class function
     std::ostringstream insert {};
-    insert << "\nType:   "sv << magic_enum::enum_name(type_) //
-           << "\nSeq No: "sv << seq_;                        //
+    insert << "\nType:   "sv << utils::to_string(type_) //
+           << "\nSeq No: "sv << seq_;                   //
 
     // Insert before tags (at least 59 chars after string begin)
     auto out = BaseHeader::to_string();

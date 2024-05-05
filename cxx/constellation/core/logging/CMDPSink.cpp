@@ -22,7 +22,6 @@
 
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
-#include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/ports.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/windows.hpp"

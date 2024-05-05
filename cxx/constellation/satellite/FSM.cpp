@@ -27,6 +27,7 @@
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/payload_buffer.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 #include "constellation/satellite/Satellite.hpp"

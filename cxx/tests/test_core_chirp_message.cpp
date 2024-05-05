@@ -16,10 +16,12 @@
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace Catch::Matchers;
 using namespace constellation::chirp;
 using namespace constellation::message;
+using namespace constellation::utils;
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
 
@@ -58,7 +60,7 @@ TEST_CASE("Detect invalid length in CHIRP message", "[chirp][chirp::message]") {
 
     REQUIRE_THROWS_WITH(
         CHIRPMessage::disassemble(msg_data),
-        Equals("Error decoding message: message length is not " + std::to_string(CHIRP_MESSAGE_LENGTH) + " bytes"));
+        Equals("Error decoding message: message length is not " + to_string(CHIRP_MESSAGE_LENGTH) + " bytes"));
 }
 
 TEST_CASE("Detect invalid identifier in CHIRP message", "[chirp][chirp::message]") {

@@ -81,10 +81,7 @@ std::string BaseHeader::to_string() const {
     out << "Header: "sv << get_readable_protocol(protocol_) << '\n' //
         << "Sender: "sv << sender_ << '\n'                          //
         << "Time:   "sv << time_ << '\n'                            //
-        << "Tags:"sv;
+        << "Tags:"sv << tags_.to_string();
 
-    for(const auto& entry : tags_) {
-        out << "\n "sv << entry.first << ": "sv << entry.second.str();
-    }
     return out.str();
 }

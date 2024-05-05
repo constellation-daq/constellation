@@ -22,7 +22,7 @@
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/satellite_definitions.hpp"
-#include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace constellation;
 using namespace constellation::config;
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
         std::this_thread::sleep_for(100ms);
         discovered_services = chirp_manager.getDiscoveredServices(chirp::ServiceIdentifier::CONTROL);
     }
-    auto uri = "tcp://" + discovered_services[0].address.to_string() + ":" + std::to_string(discovered_services[0].port);
+    auto uri = "tcp://" + discovered_services[0].address.to_string() + ":" + to_string(discovered_services[0].port);
     std::cout << "Connecting to " << uri << std::endl;
 
     zmq::context_t context {};

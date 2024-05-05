@@ -20,6 +20,7 @@
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace Catch::Matchers;
 using namespace constellation::config;

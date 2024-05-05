@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "constellation/core/utils/std23.hpp"
+#include "constellation/core/utils/string.hpp"
 
 namespace constellation::message {
 
@@ -73,7 +74,7 @@ namespace constellation::message {
     inline std::string get_readable_protocol(std::string_view protocol_identifier) {
         std::string out {protocol_identifier.data(), protocol_identifier.size() - 1};
         // TODO(stephan.lachnit): make this general by finding all non-ASCII symbols and convert them to numbers
-        out += std::to_string(protocol_identifier.back());
+        out += utils::to_string(protocol_identifier.back());
         return out;
     }
 

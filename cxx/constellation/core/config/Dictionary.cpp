@@ -105,7 +105,7 @@ Dictionary Dictionary::disassemble(const payload_buffer& message) {
 std::string Dictionary::to_string() const {
     std::string out {};
     for(const auto& [key, value] : *this) {
-        out += "\n " + key + " = " + value.str();
+        out += "\n " + key + ": " + value.str();
     }
     return out;
 }

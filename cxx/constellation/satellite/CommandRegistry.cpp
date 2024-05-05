@@ -16,7 +16,6 @@
 
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/Value.hpp"
-#include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
@@ -56,19 +55,13 @@ std::map<std::string, std::string> CommandRegistry::describeCommands() const {
 
         // Augment description with number of required parameters
         description += "\nThis command requires ";
-        description += std::to_string(cmd.second.nargs);
+        description += to_string(cmd.second.nargs);
         description += " arguments.";
 
         // Append allowed states (empty means allowed from all states)
         if(!cmd.second.valid_states.empty()) {
             description += "\nThis command can only be called in the following states: ";
-            description += list_strings(std::accumulate(cmd.second.valid_states.begin(),
-                                                        cmd.second.valid_states.end(),
-                                                        std::vector<std::string>(),
-                                                        [](auto vec, auto state) {
-                                                            vec.emplace_back(to_string(state));
-                                                            return vec;
-                                                        }));
+            description += list_to_string(cmd.second.valid_states);
         } else {
             description += "\nThis command can be called in all states.";
         }

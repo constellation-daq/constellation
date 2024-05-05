@@ -10,8 +10,8 @@
 #pragma once
 
 #include "constellation/core/message/satellite_definitions.hpp"
-#include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/exceptions.hpp"
+#include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/type.hpp"
 
 namespace constellation::satellite {
@@ -95,9 +95,9 @@ namespace constellation::satellite {
             error_message_ = "Command \"";
             error_message_ += command;
             error_message_ += "\" expects ";
-            error_message_ += std::to_string(args_expected);
+            error_message_ += utils::to_string(args_expected);
             error_message_ += " arguments but ";
-            error_message_ += std::to_string(args_given);
+            error_message_ += utils::to_string(args_given);
             error_message_ += " given";
         }
     };

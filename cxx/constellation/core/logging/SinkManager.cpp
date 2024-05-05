@@ -30,7 +30,6 @@
 #include "constellation/core/logging/CMDPSink.hpp"
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/ProxySink.hpp"
-#include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/string.hpp"
 
@@ -140,7 +139,7 @@ void SinkManager::registerService(std::string sender_name) {
         cmdp_console_logger_->log(to_spdlog_level(WARNING),
                                   "Failed to advertise logging on the network, satellite might not be discovered");
     }
-    cmdp_console_logger_->log(to_spdlog_level(INFO), "Starting to log on port " + std::to_string(cmdp_sink_->getPort()));
+    cmdp_console_logger_->log(to_spdlog_level(INFO), "Starting to log on port " + to_string(cmdp_sink_->getPort()));
     // Set name in CMDP sink
     cmdp_sink_->setSender(std::move(sender_name));
 }
