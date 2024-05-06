@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+# SPDX-License-Identifier: CC0-1.0
+
+qt5 = import('qt5')
+qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets'])
+
+inc = include_directories('.')
+
+ui_files = qt5.compile_ui(sources : 'euRun.ui')
+
+executable('euRun', 'euRun.cpp', 'QRunControl.cpp', ui_files,
+           include_directories: inc,
+           dependencies: [exec_dep, qt5_dep],
+           install: true,
+           install_rpath: constellation_rpath,
+           )
