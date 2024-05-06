@@ -24,6 +24,7 @@
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
+#include "constellation/satellite/fsm_definitions.hpp"
 
 namespace constellation::controller {
 
@@ -32,6 +33,8 @@ namespace constellation::controller {
         struct Connection {
             zmq::socket_t req;
             message::MD5Hash host_id;
+            satellite::State state {satellite::State::NEW};
+            std::string status {};
         };
 
     public:
@@ -65,12 +68,12 @@ namespace constellation::controller {
 
     protected:
         /** Logger to use */
-        log::Logger logger_; // NOLINT(*-non-private-member-variables-in-classes)
+        log::Logger logger_;                                         // NOLINT(*-non-private-member-variables-in-classes)
+        std::map<std::string, Connection, std::less<>> connections_; // NOLINT(*-non-private-member-variables-in-classes)
 
     private:
         std::string controller_name_;
         zmq::context_t context_ {};
-        std::map<std::string, Connection, std::less<>> satellite_connections_;
     };
 
 } // namespace constellation::controller

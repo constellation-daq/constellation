@@ -37,11 +37,11 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
     // Add or drop, depending on message:
     const auto uri = service.to_uri();
     if(depart) {
-        const auto it = std::find_if(satellite_connections_.begin(), satellite_connections_.end(), [&](const auto& sat) {
+        const auto it = std::find_if(connections_.begin(), connections_.end(), [&](const auto& sat) {
             return sat.second.host_id == service.host_id;
         });
-        if(it != satellite_connections_.end()) {
-            satellite_connections_.erase(it);
+        if(it != connections_.end()) {
+            connections_.erase(it);
             LOG(logger_, INFO) << "Satellite at " << uri << " departed";
         }
     } else {
@@ -54,7 +54,7 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
         const auto recv_msg = send_receive(conn, send_msg);
         const auto name = recv_msg.getVerb().second;
 
-        const auto [it, success] = satellite_connections_.emplace(name, std::move(conn));
+        const auto [it, success] = connections_.emplace(name, std::move(conn));
 
         if(!success) {
             LOG(logger_, DEBUG) << "Not adding remote satellite at " << uri << ", was already registered";
@@ -72,8 +72,8 @@ CSCP1Message Controller::send_receive(Connection& conn, CSCP1Message& cmd) {
 }
 
 CSCP1Message Controller::sendCommand(std::string_view satellite_name, CSCP1Message& cmd) {
-    const auto sat = satellite_connections_.find(satellite_name);
-    if(sat == satellite_connections_.end()) {
+    const auto sat = connections_.find(satellite_name);
+    if(sat == connections_.end()) {
         throw;
     }
 
@@ -82,7 +82,7 @@ CSCP1Message Controller::sendCommand(std::string_view satellite_name, CSCP1Messa
 
 std::map<std::string, CSCP1Message> Controller::sendCommand(CSCP1Message& cmd) {
     std::map<std::string, CSCP1Message> replies;
-    for(auto& sat : satellite_connections_) {
+    for(auto& sat : connections_) {
         replies.emplace(sat.first, send_receive(sat.second, cmd));
     }
     return replies;
