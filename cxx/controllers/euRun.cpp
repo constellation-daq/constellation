@@ -1,5 +1,4 @@
 #include "euRun.hpp"
-#include "Color.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -8,17 +7,21 @@
 #include <QApplication>
 #include <QDateTime>
 
+#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Configuration.hpp"
-#include "constellation/core/logging/Logger.hpp"
+#include "constellation/core/logging/log.hpp"
+#include "constellation/core/logging/SinkManager.hpp"
+#include "constellation/core/utils/casts.hpp"
 
-#include "eudaq/OptionParser.hh"
-#include "eudaq/Utils.hh"
+using namespace constellation;
+using namespace constellation::chirp;
+using namespace constellation::log;
+using namespace constellation::utils;
 
-#include "euRun.hpp"
-
-RunControlGUI::RunControlGUI()
-    : QMainWindow(0, 0), m_display_col(0), m_scan_active(false), m_scan_interrupt_received(false),
-      m_save_config_at_run_start(true), m_display_row(0), m_config_at_run_path("") {
+RunControlGUI::RunControlGUI(td::string_view controller_name)
+    : QMainWindow(0, 0), runcontrol_(controller_name), logger_("GUI"), user_logger_("USER"), m_display_col(0),
+      m_scan_active(false), m_scan_interrupt_received(false), m_save_config_at_run_start(true), m_display_row(0),
+      m_config_at_run_path("") {
     m_map_label_str = {{"RUN", "Run Number"}};
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
@@ -76,7 +79,7 @@ RunControlGUI::RunControlGUI()
         }
     }
 
-    setWindowTitle("eudaq Run Control " PACKAGE_VERSION);
+    setWindowTitle("eudaq Run Control " CNSTLN_VERSION);
     connect(&m_timer_display, SIGNAL(timeout()), this, SLOT(DisplayTimer()));
     connect(&m_scanningTimer, SIGNAL(timeout()), this, SLOT(nextStep()));
     m_timer_display.start(1000); // internal update time of GUI
@@ -183,7 +186,7 @@ void RunControlGUI::on_btnReset_clicked() {
 
 void RunControlGUI::on_btnLog_clicked() {
     std::string msg = txtLogmsg->text().toStdString();
-    LOG(logger_, INFO) << msg;
+    LOG(user_logger_, INFO) << msg;
 }
 
 void RunControlGUI::on_btnLoadInit_clicked() {
@@ -767,25 +770,78 @@ void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser) {
     parser.parse_args(argc, argv);
 }
 
+// parser.get() might throw a logic error, but this never happens in practice
+std::string get_arg(argparse::ArgumentParser& parser, std::string_view arg) noexcept {
+    try {
+        return parser.get(arg);
+    } catch(const std::exception&) {
+        std::unreachable();
+    }
+}
+
 int main(int argc, char** argv) {
     QCoreApplication* qapp = new QApplication(argc, argv);
+
+    // Get the default logger
+    auto& logger = Logger::getDefault();
 
     // CLI parsing
     argparse::ArgumentParser parser {"euRun", CNSTLN_VERSION};
     try {
         parse_args(argc, argv, parser);
     } catch(const std::exception& error) {
-        LOG(logger_, CRITICAL) << "Argument parsing failed: " << error.what();
-        LOG(logger_, CRITICAL) << "Run \""
-                               << "euRun"
-                               << " --help\" for help";
+        LOG(logger, CRITICAL) << "Argument parsing failed: " << error.what();
+        LOG(logger, CRITICAL) << "Run \""
+                              << "euRun"
+                              << " --help\" for help";
         return 1;
     }
 
-    auto app =
-        eudaq::Factory<eudaq::RunControl>::MakeUnique<const std::string&>(eudaq::str2hash(sname.Value()), addr.Value());
-    RunControlGUI gui;
-    gui.SetInstance(std::move(app));
+    // Set log level
+    const auto default_level = magic_enum::enum_cast<Level>(get_arg(parser, "level"), magic_enum::case_insensitive);
+    if(!default_level.has_value()) {
+        LOG(logger, CRITICAL) << "Log level \"" << get_arg(parser, "level") << "\" is not valid"
+                              << ", possible values are: " << utils::list_enum_names<Level>();
+        return 1;
+    }
+    SinkManager::getInstance().setGlobalConsoleLevel(default_level.value());
+
+    // Check broadcast and any address
+    asio::ip::address brd_addr {};
+    try {
+        brd_addr = asio::ip::address::from_string(get_arg(parser, "brd"));
+    } catch(const asio::system_error& error) {
+        LOG(logger, CRITICAL) << "Invalid broadcast address \"" << get_arg(parser, "brd") << "\"";
+        return 1;
+    }
+    asio::ip::address any_addr {};
+    try {
+        any_addr = asio::ip::address::from_string(get_arg(parser, "any"));
+    } catch(const asio::system_error& error) {
+        LOG(logger, CRITICAL) << "Invalid any address \"" << get_arg(parser, "any") << "\"";
+        return 1;
+    }
+
+    // Check satellite name
+    const auto controller_name = get_arg(parser, "name");
+
+    // Log the version after all the basic checks are done
+    LOG(logger, STATUS) << "Constellation v" << CNSTLN_VERSION;
+
+    // Create CHIRP manager and set as default
+    std::unique_ptr<chirp::Manager> chirp_manager {};
+    try {
+        chirp_manager = std::make_unique<chirp::Manager>(brd_addr, any_addr, parser.get("group"), controller_name);
+        chirp_manager->setAsDefaultInstance();
+        chirp_manager->start();
+    } catch(const std::exception& error) {
+        LOG(logger, CRITICAL) << "Failed to initiate network discovery: " << error.what();
+    }
+
+    // Register CMDP in CHIRP and set sender name for CMDP
+    SinkManager::getInstance().registerService(controller_name);
+
+    RunControlGUI gui(controller_name);
     gui.Exec();
     return 0;
 }

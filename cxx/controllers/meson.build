@@ -10,7 +10,7 @@ ui_files = qt5.compile_ui(sources : 'euRun.ui')
 
 executable('euRun', 'euRun.cpp', 'QRunControl.cpp', ui_files,
            include_directories: inc,
-           dependencies: [exec_dep, qt5_dep],
+           dependencies: [exec_dep, argparse_dep, qt5_dep],
            install: true,
            install_rpath: constellation_rpath,
            )

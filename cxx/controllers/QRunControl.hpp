@@ -26,5 +26,5 @@ public:
     void stop(const QModelIndex& index);
 
 private:
-    static constexpr std::array<std::string, 6> headers_ {"type", "name", "state", "connection", "message", "information"};
+    static constexpr std::array<const char*, 6> headers_ {"type", "name", "state", "connection", "message", "information"};
 };

@@ -19,8 +19,8 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun {
 
     Q_OBJECT
 public:
-    RunControlGUI();
-    void SetInstance(eudaq::RunControlUP rc);
+    RunControlGUI(std::string_view controller_name);
+
     void Exec();
 private slots:
     void on_checkBox_stateChanged(int arg1);
@@ -61,10 +61,14 @@ private:
     bool checkEventsInStep();
     int getEventsCurrent();
     void store_config();
+
+    constellation::log::Logger logger_;
+    constellation::log::Logger user_logger_;
+    QRunControl runcontrol_;
+
     static std::map<int, QString> m_map_state_str;
     std::map<QString, QString> m_map_label_str;
     eudaq::RunControlUP m_rc;
-    QRunControl runcontrol_;
     QItemDelegate m_delegate;
     QTimer m_timer_display;
     std::map<QString, QLabel*> m_str_label;
