@@ -16,6 +16,7 @@
 using namespace constellation;
 using namespace constellation::chirp;
 using namespace constellation::log;
+using namespace constellation::satellite;
 using namespace constellation::utils;
 
 RunControlGUI::RunControlGUI(td::string_view controller_name)
@@ -26,7 +27,7 @@ RunControlGUI::RunControlGUI(td::string_view controller_name)
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
 
-    lblCurrent->setText(m_map_state_str.at(eudaq::Status::STATE_UNINIT));
+    lblCurrent->setText(m_map_state_str.at(State::NEW));
     for(auto& label_str : m_map_label_str) {
         QLabel* lblname = new QLabel(grpStatus);
         lblname->setObjectName("lbl_st_" + label_str.first);
@@ -50,17 +51,15 @@ RunControlGUI::RunControlGUI(td::string_view controller_name)
 
     QRect geom(-1, -1, 150, 200);
     QRect geom_from_last_program_run;
-    QSettings settings("EUDAQ collaboration", "EUDAQ");
-    settings.beginGroup("euRun2");
+    QSettings settings("Constellation collaboration", "Constellation");
+    settings.beginGroup("qcontrol");
     m_run_n_qsettings = settings.value("runnumber", 0).toUInt();
     m_lastexit_success = settings.value("successexit", 1).toUInt();
     geom_from_last_program_run.setSize(settings.value("size", geom.size()).toSize());
     geom_from_last_program_run.moveTo(settings.value("pos", geom.topLeft()).toPoint());
     // TODO: check last if last file exits. if not, use default value.
     txtConfigFileName->setText(settings.value("lastConfigFile", "config file not set").toString());
-    txtInitFileName->setText(settings.value("lastInitFile", "init file not set").toString());
     txtScanFile->setText(settings.value("lastScanFile", "scan file not set").toString());
-
     settings.endGroup();
 
     QSize fsize = frameGeometry().size();
@@ -79,7 +78,7 @@ RunControlGUI::RunControlGUI(td::string_view controller_name)
         }
     }
 
-    setWindowTitle("eudaq Run Control " CNSTLN_VERSION);
+    setWindowTitle("Constellation QControl " CNSTLN_VERSION);
     connect(&m_timer_display, SIGNAL(timeout()), this, SLOT(DisplayTimer()));
     connect(&m_scanningTimer, SIGNAL(timeout()), this, SLOT(nextStep()));
     m_timer_display.start(1000); // internal update time of GUI
@@ -93,43 +92,21 @@ RunControlGUI::RunControlGUI(td::string_view controller_name)
     btnTerminate->setEnabled(1);
     btnLog->setEnabled(1);
 
-    QSettings settings_output("EUDAQ collaboration", "EUDAQ");
-    settings_output.beginGroup("euRun2");
+    QSettings settings_output("Constellation collaboration", "Constellation");
+    settings_output.beginGroup("qcontrol");
     settings_output.setValue("successexit", 0);
     settings_output.endGroup();
 }
 
-void RunControlGUI::SetInstance(eudaq::RunControlUP rc) {
-    m_rc = std::move(rc);
-    if(m_lastexit_success)
-        m_rc->SetRunN(m_run_n_qsettings);
-    else
-        m_rc->SetRunN(m_run_n_qsettings + 1);
-    auto thd_rc = std::thread(&eudaq::RunControl::Exec, m_rc.get());
-    thd_rc.detach();
-}
-
 void RunControlGUI::on_btnInit_clicked() {
-    std::string settings = txtInitFileName->text().toStdString();
-    if(!checkFile(QString::fromStdString(settings), QString::fromStdString("init file")))
+    std::string settings = txtConfigFileName->text().toStdString();
+    if(!checkFile(QString::fromStdString(settings), QString::fromStdString("config file")))
         return;
-    if(m_rc) {
-        m_rc->ReadInitilizeFile(settings);
-        m_rc->Initialise();
-    }
-    // connect to the log collector - based on RunControl.cc implementation
-    std::map<eudaq::ConnectionSPC, eudaq::StatusSPC> map_conn_status;
-    if(m_rc)
-        map_conn_status = m_rc->GetActiveConnectionStatusMap();
-    for(auto& conn_status : map_conn_status) {
-        if((conn_status.first->GetType() == "LogCollector" && conn_status.first->GetName() == "log")) {
-            std::string server_addr = conn_status.second->GetTag("_SERVER");
-            std::string conn_addr = conn_status.first->GetRemote();
-            std::string log_server = conn_addr.substr(0, conn_addr.find_last_not_of("0123456789")) + ":" +
-                                     server_addr.substr(server_addr.find_last_not_of("0123456789") + 1);
-            LOG(logger_, STATUS) << "RunControl"
-                                 << "RC-GUI" << log_server;
-        }
+
+    auto responses = runcontrol_.initialize();
+    for(auto& response : responses) {
+        LOG(logger_, STATUS) << "Initialize: " << response.first << ": "
+                             << utils::to_string(response.second.getVerb().first);
     }
 }
 
@@ -138,22 +115,9 @@ void RunControlGUI::on_btnTerminate_clicked() {
 }
 
 void RunControlGUI::on_btnConfig_clicked() {
-    std::string settings = txtConfigFileName->text().toStdString();
-    if(!checkFile(QString::fromStdString(settings), QString::fromStdString("Config file"))) {
-        LOG(logger_, CRITICAL) << settings << " cannot be read";
-        return;
-    }
-    if(m_rc) {
-        m_rc->ReadConfigureFile(settings);
-        m_rc->Configure();
-    }
-    if(m_rc) {
-        eudaq::ConfigurationSPC conf = m_rc->GetConfiguration();
-        conf->SetSection("RunControl");
-        m_config_at_run_path = conf->Get("config_log_path", "");
-        std::string additionalDisplays = conf->Get("ADDITIONAL_DISPLAY_NUMBERS", "");
-        if(additionalDisplays != "")
-            addAdditionalStatus(additionalDisplays);
+    auto responses = runcontrol_.launch();
+    for(auto& response : responses) {
+        LOG(logger_, STATUS) << "Launch: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
@@ -163,38 +127,35 @@ void RunControlGUI::on_btnStart_clicked() {
         bool succ;
         uint32_t run_n = qs_next_run.toInt(&succ);
         if(succ) {
-            m_rc->SetRunN(run_n);
+            // FIXME use Run nr
         }
         txtNextRunNumber->clear();
     }
-    if(m_rc)
-        m_rc->StartRun();
+
+    // FIXME run number
+    auto responses = runcontrol_.start();
+    for(auto& response : responses) {
+        LOG(logger_, STATUS) << "Start: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
+    }
+
     if(m_save_config_at_run_start)
         store_config();
 }
 
 void RunControlGUI::on_btnStop_clicked() {
-    if(m_rc)
-        m_rc->StopRun();
-    // update_infos();
+    auto responses = runcontrol_.stop();
+    for(auto& response : responses) {
+        LOG(logger_, STATUS) << "Stop: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
+    }
 }
 
 void RunControlGUI::on_btnReset_clicked() {
-    if(m_rc)
-        m_rc->Reset();
+    // FIXME reset?
 }
 
 void RunControlGUI::on_btnLog_clicked() {
     std::string msg = txtLogmsg->text().toStdString();
     LOG(user_logger_, INFO) << msg;
-}
-
-void RunControlGUI::on_btnLoadInit_clicked() {
-    QString usedpath = QFileInfo(txtInitFileName->text()).path();
-    QString filename = QFileDialog::getOpenFileName(this, tr("Open File"), usedpath, tr("*.ini (*.ini)"));
-    if(!filename.isNull()) {
-        txtInitFileName->setText(filename);
-    }
 }
 
 void RunControlGUI::on_btnLoadConf_clicked() {
@@ -208,7 +169,7 @@ void RunControlGUI::on_btnLoadConf_clicked() {
 void RunControlGUI::DisplayTimer() {
     auto state = updateInfos();
     updateStatusDisplay();
-    if(state == eudaq::Status::STATE_RUNNING)
+    if(state == State::RUN)
         updateProgressBar();
 
     if(!m_scan.scanIsTimeBased() && m_scan_active == true)
@@ -216,7 +177,7 @@ void RunControlGUI::DisplayTimer() {
             nextStep();
 }
 
-eudaq::Status::State RunControlGUI::updateInfos() {
+State RunControlGUI::updateInfos() {
     std::map<eudaq::ConnectionSPC, eudaq::StatusSPC> map_conn_status;
     auto state = eudaq::Status::STATE_RUNNING;
     if(m_rc)
@@ -231,8 +192,7 @@ eudaq::Status::State RunControlGUI::updateInfos() {
     for(auto& conn_status : map_conn_status) {
         if(!m_map_conn_status_last.count(conn_status.first)) {
             // m_model_conns.newconnection(conn_status.first);
-            if(!(conn_status.first->GetType() == "LogCollector"))
-                addStatusDisplay(conn_status);
+            addStatusDisplay(conn_status);
         }
     }
     if(map_conn_status.empty()) {
@@ -253,29 +213,27 @@ eudaq::Status::State RunControlGUI::updateInfos() {
     bool confLoaded = rx_conf.exactMatch(txtConfigFileName->text());
     bool initLoaded = rx_init.exactMatch(txtInitFileName->text());
 
-    btnInit->setEnabled(state == eudaq::Status::STATE_UNINIT && initLoaded);
-    btnConfig->setEnabled((state == eudaq::Status::STATE_UNCONF || state == eudaq::Status::STATE_CONF ||
-                           state == eudaq::Status::STATE_STOPPED) &&
-                          confLoaded);
-    btnLoadInit->setEnabled(state != eudaq::Status::STATE_RUNNING || state != eudaq::Status::STATE_STOPPED);
-    btnLoadConf->setEnabled(state != eudaq::Status::STATE_RUNNING || state != eudaq::Status::STATE_STOPPED);
-    btnStart->setEnabled(state == eudaq::Status::STATE_CONF || state == eudaq::Status::STATE_STOPPED);
-    btnStop->setEnabled(state == eudaq::Status::STATE_RUNNING && !m_scan_active);
-    btnReset->setEnabled(state != eudaq::Status::STATE_RUNNING);
-    btnTerminate->setEnabled(state != eudaq::Status::STATE_RUNNING);
+    btnInit->setEnabled((state == State::NEW || state == State::ERROR) && confLoaded);
+    btnConfig->setEnabled(state == State::NEW || state == State::INIT);
+    btnLoadConf->setEnabled(state != State::RUN || state != State::ORBIT);
+    btnStart->setEnabled(state == State::ORBIT);
+    btnStop->setEnabled(state == State::RUN && !m_scan_active);
+    // FIXME
+    // btnReset->setEnabled(state != State::RUN);
+    // btnTerminate->setEnabled(state != State::STATE_RUNNING);
 
     lblCurrent->setText(m_map_state_str.at(state));
 
     uint32_t run_n = m_rc->GetRunN();
     if(m_run_n_qsettings != run_n) {
         m_run_n_qsettings = run_n;
-        QSettings settings("EUDAQ collaboration", "EUDAQ");
-        settings.beginGroup("euRun2");
+        QSettings settings("Constellation collaboration", "Constellation");
+        settings.beginGroup("qcontrol");
         settings.setValue("runnumber", m_run_n_qsettings);
         settings.endGroup();
     }
     if(m_rc && m_str_label.count("RUN")) {
-        if(state == eudaq::Status::STATE_RUNNING) {
+        if(state == State::RUN) {
             m_str_label.at("RUN")->setText(QString::number(run_n));
         } else {
             m_str_label.at("RUN")->setText(QString::number(run_n) + " (next run)");
@@ -319,12 +277,12 @@ void RunControlGUI::Exec() {
 }
 
 std::map<int, QString> RunControlGUI::m_map_state_str = {
-    {eudaq::Status::STATE_UNINIT, "<font size=12 color='red'><b>Current State: Uninitialised </b></font>"},
-    {eudaq::Status::STATE_UNCONF, "<font size=12 color='red'><b>Current State: Unconfigured </b></font>"},
-    {eudaq::Status::STATE_CONF, "<font size=12 color='orange'><b>Current State: Configured </b></font>"},
-    {eudaq::Status::STATE_STOPPED, "<font size=12 color='blue'><b>Current State: Stopped </b></font>"},
-    {eudaq::Status::STATE_RUNNING, "<font size=12 color='green'><b>Current State: Running </b></font>"},
-    {eudaq::Status::STATE_ERROR, "<font size=12 color='darkred'><b>Current State: Error </b></font>"}};
+    {State::NEW, "<font size=12 color='red'><b>Current State: New </b></font>"},
+    {State::INIT, "<font size=12 color='red'><b>Current State: Initialized </b></font>"},
+    {State::ORBIT, "<font size=12 color='orange'><b>Current State: Orbiting </b></font>"},
+    {State::RUN, "<font size=12 color='green'><b>Current State: Running </b></font>"},
+    {State::SAFE, "<font size=12 color='red'><b>Current State: Safe Mode </b></font>"},
+    {State::ERROR, "<font size=12 color='darkred'><b>Current State: Error </b></font>"}};
 
 void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     QModelIndex index = viewConn->indexAt(point);
@@ -385,18 +343,18 @@ bool RunControlGUI::loadConfigFile() {
     return true;
 }
 
-bool RunControlGUI::addStatusDisplay(std::pair<eudaq::ConnectionSPC, eudaq::StatusSPC> connection) {
-    QString name = QString::fromStdString(connection.first->GetName() + ":" + connection.first->GetType());
-    QString displayName = QString::fromStdString(connection.first->GetName() + ":EventN");
+bool RunControlGUI::addStatusDisplay(std::string satellite_name, std::string metric) {
+    QString name = QString::fromStdString(satellite_name + ":" + metric);
+    QString displayName = QString::fromStdString(satellite_name + ":" + metric);
     addToGrid(displayName, name);
     return true;
 }
 
-bool RunControlGUI::removeStatusDisplay(std::pair<eudaq::ConnectionSPC, eudaq::StatusSPC> connection) {
+bool RunControlGUI::removeStatusDisplay(std::string satellite_name, std::string metric) {
     // remove obsolete information from disconnected Connections
     for(auto idx = 0; idx < grpGrid->count(); idx++) {
         QLabel* l = dynamic_cast<QLabel*>(grpGrid->itemAt(idx)->widget());
-        if(l->objectName() == QString::fromStdString(connection.first->GetName() + ":" + connection.first->GetType())) {
+        if(l->objectName() == QString::fromStdString(satellite_name + ":" + metric)) {
             // Status updates are always pairs
             m_map_label_str.erase(l->objectName());
             m_str_label.erase(l->objectName());
@@ -580,7 +538,7 @@ void RunControlGUI::nextStep() {
         LOG(logger_, INFO) << "Stopping scan";
         m_scan_interrupt_received = false;
         m_scanningTimer.stop();
-        if(!allConnectionsInState(eudaq::Status::STATE_STOPPED))
+        if(!allConnectionsInState(State::ORBIT))
             on_btnStop_clicked();
         return;
     }
@@ -592,8 +550,8 @@ void RunControlGUI::nextStep() {
         LOG(logger_, INFO) << "Next step";
         txtConfigFileName->setText(QString(conf.c_str()));
         QCoreApplication::processEvents();
-        while((!allConnectionsInState(eudaq::Status::STATE_STOPPED) && m_scan.scanHasbeenStarted()) ||
-              (!allConnectionsInState(eudaq::Status::STATE_CONF) && !m_scan_active)) {
+        while((!allConnectionsInState(State::ORBIT) && m_scan.scanHasbeenStarted()) ||
+              (!allConnectionsInState(State::ORBIT) && !m_scan_active)) {
             updateInfos();
             QCoreApplication::processEvents();
             std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -603,7 +561,7 @@ void RunControlGUI::nextStep() {
         updateInfos();
         std::this_thread::sleep_for(std::chrono::seconds(3));
         on_btnConfig_clicked();
-        while(!allConnectionsInState(eudaq::Status::STATE_CONF) && m_scan_active) {
+        while(!allConnectionsInState(State::ORBIT) && m_scan_active) {
             updateInfos();
             QCoreApplication::processEvents();
             std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -613,7 +571,7 @@ void RunControlGUI::nextStep() {
         LOG(logger_, INFO) << "Ready for next step";
 
         on_btnStart_clicked();
-        while(!allConnectionsInState(eudaq::Status::STATE_RUNNING)) {
+        while(!allConnectionsInState(State::RUN)) {
             updateInfos();
             QCoreApplication::processEvents();
             std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -654,16 +612,6 @@ bool RunControlGUI::allConnectionsInState(constellation::satellite::State state)
             continue;
         auto state_conn = conn_status.second->GetState();
 
-        if(state_conn == eudaq::Status::STATE_ERROR) {
-            LOG(logger_, CRITICAL) << "Automatic config failed - retry...";
-            // private reset here....
-            m_rc->ResetSingleConnection(conn_status.first);
-            if(state <= eudaq::Status::STATE_UNCONF && conn_status.second->GetState() == eudaq::Status::STATE_UNINIT)
-                m_rc->InitialiseSingleConnection(conn_status.first);
-            if(state <= eudaq::Status::STATE_CONF && (conn_status.second->GetState() == eudaq::Status::STATE_UNCONF))
-                m_rc->ConfigureSingleConnection(conn_status.first);
-            return false;
-        }
         if((int)state_conn != (int)state)
             return false;
     }
