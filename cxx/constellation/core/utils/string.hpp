@@ -19,6 +19,8 @@
 
 #include <magic_enum.hpp>
 
+#include "constellation/core/utils/chrono.hpp"
+
 namespace constellation::utils {
 
     template <typename T> inline std::string transform(std::string_view string, const T& operation) {
@@ -44,6 +46,12 @@ namespace constellation::utils {
             return number ? "true" : "false";
         }
         return std::to_string(number);
+    }
+
+    template <typename T>
+        requires chrono_time_point<T>
+    std::string to_string(T tp) {
+        return time_point_to_string(tp);
     }
 
     template <typename E>

@@ -34,20 +34,4 @@ namespace std {
 } // namespace std
 #endif
 
-#ifndef __cpp_lib_format
-#include <chrono>
-#include <ctime>
-#include <iomanip>
-#include <time.h>
-namespace std {
-    template <typename Clock, typename Duration>
-    std::ostream& operator<<(std::ostream& stream, const std::chrono::time_point<Clock, Duration>& time_point) {
-        const auto tt = Clock::to_time_t(time_point);
-        std::tm tm {};
-        gmtime_r(&tt, &tm); // there is no thread-safe std::locatime
-        return stream << std::put_time(&tm, "%F %T.000000000");
-    }
-} // namespace std
-#endif
-
 // NOLINTEND(cert-dcl58-cpp)

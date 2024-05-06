@@ -76,6 +76,7 @@ install_headers(
 
 install_headers(
   'utils/casts.hpp',
+  'utils/chrono.hpp',
   'utils/exceptions.hpp',
   'utils/ports.hpp',
   'utils/std23.hpp',
