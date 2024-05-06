@@ -1,5 +1,4 @@
 #include "QRunControl.hpp"
-#include "scanHelper.hh"
 #include "ui_euRun.h"
 
 #include <QCloseEvent>

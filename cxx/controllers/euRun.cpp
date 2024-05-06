@@ -1,18 +1,21 @@
 #include "euRun.hpp"
+#include "Color.hpp"
+
 #include <fstream>
 #include <iostream>
+
+#include <argparse/argparse.hpp>
 #include <QApplication>
 #include <QDateTime>
-#include "Colours.hh"
-#include "eudaq/Config.hh"
-#include "eudaq/Logger.hh"
+
+#include "constellation/core/config/Configuration.hpp"
+#include "constellation/core/logging/Logger.hpp"
+
 #include "eudaq/OptionParser.hh"
 #include "eudaq/Utils.hh"
 
 #include "euRun.hpp"
 
-using std::cout;
-using std::endl;
 RunControlGUI::RunControlGUI()
     : QMainWindow(0, 0), m_display_col(0), m_scan_active(false), m_scan_interrupt_received(false),
       m_save_config_at_run_start(true), m_display_row(0), m_config_at_run_path("") {
@@ -121,7 +124,8 @@ void RunControlGUI::on_btnInit_clicked() {
             std::string conn_addr = conn_status.first->GetRemote();
             std::string log_server = conn_addr.substr(0, conn_addr.find_last_not_of("0123456789")) + ":" +
                                      server_addr.substr(server_addr.find_last_not_of("0123456789") + 1);
-            EUDAQ_LOG_CONNECT("RunControl", "RC-GUI", log_server);
+            LOG(logger_, STATUS) << "RunControl"
+                                 << "RC-GUI" << log_server;
         }
     }
 }
@@ -133,7 +137,7 @@ void RunControlGUI::on_btnTerminate_clicked() {
 void RunControlGUI::on_btnConfig_clicked() {
     std::string settings = txtConfigFileName->text().toStdString();
     if(!checkFile(QString::fromStdString(settings), QString::fromStdString("Config file"))) {
-        EUDAQ_ERROR(settings + " cannot be read");
+        LOG(logger_, CRITICAL) << settings << " cannot be read";
         return;
     }
     if(m_rc) {
@@ -179,7 +183,7 @@ void RunControlGUI::on_btnReset_clicked() {
 
 void RunControlGUI::on_btnLog_clicked() {
     std::string msg = txtLogmsg->text().toStdString();
-    EUDAQ_USER(msg);
+    LOG(logger_, INFO) << msg;
 }
 
 void RunControlGUI::on_btnLoadInit_clicked() {
@@ -555,7 +559,7 @@ void RunControlGUI::on_btnStartScan_clicked() {
             return;
         m_scan_active = true;
         m_scan_interrupt_received = false;
-        EUDAQ_INFO("STARTING SCAN");
+        LOG(logger_, INFO) << "STARTING SCAN";
         btnStartScan->setText("Interrupt Scan");
         nextStep();
         return;
@@ -570,7 +574,7 @@ void RunControlGUI::on_btnStartScan_clicked() {
 void RunControlGUI::nextStep() {
     if(!m_scan_active) {
         btnStartScan->setText("Start scan");
-        std::cout << "Stopping scan" << std::endl;
+        LOG(logger_, INFO) << "Stopping scan";
         m_scan_interrupt_received = false;
         m_scanningTimer.stop();
         if(!allConnectionsInState(eudaq::Status::STATE_STOPPED))
@@ -580,9 +584,9 @@ void RunControlGUI::nextStep() {
     if(m_scan.currentStep() != 0)
         on_btnStop_clicked();
     std::string conf = m_scan.nextConfig();
-    EUDAQ_USER("Next file (" + std::to_string(m_scan.currentStep()) + "): " + conf);
+    LOG(logger_, INFO) << "Next file (" << m_scan.currentStep() << "): " << conf;
     if(m_scan_interrupt_received == false && m_scan_active == true && conf != "finished") {
-        std::cout << "Next step" << std::endl;
+        LOG(logger_, INFO) << "Next step";
         txtConfigFileName->setText(QString(conf.c_str()));
         QCoreApplication::processEvents();
         while((!allConnectionsInState(eudaq::Status::STATE_STOPPED) && m_scan.scanHasbeenStarted()) ||
@@ -590,7 +594,7 @@ void RunControlGUI::nextStep() {
             updateInfos();
             QCoreApplication::processEvents();
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            std::cout << "Waiting until all components are stopped" << std::endl;
+            LOG(logger_, INFO) << "Waiting until all components are stopped";
         }
 
         updateInfos();
@@ -600,26 +604,26 @@ void RunControlGUI::nextStep() {
             updateInfos();
             QCoreApplication::processEvents();
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            std::cout << "Waiting until all components are (re)configured" << std::endl;
+            LOG(logger_, INFO) << "Waiting until all components are (re)configured";
         }
         updateInfos();
-        std::cout << "Ready for next step" << std::endl;
+        LOG(logger_, INFO) << "Ready for next step";
 
         on_btnStart_clicked();
         while(!allConnectionsInState(eudaq::Status::STATE_RUNNING)) {
             updateInfos();
             QCoreApplication::processEvents();
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            std::cout << "Waiting until all components are running" << std::endl;
+            LOG(logger_, INFO) << "Waiting until all components are running";
         }
         std::this_thread::sleep_for(std::chrono::seconds(2));
         updateInfos();
 
         if(m_scan.scanIsTimeBased()) {
             m_scanningTimer.start(1000 * m_scan.timePerStep());
-            EUDAQ_USER("Time based scan next step");
+            LOG(logger_, INFO) << "Time based scan next step";
         } else {
-            EUDAQ_USER("Event based scan next step");
+            LOG(logger_, INFO) << "Event based scan next step";
         }
         // stop the scan here
     } else {
@@ -648,7 +652,7 @@ bool RunControlGUI::allConnectionsInState(constellation::satellite::State state)
         auto state_conn = conn_status.second->GetState();
 
         if(state_conn == eudaq::Status::STATE_ERROR) {
-            EUDAQ_ERROR("Automatic config failed - retry...");
+            LOG(logger_, CRITICAL) << "Automatic config failed - retry...";
             // private reset here....
             m_rc->ResetSingleConnection(conn_status.first);
             if(state <= eudaq::Status::STATE_UNCONF && conn_status.second->GetState() == eudaq::Status::STATE_UNINIT)
@@ -730,17 +734,54 @@ void RunControlGUI::on_checkBox_stateChanged(int arg1) {
     m_save_config_at_run_start = arg1;
 }
 
+// NOLINTNEXTLINE(*-avoid-c-arrays)
+void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser) {
+    // Controller name (-n)
+    parser.add_argument("-n", "--name").help("controller name").default_value("qruncontrol");
+
+    // Constellation group (-g)
+    parser.add_argument("-g", "--group").help("group name").required();
+
+    // Console log level (-l)
+    parser.add_argument("-l", "--level").help("log level").default_value("INFO");
+
+    // Broadcast address (--brd)
+    std::string default_brd_addr {};
+    try {
+        default_brd_addr = asio::ip::address_v4::broadcast().to_string();
+    } catch(const asio::system_error& error) {
+        default_brd_addr = "255.255.255.255";
+    }
+    parser.add_argument("--brd").help("broadcast address").default_value(default_brd_addr);
+
+    // Any address (--any)
+    std::string default_any_addr {};
+    try {
+        default_any_addr = asio::ip::address_v4::any().to_string();
+    } catch(const asio::system_error& error) {
+        default_any_addr = "0.0.0.0";
+    }
+    parser.add_argument("--any").help("any address").default_value(default_any_addr);
+
+    // Note: this might throw
+    parser.parse_args(argc, argv);
+}
+
 int main(int argc, char** argv) {
     QCoreApplication* qapp = new QApplication(argc, argv);
 
-    eudaq::OptionParser op("EUDAQ Run Control", "2", "A Qt Launcher of the Run Control");
-    eudaq::Option<std::string> sname(op, "n", "name", "RunControl", "Static Name", "Static Name of RunControl");
-    eudaq::Option<std::string> addr(
-        op, "a", "listen-address", "tcp://44000", "address", "The address on which to listen for connections");
-    eudaq::Option<std::string> level(
-        op, "l", "log-level", "NONE", "level", "The minimum level for displaying log messages locally");
-    op.Parse(argv);
-    EUDAQ_LOG_LEVEL(level.Value());
+    // CLI parsing
+    argparse::ArgumentParser parser {"euRun", CNSTLN_VERSION};
+    try {
+        parse_args(argc, argv, parser);
+    } catch(const std::exception& error) {
+        LOG(logger_, CRITICAL) << "Argument parsing failed: " << error.what();
+        LOG(logger_, CRITICAL) << "Run \""
+                               << "euRun"
+                               << " --help\" for help";
+        return 1;
+    }
+
     auto app =
         eudaq::Factory<eudaq::RunControl>::MakeUnique<const std::string&>(eudaq::str2hash(sname.Value()), addr.Value());
     RunControlGUI gui;
