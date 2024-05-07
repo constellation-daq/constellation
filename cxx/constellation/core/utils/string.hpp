@@ -65,16 +65,22 @@ namespace constellation::utils {
         { to_string(t) } -> std::same_as<std::string>;
     };
 
-    template <typename R>
-        requires std::ranges::range<R> && convertible_to_string<std::ranges::range_value_t<R>>
-    inline std::string list_to_string(const R& range) {
+    template <typename R, typename F>
+        requires std::ranges::range<R> && std::is_invocable_r_v<std::string, F, std::ranges::range_value_t<R>>
+    inline std::string list_to_string(const R& range, F to_string_func, const std::string& delim = ", ") {
         std::string out {};
         if(!std::ranges::empty(range)) {
             std::ranges::for_each(std::ranges::subrange(std::cbegin(range), std::ranges::prev(std::ranges::cend(range))),
-                                  [&out](const auto& element) { out += to_string(element) + ", "; });
-            out += to_string(*std::ranges::crbegin(range));
+                                  [&](const auto& element) { out += to_string_func(element) + delim; });
+            out += to_string_func(*std::ranges::crbegin(range));
         }
         return out;
+    }
+
+    template <typename R>
+        requires std::ranges::range<R> && convertible_to_string<std::ranges::range_value_t<R>>
+    inline std::string list_to_string(const R& range) {
+        return list_to_string(range, constellation::utils::to_string<std::ranges::range_value_t<R>>);
     }
 
     template <typename T>
