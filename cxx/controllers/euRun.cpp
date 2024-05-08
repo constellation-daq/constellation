@@ -27,7 +27,7 @@ RunControlGUI::RunControlGUI(td::string_view controller_name)
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
 
-    lblCurrent->setText(m_map_state_str.at(State::NEW));
+    lblCurrent->setText(state_str_.at(State::NEW));
     for(auto& label_str : m_map_label_str) {
         QLabel* lblname = new QLabel(grpStatus);
         lblname->setObjectName("lbl_st_" + label_str.first);
@@ -103,7 +103,7 @@ void RunControlGUI::on_btnInit_clicked() {
     if(!checkFile(QString::fromStdString(settings), QString::fromStdString("config file")))
         return;
 
-    auto responses = runcontrol_.initialize();
+    auto responses = runcontrol_.sendCommand("initialize");
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Initialize: " << response.first << ": "
                              << utils::to_string(response.second.getVerb().first);
@@ -115,7 +115,7 @@ void RunControlGUI::on_btnTerminate_clicked() {
 }
 
 void RunControlGUI::on_btnConfig_clicked() {
-    auto responses = runcontrol_.launch();
+    auto responses = runcontrol_.sendCommand("launch");
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Launch: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
@@ -133,7 +133,7 @@ void RunControlGUI::on_btnStart_clicked() {
     }
 
     // FIXME run number
-    auto responses = runcontrol_.start();
+    auto responses = runcontrol_.sendCommand("start");
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Start: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
@@ -143,7 +143,7 @@ void RunControlGUI::on_btnStart_clicked() {
 }
 
 void RunControlGUI::on_btnStop_clicked() {
-    auto responses = runcontrol_.stop();
+    auto responses = runcontrol_.sendCommand("stop");
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Stop: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
@@ -178,35 +178,11 @@ void RunControlGUI::DisplayTimer() {
 }
 
 State RunControlGUI::updateInfos() {
-    std::map<eudaq::ConnectionSPC, eudaq::StatusSPC> map_conn_status;
-    auto state = eudaq::Status::STATE_RUNNING;
-    if(m_rc)
-        map_conn_status = m_rc->GetActiveConnectionStatusMap();
 
-    for(auto& conn_status_last : m_map_conn_status_last) {
-        if(!map_conn_status.count(conn_status_last.first)) {
-            // m_model_conns.disconnected(conn_status_last.first);
-            removeStatusDisplay(conn_status_last);
-        }
-    }
-    for(auto& conn_status : map_conn_status) {
-        if(!m_map_conn_status_last.count(conn_status.first)) {
-            // m_model_conns.newconnection(conn_status.first);
-            addStatusDisplay(conn_status);
-        }
-    }
-    if(map_conn_status.empty()) {
-        state = eudaq::Status::STATE_UNINIT;
-    } else {
-        state = eudaq::Status::STATE_RUNNING;
-        for(auto& conn_status : map_conn_status) {
-            if(!conn_status.second)
-                continue;
-            auto state_conn = conn_status.second->GetState();
-            state_conn < state ? state = eudaq::Status::State(state_conn) : state = state;
-            m_model_conns.SetStatus(conn_status.first, conn_status.second);
-        }
-    }
+    // FIXME revisit what needs to be done here. Most infos are updated in the background by the controller via heartbeats!
+    // We might need to handle metrics here and call addStatusDisoplay and removeStatusDisplay.
+
+    auto state = runcontrol_.getLowestState();
 
     QRegExp rx_init(".+(\\.ini$)");
     QRegExp rx_conf(".+(\\.conf$)");
@@ -222,24 +198,23 @@ State RunControlGUI::updateInfos() {
     // btnReset->setEnabled(state != State::RUN);
     // btnTerminate->setEnabled(state != State::STATE_RUNNING);
 
-    lblCurrent->setText(m_map_state_str.at(state));
+    lblCurrent->setText(state_str_.at(state));
 
-    uint32_t run_n = m_rc->GetRunN();
-    if(m_run_n_qsettings != run_n) {
-        m_run_n_qsettings = run_n;
+    if(m_run_n_qsettings != current_run_nr_) {
+        m_run_n_qsettings = current_run_nr_;
         QSettings settings("Constellation collaboration", "Constellation");
         settings.beginGroup("qcontrol");
         settings.setValue("runnumber", m_run_n_qsettings);
         settings.endGroup();
     }
-    if(m_rc && m_str_label.count("RUN")) {
+    if(m_str_label.count("RUN")) {
         if(state == State::RUN) {
-            m_str_label.at("RUN")->setText(QString::number(run_n));
+            m_str_label.at("RUN")->setText(QString::number(current_run_nr_));
         } else {
-            m_str_label.at("RUN")->setText(QString::number(run_n) + " (next run)");
+            m_str_label.at("RUN")->setText(QString::number(current_run_nr_) + " (next run)");
         }
     }
-    m_map_conn_status_last = map_conn_status;
+
     return state;
 }
 
@@ -249,10 +224,10 @@ void RunControlGUI::closeEvent(QCloseEvent* event) {
        QMessageBox::Cancel) {
         event->ignore();
     } else {
-        QSettings settings("EUDAQ collaboration", "EUDAQ");
-        settings.beginGroup("euRun2");
-        if(m_rc)
-            settings.setValue("runnumber", m_rc->GetRunN());
+        QSettings settings("Constellation collaboration", "Constellation");
+        settings.beginGroup("qcontrol");
+        if(current_run_nr_ != 0)
+            settings.setValue("runnumber", current_run_nr_);
         else
             settings.setValue("runnumber", m_run_n_qsettings);
         settings.setValue("size", size());
@@ -262,8 +237,8 @@ void RunControlGUI::closeEvent(QCloseEvent* event) {
         settings.setValue("lastScanFile", txtScanFile->text());
         settings.setValue("successexit", 1);
         settings.endGroup();
-        if(m_rc)
-            m_rc->Terminate();
+
+        // FIXME terminate the application, send shutdown command to satellites?
         event->accept();
     }
 }
@@ -273,10 +248,10 @@ void RunControlGUI::Exec() {
     if(QApplication::instance())
         QApplication::instance()->exec();
     else
-        std::cerr << "ERROR: RUNContrlGUI::EXEC\n";
+        LOG(logger_, CRITICAL) << "ERROR: RUNControlGUI::EXEC\n";
 }
 
-std::map<int, QString> RunControlGUI::m_map_state_str = {
+std::map<satellite::State, QString> RunControlGUI::state_str_ = {
     {State::NEW, "<font size=12 color='red'><b>Current State: New </b></font>"},
     {State::INIT, "<font size=12 color='red'><b>Current State: Initialized </b></font>"},
     {State::ORBIT, "<font size=12 color='orange'><b>Current State: Orbiting </b></font>"},
@@ -292,31 +267,29 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
 
     QMenu* contextMenu = new QMenu(viewConn);
 
-    // load an eventually updated ini file
-    if(m_rc) {
-        loadConfigFile();
-    }
-    if(m_rc->GetConfiguration()) {
-        QAction* initialiseAction = new QAction("Initialize", this);
-        connect(initialiseAction, &QAction::triggered, this, [this, index]() { runcontrol_.initialize(index); });
-        contextMenu->addAction(initialiseAction);
-    }
+    // load an eventually updated file
+    loadConfigFile();
+
+    // FIXME pass configuration
+    QAction* initialiseAction = new QAction("Initialize", this);
+    connect(initialiseAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendCommand(index, "initialize"); });
+    contextMenu->addAction(initialiseAction);
 
     // load an eventually updated config file
     QAction* launchAction = new QAction("Launch", this);
-    connect(launchAction, &QAction::triggered, this, [this, index]() { runcontrol_.launch(index); });
+    connect(launchAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendCommand(index, "launch"); });
     contextMenu->addAction(launchAction);
 
     QAction* landAction = new QAction("Land", this);
-    connect(landAction, &QAction::triggered, this, [this, index]() { runcontrol_.land(index); });
+    connect(landAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendCommand(index, "land"); });
     contextMenu->addAction(landAction);
 
     QAction* startAction = new QAction("Start", this);
-    connect(startAction, &QAction::triggered, this, [this, index]() { runcontrol_.start(index); });
+    connect(startAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendCommand(index, "start"); });
     contextMenu->addAction(startAction);
 
     QAction* stopAction = new QAction("Stop", this);
-    connect(stopAction, &QAction::triggered, this, [this, index]() { runcontrol_.stop(index); });
+    connect(stopAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendCommand(index, "stop"); });
     contextMenu->addAction(stopAction);
 
     // QAction *resetAction = new QAction("Reset", this);
@@ -337,9 +310,8 @@ bool RunControlGUI::loadConfigFile() {
         QMessageBox::warning(NULL, "ERROR", "Config file does not exist.");
         return false;
     }
-    if(m_rc) {
-        m_rc->ReadConfigureFile(settings);
-    }
+
+    // FIXME read and parse config file
     return true;
 }
 
@@ -440,7 +412,13 @@ bool RunControlGUI::updateStatusDisplay() {
 }
 
 bool RunControlGUI::addAdditionalStatus(std::string info) {
-    std::vector<std::string> results = eudaq::splitString(info, ',');
+    std::vector<std::string> results;
+    std::stringstream sts(info);
+    std::string token;
+    while(std::getline(sts, token, ',')) {
+        results.push_back(token);
+    }
+
     if(results.size() % 2 != 0) {
         QMessageBox::warning(NULL, "ERROR", "Additional Status Display inputs are not correctly formatted - please check");
         return false;
@@ -602,20 +580,7 @@ void RunControlGUI::nextStep() {
  * @return true if all connections are in state, false otherwise
  */
 bool RunControlGUI::allConnectionsInState(constellation::satellite::State state) {
-    std::map<eudaq::ConnectionSPC, eudaq::StatusSPC> map_conn_status;
-    if(m_rc)
-        map_conn_status = m_rc->GetActiveConnectionStatusMap();
-    else
-        return false;
-    for(auto& conn_status : map_conn_status) {
-        if(!conn_status.second)
-            continue;
-        auto state_conn = conn_status.second->GetState();
-
-        if((int)state_conn != (int)state)
-            return false;
-    }
-    return true;
+    return runcontrol_.isInState(state);
 }
 
 /**
@@ -643,28 +608,14 @@ bool RunControlGUI::checkEventsInStep() {
  */
 
 int RunControlGUI::getEventsCurrent() {
-    std::map<eudaq::ConnectionSPC, eudaq::StatusSPC> map_conn_status;
-    if(m_scan.scanIsTimeBased())
-        return m_scan.eventsPerStep() + 1;
-    if(m_rc)
-        map_conn_status = m_rc->GetActiveConnectionStatusMap();
-    else
-        return -2;
-    for(auto conn : map_conn_status) {
-        if((conn.first->GetType() + "." + conn.first->GetName()) == m_scan.currentCountingComponent()) {
-            auto tags = conn.second->GetTags();
-            for(auto& tag : tags)
-                if(tag.first == "EventN")
-                    return std::stoi(tag.second);
-        }
-    }
+    // FIXME required metrics reading
     return -1;
 }
 
 void RunControlGUI::store_config() {
     std::string configFile = txtConfigFileName->text().toStdString();
     std::string command =
-        "cp " + configFile + " " + m_config_at_run_path + "config_run_" + std::to_string(m_rc->GetRunN()) + ".txt";
+        "cp " + configFile + " " + m_config_at_run_path + "config_run_" + std::to_string(current_run_nr_) + ".txt";
     system(command.c_str());
 }
 

@@ -18,12 +18,7 @@ public:
 
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
-    void initialize(const QModelIndex& index);
-    void launch(const QModelIndex& index);
-    void land(const QModelIndex& index);
-    void reconfigure(const QModelIndex& index);
-    void start(const QModelIndex& index);
-    void stop(const QModelIndex& index);
+    void sendCommand(const QModelIndex& index, const std::string& verb);
 
 private:
     static constexpr std::array<const char*, 6> headers_ {"type", "name", "state", "connection", "message", "information"};

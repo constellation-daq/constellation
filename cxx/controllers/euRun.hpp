@@ -66,8 +66,9 @@ private:
     constellation::log::Logger logger_;
     constellation::log::Logger user_logger_;
     QRunControl runcontrol_;
+    std::uint32_t current_run_nr_;
 
-    static std::map<int, QString> m_map_state_str;
+    static std::map<constellation::satellite::State, QString> state_str_;
     std::map<QString, QString> m_map_label_str;
 
     QItemDelegate m_delegate;
