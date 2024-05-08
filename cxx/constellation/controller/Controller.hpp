@@ -49,15 +49,22 @@ namespace constellation::controller {
 
     public:
         message::CSCP1Message sendCommand(std::string_view satellite_name, message::CSCP1Message& cmd);
+        // FIXME allow adding payload!
+        message::CSCP1Message sendCommand(std::string_view satellite_name, const std::string& verb);
 
         std::map<std::string, message::CSCP1Message> sendCommand(message::CSCP1Message& cmd);
+        // FIXME allow adding payload!
+        std::map<std::string, message::CSCP1Message> sendCommand(const std::string& verb);
 
-        message::CSCP1Message initialize(std::string_view satellite_name);
-        message::CSCP1Message launch(std::string_view satellite_name);
-        message::CSCP1Message land(std::string_view satellite_name);
-        message::CSCP1Message reconfigure(std::string_view satellite_name);
-        message::CSCP1Message start(std::string_view satellite_name);
-        message::CSCP1Message stop(std::string_view satellite_name);
+        /**
+         * @brief Helper to check if all connections are in a given state
+         *
+         * @param state State to be checked for
+         * @return True if all connections are in the given state, false otherwise
+         */
+        bool isInState(satellite::State state);
+
+        satellite::State getLowestState();
 
     private:
         message::CSCP1Message send_receive(Connection& conn, message::CSCP1Message& cmd);

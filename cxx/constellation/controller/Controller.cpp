@@ -20,6 +20,7 @@
 
 using namespace constellation::controller;
 using namespace constellation::message;
+using namespace constellation::satellite;
 using namespace constellation::utils;
 
 Controller::Controller(std::string_view controller_name) : logger_("CONTROLLER"), controller_name_(controller_name) {
@@ -64,6 +65,29 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
     }
 }
 
+bool Controller::isInState(State state) {
+    for(const auto& conn : connections_) {
+        if(conn.second.state != state) {
+            return false;
+        }
+    }
+    return true;
+}
+
+State Controller::getLowestState() {
+    if(connections_.empty()) {
+        return State::NEW;
+    }
+
+    State state {State::ERROR};
+    for(const auto& conn : connections_) {
+        if(conn.second.state < state) {
+            state = conn.second.state;
+        }
+    }
+    return state;
+}
+
 CSCP1Message Controller::send_receive(Connection& conn, CSCP1Message& cmd) {
     cmd.assemble().send(conn.req);
     zmq::multipart_t recv_zmq_msg {};
@@ -88,32 +112,12 @@ std::map<std::string, CSCP1Message> Controller::sendCommand(CSCP1Message& cmd) {
     return replies;
 }
 
-CSCP1Message Controller::initialize(std::string_view satellite_name) {
-    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "initialize"});
-    return sendCommand(satellite_name, send_msg);
+std::map<std::string, CSCP1Message> Controller::sendCommand(const std::string& verb) {
+    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, {verb}});
+    return sendCommand(send_msg);
 }
 
-CSCP1Message Controller::launch(std::string_view satellite_name) {
-    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "launch"});
-    return sendCommand(satellite_name, send_msg);
-}
-
-CSCP1Message Controller::land(std::string_view satellite_name) {
-    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "land"});
-    return sendCommand(satellite_name, send_msg);
-}
-
-CSCP1Message Controller::reconfigure(std::string_view satellite_name) {
-    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "reconfigure"});
-    return sendCommand(satellite_name, send_msg);
-}
-
-CSCP1Message Controller::start(std::string_view satellite_name) {
-    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "start"});
-    return sendCommand(satellite_name, send_msg);
-}
-
-CSCP1Message Controller::stop(std::string_view satellite_name) {
-    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "stop"});
+CSCP1Message Controller::sendCommand(std::string_view satellite_name, const std::string& verb) {
+    auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, {verb}});
     return sendCommand(satellite_name, send_msg);
 }
