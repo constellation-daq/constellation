@@ -67,7 +67,7 @@ QVariant QRunControl::headerData(int section, Qt::Orientation orientation, int r
     return QVariant();
 }
 
-void QRunControl::sendCommand(const QModelIndex& index, const std::string& verb) {
+void QRunControl::sendQCommand(const QModelIndex& index, const std::string& verb) {
     // Select connection by index:
     auto it = connections_.begin();
     std::advance(it, index.row());

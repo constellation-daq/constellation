@@ -19,10 +19,8 @@ using namespace constellation::log;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 
-RunControlGUI::RunControlGUI(td::string_view controller_name)
-    : QMainWindow(0, 0), runcontrol_(controller_name), logger_("GUI"), user_logger_("USER"), m_display_col(0),
-      m_scan_active(false), m_scan_interrupt_received(false), m_save_config_at_run_start(true), m_display_row(0),
-      m_config_at_run_path("") {
+RunControlGUI::RunControlGUI(std::string_view controller_name)
+    : QMainWindow(), runcontrol_(controller_name), logger_("GUI"), user_logger_("USER"), m_display_col(0), m_display_row(0) {
     m_map_label_str = {{"RUN", "Run Number"}};
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
@@ -59,7 +57,6 @@ RunControlGUI::RunControlGUI(td::string_view controller_name)
     geom_from_last_program_run.moveTo(settings.value("pos", geom.topLeft()).toPoint());
     // TODO: check last if last file exits. if not, use default value.
     txtConfigFileName->setText(settings.value("lastConfigFile", "config file not set").toString());
-    txtScanFile->setText(settings.value("lastScanFile", "scan file not set").toString());
     settings.endGroup();
 
     QSize fsize = frameGeometry().size();
@@ -80,7 +77,6 @@ RunControlGUI::RunControlGUI(td::string_view controller_name)
 
     setWindowTitle("Constellation QControl " CNSTLN_VERSION);
     connect(&m_timer_display, SIGNAL(timeout()), this, SLOT(DisplayTimer()));
-    connect(&m_scanningTimer, SIGNAL(timeout()), this, SLOT(nextStep()));
     m_timer_display.start(1000); // internal update time of GUI
     btnInit->setEnabled(1);
     btnConfig->setEnabled(1);
@@ -127,7 +123,7 @@ void RunControlGUI::on_btnStart_clicked() {
         bool succ;
         uint32_t run_n = qs_next_run.toInt(&succ);
         if(succ) {
-            // FIXME use Run nr
+            current_run_nr_ = run_n;
         }
         txtNextRunNumber->clear();
     }
@@ -137,9 +133,6 @@ void RunControlGUI::on_btnStart_clicked() {
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Start: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
-
-    if(m_save_config_at_run_start)
-        store_config();
 }
 
 void RunControlGUI::on_btnStop_clicked() {
@@ -166,17 +159,6 @@ void RunControlGUI::on_btnLoadConf_clicked() {
     }
 }
 
-void RunControlGUI::DisplayTimer() {
-    auto state = updateInfos();
-    updateStatusDisplay();
-    if(state == State::RUN)
-        updateProgressBar();
-
-    if(!m_scan.scanIsTimeBased() && m_scan_active == true)
-        if(checkEventsInStep())
-            nextStep();
-}
-
 State RunControlGUI::updateInfos() {
 
     // FIXME revisit what needs to be done here. Most infos are updated in the background by the controller via heartbeats!
@@ -187,13 +169,12 @@ State RunControlGUI::updateInfos() {
     QRegExp rx_init(".+(\\.ini$)");
     QRegExp rx_conf(".+(\\.conf$)");
     bool confLoaded = rx_conf.exactMatch(txtConfigFileName->text());
-    bool initLoaded = rx_init.exactMatch(txtInitFileName->text());
 
     btnInit->setEnabled((state == State::NEW || state == State::ERROR) && confLoaded);
     btnConfig->setEnabled(state == State::NEW || state == State::INIT);
     btnLoadConf->setEnabled(state != State::RUN || state != State::ORBIT);
     btnStart->setEnabled(state == State::ORBIT);
-    btnStop->setEnabled(state == State::RUN && !m_scan_active);
+    btnStop->setEnabled(state == State::RUN);
     // FIXME
     // btnReset->setEnabled(state != State::RUN);
     // btnTerminate->setEnabled(state != State::STATE_RUNNING);
@@ -234,7 +215,6 @@ void RunControlGUI::closeEvent(QCloseEvent* event) {
         settings.setValue("pos", pos());
         settings.setValue("lastConfigFile", txtConfigFileName->text());
         settings.setValue("lastInitFile", txtInitFileName->text());
-        settings.setValue("lastScanFile", txtScanFile->text());
         settings.setValue("successexit", 1);
         settings.endGroup();
 
@@ -272,24 +252,24 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
 
     // FIXME pass configuration
     QAction* initialiseAction = new QAction("Initialize", this);
-    connect(initialiseAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendCommand(index, "initialize"); });
+    connect(initialiseAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "initialize"); });
     contextMenu->addAction(initialiseAction);
 
     // load an eventually updated config file
     QAction* launchAction = new QAction("Launch", this);
-    connect(launchAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendCommand(index, "launch"); });
+    connect(launchAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "launch"); });
     contextMenu->addAction(launchAction);
 
     QAction* landAction = new QAction("Land", this);
-    connect(landAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendCommand(index, "land"); });
+    connect(landAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "land"); });
     contextMenu->addAction(landAction);
 
     QAction* startAction = new QAction("Start", this);
-    connect(startAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendCommand(index, "start"); });
+    connect(startAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "start"); });
     contextMenu->addAction(startAction);
 
     QAction* stopAction = new QAction("Stop", this);
-    connect(stopAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendCommand(index, "stop"); });
+    connect(stopAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "stop"); });
     contextMenu->addAction(stopAction);
 
     // QAction *resetAction = new QAction("Reset", this);
@@ -355,7 +335,7 @@ bool RunControlGUI::addToGrid(const QString& objectName, QString displayedName) 
     lblvalue->setText("val_" + objectName);
 
     int colPos = 0, rowPos = 0;
-    if(2 * (m_str_label.size() + 1) < grpGrid->rowCount() * grpGrid->columnCount()) {
+    if(2 * (m_str_label.size() + 1) < static_cast<size_t>(grpGrid->rowCount() * grpGrid->columnCount())) {
         colPos = m_display_col;
         rowPos = m_display_row;
         if(++m_display_col > 1) {
@@ -381,33 +361,7 @@ bool RunControlGUI::addToGrid(const QString& objectName, QString displayedName) 
  * @return true if success, false otherwise (cannot happen currently)
  */
 bool RunControlGUI::updateStatusDisplay() {
-    auto it = m_map_conn_status_last.begin();
-    while(it != m_map_conn_status_last.end()) {
-        // elements might not be existing at startup/being asynchronously changed
-        if(it->first && it->second) {
-            auto labelit = m_str_label.begin();
-            while(labelit != m_str_label.end()) {
-                std::string labelname = (labelit->first.toStdString()).substr(0, labelit->first.toStdString().find(":"));
-                std::string displayedItem =
-                    (labelit->first.toStdString())
-                        .substr(labelit->first.toStdString().find(":") + 1, labelit->first.toStdString().size());
-                if(it->first->GetName() == labelname) {
-                    auto tags = it->second->GetTags();
-                    // obviously not really elegant...
-                    for(auto& tag : tags) {
-                        if(tag.first == displayedItem && displayedItem == "EventN")
-                            labelit->second->setText(QString::fromStdString(tag.second + " Events"));
-                        else if(tag.first == displayedItem && displayedItem == "Freq. (avg.) [kHz]")
-                            labelit->second->setText(QString::fromStdString(tag.second + " kHz"));
-                        else if(tag.first == displayedItem)
-                            labelit->second->setText(QString::fromStdString(tag.second));
-                    }
-                }
-                labelit++;
-            }
-        }
-        it++;
-    }
+    // FIXME update status display with tags
     return true;
 }
 
@@ -423,22 +377,16 @@ bool RunControlGUI::addAdditionalStatus(std::string info) {
         QMessageBox::warning(NULL, "ERROR", "Additional Status Display inputs are not correctly formatted - please check");
         return false;
     } else {
-        for(auto c = 0; c < results.size(); c += 2) {
+        for(std::size_t c = 0; c < results.size(); c += 2) {
             // check if the connection exists, otherwise do not display
-            auto it = m_map_conn_status_last.begin();
-            bool found = false;
-            while(it != m_map_conn_status_last.end()) {
-                if(it->first && it->first->GetName() == results.at(c)) {
-                    addToGrid(QString::fromStdString(results.at(c) + ":" + results.at(c + 1)));
-                    found = true;
-                }
-                it++;
-            }
-            if(!found) {
-                QMessageBox::warning(
-                    NULL, "ERROR", QString::fromStdString("Element \"" + results.at(c) + "\" is not connected"));
-                return false;
-            }
+
+            // addToGrid(QString::fromStdString(results.at(c) + ":" + results.at(c + 1)));
+
+            // if(!found) {
+            // QMessageBox::warning(
+            // NULL, "ERROR", QString::fromStdString("Element \"" + results.at(c) + "\" is not connected"));
+            // return false;
+            // }
         }
     }
     return true;
@@ -454,186 +402,12 @@ bool RunControlGUI::checkFile(QString file, QString usecase) {
 }
 
 /**
- * @brief RunControlGUI::on_btn_LoadScanFile_clicked
- * @abstract push Button to open file dialog to select the scan configuration
- * file.
- * @group Scanning utils, RunControlGUI
- */
-void RunControlGUI::on_btn_LoadScanFile_clicked() {
-    QString usedpath = QFileInfo(txtScanFile->text()).path();
-    QString filename = QFileDialog::getOpenFileName(this, tr("Open File"), usedpath, tr("*.scan (*.scan)"));
-    if(!filename.isNull()) {
-        txtScanFile->setText(filename);
-    }
-}
-
-/**
- * @brief RunControlGUI::on_btnStartScan_clicked
- * @abstract Button to control the scanning procedure. Does not implement any real
- * functionality, only changes status bools and texts
- *
- */
-void RunControlGUI::on_btnStartScan_clicked() {
-    if(m_scan_active == true) {
-        QMessageBox::StandardButton reply;
-        reply =
-            QMessageBox::question(NULL,
-                                  "Interrupt Scan",
-                                  "Do you want to stop immediately?\n Hitting no will stop after finishing the current step",
-                                  QMessageBox::Yes | QMessageBox::No | QMessageBox::Abort);
-        if(reply == QMessageBox::Yes) {
-            m_scan_active = false;
-            m_scanningTimer.stop();
-            nextStep();
-            return;
-        } else if(reply == QMessageBox::Abort) {
-            m_scan_active = true;
-            btnStartScan->setText("Interrupt scan");
-        } else if(reply == QMessageBox::No) {
-            m_scan_interrupt_received = true;
-            btnStartScan->setText("Scan stops after current step");
-        }
-    } else {
-        if(!readScanConfig())
-            return;
-        m_scan_active = true;
-        m_scan_interrupt_received = false;
-        LOG(logger_, INFO) << "STARTING SCAN";
-        btnStartScan->setText("Interrupt Scan");
-        nextStep();
-        return;
-    }
-}
-
-/**
- * @brief RunControlGUI::prepareAndStartStep
- * @abstract stop the data taking, update the configuration and start a new run
- * @return Returns true if step has been successful
- */
-void RunControlGUI::nextStep() {
-    if(!m_scan_active) {
-        btnStartScan->setText("Start scan");
-        LOG(logger_, INFO) << "Stopping scan";
-        m_scan_interrupt_received = false;
-        m_scanningTimer.stop();
-        if(!allConnectionsInState(State::ORBIT))
-            on_btnStop_clicked();
-        return;
-    }
-    if(m_scan.currentStep() != 0)
-        on_btnStop_clicked();
-    std::string conf = m_scan.nextConfig();
-    LOG(logger_, INFO) << "Next file (" << m_scan.currentStep() << "): " << conf;
-    if(m_scan_interrupt_received == false && m_scan_active == true && conf != "finished") {
-        LOG(logger_, INFO) << "Next step";
-        txtConfigFileName->setText(QString(conf.c_str()));
-        QCoreApplication::processEvents();
-        while((!allConnectionsInState(State::ORBIT) && m_scan.scanHasbeenStarted()) ||
-              (!allConnectionsInState(State::ORBIT) && !m_scan_active)) {
-            updateInfos();
-            QCoreApplication::processEvents();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            LOG(logger_, INFO) << "Waiting until all components are stopped";
-        }
-
-        updateInfos();
-        std::this_thread::sleep_for(std::chrono::seconds(3));
-        on_btnConfig_clicked();
-        while(!allConnectionsInState(State::ORBIT) && m_scan_active) {
-            updateInfos();
-            QCoreApplication::processEvents();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            LOG(logger_, INFO) << "Waiting until all components are (re)configured";
-        }
-        updateInfos();
-        LOG(logger_, INFO) << "Ready for next step";
-
-        on_btnStart_clicked();
-        while(!allConnectionsInState(State::RUN)) {
-            updateInfos();
-            QCoreApplication::processEvents();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            LOG(logger_, INFO) << "Waiting until all components are running";
-        }
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-        updateInfos();
-
-        if(m_scan.scanIsTimeBased()) {
-            m_scanningTimer.start(1000 * m_scan.timePerStep());
-            LOG(logger_, INFO) << "Time based scan next step";
-        } else {
-            LOG(logger_, INFO) << "Event based scan next step";
-        }
-        // stop the scan here
-    } else {
-        btnStartScan->setText("Start scan");
-        m_scan_active = false;
-        m_scan_interrupt_received = false;
-        m_scanningTimer.stop();
-    }
-    m_scan.scanStarted();
-    return;
-}
-/**
  * @brief RunControlGUI::allConnectionsInState
  * @param state to be checked
  * @return true if all connections are in state, false otherwise
  */
 bool RunControlGUI::allConnectionsInState(constellation::satellite::State state) {
     return runcontrol_.isInState(state);
-}
-
-/**
- * @brief RunControlGUI::readScanConfig
- * @abstract Read the scan config file and prepare all parameters
- * @return true if successful
- */
-bool RunControlGUI::readScanConfig() {
-    m_scan.reset();
-    return m_scan.setupScan(txtConfigFileName->text().toStdString(), txtScanFile->text().toStdString());
-}
-/**
- * @brief RunControlGUI::checkEventsInStep
- * @abstract check if the requested number of events for a certain step is recorded
- * @return true if reached/surpassed, false otherwise
- */
-bool RunControlGUI::checkEventsInStep() {
-    int events = getEventsCurrent();
-    return ((events > 0 ? events : (m_scan.eventsPerStep() - 2)) > m_scan.eventsPerStep());
-}
-
-/**
- * @brief RunControlGUI::getEventsCurrent
- * @return Number of events in current step of scans
- */
-
-int RunControlGUI::getEventsCurrent() {
-    // FIXME required metrics reading
-    return -1;
-}
-
-void RunControlGUI::store_config() {
-    std::string configFile = txtConfigFileName->text().toStdString();
-    std::string command =
-        "cp " + configFile + " " + m_config_at_run_path + "config_run_" + std::to_string(current_run_nr_) + ".txt";
-    system(command.c_str());
-}
-
-void RunControlGUI::updateProgressBar() {
-    double scanProgress = 0;
-    if(m_scan_active) {
-        scanProgress = ((m_scan.currentStep() - 1) % m_scan.nSteps()) / double(std::max(1, m_scan.nSteps())) * 100;
-        if(m_scan.scanIsTimeBased())
-            scanProgress += ((m_scanningTimer.interval() - m_scanningTimer.remainingTime()) /
-                             double(std::max(1, m_scanningTimer.interval())) * 100. / std::max(1, m_scan.nSteps()));
-        else
-            scanProgress += getEventsCurrent() / double(m_scan.eventsPerStep()) * 100. / std::max(1, m_scan.nSteps());
-    }
-    progressBar_scan->setValue(scanProgress);
-}
-
-void RunControlGUI::on_checkBox_stateChanged(int arg1) {
-    m_save_config_at_run_start = arg1;
 }
 
 // NOLINTNEXTLINE(*-avoid-c-arrays)

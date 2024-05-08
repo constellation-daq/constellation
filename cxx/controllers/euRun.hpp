@@ -1,5 +1,4 @@
 #include "QRunControl.hpp"
-#include "scanHelper.hh"
 #include "ui_euRun.h"
 
 #include <QCloseEvent>
@@ -30,7 +29,6 @@ private:
     void closeEvent(QCloseEvent* event) override;
 
 private slots:
-    void DisplayTimer();
     void on_btnInit_clicked();
     void on_btnConfig_clicked();
     void on_btnStart_clicked();
@@ -38,13 +36,8 @@ private slots:
     void on_btnReset_clicked();
     void on_btnTerminate_clicked();
     void on_btnLog_clicked();
-    void on_btnLoadInit_clicked();
     void on_btnLoadConf_clicked();
     void onCustomContextMenu(const QPoint& point);
-
-    void on_btn_LoadScanFile_clicked();
-    void on_btnStartScan_clicked();
-    void nextStep();
 
 private:
     constellation::satellite::State updateInfos();
@@ -57,15 +50,11 @@ private:
     bool addAdditionalStatus(std::string info);
     bool checkFile(QString file, QString usecase);
 
-    bool readScanConfig();
     bool allConnectionsInState(constellation::satellite::State state);
-    bool checkEventsInStep();
-    int getEventsCurrent();
-    void store_config();
 
+    QRunControl runcontrol_;
     constellation::log::Logger logger_;
     constellation::log::Logger user_logger_;
-    QRunControl runcontrol_;
     std::uint32_t current_run_nr_;
 
     static std::map<constellation::satellite::State, QString> state_str_;
@@ -75,22 +64,10 @@ private:
     QTimer m_timer_display;
     std::map<QString, QLabel*> m_str_label;
 
-    std::map<eudaq::ConnectionSPC, eudaq::StatusSPC> m_map_conn_status_last;
-
     uint32_t m_run_n_qsettings;
     int m_display_col, m_display_row;
     QMenu* contextMenu;
     bool m_lastexit_success;
 
-    bool m_scan_active;
-    bool m_scan_interrupt_received;
-    bool m_save_config_at_run_start;
-
-    QTimer m_scanningTimer;
-
-    std::shared_ptr<eudaq::Configuration> m_scan_config;
-    Scan m_scan;
     std::string m_config_at_run_path;
-
-    void updateProgressBar();
 };
