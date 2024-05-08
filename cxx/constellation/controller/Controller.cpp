@@ -28,6 +28,7 @@ Controller::Controller(std::string_view controller_name) : logger_("CONTROLLER")
     chirp::Manager::getDefaultInstance()->registerDiscoverCallback(&Controller::callback, chirp::CONTROL, this);
 }
 
+// NOLINTNEXTLINE(performance-unnecessary-value-param)
 void Controller::callback(chirp::DiscoveredService service, bool depart, std::any user_data) {
     auto* instance = std::any_cast<Controller*>(user_data);
     instance->callback_impl(std::move(service), depart);
