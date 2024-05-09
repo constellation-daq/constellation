@@ -70,7 +70,15 @@ QVariant QRunControl::headerData(int section, Qt::Orientation orientation, int r
 }
 
 void QRunControl::propagate_update(std::size_t connections) {
-    emit dataChanged(createIndex(0, 0), createIndex(connections - 1, headers_.size() - 1));
+    if(current_rows_ < connections) {
+        beginInsertRows(QModelIndex(), 0, 0);
+        endInsertRows();
+    } else if(current_rows_ > connections) {
+        emit dataChanged(createIndex(0, 0), createIndex(connections, headers_.size() - 1));
+    } else {
+        emit dataChanged(createIndex(0, 0), createIndex(connections - 1, headers_.size() - 1));
+    }
+    current_rows_ = connections;
 }
 
 void QRunControl::sendQCommand(const QModelIndex& index, const std::string& verb, const CommandPayload& payload) {

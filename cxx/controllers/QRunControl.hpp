@@ -26,4 +26,6 @@ public:
 
 private:
     static constexpr std::array<const char*, 6> headers_ {"type", "name", "state", "connection", "message", "information"};
+
+    std::size_t current_rows_ {0};
 };
