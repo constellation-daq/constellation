@@ -75,7 +75,7 @@ class RPGamma(RedPitayaSatellite):
 
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
-            return super().do_initializing(payload)
+        return super().do_initializing(payload)
 
     def do_starting(self, payload: any) -> str:
 
@@ -117,7 +117,7 @@ def main(args=None):
     parser.add_argument("--data-port", type=int, default=55557)
     parser.add_argument("--interface", type=str, default="*")
     parser.add_argument("--name", type=str,
-                        default="RedPitaya_Gamma_" + str(os.uname().nodename))
+                        default=str(os.uname().nodename))
     parser.add_argument("--group", type=str, default="constellation")
     args = parser.parse_args(args)
 
