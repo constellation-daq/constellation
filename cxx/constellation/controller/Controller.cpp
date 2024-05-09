@@ -69,9 +69,13 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
         conn.req.connect(uri);
 
         // Obtain canonical name:
-        auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "get_name"});
-        const auto recv_msg = send_receive(conn, send_msg);
-        const auto name = recv_msg.getVerb().second;
+        auto send_msg_name = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "get_name"});
+        const auto recv_msg_name = send_receive(conn, send_msg_name);
+        const auto name = recv_msg_name.getVerb().second;
+
+        auto send_msg_state = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "get_state"});
+        const auto recv_msg_state = send_receive(conn, send_msg_state);
+        conn.state = magic_enum::enum_cast<State>(recv_msg_state.getVerb().second).value_or(State::NEW);
 
         const auto [it, success] = connections_.emplace(name, std::move(conn));
 
