@@ -3,8 +3,11 @@
 #include <string>
 #include <vector>
 
+#include "constellation/core/config/Dictionary.hpp"
+
 #include <qmetatype.h>
 
+using namespace constellation::config;
 using namespace constellation::controller;
 
 QRunControl::QRunControl(std::string_view controller_name, QObject* parent)
@@ -79,6 +82,21 @@ void QRunControl::propagate_update(std::size_t connections) {
         emit dataChanged(createIndex(0, 0), createIndex(connections - 1, headers_.size() - 1));
     }
     current_rows_ = connections;
+}
+
+Dictionary QRunControl::getQCommands(const QModelIndex& index) {
+    std::unique_lock<std::mutex> lock(connection_mutex_);
+
+    // Select connection by index:
+    auto it = connections_.begin();
+    std::advance(it, index.row());
+
+    // Unlock so the controller can grab it
+    lock.unlock();
+    auto msg = Controller::sendCommand(it->first, "get_commands");
+
+    // FIXME check success
+    return Dictionary::disassemble(msg.getPayload());
 }
 
 void QRunControl::sendQCommand(const QModelIndex& index, const std::string& verb, const CommandPayload& payload) {

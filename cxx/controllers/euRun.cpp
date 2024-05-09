@@ -275,7 +275,6 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     });
     contextMenu->addAction(initialiseAction);
 
-    // load an eventually updated config file
     QAction* launchAction = new QAction("Launch", this);
     connect(launchAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "launch"); });
     contextMenu->addAction(launchAction);
@@ -301,6 +300,14 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     // QAction *terminateAction = new QAction("Terminate", this);
     // connect(terminateAction, &QAction::triggered, this, [this,index]() { /** FIXME end the satellite */ });
     // contextMenu->addAction(terminateAction);
+
+    // Request possible commands from remote:
+    auto dict = runcontrol_.getQCommands(index);
+    for(const auto& [key, value] : dict) {
+        QAction* action = new QAction(QString::fromStdString(key), this);
+        connect(action, &QAction::triggered, this, [this, index, key]() { runcontrol_.sendQCommand(index, key); });
+        contextMenu->addAction(action);
+    }
 
     contextMenu->exec(viewConn->viewport()->mapToGlobal(point));
 }

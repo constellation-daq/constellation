@@ -22,6 +22,8 @@ public:
 
     void sendQCommand(const QModelIndex& index, const std::string& verb, const CommandPayload& payload = {});
 
+    constellation::config::Dictionary getQCommands(const QModelIndex& index);
+
     void propagate_update(std::size_t connections) override;
 
 private:
