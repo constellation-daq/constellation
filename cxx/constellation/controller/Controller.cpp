@@ -31,7 +31,7 @@ Controller::Controller(std::string_view controller_name) : logger_("CONTROLLER")
 // NOLINTNEXTLINE(performance-unnecessary-value-param)
 void Controller::callback(chirp::DiscoveredService service, bool depart, std::any user_data) {
     auto* instance = std::any_cast<Controller*>(user_data);
-    instance->callback_impl(std::move(service), depart);
+    instance->callback_impl(service, depart);
 }
 
 void Controller::callback_impl(const constellation::chirp::DiscoveredService& service, bool depart) {
@@ -67,12 +67,12 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
 }
 
 bool Controller::isInState(State state) {
-    for(const auto& conn : connections_) {
-        if(conn.second.state != state) {
-            return false;
-        }
+    if(std::ranges::all_of(
+           connections_.cbegin(), connections_.cend(), [state](const auto& conn) { return conn.second.state == state; })) {
+        return true;
     }
-    return true;
+
+    return false;
 }
 
 State Controller::getLowestState() {
