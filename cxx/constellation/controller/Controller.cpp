@@ -90,7 +90,7 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
     propagate_update(connections_.size());
 }
 
-bool Controller::isInState(State state) {
+bool Controller::isInState(State state) const {
     const std::lock_guard connection_lock {connection_mutex_};
 
     if(std::ranges::all_of(
@@ -101,7 +101,7 @@ bool Controller::isInState(State state) {
     return false;
 }
 
-State Controller::getLowestState() {
+State Controller::getLowestState() const {
     const std::lock_guard connection_lock {connection_mutex_};
 
     if(connections_.empty()) {

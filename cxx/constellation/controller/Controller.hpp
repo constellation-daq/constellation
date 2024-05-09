@@ -68,9 +68,9 @@ namespace constellation::controller {
          * @param state State to be checked for
          * @return True if all connections are in the given state, false otherwise
          */
-        bool isInState(satellite::State state);
+        bool isInState(satellite::State state) const;
 
-        satellite::State getLowestState();
+        satellite::State getLowestState() const;
 
     private:
         message::CSCP1Message send_receive(Connection& conn, message::CSCP1Message& cmd);
