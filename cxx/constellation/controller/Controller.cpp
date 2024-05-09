@@ -112,12 +112,8 @@ void Controller::process_heartbeat(const message::CHP1Message& msg) {
 bool Controller::isInState(State state) const {
     const std::lock_guard connection_lock {connection_mutex_};
 
-    if(std::ranges::all_of(
-           connections_.cbegin(), connections_.cend(), [state](const auto& conn) { return conn.second.state == state; })) {
-        return true;
-    }
-
-    return false;
+    return std::ranges::all_of(
+        connections_.cbegin(), connections_.cend(), [state](const auto& conn) { return conn.second.state == state; });
 }
 
 State Controller::getLowestState() const {
@@ -149,7 +145,7 @@ CSCP1Message Controller::sendCommand(std::string_view satellite_name, CSCP1Messa
 
     const auto sat = connections_.find(satellite_name);
     if(sat == connections_.end()) {
-        return CSCP1Message({controller_name_}, {CSCP1Message::Type::ERROR, "Target satellite is unknown to controller"});
+        return {{controller_name_}, {CSCP1Message::Type::ERROR, "Target satellite is unknown to controller"}};
     }
 
     return send_receive(sat->second, cmd);

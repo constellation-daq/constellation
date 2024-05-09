@@ -97,7 +97,7 @@ namespace constellation::controller {
          *
          * @param connections Number of current connections
          */
-        virtual void propagate_update(std::size_t /*unused*/) {};
+        virtual void propagate_update(std::size_t /*connections*/) {};
 
         /** Logger to use */
         log::Logger logger_;                                         // NOLINT(*-non-private-member-variables-in-classes)
