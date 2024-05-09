@@ -243,9 +243,9 @@ void RunControlGUI::Exec() {
 }
 
 std::map<satellite::State, QString> RunControlGUI::state_str_ = {
-    {State::NEW, "<font size=12 color='red'><b>Current State: New </b></font>"},
-    {State::initializing, "<font size=12 color='red'><b>Current State: Initializing... </b></font>"},
-    {State::INIT, "<font size=12 color='red'><b>Current State: Initialized </b></font>"},
+    {State::NEW, "<font size=12 color='gray'><b>Current State: New </b></font>"},
+    {State::initializing, "<font size=12 color='gray'><b>Current State: Initializing... </b></font>"},
+    {State::INIT, "<font size=12 color='gray'><b>Current State: Initialized </b></font>"},
     {State::launching, "<font size=12 color='orange'><b>Current State: Launching... </b></font>"},
     {State::landing, "<font size=12 color='orange'><b>Current State: Landing... </b></font>"},
     {State::reconfiguring, "<font size=12 color='orange'><b>Current State: Reconfiguring... </b></font>"},
