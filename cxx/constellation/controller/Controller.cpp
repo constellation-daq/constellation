@@ -105,7 +105,7 @@ CSCP1Message Controller::send_receive(Connection& conn, CSCP1Message& cmd) {
 CSCP1Message Controller::sendCommand(std::string_view satellite_name, CSCP1Message& cmd) {
     const auto sat = connections_.find(satellite_name);
     if(sat == connections_.end()) {
-        throw;
+        return CSCP1Message({controller_name_}, {CSCP1Message::Type::ERROR, "Target satellite is unknown to controller"});
     }
 
     return send_receive(sat->second, cmd);
