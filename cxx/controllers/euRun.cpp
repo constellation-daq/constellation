@@ -20,7 +20,7 @@ using namespace constellation::satellite;
 using namespace constellation::utils;
 
 RunControlGUI::RunControlGUI(std::string_view controller_name)
-    : QMainWindow(), runcontrol_(controller_name), logger_("GUI"), user_logger_("USER"), m_display_col(0), m_display_row(0) {
+    : QMainWindow(), runcontrol_(controller_name), logger_("GUI"), user_logger_("OP"), m_display_col(0), m_display_row(0) {
     m_map_label_str = {{"RUN", "Run Number"}};
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
@@ -186,7 +186,7 @@ State RunControlGUI::updateInfos() {
     QRegExp rx_conf(".+(\\.conf$)");
     bool confLoaded = rx_conf.exactMatch(txtConfigFileName->text());
 
-    btnInit->setEnabled((state == State::NEW || state == State::ERROR) && confLoaded);
+    btnInit->setEnabled((state == State::NEW || state == State::INIT || state == State::ERROR) && confLoaded);
     btnLand->setEnabled(state == State::ORBIT);
     btnConfig->setEnabled(state == State::INIT);
     btnLoadConf->setEnabled(state != State::RUN || state != State::ORBIT);
@@ -244,10 +244,17 @@ void RunControlGUI::Exec() {
 
 std::map<satellite::State, QString> RunControlGUI::state_str_ = {
     {State::NEW, "<font size=12 color='red'><b>Current State: New </b></font>"},
+    {State::initializing, "<font size=12 color='red'><b>Current State: Initializing... </b></font>"},
     {State::INIT, "<font size=12 color='red'><b>Current State: Initialized </b></font>"},
+    {State::launching, "<font size=12 color='orange'><b>Current State: Launching... </b></font>"},
+    {State::landing, "<font size=12 color='orange'><b>Current State: Landing... </b></font>"},
+    {State::reconfiguring, "<font size=12 color='orange'><b>Current State: Reconfiguring... </b></font>"},
     {State::ORBIT, "<font size=12 color='orange'><b>Current State: Orbiting </b></font>"},
+    {State::starting, "<font size=12 color='green'><b>Current State: Starting... </b></font>"},
+    {State::stopping, "<font size=12 color='green'><b>Current State: Stopping... </b></font>"},
     {State::RUN, "<font size=12 color='green'><b>Current State: Running </b></font>"},
     {State::SAFE, "<font size=12 color='red'><b>Current State: Safe Mode </b></font>"},
+    {State::interrupting, "<font size=12 color='red'><b>Current State: Interrupting... </b></font>"},
     {State::ERROR, "<font size=12 color='darkred'><b>Current State: Error </b></font>"}};
 
 void RunControlGUI::onCustomContextMenu(const QPoint& point) {
