@@ -6,7 +6,9 @@
 #include "constellation/controller/Controller.hpp"
 
 class QRunControl : public QAbstractListModel, public constellation::controller::Controller {
+
     Q_OBJECT
+
 public:
     QRunControl(std::string_view controller_name, QObject* parent = 0);
 

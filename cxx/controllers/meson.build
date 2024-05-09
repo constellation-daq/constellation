@@ -6,9 +6,10 @@ qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets'])
 
 inc = include_directories('.')
 
-ui_files = qt5.compile_ui(sources : 'euRun.ui')
+ui_files = qt5.compile_ui(sources: 'euRun.ui')
+moc_files = qt5.compile_moc(headers: ['QRunControl.hpp', 'euRun.hpp'])
 
-executable('euRun', 'euRun.cpp', 'QRunControl.cpp', ui_files,
+executable('euRun', 'euRun.cpp', 'QRunControl.cpp', ui_files, moc_files,
            include_directories: inc,
            dependencies: [exec_dep, argparse_dep, qt5_dep, controller_dep],
            install: true,

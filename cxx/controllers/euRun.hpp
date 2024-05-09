@@ -22,8 +22,6 @@ public:
     RunControlGUI(std::string_view controller_name);
 
     void Exec();
-private slots:
-    void on_checkBox_stateChanged(int arg1);
 
 private:
     void closeEvent(QCloseEvent* event) override;
