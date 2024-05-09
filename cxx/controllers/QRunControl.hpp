@@ -22,6 +22,8 @@ public:
 
     void sendQCommand(const QModelIndex& index, const std::string& verb, const CommandPayload& payload = {});
 
+    void propagate_update(std::size_t connections) override;
+
 private:
     static constexpr std::array<const char*, 6> headers_ {"type", "name", "state", "connection", "message", "information"};
 };

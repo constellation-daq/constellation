@@ -69,6 +69,10 @@ QVariant QRunControl::headerData(int section, Qt::Orientation orientation, int r
     return QVariant();
 }
 
+void QRunControl::propagate_update(std::size_t connections) {
+    emit dataChanged(createIndex(0, 0), createIndex(connections - 1, headers_.size() - 1));
+}
+
 void QRunControl::sendQCommand(const QModelIndex& index, const std::string& verb, const CommandPayload& payload) {
     std::unique_lock<std::mutex> lock(connection_mutex_);
 
