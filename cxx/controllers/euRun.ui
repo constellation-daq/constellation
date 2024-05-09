@@ -14,7 +14,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>eudaq Run Control</string>
+   <string>Constellation Run Control</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout">
@@ -54,7 +54,7 @@
        <item>
         <widget class="QLabel" name="lblCurrent">
          <property name="text">
-          <string>Current State :</string>
+          <string>Current State:</string>
          </property>
         </widget>
        </item>
@@ -91,10 +91,10 @@
           <bool>false</bool>
          </property>
          <property name="toolTip">
-          <string>Terminate the DAQ session</string>
+          <string>Shutdown all satellites</string>
          </property>
          <property name="text">
-          <string>Terminate</string>
+          <string>Shutdown</string>
          </property>
         </widget>
        </item>
@@ -112,58 +112,23 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="2">
-        <widget class="QProgressBar" name="progressBar_scan">
-         <property name="value">
-          <number>24</number>
-         </property>
-        </widget>
-       </item>
        <item row="2" column="4">
         <widget class="QPushButton" name="btnStop">
          <property name="enabled">
           <bool>false</bool>
          </property>
          <property name="toolTip">
-          <string>Stop a run</string>
+          <string>Stop the run</string>
          </property>
          <property name="text">
           <string>Stop</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="4">
-        <widget class="QPushButton" name="btnStartScan">
-         <property name="text">
-          <string>Start Scan</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
+       <item row="0" column="0">
         <widget class="QLabel" name="lblConfig">
          <property name="text">
           <string>Config file: </string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="2">
-        <widget class="QLineEdit" name="txtScanFile">
-         <property name="text">
-          <string>scan config file not set</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>ScanFile</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QLabel" name="lblInit">
-         <property name="text">
-          <string>Init file:</string>
          </property>
         </widget>
        </item>
@@ -174,31 +139,24 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="3">
-        <widget class="QPushButton" name="btnLoadInit">
+       <item row="0" column="2">
+        <widget class="QLineEdit" name="txtConfigFileName">
+         <property name="whatsThis">
+          <string extracomment="Configuration file - directly editable or through file dialog."/>
+         </property>
          <property name="text">
-          <string>Load</string>
+          <string>Configuration file not set</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="3">
+       <item row="0" column="3">
         <widget class="QPushButton" name="btnLoadConf">
          <property name="text">
           <string>Load</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="2">
-        <widget class="QLineEdit" name="txtConfigFileName">
-         <property name="whatsThis">
-          <string extracomment="Configuration file - directly editable or through file dialog."/>
-         </property>
-         <property name="text">
-          <string>configuration file not set</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="4">
+       <item row="1" column="3">
         <widget class="QPushButton" name="btnConfig">
          <property name="enabled">
           <bool>false</bool>
@@ -210,10 +168,29 @@
           </sizepolicy>
          </property>
          <property name="toolTip">
-          <string>Configure using the selected configuration</string>
+          <string>Launch the constellation</string>
          </property>
          <property name="text">
           <string>Launch</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="4">
+        <widget class="QPushButton" name="btnLand">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="toolTip">
+          <string>Land the constellation</string>
+         </property>
+         <property name="text">
+          <string>Land</string>
          </property>
         </widget>
        </item>
@@ -236,7 +213,7 @@
           <bool>false</bool>
          </property>
          <property name="toolTip">
-          <string>Reset all the DAQ clients</string>
+          <string>Reset all satellites</string>
          </property>
          <property name="text">
           <string>Reset</string>
@@ -246,28 +223,21 @@
        <item row="2" column="2">
         <widget class="QLineEdit" name="txtNextRunNumber"/>
        </item>
-       <item row="5" column="3">
-        <widget class="QPushButton" name="btn_LoadScanFile">
-         <property name="text">
-          <string>Load</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="2">
+       <item row="5" column="2">
         <widget class="QLineEdit" name="txtLogmsg">
          <property name="toolTip">
-          <string>Send a message to the LogCollector</string>
+          <string>Send a log message</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="5" column="0">
         <widget class="QLabel" name="lblLogmsg">
          <property name="text">
           <string>Log: </string>
          </property>
         </widget>
        </item>
-       <item row="4" column="3">
+       <item row="5" column="3">
         <widget class="QPushButton" name="btnLog">
          <property name="enabled">
           <bool>false</bool>
@@ -277,16 +247,6 @@
          </property>
          <property name="text">
           <string>Log</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="4">
-        <widget class="QCheckBox" name="checkBox">
-         <property name="text">
-          <string>LogConfigs</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
          </property>
         </widget>
        </item>
@@ -323,7 +283,7 @@
     <item>
      <widget class="QGroupBox" name="grpConnections">
       <property name="title">
-       <string>Connections</string>
+       <string>Satellite connections</string>
       </property>
       <layout class="QVBoxLayout">
        <property name="spacing">
@@ -344,7 +304,7 @@
        <item>
         <widget class="QTreeView" name="viewConn">
          <property name="toolTip">
-          <string>Processes connected to the Run Control</string>
+          <string>Satellites connected to the Run Control</string>
          </property>
          <property name="rootIsDecorated">
           <bool>false</bool>

@@ -79,8 +79,8 @@ RunControlGUI::RunControlGUI(std::string_view controller_name)
     connect(&m_timer_display, SIGNAL(timeout()), this, SLOT(DisplayTimer()));
     m_timer_display.start(1000); // internal update time of GUI
     btnInit->setEnabled(1);
+    btnLand->setEnabled(1);
     btnConfig->setEnabled(1);
-    btnLoadInit->setEnabled(1);
     btnLoadConf->setEnabled(1);
     btnStart->setEnabled(1);
     btnStop->setEnabled(1);
@@ -107,13 +107,24 @@ void RunControlGUI::on_btnInit_clicked() {
 }
 
 void RunControlGUI::on_btnTerminate_clicked() {
-    close();
+    // FIXME we don;;t close but shutdown satellites
+    if(QMessageBox::question(this, "Quitting", "Shutdown all satellites?", QMessageBox::Ok | QMessageBox::Cancel) ==
+       QMessageBox::Cancel) {
+    } else {
+    }
 }
 
 void RunControlGUI::on_btnConfig_clicked() {
     auto responses = runcontrol_.sendCommand("launch");
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Launch: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
+    }
+}
+
+void RunControlGUI::on_btnLand_clicked() {
+    auto responses = runcontrol_.sendCommand("land");
+    for(auto& response : responses) {
+        LOG(logger_, STATUS) << "Land: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
@@ -176,7 +187,8 @@ State RunControlGUI::updateInfos() {
     bool confLoaded = rx_conf.exactMatch(txtConfigFileName->text());
 
     btnInit->setEnabled((state == State::NEW || state == State::ERROR) && confLoaded);
-    btnConfig->setEnabled(state == State::NEW || state == State::INIT);
+    btnLand->setEnabled(state == State::ORBIT);
+    btnConfig->setEnabled(state == State::INIT);
     btnLoadConf->setEnabled(state != State::RUN || state != State::ORBIT);
     btnStart->setEnabled(state == State::ORBIT);
     btnStop->setEnabled(state == State::RUN);
@@ -205,27 +217,21 @@ State RunControlGUI::updateInfos() {
 }
 
 void RunControlGUI::closeEvent(QCloseEvent* event) {
-    if(QMessageBox::question(
-           this, "Quitting", "Terminate all connections and quit?", QMessageBox::Ok | QMessageBox::Cancel) ==
-       QMessageBox::Cancel) {
-        event->ignore();
-    } else {
-        QSettings settings("Constellation collaboration", "Constellation");
-        settings.beginGroup("qcontrol");
-        if(current_run_nr_ != 0)
-            settings.setValue("runnumber", current_run_nr_);
-        else
-            settings.setValue("runnumber", m_run_n_qsettings);
-        settings.setValue("size", size());
-        settings.setValue("pos", pos());
-        settings.setValue("lastConfigFile", txtConfigFileName->text());
-        settings.setValue("lastInitFile", txtInitFileName->text());
-        settings.setValue("successexit", 1);
-        settings.endGroup();
+    QSettings settings("Constellation collaboration", "Constellation");
+    settings.beginGroup("qcontrol");
+    if(current_run_nr_ != 0)
+        settings.setValue("runnumber", current_run_nr_);
+    else
+        settings.setValue("runnumber", m_run_n_qsettings);
+    settings.setValue("size", size());
+    settings.setValue("pos", pos());
+    settings.setValue("lastConfigFile", txtConfigFileName->text());
+    settings.setValue("lastInitFile", txtInitFileName->text());
+    settings.setValue("successexit", 1);
+    settings.endGroup();
 
-        // FIXME terminate the application, send shutdown command to satellites?
-        event->accept();
-    }
+    // Terminate the application
+    event->accept();
 }
 
 void RunControlGUI::Exec() {

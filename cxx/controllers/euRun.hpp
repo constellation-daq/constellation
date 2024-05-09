@@ -27,7 +27,10 @@ private:
     void closeEvent(QCloseEvent* event) override;
 
 private slots:
+    void DisplayTimer();
+
     void on_btnInit_clicked();
+    void on_btnLand_clicked();
     void on_btnConfig_clicked();
     void on_btnStart_clicked();
     void on_btnStop_clicked();
@@ -49,8 +52,6 @@ private:
     bool checkFile(QString file, QString usecase);
 
     bool allConnectionsInState(constellation::satellite::State state);
-
-    void DisplayTimer();
 
     QRunControl runcontrol_;
     constellation::log::Logger logger_;
