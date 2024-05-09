@@ -33,8 +33,8 @@ QVariant QRunControl::data(const QModelIndex& index, int role) const {
         return QString::fromStdString(name.substr(0, type_endpos));
     }
     case 1: {
-        const auto name_endpos = name.find_first_of('.', 0);
-        return QString::fromStdString(name.substr(name_endpos));
+        const auto name_startpos = name.find_first_of('.', 0);
+        return QString::fromStdString(name.substr(name_startpos + 1));
     }
     case 2: {
         const auto state = std::string(magic_enum::enum_name(conn.state));
