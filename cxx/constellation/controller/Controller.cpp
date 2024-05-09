@@ -25,7 +25,11 @@ using namespace constellation::utils;
 
 Controller::Controller(std::string_view controller_name) : logger_("CONTROLLER"), controller_name_(controller_name) {
     LOG(logger_, DEBUG) << "Registering controller callback";
-    chirp::Manager::getDefaultInstance()->registerDiscoverCallback(&Controller::callback, chirp::CONTROL, this);
+    auto* chirp_manager = chirp::Manager::getDefaultInstance();
+    if(chirp_manager != nullptr) {
+        chirp_manager->registerDiscoverCallback(&Controller::callback, chirp::CONTROL, this);
+        chirp_manager->sendRequest(chirp::CONTROL);
+    }
 }
 
 // NOLINTNEXTLINE(performance-unnecessary-value-param)
