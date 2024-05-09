@@ -22,6 +22,7 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/heartbeat/HeartbeatRecv.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
@@ -79,6 +80,15 @@ namespace constellation::controller {
 
         void callback_impl(const constellation::chirp::DiscoveredService& service, bool depart);
 
+        /**
+         * @brief Helper to process heartbeats. This is registered as callback in the heartbeat receiver
+         * @details It registers and updates the last heartbeat time point as well as the received state from remote
+         * heartbeat services
+         *
+         * @param msg Received CHP message from remote service
+         * */
+        void process_heartbeat(const message::CHP1Message& msg);
+
     protected:
         /**
          * @brief Method to propagate updates of the connections
@@ -97,6 +107,7 @@ namespace constellation::controller {
     private:
         std::string controller_name_;
         zmq::context_t context_ {};
+        constellation::heartbeat::HeartbeatRecv heartbeat_receiver_;
     };
 
 } // namespace constellation::controller

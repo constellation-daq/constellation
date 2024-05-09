@@ -24,7 +24,9 @@ using namespace constellation::message;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 
-Controller::Controller(std::string_view controller_name) : logger_("CONTROLLER"), controller_name_(controller_name) {
+Controller::Controller(std::string_view controller_name)
+    : logger_("CONTROLLER"), controller_name_(controller_name),
+      heartbeat_receiver_([this](auto&& arg) { process_heartbeat(std::forward<decltype(arg)>(arg)); }) {
     LOG(logger_, DEBUG) << "Registering controller callback";
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
     if(chirp_manager != nullptr) {
@@ -88,6 +90,23 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
 
     // trigger update method
     propagate_update(connections_.size());
+}
+
+void Controller::process_heartbeat(const message::CHP1Message& msg) {
+
+    const std::lock_guard connection_lock {connection_mutex_};
+
+    const auto sat = connections_.find(msg.getSender());
+    if(sat != connections_.end()) {
+        LOG(logger_, DEBUG) << msg.getSender() << " reports state " << magic_enum::enum_name(msg.getState())
+                            << ", next message in " << msg.getInterval().count();
+        // Update status:
+        sat->second.state = msg.getState();
+        // Call update propagator
+        propagate_update(connections_.size());
+    } else {
+        LOG(logger_, TRACE) << "Ignoring heartbeat from " << msg.getSender() << ", satellite is not connected";
+    }
 }
 
 bool Controller::isInState(State state) const {
