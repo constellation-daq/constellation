@@ -76,6 +76,8 @@ RunControlGUI::RunControlGUI(std::string_view controller_name)
     }
 
     setWindowTitle("Constellation QControl " CNSTLN_VERSION);
+    connect(&m_timer_display, SIGNAL(timeout()), this, SLOT(DisplayTimer()));
+    m_timer_display.start(1000); // internal update time of GUI
     btnInit->setEnabled(1);
     btnConfig->setEnabled(1);
     btnLoadInit->setEnabled(1);
@@ -155,6 +157,11 @@ void RunControlGUI::on_btnLoadConf_clicked() {
     if(!filename.isNull()) {
         txtConfigFileName->setText(filename);
     }
+}
+
+void RunControlGUI::DisplayTimer() {
+    auto state = updateInfos();
+    updateStatusDisplay();
 }
 
 State RunControlGUI::updateInfos() {

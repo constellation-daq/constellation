@@ -50,6 +50,8 @@ private:
 
     bool allConnectionsInState(constellation::satellite::State state);
 
+    void DisplayTimer();
+
     QRunControl runcontrol_;
     constellation::log::Logger logger_;
     constellation::log::Logger user_logger_;
@@ -59,6 +61,7 @@ private:
     std::map<QString, QString> m_map_label_str;
 
     QItemDelegate m_delegate;
+    QTimer m_timer_display;
     std::map<QString, QLabel*> m_str_label;
 
     uint32_t m_run_n_qsettings;
