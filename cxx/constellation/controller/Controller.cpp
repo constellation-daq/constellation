@@ -85,6 +85,9 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
             LOG(logger_, INFO) << "Registered remote satellite at " << uri;
         }
     }
+
+    // trigger update method
+    propagate_update(connections_.size());
 }
 
 bool Controller::isInState(State state) {

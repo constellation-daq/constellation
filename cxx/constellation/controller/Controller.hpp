@@ -75,11 +75,20 @@ namespace constellation::controller {
     private:
         message::CSCP1Message send_receive(Connection& conn, message::CSCP1Message& cmd);
 
-        void callback_impl(const constellation::chirp::DiscoveredService& service, bool depart);
-
         static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
 
+        void callback_impl(const constellation::chirp::DiscoveredService& service, bool depart);
+
     protected:
+        /**
+         * @brief Method to propagate updates of the connections
+         * @details This virtual method can be overridden by derived controller classes in order to be informed about
+         * updates of the attached connections such as new or departed connections as well as state and data changes
+         *
+         * @param connections Number of current connections
+         */
+        virtual void propagate_update(std::size_t /*unused*/) {};
+
         /** Logger to use */
         log::Logger logger_;                                         // NOLINT(*-non-private-member-variables-in-classes)
         std::map<std::string, Connection, std::less<>> connections_; // NOLINT(*-non-private-member-variables-in-classes)
