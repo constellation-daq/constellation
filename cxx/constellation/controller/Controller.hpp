@@ -29,6 +29,10 @@
 namespace constellation::controller {
 
     class CNSTLN_API Controller {
+    public:
+        /** Payload of a transition function: variant with config, partial_config or run_nr */
+        using CommandPayload = std::variant<std::monostate, config::Dictionary, config::List, std::uint32_t>;
+
     protected:
         struct Connection {
             zmq::socket_t req;
@@ -49,12 +53,13 @@ namespace constellation::controller {
 
     public:
         message::CSCP1Message sendCommand(std::string_view satellite_name, message::CSCP1Message& cmd);
-        // FIXME allow adding payload!
-        message::CSCP1Message sendCommand(std::string_view satellite_name, const std::string& verb);
+        message::CSCP1Message sendCommand(std::string_view satellite_name,
+                                          const std::string& verb,
+                                          const CommandPayload& payload = {});
 
         std::map<std::string, message::CSCP1Message> sendCommand(message::CSCP1Message& cmd);
-        // FIXME allow adding payload!
-        std::map<std::string, message::CSCP1Message> sendCommand(const std::string& verb);
+        std::map<std::string, message::CSCP1Message> sendCommand(const std::string& verb,
+                                                                 const CommandPayload& payload = {});
 
         /**
          * @brief Helper to check if all connections are in a given state

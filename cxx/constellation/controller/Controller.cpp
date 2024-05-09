@@ -18,6 +18,7 @@
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
+using namespace constellation::config;
 using namespace constellation::controller;
 using namespace constellation::message;
 using namespace constellation::satellite;
@@ -117,12 +118,32 @@ std::map<std::string, CSCP1Message> Controller::sendCommand(CSCP1Message& cmd) {
     return replies;
 }
 
-std::map<std::string, CSCP1Message> Controller::sendCommand(const std::string& verb) {
+std::map<std::string, CSCP1Message> Controller::sendCommand(const std::string& verb, const CommandPayload& payload) {
     auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, {verb}});
+    if(std::holds_alternative<Dictionary>(payload)) {
+        send_msg.addPayload(std::get<Dictionary>(payload).assemble());
+    } else if(std::holds_alternative<List>(payload)) {
+        send_msg.addPayload(std::get<List>(payload).assemble());
+    } else if(std::holds_alternative<std::uint32_t>(payload)) {
+        msgpack::sbuffer sbuf {};
+        msgpack::pack(sbuf, std::get<std::uint32_t>(payload));
+        send_msg.addPayload(std::move(sbuf));
+    }
     return sendCommand(send_msg);
 }
 
-CSCP1Message Controller::sendCommand(std::string_view satellite_name, const std::string& verb) {
+CSCP1Message Controller::sendCommand(std::string_view satellite_name,
+                                     const std::string& verb,
+                                     const CommandPayload& payload) {
     auto send_msg = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, {verb}});
+    if(std::holds_alternative<Dictionary>(payload)) {
+        send_msg.addPayload(std::get<Dictionary>(payload).assemble());
+    } else if(std::holds_alternative<List>(payload)) {
+        send_msg.addPayload(std::get<List>(payload).assemble());
+    } else if(std::holds_alternative<std::uint32_t>(payload)) {
+        msgpack::sbuffer sbuf {};
+        msgpack::pack(sbuf, std::get<std::uint32_t>(payload));
+        send_msg.addPayload(std::move(sbuf));
+    }
     return sendCommand(satellite_name, send_msg);
 }
