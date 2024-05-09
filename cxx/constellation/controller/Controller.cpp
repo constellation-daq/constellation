@@ -95,7 +95,8 @@ State Controller::getLowestState() {
 }
 
 CSCP1Message Controller::send_receive(Connection& conn, CSCP1Message& cmd) {
-    cmd.assemble().send(conn.req);
+    // Keep payload, we might send multiple command messages:
+    cmd.assemble(true).send(conn.req);
     zmq::multipart_t recv_zmq_msg {};
     recv_zmq_msg.recv(conn.req);
     return CSCP1Message::disassemble(recv_zmq_msg);
