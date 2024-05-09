@@ -43,7 +43,7 @@ namespace constellation::controller {
         };
 
     public:
-        virtual ~Controller() = default;
+        virtual ~Controller();
         Controller(std::string_view controller_name);
 
         // No copy/move constructor/assignment

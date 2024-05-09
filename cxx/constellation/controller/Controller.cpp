@@ -33,6 +33,15 @@ Controller::Controller(std::string_view controller_name) : logger_("CONTROLLER")
     }
 }
 
+Controller::~Controller() {
+    const std::lock_guard connection_lock {connection_mutex_};
+
+    for(auto& conn : connections_) {
+        conn.second.req.close();
+    }
+    connections_.clear();
+}
+
 // NOLINTNEXTLINE(performance-unnecessary-value-param)
 void Controller::callback(chirp::DiscoveredService service, bool depart, std::any user_data) {
     auto* instance = std::any_cast<Controller*>(user_data);
@@ -50,6 +59,7 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
             return sat.second.host_id == service.host_id;
         });
         if(it != connections_.end()) {
+            it->second.req.close();
             connections_.erase(it);
             LOG(logger_, INFO) << "Satellite at " << uri << " departed";
         }
