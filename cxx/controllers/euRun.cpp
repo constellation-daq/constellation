@@ -97,7 +97,7 @@ void RunControlGUI::on_btnInit_clicked() {
     if(!checkFile(QString::fromStdString(settings), QString::fromStdString("config file")))
         return;
 
-    auto responses = runcontrol_.sendCommand("initialize");
+    auto responses = runcontrol_.sendCommand("initialize", constellation::config::Dictionary());
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Initialize: " << response.first << ": "
                              << utils::to_string(response.second.getVerb().first);
@@ -127,7 +127,7 @@ void RunControlGUI::on_btnStart_clicked() {
     }
 
     // FIXME run number
-    auto responses = runcontrol_.sendCommand("start");
+    auto responses = runcontrol_.sendCommand("start", current_run_nr_);
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Start: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
@@ -250,7 +250,9 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
 
     // FIXME pass configuration
     QAction* initialiseAction = new QAction("Initialize", this);
-    connect(initialiseAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "initialize"); });
+    connect(initialiseAction, &QAction::triggered, this, [this, index]() {
+        runcontrol_.sendQCommand(index, "initialize", constellation::config::Dictionary());
+    });
     contextMenu->addAction(initialiseAction);
 
     // load an eventually updated config file
@@ -263,7 +265,9 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     contextMenu->addAction(landAction);
 
     QAction* startAction = new QAction("Start", this);
-    connect(startAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "start"); });
+    connect(startAction, &QAction::triggered, this, [this, index]() {
+        runcontrol_.sendQCommand(index, "start", current_run_nr_);
+    });
     contextMenu->addAction(startAction);
 
     QAction* stopAction = new QAction("Stop", this);

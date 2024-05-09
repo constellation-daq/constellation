@@ -16,6 +16,8 @@ QVariant QRunControl::data(const QModelIndex& index, int role) const {
         return QVariant();
     }
 
+    const std::lock_guard connection_lock {connection_mutex_};
+
     if(index.row() >= static_cast<int>(connections_.size()) || index.column() >= static_cast<int>(headers_.size())) {
         return QVariant();
     }
@@ -67,9 +69,15 @@ QVariant QRunControl::headerData(int section, Qt::Orientation orientation, int r
     return QVariant();
 }
 
-void QRunControl::sendQCommand(const QModelIndex& index, const std::string& verb) {
+void QRunControl::sendQCommand(const QModelIndex& index, const std::string& verb, const CommandPayload& payload) {
+    std::unique_lock<std::mutex> lock(connection_mutex_);
+
     // Select connection by index:
     auto it = connections_.begin();
     std::advance(it, index.row());
-    Controller::sendCommand(it->first, verb);
+
+    // Unlock so the controller can grab it
+    lock.unlock();
+
+    Controller::sendCommand(it->first, verb, payload);
 }

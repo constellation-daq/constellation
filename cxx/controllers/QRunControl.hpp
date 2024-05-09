@@ -20,7 +20,7 @@ public:
 
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
-    void sendQCommand(const QModelIndex& index, const std::string& verb);
+    void sendQCommand(const QModelIndex& index, const std::string& verb, const CommandPayload& payload = {});
 
 private:
     static constexpr std::array<const char*, 6> headers_ {"type", "name", "state", "connection", "message", "information"};
