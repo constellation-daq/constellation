@@ -11,6 +11,7 @@
 
 #include <any>
 #include <cstdint>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -82,6 +83,7 @@ namespace constellation::controller {
         /** Logger to use */
         log::Logger logger_;                                         // NOLINT(*-non-private-member-variables-in-classes)
         std::map<std::string, Connection, std::less<>> connections_; // NOLINT(*-non-private-member-variables-in-classes)
+        mutable std::mutex connection_mutex_;                        // NOLINT(*-non-private-member-variables-in-classes)
 
     private:
         std::string controller_name_;

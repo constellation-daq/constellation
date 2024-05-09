@@ -41,6 +41,8 @@ void Controller::callback(chirp::DiscoveredService service, bool depart, std::an
 
 void Controller::callback_impl(const constellation::chirp::DiscoveredService& service, bool depart) {
 
+    const std::lock_guard connection_lock {connection_mutex_};
+
     // Add or drop, depending on message:
     const auto uri = service.to_uri();
     if(depart) {
@@ -72,6 +74,8 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
 }
 
 bool Controller::isInState(State state) {
+    const std::lock_guard connection_lock {connection_mutex_};
+
     if(std::ranges::all_of(
            connections_.cbegin(), connections_.cend(), [state](const auto& conn) { return conn.second.state == state; })) {
         return true;
@@ -81,6 +85,8 @@ bool Controller::isInState(State state) {
 }
 
 State Controller::getLowestState() {
+    const std::lock_guard connection_lock {connection_mutex_};
+
     if(connections_.empty()) {
         return State::NEW;
     }
@@ -103,6 +109,8 @@ CSCP1Message Controller::send_receive(Connection& conn, CSCP1Message& cmd) {
 }
 
 CSCP1Message Controller::sendCommand(std::string_view satellite_name, CSCP1Message& cmd) {
+    const std::lock_guard connection_lock {connection_mutex_};
+
     const auto sat = connections_.find(satellite_name);
     if(sat == connections_.end()) {
         return CSCP1Message({controller_name_}, {CSCP1Message::Type::ERROR, "Target satellite is unknown to controller"});
@@ -112,6 +120,8 @@ CSCP1Message Controller::sendCommand(std::string_view satellite_name, CSCP1Messa
 }
 
 std::map<std::string, CSCP1Message> Controller::sendCommand(CSCP1Message& cmd) {
+
+    const std::lock_guard connection_lock {connection_mutex_};
     std::map<std::string, CSCP1Message> replies;
     for(auto& sat : connections_) {
         replies.emplace(sat.first, send_receive(sat.second, cmd));
