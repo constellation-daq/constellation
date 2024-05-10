@@ -26,9 +26,14 @@ default:
       - stuck_or_timeout_failure
       - runner_system_failure
 
+# SAST
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+
 variables:
   CCACHE_DIR: $CI_PROJECT_DIR/.cache/ccache
   PIP_CACHE_DIR: $CI_PROJECT_DIR/.cache/pip
+  SAST_EXCLUDED_PATHS: "subprojects, cxx/tests, python/tests"
 
 # C++ templates
 
