@@ -141,10 +141,12 @@ namespace constellation::controller {
          *
          * @param conn Target connection
          * @param cmd CSCP message
+         * @param keep_payload Flag to indicate whether to release payload upon sending or not. This should be set to true
+         * when sending the same command to multiple satellites. Defaults to false.
          *
          * @return CSCP response message
          */
-        static message::CSCP1Message send_receive(Connection& conn, message::CSCP1Message& cmd);
+        static message::CSCP1Message send_receive(Connection& conn, message::CSCP1Message& cmd, bool keep_payload = false);
 
         /**
          * @brief Callback helper for CHIPR service discovery

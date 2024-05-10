@@ -142,9 +142,9 @@ State Controller::getLowestState() const {
     return state;
 }
 
-CSCP1Message Controller::send_receive(Connection& conn, CSCP1Message& cmd) {
-    // Keep payload, we might send multiple command messages:
-    cmd.assemble(true).send(conn.req);
+CSCP1Message Controller::send_receive(Connection& conn, CSCP1Message& cmd, bool keep_payload) {
+    // Possible keep payload, we might send multiple command messages:
+    cmd.assemble(keep_payload).send(conn.req);
     zmq::multipart_t recv_zmq_msg {};
     recv_zmq_msg.recv(conn.req);
     return CSCP1Message::disassemble(recv_zmq_msg);
@@ -173,7 +173,7 @@ std::map<std::string, CSCP1Message> Controller::sendCommand(CSCP1Message& cmd) {
     const std::lock_guard connection_lock {connection_mutex_};
     std::map<std::string, CSCP1Message> replies;
     for(auto& sat : connections_) {
-        replies.emplace(sat.first, send_receive(sat.second, cmd));
+        replies.emplace(sat.first, send_receive(sat.second, cmd, true));
     }
     return replies;
 }
