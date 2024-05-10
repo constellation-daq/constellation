@@ -37,24 +37,17 @@ extern "C" std::shared_ptr<Satellite> generator(std::string_view type_name, std:
 }
 
 CaribouSatellite::CaribouSatellite(std::string_view type_name, std::string_view satellite_name)
-    : Satellite(type_name, satellite_name) {
-    const auto pos = satellite_name.find_last_of('_');
-    if(pos == std::string_view::npos) {
-        device_name_ = satellite_name;
-        LOG(logger_, INFO) << "Instantiated " << getCanonicalName() << " for device \"" << device_name_ << "\"";
-    } else {
-        device_name_ = satellite_name.substr(0, pos);
-        const auto identifier = satellite_name.substr(pos + 1);
-        LOG(logger_, INFO) << "Instantiated " << getCanonicalName() << " for device \"" << device_name_
-                           << "\" with identifier \"" << identifier << "\"";
-    }
+    : Satellite(type_name, satellite_name), manager_(std::make_shared<DeviceManager>()) {}
 
-    // Create new Peary device manager
-    manager_ = std::make_shared<DeviceManager>();
-}
-
-void CaribouSatellite::initializing(const constellation::config::Configuration& config) {
+void CaribouSatellite::initializing(constellation::config::Configuration& config) {
     LOG(logger_, INFO) << "Initializing " << getCanonicalName();
+
+    // Clear all existing devices - the initializing method can be called multiple times!
+    manager_->clearDevices();
+
+    // Read the device type from the configuration:
+    device_class_ = config.get<std::string>("type");
+    LOG(logger_, INFO) << "Instantiated " << getCanonicalName() << " for device \"" << device_class_ << "\"";
 
     // Open configuration file and read caribou configuration
     caribou::Configuration caribou_config {};
@@ -69,17 +62,17 @@ void CaribouSatellite::initializing(const constellation::config::Configuration& 
 
     // Select section from the configuration file relevant for this device
     const auto sections = caribou_config.GetSections();
-    if(std::find(sections.cbegin(), sections.cend(), device_name_) != sections.cend()) {
-        caribou_config.SetSection(device_name_);
+    if(std::find(sections.cbegin(), sections.cend(), device_class_) != sections.cend()) {
+        caribou_config.SetSection(device_class_);
     }
 
     std::lock_guard<std::mutex> lock {device_mutex_};
     try {
-        const auto device_id = manager_->addDevice(device_name_, caribou_config);
+        const auto device_id = manager_->addDevice(device_class_, caribou_config);
         LOG(logger_, INFO) << "Manager returned device ID " << device_id << ", fetching device...";
         device_ = manager_->getDevice(device_id);
     } catch(const caribou::DeviceException& error) {
-        LOG(logger_, CRITICAL) << "Failed to get device \"" << device_name_ << "\": " << error.what();
+        LOG(logger_, CRITICAL) << "Failed to get device \"" << device_class_ << "\": " << error.what();
         throw std::exception();
     }
 
