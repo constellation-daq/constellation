@@ -42,6 +42,9 @@ CaribouSatellite::CaribouSatellite(std::string_view type_name, std::string_view 
 void CaribouSatellite::initializing(constellation::config::Configuration& config) {
     LOG(logger_, INFO) << "Initializing " << getCanonicalName();
 
+    // Set default values:
+    config.setDefault("adc_frequency", 1000);
+
     // Clear all existing devices - the initializing method can be called multiple times!
     manager_->clearDevices();
 
@@ -92,8 +95,6 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
         }
     }
 
-    // Store the configuration:
-    config_ = config;
     LOG(logger_, STATUS) << getCanonicalName() << " initialized";
 }
 
@@ -120,19 +121,20 @@ void CaribouSatellite::launching() {
     }
 
     // Set additional registers from the configuration:
-    if(config_.has("register_key") || config_.has("register_value")) {
-        auto key = config_.get<std::string>("register_key", "");
-        auto value = config_.get("register_value", 0);
+    const auto& config = getConfig();
+    if(config.has("register_key") && config.has("register_value")) {
+        auto key = config.get<std::string>("register_key");
+        auto value = config.get<uintptr_t>("register_value");
         device_->setRegister(key, value);
         LOG(logger_, INFO) << "Setting " << key << " = " << std::to_string(value);
     }
 
-    // Select which ADC signal to regularly fetch:
-    adc_signal_ = config_.get<std::string>("adc_signal", "");
-    adc_freq_ = config_.get("adc_frequency", 1000);
+    if(config.has("adc_signal")) {
+        // Select which ADC signal to regularly fetch:
+        adc_signal_ = config.get<std::string>("adc_signal");
+        adc_freq_ = config.get<std::uint64_t>("adc_frequency");
 
-    if(!adc_signal_.empty()) {
-        // Try it out directly to catch misconfiugration
+        // Try it out directly to catch mis-configuration
         auto adc_value = device_->getADC(adc_signal_);
         LOG(logger_, INFO) << "Will probe ADC signal \"" << adc_signal_ << "\" every " << adc_freq_ << " frames";
         LOG(logger_, TRACE) << "ADC value: " << adc_value; // FIXME: unused variable, send as stats instead
@@ -164,7 +166,6 @@ void CaribouSatellite::starting(std::uint32_t run_number) {
 
     // How to add additional information for the Begin-of-run event, e.g. containing tags with detector information?
     /*DataSender::BORMessage bor_msg {};
-    bor_msg.set_config(config_);
     bor_msg.add_tag("software", device_->getVersion());
     bor_msg.add_tag("firmware", device_->getFirmwareVersion());
     const auto registers = device_->getRegisters();
