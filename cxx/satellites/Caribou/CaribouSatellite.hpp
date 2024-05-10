@@ -37,7 +37,7 @@ public:
     void running(const std::stop_token& stop_token) override;
 
 private:
-    std::string device_name_;
+    std::string device_class_;
     Configuration config_;
 
     std::shared_ptr<caribou::DeviceManager> manager_;
