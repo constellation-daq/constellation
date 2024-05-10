@@ -107,10 +107,16 @@ void RunControlGUI::on_btnInit_clicked() {
 }
 
 void RunControlGUI::on_btnTerminate_clicked() {
-    // FIXME we don;;t close but shutdown satellites
+    // We don't close the GUI but shutdown satellites instead:
     if(QMessageBox::question(this, "Quitting", "Shutdown all satellites?", QMessageBox::Ok | QMessageBox::Cancel) ==
        QMessageBox::Cancel) {
+        LOG(logger_, DEBUG) << "Aborted satellite shutdown";
     } else {
+        auto responses = runcontrol_.sendCommand("shutdown");
+        for(auto& response : responses) {
+            LOG(logger_, STATUS) << "Shutdown: " << response.first << ": "
+                                 << utils::to_string(response.second.getVerb().first);
+        }
     }
 }
 
@@ -297,9 +303,9 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     // connect(resetAction, &QAction::triggered, this, [this,index]() { runcontrol_.reset(index); });
     // contextMenu->addAction(resetAction);
 
-    // QAction *terminateAction = new QAction("Terminate", this);
-    // connect(terminateAction, &QAction::triggered, this, [this,index]() { /** FIXME end the satellite */ });
-    // contextMenu->addAction(terminateAction);
+    QAction* terminateAction = new QAction("Shutdown", this);
+    connect(terminateAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "shutdown"); });
+    contextMenu->addAction(terminateAction);
 
     // Request possible commands from remote:
     auto dict = runcontrol_.getQCommands(index);
