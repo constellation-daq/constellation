@@ -28,7 +28,7 @@ public:
     CaribouSatellite(std::string_view type_name, std::string_view satellite_name);
 
 public:
-    void initializing(const Configuration& config) override;
+    void initializing(Configuration& config) override;
     void launching() override;
     void landing() override;
     void reconfiguring(const Configuration& partial_config) override;
