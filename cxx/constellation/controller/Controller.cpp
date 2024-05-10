@@ -36,8 +36,15 @@ Controller::Controller(std::string_view controller_name)
 }
 
 Controller::~Controller() {
-    const std::lock_guard connection_lock {connection_mutex_};
 
+    // Unregister callback
+    auto* chirp_manager = chirp::Manager::getDefaultInstance();
+    if(chirp_manager != nullptr) {
+        chirp_manager->unregisterDiscoverCallback(&Controller::callback, chirp::CONTROL);
+    }
+
+    // Close all open connections
+    const std::lock_guard connection_lock {connection_mutex_};
     for(auto& conn : connections_) {
         conn.second.req.close();
     }
@@ -75,12 +82,13 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
         const auto recv_msg_name = send_receive(conn, send_msg_name);
         const auto name = recv_msg_name.getVerb().second;
 
+        // Obtain current state
         auto send_msg_state = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "get_state"});
         const auto recv_msg_state = send_receive(conn, send_msg_state);
         conn.state = magic_enum::enum_cast<State>(recv_msg_state.getVerb().second).value_or(State::NEW);
 
+        // Add to map of open connections
         const auto [it, success] = connections_.emplace(name, std::move(conn));
-
         if(!success) {
             LOG(logger_, DEBUG) << "Not adding remote satellite at " << uri << ", was already registered";
         } else {
@@ -88,7 +96,7 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
         }
     }
 
-    // trigger update method
+    // Trigger method for propagation of connection list updates
     propagate_update(connections_.size());
 }
 
@@ -96,12 +104,14 @@ void Controller::process_heartbeat(const message::CHP1Message& msg) {
 
     const std::lock_guard connection_lock {connection_mutex_};
 
+    // Find satellite from connection list based in the heartbeat sender name
     const auto sat = connections_.find(msg.getSender());
     if(sat != connections_.end()) {
         LOG(logger_, DEBUG) << msg.getSender() << " reports state " << magic_enum::enum_name(msg.getState())
                             << ", next message in " << msg.getInterval().count();
-        // Update status:
+        // Update status
         sat->second.state = msg.getState();
+
         // Call update propagator
         propagate_update(connections_.size());
     } else {
@@ -143,11 +153,18 @@ CSCP1Message Controller::send_receive(Connection& conn, CSCP1Message& cmd) {
 CSCP1Message Controller::sendCommand(std::string_view satellite_name, CSCP1Message& cmd) {
     const std::lock_guard connection_lock {connection_mutex_};
 
+    // Check if this is a request message
+    if(cmd.getVerb().first != CSCP1Message::Type::REQUEST) {
+        return {{controller_name_}, {CSCP1Message::Type::ERROR, "Can only send command messages of type REQUEST"}};
+    }
+
+    // Find satellite by canonical name:
     const auto sat = connections_.find(satellite_name);
     if(sat == connections_.end()) {
         return {{controller_name_}, {CSCP1Message::Type::ERROR, "Target satellite is unknown to controller"}};
     }
 
+    // Exchange messages
     return send_receive(sat->second, cmd);
 }
 
