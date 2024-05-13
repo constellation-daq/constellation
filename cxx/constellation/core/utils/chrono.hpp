@@ -54,7 +54,7 @@ namespace constellation::utils {
         requires chrono_time_point<T>
     inline std::string time_point_to_string(T tp) {
         // Convert to system_clock to get time_t
-        const auto tp_sys = std::chrono::clock_cast<std::chrono::system_clock>(tp);
+        const auto tp_sys = tp; // std::chrono::clock_cast<std::chrono::system_clock>(tp);
         // Convert time point to tm struct
         const auto time_t = std::chrono::system_clock::to_time_t(tp_sys);
         std::tm tm {};
