@@ -1,0 +1,60 @@
+Device:
+    Configuration:
+        Device: 2410
+        #use 'COM<n>' for Windows (n is integer)
+        #use '/dev/ttyUSB<n>' for Linux/MAC (n is integer)
+        #might need to: 'sudo chmod a+rw /dev/ttyUSB<n>'
+        Port: '/dev/ttyUSB0'
+        Baudrate: 19200
+        TimeOut: 2
+        #NOTE: On Keithley: set RS-232 connection to have this baud rate, 8 bits, even partiy, <CR+LF> terminator
+        
+        Measure: 'I'
+        # For ComplianceMeasure
+        # For 2400 Series:
+        #     current: from -1.05A to +1.05A
+        #     voltage: from -210V to +210V
+        # For 2410 Series:
+        #     current: from -1.05A to +1.05A
+        #     voltage: from -1100V to +1100V
+        #
+        #0.000105 for the standard 105 µA
+        #Highest available range depends on the compliance
+        ComplianceMeasure: 0.000105 # [A] when sourcing V
+        RangeMeasure:      0.001 # [A]
+                
+        Source: 'V'   
+        #For ComplianceSoucre
+        # For RangeSource
+        # For 2400 Series:
+        #     current: from -1.05A to +1.05A
+        #     voltage: from -210V to +210V
+        # For 2410 Series:
+        #     current: from -1.05A to +1.05A
+        #     voltage: from -1100V to +1100V
+        #     possible over voltage protection values: 20, 40, 100, 200, 300, 400, 500, none if 501 or higher
+        #     if an OVP value is set between two allowed values, the lower is used
+        # Min and max allowed are used to restrict dangerous settings for your biased object
+        # Safe level is returned to before turning off
+        OVPSource:  20 # [V]
+        RangeSource:       10.0 # [V]
+        MinAllowedSource: -6.0 # [V]
+        MaxAllowedSource: 0.0 # [V]
+        SafeLevelSource: 0.0 # [V]
+
+        #For auto range
+        AutoRangeMeasure: 'ON'
+        AutoRangeSource: 'ON'
+        
+        #To get the display to show sensibly.
+        #Not super important, since we read the current off anyway.
+        TriggerCount: 2
+        TriggerDelay: 0.001
+        WaitRead: 0.05
+
+        SettlingTime: 0.1
+SetVoltage:
+    V_Step:  0.25  # [V]
+    V_Set:   -2.4  # [V]
+CurrentPublish:
+    Interval: 1 # [s]
