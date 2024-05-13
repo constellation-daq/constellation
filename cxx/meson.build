@@ -76,6 +76,8 @@ constellation_inc = include_directories('.')
 # RPATH for non-default install locations
 constellation_rpath = get_option('prefix') / get_option('libdir')
 
+add_project_arguments('-fexperimental-library', language: 'cpp')
+
 subdir('constellation')
 subdir('tools')
 subdir('satellites')
