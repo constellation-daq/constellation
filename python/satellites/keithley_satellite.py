@@ -5,8 +5,9 @@ import yaml
 from constellation.core.satellite import Satellite
 from constellation.core.configuration import Configuration
 from powerSupplyControl.Keithley6517 import KeithleySMU6517Series
-import time
 import logging
+
+METRICS_PERIOD = 5.0
 
 
 class Keithley_Satellite(Satellite):
@@ -67,25 +68,30 @@ class Keithley_Satellite(Satellite):
         # ramp to V_Set
         self.device.ramp_v(self.v_set, self.v_step, "V")
 
-        # Start publishing the current
-        # self.publish_current = True
-        # self.current_stat_thread = threading.Thread(target=self.pub_current_stat, args=(self.current_publish_interval,))
-        # self.current_stat_thread.start()
+        # How to stop it, though?
+        self.schedule_metric(
+            "Current",
+            self.device.get_current,
+            interval=METRICS_PERIOD,
+        )
+
+        # How to stop it, though?
+        # self.schedule_metric(
+        #    "Voltage",
+        #    self.device.get_voltage,
+        #    interval=METRICS_PERIOD,
+        # )
         return "Launched."
 
     def do_landing(self, payload: any) -> str:
         """Return Satellite to Initialized state."""
-        super.do_landing(payload)
+        super().do_landing(payload)
         self.log.info(
             "Landing Keithley satellite. Ramping down voltage to safe level of "
             + str(self.device._SafeLevelSource)
             + " V."
         )
-        # Stop current-publishing thread
-        self.publish_current = False
-        if self.current_stat_thread.is_alive():
-            self.current_stat_thread.join()
-        # ramp to safe
+        # TODO: Stop current-publishing thread
         self.device.ramp_v(self.device._SafeLevelSource, self.v_step, "V")
         return "Landed."
 
@@ -128,19 +134,6 @@ class Keithley_Satellite(Satellite):
         self.device.ramp_v(self.device._SafeLevelSource, self.v_step, "V")
         return "Interrupted."
 
-    def on_unload(self):
-        """Callback method for the 'deinitialize' transition of the FSM.
-
-        Undo actions from 'do_initialize'
-        """
-        # Unload config, reset everything to default
-        # self.logstatspub.sendLog(
-        #    LogLevels.INFO, "Resetting and removing Keithley device."
-        # )
-        self.device.disconnect()
-        self.device = None
-        self.current_stat_thread = None
-
     def on_failure(self):
         """Callback method for the 'on_failure' transition of the FSM."""
         super().on_failure()
@@ -167,14 +160,6 @@ class Keithley_Satellite(Satellite):
         #    LogLevels.INFO, "Resetting and removing Keithley device."
         # )
         self.device.disconnect()
-
-    # Publishes the current reading
-    def pub_current_stat(self, interval):
-        while self.publish_current:
-            # self.logstatspub.sendStats(
-            #    "CURRENT", eddaEnums.DataType.FLOAT, self.device.get_current()[0]
-            # )
-            time.sleep(interval)
 
 
 # -------------------------------------------------------------------------
