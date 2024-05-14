@@ -86,9 +86,9 @@ install_headers(
 )
 
 install_headers(
-  'receiver/Receiver.hpp',
-  'receiver/Receiver.tpp',
-  subdir: 'constellation/core/receiver',
+  'subscriber/Subscriber.hpp',
+  'subscriber/Subscriber.tpp',
+  subdir: 'constellation/core/subscriber',
 )
 
 install_headers(

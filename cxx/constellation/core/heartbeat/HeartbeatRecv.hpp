@@ -21,10 +21,8 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/chirp/Manager.hpp"
-#include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
-#include "constellation/core/message/exceptions.hpp"
-#include "constellation/core/receiver/Receiver.hpp"
+#include "constellation/core/subscriber/Subscriber.hpp"
 
 namespace constellation::heartbeat {
 
@@ -35,7 +33,7 @@ namespace constellation::heartbeat {
      * services in the constellation and listens for heartbeat and extrasystole messages from remote satellites and forwards
      * them to a callback registered upon creation of the receiver
      */
-    class HeartbeatRecv : public Receiver<message::CHP1Message> {
+    class HeartbeatRecv : public Subscriber<message::CHP1Message> {
     public:
         /**
          * @brief Construct heartbeat receiver
@@ -43,7 +41,7 @@ namespace constellation::heartbeat {
          * @param callback Callback function pointer for received heartbeat messages
          */
         CNSTLN_API HeartbeatRecv(std::function<void(const message::CHP1Message&)> callback)
-            : Receiver<message::CHP1Message>(chirp::HEARTBEAT, callback) {}
+            : Subscriber<message::CHP1Message>(chirp::HEARTBEAT, "CHP", callback) {}
 
         /** Default destructor */
         CNSTLN_API ~HeartbeatRecv() = default;

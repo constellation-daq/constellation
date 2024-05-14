@@ -29,32 +29,34 @@
 namespace constellation::utils {
 
     /**
-     * Abstract receiver class
+     * Abstract Subscriber class
      *
      * This class registers a CHIRP callback for the services defined via the template parameter, listens to incoming
-     * messages and forwards them to a callback registered upon creation of the receiver
+     * messages and forwards them to a callback registered upon creation of the Subscriber
      */
-    template <typename MESSAGE> class Receiver {
+    template <typename MESSAGE> class Subscriber {
     public:
         /**
-         * @brief Construct receiver
+         * @brief Construct Subscriber
          *
          * @param callback Callback function pointer for received messages
          */
-        CNSTLN_API Receiver(chirp::ServiceIdentifier service, std::function<void(const MESSAGE&)> callback);
+        CNSTLN_API Subscriber(chirp::ServiceIdentifier service,
+                              const std::string& logger_name,
+                              std::function<void(const MESSAGE&)> callback);
 
         /**
-         * @brief Destruct receiver
+         * @brief Destruct Subscriber
          *
          * This closes all connections and unregisters the CHIRP service discovery callback
          */
-        CNSTLN_API virtual ~Receiver();
+        CNSTLN_API virtual ~Subscriber();
 
         // No copy/move constructor/assignment
-        Receiver(const Receiver& other) = delete;
-        Receiver& operator=(const Receiver& other) = delete;
-        Receiver(Receiver&& other) = delete;
-        Receiver& operator=(Receiver&& other) = delete;
+        Subscriber(const Subscriber& other) = delete;
+        Subscriber& operator=(const Subscriber& other) = delete;
+        Subscriber(Subscriber&& other) = delete;
+        Subscriber& operator=(Subscriber&& other) = delete;
 
         /**
          * @brief Callback for CHIRP service discovery
@@ -64,7 +66,7 @@ namespace constellation::utils {
          *
          * @param service Discovered service
          * @param depart Boolean to indicate discovery or departure
-         * @param user_data Pointer to the receiver instance
+         * @param user_data Pointer to the Subscriber instance
          */
         CNSTLN_API static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
 
@@ -93,11 +95,11 @@ namespace constellation::utils {
 
         std::timed_mutex sockets_mutex_;
         std::atomic_flag af_;
-        std::jthread receiver_thread_;
+        std::jthread subscriber_thread_;
 
         std::function<void(const MESSAGE&)> message_callback_;
     };
 } // namespace constellation::utils
 
 // Include template members
-#include "Receiver.tpp"
+#include "Subscriber.tpp"
