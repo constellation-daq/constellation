@@ -9,7 +9,6 @@ core_src = files(
   'config/Dictionary.cpp',
   'config/Value.cpp',
   'config/exceptions.cpp',
-  'heartbeat/HeartbeatRecv.cpp',
   'heartbeat/HeartbeatSend.cpp',
   'heartbeat/HeartbeatManager.cpp',
   'logging/CMDPSink.cpp',
@@ -84,6 +83,12 @@ install_headers(
   'message/Protocol.hpp',
   'message/satellite_definitions.hpp',
   subdir: 'constellation/core/message',
+)
+
+install_headers(
+  'receiver/Receiver.hpp',
+  'receiver/Receiver.tpp',
+  subdir: 'constellation/core/receiver',
 )
 
 install_headers(
