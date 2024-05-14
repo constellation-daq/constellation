@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include "HeartbeatRecv.hpp"
+#include "Receiver.hpp"
 
 #include <any>
 #include <functional>
@@ -21,36 +21,34 @@
 
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/logging/log.hpp"
-#include "constellation/core/message/CHP1Message.hpp"
 #include "constellation/core/message/exceptions.hpp"
 
 using namespace constellation;
-using namespace constellation::heartbeat;
 using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 
-HeartbeatRecv::HeartbeatRecv(std::function<void(const message::CHP1Message&)> callback)
-    : logger_("CHP"), message_callback_(std::move(callback)) {
+template<typename MESSAGE> Receiver<MESSAGE>::Receiver(chirp::ServiceIdentifier service, std::function<void(const MESSAGE&)> callback)
+    : service_(service), logger_("CHP"), message_callback_(std::move(callback)) {
 
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
     if(chirp_manager != nullptr) {
         // Register CHIRP callback
-        chirp_manager->registerDiscoverCallback(&HeartbeatRecv::callback, chirp::HEARTBEAT, this);
-        // Request currently active heartbeating services
-        chirp_manager->sendRequest(chirp::HEARTBEAT);
+        chirp_manager->registerDiscoverCallback(&Receiver::callback, service_, this);
+        // Request currently active services
+        chirp_manager->sendRequest(service_);
     }
 
     // Start the receiver thread
-    receiver_thread_ = std::jthread(std::bind_front(&HeartbeatRecv::loop, this));
+    receiver_thread_ = std::jthread(std::bind_front(&Receiver::loop, this));
 }
 
-HeartbeatRecv::~HeartbeatRecv() {
+template<typename MESSAGE> Receiver<MESSAGE>::~Receiver() {
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
     if(chirp_manager != nullptr) {
         // Unregister CHIRP discovery callback:
-        chirp_manager->unregisterDiscoverCallback(&HeartbeatRecv::callback, chirp::HEARTBEAT);
+        chirp_manager->unregisterDiscoverCallback(&Receiver::callback, service_);
     }
 
     // Stop the receiver thread
@@ -66,7 +64,7 @@ HeartbeatRecv::~HeartbeatRecv() {
     disconnect_all();
 }
 
-void HeartbeatRecv::connect(const chirp::DiscoveredService& service) {
+template<typename MESSAGE> void Receiver<MESSAGE>::connect(const chirp::DiscoveredService& service) {
     const std::lock_guard sockets_lock {sockets_mutex_};
 
     // Connect
@@ -89,7 +87,7 @@ void HeartbeatRecv::connect(const chirp::DiscoveredService& service) {
                 auto received = zmq_msg.recv(sock);
                 if(received) {
                     try {
-                        const auto msg = CHP1Message::disassemble(zmq_msg);
+                        const auto msg = MESSAGE::disassemble(zmq_msg);
                         message_callback_(msg);
                     } catch(const MessageDecodingError& error) {
                         LOG(logger_, WARNING) << error.what();
@@ -111,7 +109,7 @@ void HeartbeatRecv::connect(const chirp::DiscoveredService& service) {
     }
 }
 
-void HeartbeatRecv::disconnect_all() {
+template<typename MESSAGE> void Receiver<MESSAGE>::disconnect_all() {
     const std::lock_guard sockets_lock {sockets_mutex_};
 
     // Unregister all sockets from the poller, then disconnect and close them.
@@ -127,7 +125,7 @@ void HeartbeatRecv::disconnect_all() {
     sockets_.clear();
 }
 
-void HeartbeatRecv::disconnect(const chirp::DiscoveredService& service) {
+template<typename MESSAGE> void Receiver<MESSAGE>::disconnect(const chirp::DiscoveredService& service) {
     const std::lock_guard sockets_lock {sockets_mutex_};
 
     // Disconnect the socket
@@ -148,7 +146,7 @@ void HeartbeatRecv::disconnect(const chirp::DiscoveredService& service) {
     }
 }
 
-void HeartbeatRecv::callback_impl(const chirp::DiscoveredService& service, bool depart) {
+template<typename MESSAGE> void Receiver<MESSAGE>::callback_impl(const chirp::DiscoveredService& service, bool depart) {
     LOG(logger_, TRACE) << "Callback for " << service.to_uri() << (depart ? ", departing" : "");
 
     if(depart) {
@@ -163,12 +161,12 @@ void HeartbeatRecv::callback_impl(const chirp::DiscoveredService& service, bool 
 }
 
 // NOLINTNEXTLINE(performance-unnecessary-value-param)
-void HeartbeatRecv::callback(chirp::DiscoveredService service, bool depart, std::any user_data) {
-    auto* instance = std::any_cast<HeartbeatRecv*>(user_data);
+template<typename MESSAGE> void Receiver<MESSAGE>::callback(chirp::DiscoveredService service, bool depart, std::any user_data) {
+    auto* instance = std::any_cast<Receiver*>(user_data);
     instance->callback_impl(service, depart);
 }
 
-void HeartbeatRecv::loop(const std::stop_token& stop_token) {
+template<typename MESSAGE> void Receiver<MESSAGE>::loop(const std::stop_token& stop_token) {
     while(!stop_token.stop_requested()) {
         std::unique_lock lock {sockets_mutex_, std::defer_lock};
 
