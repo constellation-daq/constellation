@@ -25,7 +25,7 @@ using namespace constellation::satellite;
 
 class CaribouSatellite : public Satellite {
 public:
-    CaribouSatellite(std::string_view type_name, std::string_view satellite_name);
+    CaribouSatellite(std::string_view type, std::string_view name);
 
 public:
     void initializing(Configuration& config) override;
