@@ -214,7 +214,7 @@ void CMDPSink::sinkStats(const std::string& key, const std::shared_ptr<metrics::
     std::call_once(setup_flag_, []() { std::this_thread::sleep_for(500ms); });
 
     // Create message header
-    auto msghead = CMDP1Message::Header(asio::ip::host_name(), std::chrono::system_clock::now());
+    auto msghead = CMDP1Message::Header(sender_name_, std::chrono::system_clock::now());
 
     // Create and send CMDP message
     CMDP1StatMessage(key, std::move(msghead), metric).assemble().send(publisher_);
