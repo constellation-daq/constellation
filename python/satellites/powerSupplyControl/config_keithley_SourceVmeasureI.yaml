@@ -8,7 +8,7 @@ Device:
         Baudrate: 19200
         TimeOut: 2
         #NOTE: On Keithley: set RS-232 connection to have this baud rate, 8 bits, even partiy, <CR+LF> terminator
-        
+
         Measure: 'I'
         # For ComplianceMeasure
         # For 2400 Series:
@@ -22,8 +22,8 @@ Device:
         #Highest available range depends on the compliance
         ComplianceMeasure: 0.000105 # [A] when sourcing V
         RangeMeasure:      0.001 # [A]
-                
-        Source: 'V'   
+
+        Source: 'V'
         #For ComplianceSoucre
         # For RangeSource
         # For 2400 Series:
@@ -44,8 +44,7 @@ Device:
 
         #For auto range
         AutoRangeMeasure: 'ON'
-        AutoRangeSource: 'ON'
-        
+
         #To get the display to show sensibly.
         #Not super important, since we read the current off anyway.
         TriggerCount: 2
