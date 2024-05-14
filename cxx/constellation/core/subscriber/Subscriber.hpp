@@ -70,6 +70,9 @@ namespace constellation::utils {
          */
         CNSTLN_API static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
 
+        void subscribe(std::string_view host, std::string_view topic);
+        void unsubscribe(std::string_view host, std::string_view topic);
+
     private:
         /** Callback implementation */
         void callback_impl(const chirp::DiscoveredService& service, bool depart);

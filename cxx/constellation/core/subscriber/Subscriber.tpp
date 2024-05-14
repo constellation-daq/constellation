@@ -63,6 +63,19 @@ template<typename MESSAGE> Subscriber<MESSAGE>::~Subscriber() {
     disconnect_all();
 }
 
+
+template<typename MESSAGE> void Subscriber<MESSAGE>::subscribe(std::string_view host, std::string_view topic) {
+    const std::lock_guard sockets_lock {sockets_mutex_};
+
+    // FIXME subscribe
+}
+
+template<typename MESSAGE> void Subscriber<MESSAGE>::unsubscribe(std::string_view host, std::string_view topic) {
+    const std::lock_guard sockets_lock {sockets_mutex_};
+
+    // FIXME unsubscribe
+}
+
 template<typename MESSAGE> void Subscriber<MESSAGE>::connect(const chirp::DiscoveredService& service) {
     const std::lock_guard sockets_lock {sockets_mutex_};
 
@@ -72,6 +85,8 @@ template<typename MESSAGE> void Subscriber<MESSAGE>::connect(const chirp::Discov
 
         zmq::socket_t socket {context_, zmq::socket_type::sub};
         socket.connect(service.to_uri());
+
+        // FIXME make optional
         socket.set(zmq::sockopt::subscribe, "");
 
         /**
