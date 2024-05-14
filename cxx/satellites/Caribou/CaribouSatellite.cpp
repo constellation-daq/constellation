@@ -36,8 +36,8 @@ extern "C" std::shared_ptr<Satellite> generator(std::string_view type_name, std:
     return std::make_shared<CaribouSatellite>(type_name, satellite_name);
 }
 
-CaribouSatellite::CaribouSatellite(std::string_view type_name, std::string_view satellite_name)
-    : Satellite(type_name, satellite_name), manager_(std::make_shared<DeviceManager>()) {}
+CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
+    : Satellite(type, name), manager_(std::make_shared<DeviceManager>()) {}
 
 void CaribouSatellite::initializing(constellation::config::Configuration& config) {
     LOG(logger_, INFO) << "Initializing " << getCanonicalName();
