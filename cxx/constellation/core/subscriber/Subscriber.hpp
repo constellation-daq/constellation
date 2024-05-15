@@ -39,7 +39,11 @@ namespace constellation::utils {
         /**
          * @brief Construct Subscriber
          *
+         * @param service CHIRP service identifier for which a subscription should be made
+         * @param logger_name Name of the logger to be used for this component
          * @param callback Callback function pointer for received messages
+         * @param default_topics List of default subscription topics to which this component subscribes directly upon
+         *        opening the socket
          */
         CNSTLN_API Subscriber(chirp::ServiceIdentifier service,
                               const std::string& logger_name,

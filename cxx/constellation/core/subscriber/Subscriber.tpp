@@ -54,7 +54,8 @@ template<typename MESSAGE> Subscriber<MESSAGE>::~Subscriber() {
 
     // Stop the Subscriber thread
     subscriber_thread_.request_stop();
-    cv_.notify_one();
+    af_.test_and_set();
+    af_.notify_one();
 
     if(subscriber_thread_.joinable()) {
         subscriber_thread_.join();
