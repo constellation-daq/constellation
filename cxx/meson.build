@@ -77,6 +77,7 @@ constellation_inc = include_directories('.')
 constellation_rpath = get_option('prefix') / get_option('libdir')
 
 subdir('constellation')
-subdir('tools')
+subdir('listeners')
 subdir('satellites')
 subdir('tests')
+subdir('tools')
