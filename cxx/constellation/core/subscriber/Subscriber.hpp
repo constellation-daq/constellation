@@ -91,6 +91,9 @@ namespace constellation::utils {
         /** Helper to disconnect from a departing service */
         void disconnect(const chirp::DiscoveredService& service);
 
+        /** Sub- or unsubscribe to a topic */
+        void scribe(std::string_view host, std::string_view topic, bool subscribe);
+
         /** Disconnect from all registered services */
         void disconnect_all();
 

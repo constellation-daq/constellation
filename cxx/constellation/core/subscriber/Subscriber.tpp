@@ -22,6 +22,7 @@
 
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/logging/log.hpp"
+#include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/message/exceptions.hpp"
 
 using namespace constellation;
@@ -66,16 +67,28 @@ template<typename MESSAGE> Subscriber<MESSAGE>::~Subscriber() {
 }
 
 
-template<typename MESSAGE> void Subscriber<MESSAGE>::subscribe(std::string_view host, std::string_view topic) {
+template<typename MESSAGE> void Subscriber<MESSAGE>::scribe(std::string_view host, std::string_view topic, bool subscribe) {
+    // Get host ID from name:
+    const auto host_id = message::MD5Hash(host);
+
     const std::lock_guard sockets_lock {sockets_mutex_};
 
-    // FIXME subscribe
+    const auto socket_it = std::ranges::find_if(sockets_, host_id, [&](const auto& s) { return s.first.host_id == host_id; });
+    if(socket_it != sockets_.end()) {
+        if(subscribe) {
+            socket_it->second.subscribe(topic);
+        } else {
+            socket_it->second.unsubscribe(topic);
+        }
+    }
+}
+
+template<typename MESSAGE> void Subscriber<MESSAGE>::subscribe(std::string_view host, std::string_view topic) {
+    scribe(host, topic, true);
 }
 
 template<typename MESSAGE> void Subscriber<MESSAGE>::unsubscribe(std::string_view host, std::string_view topic) {
-    const std::lock_guard sockets_lock {sockets_mutex_};
-
-    // FIXME unsubscribe
+    scribe(host, topic, false);
 }
 
 template<typename MESSAGE> void Subscriber<MESSAGE>::connect(const chirp::DiscoveredService& service) {
