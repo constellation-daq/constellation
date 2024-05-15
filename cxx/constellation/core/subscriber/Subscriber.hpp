@@ -43,7 +43,8 @@ namespace constellation::utils {
          */
         CNSTLN_API Subscriber(chirp::ServiceIdentifier service,
                               const std::string& logger_name,
-                              std::function<void(const MESSAGE&)> callback);
+                              std::function<void(const MESSAGE&)> callback,
+                              std::initializer_list<std::string> default_topics = {});
 
         /**
          * @brief Destruct Subscriber
@@ -101,6 +102,7 @@ namespace constellation::utils {
         std::jthread subscriber_thread_;
 
         std::function<void(const MESSAGE&)> message_callback_;
+        std::set<std::string> default_topics_;
     };
 } // namespace constellation::utils
 

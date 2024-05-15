@@ -12,6 +12,7 @@
 #include <any>
 #include <functional>
 #include <mutex>
+#include <set>
 #include <stop_token>
 #include <thread>
 #include <utility>
@@ -29,8 +30,8 @@ using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 
-template<typename MESSAGE> Subscriber<MESSAGE>::Subscriber(chirp::ServiceIdentifier service, const std::string& logger_name, std::function<void(const MESSAGE&)> callback)
-    : service_(service), logger_(logger_name), message_callback_(std::move(callback)) {
+template<typename MESSAGE> Subscriber<MESSAGE>::Subscriber(chirp::ServiceIdentifier service, const std::string& logger_name, std::function<void(const MESSAGE&)> callback, std::initializer_list<std::string> default_topics)
+    : service_(service), logger_(logger_name), message_callback_(std::move(callback)), default_topics_(default_topics) {
 
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
     if(chirp_manager != nullptr) {
@@ -86,8 +87,10 @@ template<typename MESSAGE> void Subscriber<MESSAGE>::connect(const chirp::Discov
         zmq::socket_t socket {context_, zmq::socket_type::sub};
         socket.connect(service.to_uri());
 
-        // FIXME make optional
-        socket.set(zmq::sockopt::subscribe, "");
+        // Directly subscribe to default topic list
+        for(const auto& topic : default_topics_) {
+            socket.set(zmq::sockopt::subscribe, topic);
+        }
 
         /**
          * This lambda is passed to the ZMQ active_poller_t to be called when a socket has a incoming message pending. Since
