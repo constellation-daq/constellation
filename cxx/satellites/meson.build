@@ -8,6 +8,7 @@ satellites_to_build = []
 subdir('DevNullReceiver')
 subdir('RandomTransmitter')
 subdir('Sputnik')
+subdir('tlu')
 
 # Installation directory for satellites - private libdir since they are more like plugins
 satellite_libdir = get_option('libdir') / 'ConstellationSatellites'
