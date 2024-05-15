@@ -138,7 +138,7 @@ class KeithleySMU6517Series:
             # Set up the buffer
             self._ser.write(b":TRAC:FEED:CONT NEVer\r\n")  # Disable buffer storage
             self._ser.write(
-                (":TRAC:POINt " + str(self._triggerCount) + "\r\n").encode("utf-8")
+                (":TRAC:POIN " + str(self._triggerCount) + "\r\n").encode("utf-8")
             )  # Specifies the size of the buffer
             self._ser.write(b":TRAC:CLEar\r\n")  # Clears the buffer
             self._ser.write(
@@ -237,7 +237,7 @@ class KeithleySMU6517Series:
 
     def read(self, time_to_wait):
         # print("Reading...")
-        while self._ser.inWaiting() <= 2:  # If less than 1 byte, don't do anything
+        while self._ser.inWaiting() < 1:  # If less than 1 byte, don't do anything
             pass
         time.sleep(time_to_wait)
         data = self._ser.read(self._ser.inWaiting())  # Read all the waiting bytes
@@ -271,52 +271,22 @@ class KeithleySMU6517Series:
         else:
             return dmean
 
-    def get_current_timestamp_voltage(self):
+    def get_current_timestamp_voltage(self, observable="all"):
         self.sample(1)
-        time.sleep(
-            2
-        )  # Wait for values to enter buffer properly. TODO: it working or not is dependent on this, currently...
+        self._ser.write(b"*WAI\r\n")
         self.get_raw_values()
         valueList = self.read(0.1).decode("utf-8").split(",")
-        print(valueList)
+        # print(valueList)
         current = float(valueList[0])
         timestamp = float(valueList[1])
         voltage = float(valueList[2])
+        if observable == "current":
+            return current, "A"
+        elif observable == "voltage":
+            return voltage, "V"
         # self.get_std()
         # derr = eval((str(self.read(0.1)).split(",")[0]).split("'")[-1])
         return current, timestamp, voltage
-
-    # Get the current reading, callable for the publisher
-    def get_current(self):
-        self.sample(1)
-        time.sleep(
-            2
-        )  # Wait for values to enter buffer properly. TODO: it working or not is dependent on this, currently...
-        self.get_raw_values()
-        valueList = self.read(0.1).decode("utf-8").split(",")
-        print(valueList)
-        current = float(valueList[0])
-        # timestamp = float(valueList[1])
-        # voltage = float(valueList[2])
-        # self.get_std()
-        # derr = eval((str(self.read(0.1)).split(",")[0]).split("'")[-1])
-        return current, "A"
-
-    # Get the voltage reading, callable for the publisher
-    def get_voltage(self):
-        self.sample(1)
-        time.sleep(
-            2
-        )  # Wait for values to enter buffer properly. TODO: it working or not is dependent on this, currently...
-        self.get_raw_values()
-        valueList = self.read(0.1).decode("utf-8").split(",")
-        print(valueList)
-        # current = float(valueList[0])
-        # timestamp = float(valueList[1])
-        voltage = float(valueList[2])
-        # self.get_std()
-        # derr = eval((str(self.read(0.1)).split(",")[0]).split("'")[-1])
-        return voltage, "V"
 
     def state(self):
         print("If the script stops here, the output is turned off\n.")

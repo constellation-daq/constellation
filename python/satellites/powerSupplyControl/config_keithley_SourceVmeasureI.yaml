@@ -1,6 +1,6 @@
 Device:
     Configuration:
-        Device: 2410
+        Device: 6517B
         #use 'COM<n>' for Windows (n is integer)
         #use '/dev/ttyUSB<n>' for Linux/MAC (n is integer)
         #might need to: 'sudo chmod a+rw /dev/ttyUSB<n>'

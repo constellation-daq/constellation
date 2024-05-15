@@ -7,6 +7,8 @@ from constellation.core.configuration import Configuration
 from powerSupplyControl.Keithley6517 import KeithleySMU6517Series
 import logging
 
+# from functools import partial
+
 METRICS_PERIOD = 5.0
 
 
@@ -69,11 +71,16 @@ class Keithley_Satellite(Satellite):
         self.device.ramp_v(self.v_set, self.v_step, "V")
 
         # How to stop it, though?
-        self.schedule_metric(
-            "Current",
-            self.device.get_current,
-            interval=METRICS_PERIOD,
-        )
+        # self.schedule_metric(
+        #    "Current",
+        #    partial(self.device.get_current_timestamp_voltage("current")),
+        #    interval=METRICS_PERIOD,
+        # )
+        # self.schedule_metric(
+        #    "Voltage",
+        #    partial(self.device.get_current_timestamp_voltage("voltage")),
+        #    interval=METRICS_PERIOD,
+        # )
 
         # How to stop it, though?
         # self.schedule_metric(
@@ -97,14 +104,14 @@ class Keithley_Satellite(Satellite):
 
     def do_stopping(self, payload: any):
         """Stop the data acquisition."""
-        super().do_stopping()
+        super().do_stopping(payload)
         # Stops acquisition... Do we do anything? I'd say no. Keep logging
         self.log.info("Acquisition stopped, but we keep sourcing the voltage.")
         return "Acquisition stopped."
 
     def do_starting(self, payload: any) -> str:
         """Final preparation for acquisition."""
-        super().do_starting()
+        super().do_starting(payload)
         # Stops acquisition... Do we do anything? I'd say no. Keep logging
         self.log.info("Acquisition starting, but we just keep sourcing the voltage.")
         return "Finished preparations, starting."

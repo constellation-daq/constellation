@@ -8,3 +8,4 @@ quiet-level = 2
 ignore-words-list =
  crate,
  ser,
+ POIN,
