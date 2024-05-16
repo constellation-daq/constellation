@@ -34,7 +34,7 @@ namespace constellation::utils {
      * This class registers a CHIRP callback for the services defined via the template parameter, listens to incoming
      * messages and forwards them to a callback registered upon creation of the subscriber socket
      */
-    template <typename MESSAGE> class SubscriberPool {
+    template <typename MESSAGE> class CNSTLN_API SubscriberPool {
     public:
         /**
          * @brief Construct SubscriberPool
@@ -45,17 +45,17 @@ namespace constellation::utils {
          * @param default_topics List of default subscription topics to which this component subscribes directly upon
          *        opening the socket
          */
-        CNSTLN_API SubscriberPool(chirp::ServiceIdentifier service,
-                                  const std::string& logger_name,
-                                  std::function<void(const MESSAGE&)> callback,
-                                  std::initializer_list<std::string> default_topics = {});
+        SubscriberPool(chirp::ServiceIdentifier service,
+                       const std::string& logger_name,
+                       std::function<void(const MESSAGE&)> callback,
+                       std::initializer_list<std::string> default_topics = {});
 
         /**
          * @brief Destruct SubscriberPool
          *
          * This closes all connections and unregisters the CHIRP service discovery callback
          */
-        CNSTLN_API virtual ~SubscriberPool();
+        virtual ~SubscriberPool();
 
         // No copy/move constructor/assignment
         SubscriberPool(const SubscriberPool& other) = delete;
@@ -73,7 +73,7 @@ namespace constellation::utils {
          * @param depart Boolean to indicate discovery or departure
          * @param user_data Pointer to the SubscriberPool instance
          */
-        CNSTLN_API static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
+        static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
 
         void subscribe(std::string_view host, std::string_view topic);
         void unsubscribe(std::string_view host, std::string_view topic);
