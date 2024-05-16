@@ -24,6 +24,8 @@ from . import __version__
 from .broadcastmanager import chirp_callback, DiscoveredService
 from .cdtp import CDTPMessage, CDTPMessageIdentifier, DataTransmitter
 from .chirp import CHIRPServiceIdentifier
+from .commandmanager import cscp_requestable
+from .cscp import CSCPMessage
 from .fsm import SatelliteState
 from .satellite import Satellite
 
@@ -153,6 +155,21 @@ class DataReceiver(Satellite):
 
         """
         raise NotImplementedError
+
+    @cscp_requestable
+    def get_data_sources(self, _request: CSCPMessage = None) -> (str, None, None):
+        """Get list of connected data sources.
+
+        No payload argument.
+
+        """
+        res = []
+        num = len(self._pull_interfaces)
+        for uuid, host in self._pull_interfaces.items():
+            address, port = host
+            res.append(f"{address}:{port} ({uuid})")
+
+        return f"{num} connected data sources", res, None
 
     @chirp_callback(CHIRPServiceIdentifier.DATA)
     def _add_sender_callback(self, service: DiscoveredService):
