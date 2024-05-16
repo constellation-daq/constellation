@@ -25,9 +25,9 @@ core_files = files(
 )
 
 satellites_files = files(
-  'satellites/example_satellite.py',
-  'satellites/keithley_satellite.py',
-  'satellites/__init__.py',
+  'constellation/satellites/example_satellite.py',
+  'constellation/satellites/keithley6517B_satellite.py',
+  'constellation/satellites/__init__.py',
 )
 
 py.install_sources(core_files,

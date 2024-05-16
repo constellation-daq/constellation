@@ -1,3 +1,6 @@
+# H. Wennlöf, based on code from C. Riegel
+# 2018
+
 from serial import Serial
 import time
 
@@ -7,19 +10,13 @@ Units = {
 }
 
 Mode = {
-    "Measure": {
-        "V": "VOLT",
-        "v": "VOLT",
-        "I": "CURR",
-        "i": "CURR",
-        "R": "RES",
-        "r": "RES",
-    }
+    "Source": {"V": "VOLT", "v": "VOLT", "I": "CURR", "i": "CURR"},
+    "Measure": {"V": "VOLT", "v": "VOLT", "I": "CURR", "i": "CURR"},
 }
 
 
-# Class for the Keithley 6517 series
-class KeithleySMU6517Series:
+# Class for the Keithley SMU 2400/2410 series
+class KeithleySMU2400Series:
     ser = None
 
     def __init__(self, conf):
@@ -66,12 +63,12 @@ class KeithleySMU6517Series:
             self._ser = Serial(
                 port=self.configuration_file["Device"]["Configuration"]["Port"],
                 baudrate=self.configuration_file["Device"]["Configuration"]["Baudrate"],
-                timeout=2,  # ,
-                # parity = 'E',
-                # rtscts = False,
-                # xonxoff = False,
-                # stopbits = 2
+                timeout=2,
+                parity="E",
             )
+            self._source = Mode["Source"][
+                self.configuration_file["Device"]["Configuration"]["Source"]
+            ]
             self._measure = Mode["Measure"][
                 self.configuration_file["Device"]["Configuration"]["Measure"]
             ]
@@ -80,6 +77,7 @@ class KeithleySMU6517Series:
             self._triggerCount = self.configuration_file["Device"]["Configuration"][
                 "TriggerCount"
             ]
+
             # Specifies trigger delay in seconds
             self._triggerDelay = self.configuration_file["Device"]["Configuration"][
                 "TriggerDelay"
@@ -88,6 +86,9 @@ class KeithleySMU6517Series:
             # Specifies source and measurement
             self._rangeSource = self.configuration_file["Device"]["Configuration"][
                 "RangeSource"
+            ]
+            self._autorangeSource = self.configuration_file["Device"]["Configuration"][
+                "AutoRangeSource"
             ]
             self._OVPSource = self.configuration_file["Device"]["Configuration"][
                 "OVPSource"
@@ -113,18 +114,58 @@ class KeithleySMU6517Series:
             ]["ComplianceMeasure"]
 
             # Set up the source
-
             self._ser.write(("*rst" + "\r\n").encode("utf-8"))
-            # self._ser.write((':SYST:PRESet' + "\r\n").encode('utf-8'))
-            self._ser.write((":SYST:ZCH OFF" + "\r\n").encode("utf-8"))
-            self._ser.write((":CALC:FORM NONE" + "\r\n").encode("utf-8"))
-
+            self._ser.write((":SYST:BEEP:STAT OFF" + "\r\n").encode("utf-8"))
+            self._ser.write((":SOUR:CLEar:IMMediate" + "\r\n").encode("utf-8"))
             self._ser.write(
-                (":SOUR:VOLT:LIM " + str(self._OVPSource) + "\r\n").encode("utf-8")
+                (":SOUR:FUNC:MODE " + self._source + "\r\n").encode("utf-8")
             )
+            # self._ser.write(b':SOUR:CLEar:IMMediate\r\n')
+            self._ser.write(
+                (":SOUR:" + self._source + ":MODE FIX" + "\r\n").encode("utf-8")
+            )
+            self._ser.write(
+                (
+                    ":SOUR:"
+                    + self._source
+                    + ":RANG:AUTO "
+                    + self._autorangeSource
+                    + "\r\n"
+                ).encode("utf-8")
+            )
+            self._ser.write(
+                (
+                    ":SOUR:"
+                    + self._source
+                    + ":PROT:LEV "
+                    + str(self._OVPSource)
+                    + "\r\n"
+                ).encode("utf-8")
+            )
+            if self._autorangeSource == "OFF":
+                self._ser.write(
+                    (
+                        ":SOUR:"
+                        + self._source
+                        + ":RANG "
+                        + str(self._rangeSource)
+                        + "\r\n"
+                    ).encode("utf-8")
+                )
+            else:
+                None
 
-            # Set up the sensing. Can be voltage, current, or resistance
+            # Set up the sensing
             self._ser.write((':SENS:FUNC "' + self._measure + '"\r\n').encode("utf-8"))
+            self._ser.write(
+                (
+                    ":SENS:"
+                    + self._measure
+                    + ":PROT:LEV "
+                    + str(self._complianceMeasure)
+                    + "\r\n"
+                ).encode("utf-8")
+            )
             self._ser.write(
                 (
                     ":SENS:"
@@ -138,21 +179,19 @@ class KeithleySMU6517Series:
             # Set up the buffer
             self._ser.write(b":TRAC:FEED:CONT NEVer\r\n")  # Disable buffer storage
             self._ser.write(
+                b":TRAC:FEED SENSE\r\n"
+            )  # Put raw readings on the readout buffer
+            self._ser.write(
                 (":TRAC:POIN " + str(self._triggerCount) + "\r\n").encode("utf-8")
             )  # Specifies the size of the buffer
-            self._ser.write(b":TRAC:CLEar\r\n")  # Clears the buffer
-            self._ser.write(
-                b":TRAC:FEED:CONT NEXT\r\n"
-            )  # Enable buffer storage. Fills the buffer, then stops
+            self._ser.write(b":TRAC:CLEar\r\n")  # Clears the ubffer
+            self._ser.write(b":TRAC:FEED:CONT NEXT\r\n")  # Enable buffer storage
 
             # Set up the data format for transfer of readings over bus
             self._ser.write(b":FORMat:DATA ASCii\r\n")
             self._ser.write(
-                b":FORMat:ELEM READing, TSTamp, VSOurce\r\n"
-            )  # Specifies item list to send. Defaults to READing, CHANnel, RNUMber, UNITs, TSTamp, STATus
-            self._ser.write(
-                b":TRACe:ELEM VSOurce, TSTamp\r\n"
-            )  # Specifies item list to send. Defaults to READing, CHANnel, RNUMber, UNITs, TSTamp, STATus
+                b":FORMat:ELEM VOLTage, CURRent\r\n"
+            )  # Specifies item list to send
 
             # Set up the trigger
             self._ser.write(
@@ -176,6 +215,12 @@ class KeithleySMU6517Series:
         self.reset()
         self._ser.close()
 
+    def enable_auto_range(self):
+        self._ser.write(b":SENS:RANG:AUTO ON\r\n")
+
+    def disable_auto_range(self):
+        self._ser.write(b":SENS:RANG:AUTO OFF\r\n")
+
     def reset(self):
         self._ser.write(b"*RST\r\n")
 
@@ -183,7 +228,9 @@ class KeithleySMU6517Series:
         if source_value > self._MaxAllowedSource:
             print("ERROR: Source value is higher than Compliance!")
         else:
-            self._ser.write(str.encode(":SOUR:VOLT:LEVel " + source_value + "\r\n"))
+            self._ser.write(
+                str.encode(":SOUR:" + self._source + ":LEVel " + source_value + "\r\n")
+            )
             time.sleep(
                 self.configuration_file["Device"]["Configuration"]["SettlingTime"]
             )
@@ -194,55 +241,44 @@ class KeithleySMU6517Series:
             raise ValueError("Voltage out of bounds")
         else:
             val = voltage_value * Units["Voltage"][unit]
-            self._ser.write(str.encode(":SOUR:VOLT:LEVel " + str(val) + "\r\n"))
+            self._ser.write(
+                str.encode(":SOUR:" + self._source + ":LEVel " + str(val) + "\r\n")
+            )
             time.sleep(
                 self.configuration_file["Device"]["Configuration"]["SettlingTime"]
             )
             print("Output voltage set to " + str(val))
 
     def set_source_upper_range(self, senseUpperRange):
-        self._ser.write(str.encode(":SENSE:VOLT:RANG:UPP " + senseUpperRange + "\r\n"))
+        self._ser.write(
+            str.encode(
+                ":SENSE:" + self._source + ":RANG:UPP " + senseUpperRange + "\r\n"
+            )
+        )
 
     # Read from the buffer
-    def sample(self, no_of_samples):
-        self._ser.write(b":TRAC:FEED:CONT NEVer\r\n")  # Disable buffer storage
-        self._ser.write(b":TRACe:CLEar\r\n")  # Clear the buffer
-        self._ser.write(
-            (":TRACe:POINTs " + str(no_of_samples) + "\r\n").encode()
-        )  # Clear the buffer
-        self._ser.write(
-            (":TRIG:COUNT " + str(no_of_samples) + "\r\n").encode()
-        )  # Clear the buffer
-        self._ser.write(
-            b":TRAC:FEED:CONT NEXT\r\n"
-        )  # Enable buffer storage, fills buffer then stops
+    def sample(self):
+        self._ser.write(b":TRAC:FEED:CONT NEVer\r\n")
+        self._ser.write(b":TRACe:CLEar\r\n")
+        self._ser.write(b":TRAC:FEED:CONT NEXT\r\n")
         self._ser.write(b":INIT\r\n")
-        # :TRACE:CLEAR
-        # :TRACE:POINTS 1000
-        # :TRIG:COUNT 1000
-        # :TRACE:FEED:CONT NEXT
 
     def get_raw_values(self):
-        # self._ser.write(b':TRACe:POINts:ACTual?\r\n') #Check how many data points live in the buffer
         self._ser.write(b":TRACe:DATA?\r\n")
 
     def get_mean(self):
-        self._ser.write(b":CALC2:STATe ON\r\n")
-        self._ser.write(b":CALC2:FORM MEAN\r\n")
-        self._ser.write(b":CALC2:DATA?\r\n")
+        self._ser.write(b":CALC3:FORM MEAN\r\n")
+        self._ser.write(b":CALC3:DATA?\r\n")
 
     def get_std(self):
-        self._ser.write(b":CALC2:FORM SDEV\r\n")
-        self._ser.write(b":CALC2:DATA?\r\n")
+        self._ser.write(b":CALC3:FORM SDEV\r\n")
+        self._ser.write(b":CALC3:DATA?\r\n")
 
     def read(self, time_to_wait):
-        # print("Reading...")
-        while self._ser.inWaiting() < 1:  # If less than 1 byte, don't do anything
+        while self._ser.inWaiting() <= 2:
             pass
         time.sleep(time_to_wait)
-        data = self._ser.read(self._ser.inWaiting())  # Read all the waiting bytes
-        # print(data)
-
+        data = self._ser.read(self._ser.inWaiting())
         return data
 
     def check_compliance(self):
@@ -271,22 +307,23 @@ class KeithleySMU6517Series:
         else:
             return dmean
 
-    def get_current_timestamp_voltage(self, observable="all"):
-        self.sample(1)
-        self._ser.write(b"*WAI\r\n")
-        self.get_raw_values()
-        valueList = self.read(0.1).decode("utf-8").split(",")
-        # print(valueList)
-        current = float(valueList[0])
-        timestamp = float(valueList[1])
-        voltage = float(valueList[2])
-        if observable == "current":
-            return current, "A"
-        elif observable == "voltage":
-            return voltage, "V"
-        # self.get_std()
-        # derr = eval((str(self.read(0.1)).split(",")[0]).split("'")[-1])
-        return current, timestamp, voltage
+    def get_voltage(self):
+        self.sample()
+        self.get_mean()
+        d = eval(
+            (str(self.read(0.1)).split(",")[0]).split("'")[-1]
+        )  # Need to strip away the leading b', to get just the numbers
+        self.get_std()
+        derr = eval((str(self.read(0.1)).split(",")[0]).split("'")[-1])
+        return d, derr
+
+    def get_current(self):
+        self.sample()
+        self.get_mean()
+        d = float(str(self.read(0.1)).split(",")[1]) / 0.000001  # Conversion to uA
+        self.get_std()
+        derr = float(str(self.read(0.1)).split(",")[1]) / 0.000001  # Conversion to uA
+        return d, derr
 
     def state(self):
         print("If the script stops here, the output is turned off\n.")
@@ -297,15 +334,12 @@ class KeithleySMU6517Series:
 
     # ramps the voltage, from current voltage to the given target one, with a step.
     def ramp_v(self, v_target, v_step, unit):
-        currVoltage = self.get_current_timestamp_voltage()[2]
+        currVoltage = self.get_voltage()[0]
         print(
             "Ramping output from "
             + str(currVoltage)
             + "V to "
             + str(v_target)
-            + str(unit)
-            + " in steps of "
-            + str(v_step)
             + str(unit)
         )
         while (currVoltage - v_step) > v_target:  # Ramping down
@@ -318,7 +352,7 @@ class KeithleySMU6517Series:
                 self.set_voltage(self._SafeLevelSource, unit)
                 raise ValueError("Voltage ramp failed")
             time.sleep(0.1)
-            currVoltage = self.get_current_timestamp_voltage()[2]
+            currVoltage = self.get_voltage()[0]
         while (currVoltage + v_step) < v_target:  # Ramping up
             try:
                 self.set_voltage(currVoltage + v_step, unit)
@@ -329,46 +363,10 @@ class KeithleySMU6517Series:
                 self.set_voltage(self._SafeLevelSource, unit)
                 raise ValueError("Voltage ramp failed")
             time.sleep(0.1)
-            currVoltage = self.get_current_timestamp_voltage()[2]
+            currVoltage = self.get_voltage()[0]
         try:
             self.set_voltage(v_target, unit)
         except ValueError:
             print("Error occurred. Check compliance and voltage. Going to safe state")
             self.set_voltage(self._SafeLevelSource, unit)
             raise ValueError("Voltage ramp failed")
-
-    def simpleFill(self):
-        self._ser.write(b"*RST\r\n")
-        self._ser.write(b":TRACE:CLEAR\r\n")
-        self._ser.write(b":TRAC:POINTS 1000\r\n")
-        self._ser.write(b":TRIG:COUNT 1000\r\n")
-        self._ser.write(b":SENSE:FUNC CURR\r\n")
-        self._ser.write(b":SENSE:CURR:RANGE 1e-6\r\n")
-        self._ser.write(b":SENSE:CURR:AVER:STAT OFF\r\n")
-        self._ser.write(b":SENSE:CURR:MED:STAT OFF\r\n")
-        self._ser.write(b":TRIG:DEL 0.0\r\n")
-        self._ser.write(b":SENSE:CURR:NPLC 0.01\r\n")
-        self._ser.write(b":FORM:ELEM READ, TST\r\n")
-        self._ser.write(b":CALC:STAT OFF\r\n")
-        self._ser.write(b":SYSTEM:LSYN:STAT OFF\r\n")
-        self._ser.write(b":DISP:ENAB OFF\r\n")
-        self._ser.write(b":TRAC:FEED:CONT NEXT\r\n")
-        self._ser.write(b":SYST:ZCH OFF\r\n")
-        self._ser.write(b":INIT\r\n")
-        # *RST
-        # :TRACE:CLEAR
-        # :TRAC:POINTS 1000
-        # :TRIG:COUNT 1000
-        # :SENSE:FUNC 'CURR'
-        # :SENSE:CURR:RANGE 1e-6
-        # :SENSE:CURR:AVER:STAT OFF
-        # :SENSE:CURR:MED:STAT OFF
-        # :TRIG:DEL 0.0
-        # :SENSE:CURR:NPLC 0.01
-        # :FORM:ELEM READ, TST
-        # :CALC:STAT OFF
-        # :SYSTEM:LSYN:STAT OFF
-        # :DISP:ENAB OFF
-        # :TRAC:FEED:CONT NEXT
-        # :SYST:ZCH OFF
-        # :INIT

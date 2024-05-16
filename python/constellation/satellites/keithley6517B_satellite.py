@@ -4,10 +4,12 @@ import yaml
 
 from constellation.core.satellite import Satellite
 from constellation.core.configuration import Configuration
+from constellation.core.commandmanager import cscp_requestable
+from constellation.core.cscp import CSCPMessage
 from powerSupplyControl.Keithley6517 import KeithleySMU6517Series
 import logging
 
-# from functools import partial
+from functools import partial
 
 METRICS_PERIOD = 5.0
 
@@ -17,7 +19,7 @@ class Keithley_Satellite(Satellite):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.config_file = "./python/satellites/powerSupplyControl/config_keithley_SourceVmeasureI.yaml"
+        self.config_file = "./python/constellation/satellites/powerSupplyControl/config_keithley_SourceVmeasureI.yaml"
         with open(self.config_file, "r") as configFile:
             self.yaml_config = yaml.safe_load(configFile)
 
@@ -29,7 +31,6 @@ class Keithley_Satellite(Satellite):
         This should set configuration variables.
 
         """
-        super().do_initializing(config)
         self.log.info("Loading Keithley configuration file " + self.config_file + ".")
 
         # Create the device, which loads the config
@@ -44,7 +45,6 @@ class Keithley_Satellite(Satellite):
         """Prepare Satellite for data acquistions."""
         """Callback method for the 'prepare' transition of the FSM.
         """
-        super().do_launching(payload)
         # Ramp up, and already here start logging currents, really.
         self.log.info(
             "Launching Keithley satellite. Activating output and ramping up voltage to "
@@ -54,12 +54,7 @@ class Keithley_Satellite(Satellite):
             + " V."
         )
 
-        # Note:
-        # Before any settings are changed, the data acquisition from the device needs to be paused
-        # (as we can't have two processes writing to the Keithley at the same time).
-        # Pausing can be done by calling pauseAcq(), unpausing by calling resumeAcq().
-
-        # Ramp to safe voltage before anything else
+        # Go to safe voltage before anything else
         # Need to disable output
         self.device.disable_output()
         self.device.set_voltage(
@@ -71,28 +66,21 @@ class Keithley_Satellite(Satellite):
         self.device.ramp_v(self.v_set, self.v_step, "V")
 
         # How to stop it, though?
-        # self.schedule_metric(
-        #    "Current",
-        #    partial(self.device.get_current_timestamp_voltage("current")),
-        #    interval=METRICS_PERIOD,
-        # )
-        # self.schedule_metric(
-        #    "Voltage",
-        #    partial(self.device.get_current_timestamp_voltage("voltage")),
-        #    interval=METRICS_PERIOD,
-        # )
+        self.schedule_metric(
+            "Current",
+            partial(self.device.get_current_timestamp_voltage, "current"),
+            interval=METRICS_PERIOD,
+        )
+        self.schedule_metric(
+            "Voltage",
+            partial(self.device.get_current_timestamp_voltage, "voltage"),
+            interval=METRICS_PERIOD,
+        )
 
-        # How to stop it, though?
-        # self.schedule_metric(
-        #    "Voltage",
-        #    self.device.get_voltage,
-        #    interval=METRICS_PERIOD,
-        # )
         return "Launched."
 
     def do_landing(self, payload: any) -> str:
         """Return Satellite to Initialized state."""
-        super().do_landing(payload)
         self.log.info(
             "Landing Keithley satellite. Ramping down voltage to safe level of "
             + str(self.device._SafeLevelSource)
@@ -104,21 +92,18 @@ class Keithley_Satellite(Satellite):
 
     def do_stopping(self, payload: any):
         """Stop the data acquisition."""
-        super().do_stopping(payload)
         # Stops acquisition... Do we do anything? I'd say no. Keep logging
         self.log.info("Acquisition stopped, but we keep sourcing the voltage.")
         return "Acquisition stopped."
 
     def do_starting(self, payload: any) -> str:
         """Final preparation for acquisition."""
-        super().do_starting(payload)
         # Stops acquisition... Do we do anything? I'd say no. Keep logging
         self.log.info("Acquisition starting, but we just keep sourcing the voltage.")
         return "Finished preparations, starting."
 
     def do_run(self, payload: any) -> str:
         """The acquisition event loop."""
-        super().do_run(payload)
         # Doing nothing special here
         self.log.info("Keithley satellite running, publishing currents")
 
@@ -127,7 +112,6 @@ class Keithley_Satellite(Satellite):
 
         Defaults to calling the stop and land handlers.
         """
-        super().do_interrupting()
         self.log.warning(
             "Keithley satellite interrupted. Ramping down voltage to safe level of "
             + str(self.device._SafeLevelSource)
@@ -167,6 +151,56 @@ class Keithley_Satellite(Satellite):
         #    LogLevels.INFO, "Resetting and removing Keithley device."
         # )
         self.device.disconnect()
+
+    @cscp_requestable
+    def ramp_voltage(self, request: CSCPMessage):
+        """Ramp voltage to a given value. Function takes three arguments;
+        value to ramp to (in volts), step size (in volts), and optionally settle time (in seconds).
+        """
+        paramList = request.payload
+        target = paramList[0]
+        step = paramList[1]
+        settle_time = paramList[2]
+        self.device.ramp_v(target, step, "V", settle_time)
+        return "Ramping voltage to" + str(target) + " V", None, None
+
+    def _ramp_voltage_is_allowed(self, request: CSCPMessage):
+        """Allow in the states INIT and ORBIT, but not during RUN"""
+        return self.fsm.current_state.id in ["INIT", "ORBIT"]
+
+    @cscp_requestable
+    def get_current(self, request: CSCPMessage):
+        """Read the current current. Takes no parameters"""
+        current = self.device.get_current_timestamp_voltage("current")
+        return ("Current current is " + str(current[0]) + " " + current[1]), None, None
+
+    def _get_current_is_allowed(self, request: CSCPMessage):
+        """Allow in the states INIT and ORBIT, but not during RUN"""
+        return self.fsm.current_state.id in ["INIT", "ORBIT", "RUN", "SAFE", "ERROR"]
+
+    """Class for handling incoming CSCP requests.
+
+    Commands will call specific methods of the inheriting class which should
+    have the following signature:
+
+    def COMMAND(self, request: cscp.CSCPMessage) -> (str, any, dict):
+
+    The expected return values are:
+    - reply message (string)
+    - payload (any)
+    - map (dictionary) (e.g. for meta information)
+
+    Inheriting classes need to decorate such command methods with
+    '@cscp_requestable' to make them callable through CSCP requests.
+
+    If a method
+
+    def _COMMAND_is_allowed(self, request: cscp.CSCPMessage) -> bool:
+
+    exists, it will be called first to determine whether the command is
+    currently allowed or not.
+
+    """
 
 
 # -------------------------------------------------------------------------
