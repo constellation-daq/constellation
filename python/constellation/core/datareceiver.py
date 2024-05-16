@@ -283,7 +283,14 @@ class H5DataReceiverWriter(DataReceiver):
             )
 
         elif item.msgtype == CDTPMessageIdentifier.DAT:
-            grp = h5file[item.name]
+            try:
+                grp = h5file[item.name]
+            except KeyError:
+                # late joiners
+                self.log.error(f"{item.name} sent data without BOR.")
+                self.running_sats.append(item.name)
+                grp = h5file.create_group(item.name)
+
             title = f"data_{self.run_number}_{item.sequence_number}"
 
             # interpret bytes as array of uint8 if nothing else was specified in the meta
