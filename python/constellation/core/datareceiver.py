@@ -351,6 +351,7 @@ class H5DataReceiverWriter(DataReceiver):
                             item.name,
                             self.data_queue.qsize(),
                         )
+                        last_msg = datetime.datetime.now()
 
                     # if we have data, write it
                     self._write_data(h5file, item)
@@ -389,7 +390,7 @@ class H5DataReceiverWriter(DataReceiver):
             self.log.error("file already exists: %s", filename)
             raise RuntimeError(f"file already exists: {filename}")
 
-        self.log.debug("Creating file %s", filename)
+        self.log.info("Creating file %s", filename)
         # Create directory path.
         directory = pathlib.Path(self.output_path)  # os.path.dirname(filename)
         try:
