@@ -33,7 +33,7 @@ namespace constellation::heartbeat {
      * services in the constellation and listens for heartbeat and extrasystole messages from remote satellites and forwards
      * them to a callback registered upon creation of the receiver
      */
-    class HeartbeatRecv : public SubscriberPool<message::CHP1Message> {
+    class HeartbeatRecv : public utils::SubscriberPool<message::CHP1Message> {
     public:
         /**
          * @brief Construct heartbeat receiver
