@@ -46,7 +46,7 @@ namespace constellation::utils {
          *        opening the socket
          */
         SubscriberPool(chirp::ServiceIdentifier service,
-                       const std::string& logger_name,
+                       const log::Logger& logger,
                        std::function<void(const MESSAGE&)> callback,
                        std::initializer_list<std::string> default_topics = {});
 
@@ -99,7 +99,7 @@ namespace constellation::utils {
 
         chirp::ServiceIdentifier service_;
 
-        log::Logger logger_;
+        const log::Logger& logger_;
         zmq::context_t context_;
         zmq::active_poller_t poller_;
         std::map<chirp::DiscoveredService, zmq::socket_t> sockets_;

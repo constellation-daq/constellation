@@ -29,10 +29,10 @@ namespace constellation::utils {
 
     template <typename MESSAGE>
     SubscriberPool<MESSAGE>::SubscriberPool(chirp::ServiceIdentifier service,
-                                            const std::string& logger_name,
+                                            const log::Logger& logger,
                                             std::function<void(const MESSAGE&)> callback,
                                             std::initializer_list<std::string> default_topics)
-        : service_(service), logger_(logger_name), message_callback_(std::move(callback)), default_topics_(default_topics) {
+        : service_(service), logger_(logger), message_callback_(std::move(callback)), default_topics_(default_topics) {
 
         auto* chirp_manager = chirp::Manager::getDefaultInstance();
         if(chirp_manager != nullptr) {

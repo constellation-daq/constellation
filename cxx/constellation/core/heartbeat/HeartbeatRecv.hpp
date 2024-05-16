@@ -41,6 +41,9 @@ namespace constellation::heartbeat {
          * @param callback Callback function pointer for received heartbeat messages
          */
         CNSTLN_API HeartbeatRecv(std::function<void(const message::CHP1Message&)> callback)
-            : SubscriberPool<message::CHP1Message>(chirp::HEARTBEAT, "CHP", std::move(callback), {""}) {}
+            : SubscriberPool<message::CHP1Message>(chirp::HEARTBEAT, logger_, std::move(callback), {""}), logger_("CHP") {}
+
+    private:
+        log::Logger logger_;
     };
 } // namespace constellation::heartbeat
