@@ -1,13 +1,13 @@
 /**
  * @file
- * @brief Heartbeat Subscriber implementation
+ * @brief Subscriber pool implementation
  *
  * @copyright Copyright (c) 2024 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include "Subscriber.hpp"
+#include "SubscriberPool.hpp"
 
 #include <any>
 #include <functional>
@@ -31,29 +31,29 @@ using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 
-template<typename MESSAGE> Subscriber<MESSAGE>::Subscriber(chirp::ServiceIdentifier service, const std::string& logger_name, std::function<void(const MESSAGE&)> callback, std::initializer_list<std::string> default_topics)
+template<typename MESSAGE> SubscriberPool<MESSAGE>::SubscriberPool(chirp::ServiceIdentifier service, const std::string& logger_name, std::function<void(const MESSAGE&)> callback, std::initializer_list<std::string> default_topics)
     : service_(service), logger_(logger_name), message_callback_(std::move(callback)), default_topics_(default_topics) {
 
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
     if(chirp_manager != nullptr) {
         // Register CHIRP callback
-        chirp_manager->registerDiscoverCallback(&Subscriber::callback, service_, this);
+        chirp_manager->registerDiscoverCallback(&SubscriberPool::callback, service_, this);
         // Request currently active services
         chirp_manager->sendRequest(service_);
     }
 
-    // Start the Subscriber thread
-    subscriber_thread_ = std::jthread(std::bind_front(&Subscriber::loop, this));
+    // Start the subscriber thread
+    subscriber_thread_ = std::jthread(std::bind_front(&SubscriberPool::loop, this));
 }
 
-template<typename MESSAGE> Subscriber<MESSAGE>::~Subscriber() {
+template<typename MESSAGE> SubscriberPool<MESSAGE>::~SubscriberPool() {
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
     if(chirp_manager != nullptr) {
         // Unregister CHIRP discovery callback:
-        chirp_manager->unregisterDiscoverCallback(&Subscriber::callback, service_);
+        chirp_manager->unregisterDiscoverCallback(&SubscriberPool::callback, service_);
     }
 
-    // Stop the Subscriber thread
+    // Stop the subscriber thread
     subscriber_thread_.request_stop();
     af_.test_and_set();
     af_.notify_one();
@@ -67,7 +67,7 @@ template<typename MESSAGE> Subscriber<MESSAGE>::~Subscriber() {
 }
 
 
-template<typename MESSAGE> void Subscriber<MESSAGE>::scribe(std::string_view host, std::string_view topic, bool subscribe) {
+template<typename MESSAGE> void SubscriberPool<MESSAGE>::scribe(std::string_view host, std::string_view topic, bool subscribe) {
     // Get host ID from name:
     const auto host_id = message::MD5Hash(host);
 
@@ -83,15 +83,15 @@ template<typename MESSAGE> void Subscriber<MESSAGE>::scribe(std::string_view hos
     }
 }
 
-template<typename MESSAGE> void Subscriber<MESSAGE>::subscribe(std::string_view host, std::string_view topic) {
+template<typename MESSAGE> void SubscriberPool<MESSAGE>::subscribe(std::string_view host, std::string_view topic) {
     scribe(host, topic, true);
 }
 
-template<typename MESSAGE> void Subscriber<MESSAGE>::unsubscribe(std::string_view host, std::string_view topic) {
+template<typename MESSAGE> void SubscriberPool<MESSAGE>::unsubscribe(std::string_view host, std::string_view topic) {
     scribe(host, topic, false);
 }
 
-template<typename MESSAGE> void Subscriber<MESSAGE>::connect(const chirp::DiscoveredService& service) {
+template<typename MESSAGE> void SubscriberPool<MESSAGE>::connect(const chirp::DiscoveredService& service) {
     const std::lock_guard sockets_lock {sockets_mutex_};
 
     // Connect
@@ -140,7 +140,7 @@ template<typename MESSAGE> void Subscriber<MESSAGE>::connect(const chirp::Discov
     }
 }
 
-template<typename MESSAGE> void Subscriber<MESSAGE>::disconnect_all() {
+template<typename MESSAGE> void SubscriberPool<MESSAGE>::disconnect_all() {
     const std::lock_guard sockets_lock {sockets_mutex_};
 
     // Unregister all sockets from the poller, then disconnect and close them.
@@ -156,7 +156,7 @@ template<typename MESSAGE> void Subscriber<MESSAGE>::disconnect_all() {
     sockets_.clear();
 }
 
-template<typename MESSAGE> void Subscriber<MESSAGE>::disconnect(const chirp::DiscoveredService& service) {
+template<typename MESSAGE> void SubscriberPool<MESSAGE>::disconnect(const chirp::DiscoveredService& service) {
     const std::lock_guard sockets_lock {sockets_mutex_};
 
     // Disconnect the socket
@@ -177,7 +177,7 @@ template<typename MESSAGE> void Subscriber<MESSAGE>::disconnect(const chirp::Dis
     }
 }
 
-template<typename MESSAGE> void Subscriber<MESSAGE>::callback_impl(const chirp::DiscoveredService& service, bool depart) {
+template<typename MESSAGE> void SubscriberPool<MESSAGE>::callback_impl(const chirp::DiscoveredService& service, bool depart) {
     LOG(logger_, TRACE) << "Callback for " << service.to_uri() << (depart ? ", departing" : "");
 
     if(depart) {
@@ -192,12 +192,12 @@ template<typename MESSAGE> void Subscriber<MESSAGE>::callback_impl(const chirp::
 }
 
 // NOLINTNEXTLINE(performance-unnecessary-value-param)
-template<typename MESSAGE> void Subscriber<MESSAGE>::callback(chirp::DiscoveredService service, bool depart, std::any user_data) {
-    auto* instance = std::any_cast<Subscriber*>(user_data);
+template<typename MESSAGE> void SubscriberPool<MESSAGE>::callback(chirp::DiscoveredService service, bool depart, std::any user_data) {
+    auto* instance = std::any_cast<SubscriberPool*>(user_data);
     instance->callback_impl(service, depart);
 }
 
-template<typename MESSAGE> void Subscriber<MESSAGE>::loop(const std::stop_token& stop_token) {
+template<typename MESSAGE> void SubscriberPool<MESSAGE>::loop(const std::stop_token& stop_token) {
     while(!stop_token.stop_requested()) {
         std::unique_lock lock {sockets_mutex_, std::defer_lock};
 
