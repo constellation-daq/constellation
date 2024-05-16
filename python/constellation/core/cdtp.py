@@ -184,17 +184,21 @@ class DataTransmitter:
 
         flags: additional ZMQ socket flags to use during transmission.
 
-        Returns: payload, map (meta data), timestamp and sending host.
+        Returns: CTDPMessage
 
         """
         try:
-            datamsg = self._socket.recv_multipart(flags=flags)
+            binmsg = self._socket.recv_multipart(flags=flags)
         except zmq.ZMQError:
             return None
+        return self.decode(binmsg)
+
+    def decode(self, binmsg) -> CDTPMessage:
+        """Decode a binary message into a CTDPMessage."""
         msg = CDTPMessage()
-        msg.set_header(*self.msgheader.decode(datamsg[0]))
+        msg.set_header(*self.msgheader.decode(binmsg[0]))
         unpacker = msgpack.Unpacker()
-        unpacker.feed(datamsg[1])
+        unpacker.feed(binmsg[1])
 
         # Retrieve sequence identifier and number
         try:
@@ -207,7 +211,7 @@ class DataTransmitter:
 
         try:
             # Retrieve payload
-            unpacker.feed(datamsg[2])
+            unpacker.feed(binmsg[2])
             msg.payload = unpacker.unpack()
         except IndexError:
             pass
