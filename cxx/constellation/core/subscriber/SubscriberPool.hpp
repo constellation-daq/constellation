@@ -40,7 +40,7 @@ namespace constellation::utils {
          * @brief Construct SubscriberPool
          *
          * @param service CHIRP service identifier for which a subscription should be made
-         * @param logger_name Name of the logger to be used for this component
+         * @param logger Reference to a logger to be used for this component
          * @param callback Callback function pointer for received messages
          * @param default_topics List of default subscription topics to which this component subscribes directly upon
          *        opening the socket
@@ -75,7 +75,20 @@ namespace constellation::utils {
          */
         static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
 
+        /**
+         * @brief Subscribe to a given topic of a specific host
+         *
+         * @param host Canonical name of the host to subscribe to
+         * @param topic Topic to subscribe to
+         */
         void subscribe(std::string_view host, std::string_view topic);
+
+        /**
+         * @brief Unsubscribe from a given topic of a specific host
+         *
+         * @param host Canonical name of the host to unsubscribe from
+         * @param topic Topic to unsubscribe
+         */
         void unsubscribe(std::string_view host, std::string_view topic);
 
     private:
