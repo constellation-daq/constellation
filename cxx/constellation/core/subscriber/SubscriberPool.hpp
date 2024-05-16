@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Abstract receiver
+ * @brief Abstract subscriber pool
  *
  * @copyright Copyright (c) 2024 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
@@ -29,15 +29,15 @@
 namespace constellation::utils {
 
     /**
-     * Abstract Subscriber class
+     * Abstract Subscriber pool class
      *
      * This class registers a CHIRP callback for the services defined via the template parameter, listens to incoming
-     * messages and forwards them to a callback registered upon creation of the Subscriber
+     * messages and forwards them to a callback registered upon creation of the subscriber socket
      */
-    template <typename MESSAGE> class Subscriber {
+    template <typename MESSAGE> class SubscriberPool {
     public:
         /**
-         * @brief Construct Subscriber
+         * @brief Construct SubscriberPool
          *
          * @param service CHIRP service identifier for which a subscription should be made
          * @param logger_name Name of the logger to be used for this component
@@ -45,23 +45,23 @@ namespace constellation::utils {
          * @param default_topics List of default subscription topics to which this component subscribes directly upon
          *        opening the socket
          */
-        CNSTLN_API Subscriber(chirp::ServiceIdentifier service,
-                              const std::string& logger_name,
-                              std::function<void(const MESSAGE&)> callback,
-                              std::initializer_list<std::string> default_topics = {});
+        CNSTLN_API SubscriberPool(chirp::ServiceIdentifier service,
+                                  const std::string& logger_name,
+                                  std::function<void(const MESSAGE&)> callback,
+                                  std::initializer_list<std::string> default_topics = {});
 
         /**
-         * @brief Destruct Subscriber
+         * @brief Destruct SubscriberPool
          *
          * This closes all connections and unregisters the CHIRP service discovery callback
          */
-        CNSTLN_API virtual ~Subscriber();
+        CNSTLN_API virtual ~SubscriberPool();
 
         // No copy/move constructor/assignment
-        Subscriber(const Subscriber& other) = delete;
-        Subscriber& operator=(const Subscriber& other) = delete;
-        Subscriber(Subscriber&& other) = delete;
-        Subscriber& operator=(Subscriber&& other) = delete;
+        SubscriberPool(const SubscriberPool& other) = delete;
+        SubscriberPool& operator=(const SubscriberPool& other) = delete;
+        SubscriberPool(SubscriberPool&& other) = delete;
+        SubscriberPool& operator=(SubscriberPool&& other) = delete;
 
         /**
          * @brief Callback for CHIRP service discovery
@@ -71,7 +71,7 @@ namespace constellation::utils {
          *
          * @param service Discovered service
          * @param depart Boolean to indicate discovery or departure
-         * @param user_data Pointer to the Subscriber instance
+         * @param user_data Pointer to the SubscriberPool instance
          */
         CNSTLN_API static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
 
@@ -114,4 +114,4 @@ namespace constellation::utils {
 } // namespace constellation::utils
 
 // Include template members
-#include "Subscriber.tpp"
+#include "SubscriberPool.tpp"

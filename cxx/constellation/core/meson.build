@@ -86,8 +86,8 @@ install_headers(
 )
 
 install_headers(
-  'subscriber/Subscriber.hpp',
-  'subscriber/Subscriber.tpp',
+  'subscriber/SubscriberPool.hpp',
+  'subscriber/SubscriberPool.tpp',
   subdir: 'constellation/core/subscriber',
 )
 
