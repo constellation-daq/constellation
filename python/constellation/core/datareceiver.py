@@ -213,7 +213,7 @@ class DataReceiver(Satellite):
         thread.name = f"{self.name}_{address}_{port}_pull-thread"
         thread.start()
         self._puller_threads[uuid] = thread
-        self.log.info(f"Satellite {self.name} pulling data from {address}:{port}")
+        self.log.info(f"Connected and ready to pull data from {address}:{port}")
 
     def _stop_pull_threads(self, timeout=None) -> None:
         """Stop any running threads that pull data."""
@@ -263,11 +263,6 @@ class H5DataReceiverWriter(DataReceiver):
 
         Writes data to file by concatenating item.payload to dataset inside group name.
         """
-        if item.sequence_number % 100 == 0:
-            self.log.debug(
-                "Processing data packet %s from %s", item.sequence_number, item.name
-            )
-
         # Check if group already exists.
         if item.msgtype == CDTPMessageIdentifier.BOR and item.name not in h5file.keys():
             self.running_sats.append(item.name)
@@ -336,12 +331,26 @@ class H5DataReceiverWriter(DataReceiver):
         h5file = self._open_file()
         self._add_version(h5file)
         last_flush = datetime.datetime.now()
+        last_msg = datetime.datetime.now()
         try:
             # processing loop
             while not self._state_thread_evt.is_set() or not self.data_queue.empty():
                 try:
                     # blocking call but with timeout to prevent deadlocks
                     item = self.data_queue.get(block=True, timeout=0.1)
+
+                    if (datetime.datetime.now() - last_msg).total_seconds() > 1.0:
+                        if self._state_thread_evt.is_set():
+                            msg = "Finishing with"
+                        else:
+                            msg = "Processing"
+                        self.log.debug(
+                            "%s data packet %s from %s with a remaining queue of size %s",
+                            msg,
+                            item.sequence_number,
+                            item.name,
+                            self.data_queue.qsize(),
+                        )
 
                     # if we have data, write it
                     self._write_data(h5file, item)
