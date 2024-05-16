@@ -38,6 +38,7 @@ dependencies = [
 [project.scripts]
 Controller = "constellation.core.controller:main"
 Monitor = "constellation.core.monitoring:main"
+DataReceiver = "constellation.core.datareceiver:main"
 DemoSatellite = "constellation.core.satellite:main"
 DemoHeartbeatChecker = "constellation.core.heartbeatchecker:main"
 DemoHeartbeatSender = "constellation.core.heartbeater:main"
