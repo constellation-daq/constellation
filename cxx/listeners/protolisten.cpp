@@ -61,14 +61,23 @@ void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser) {
     // Subscription level (-l)
     parser.add_argument("-s", "--subscription").help("subscription log level").default_value("INFO");
 
-    // // Any address (--any)
-    // std::string default_any_addr {};
-    // try {
-    //     default_any_addr = asio::ip::address_v4::any().to_string();
-    // } catch(const asio::system_error& error) {
-    //     default_any_addr = "0.0.0.0";
-    // }
-    // parser.add_argument("--any").help("any address").default_value(default_any_addr);
+    // Broadcast address (--brd)
+    std::string default_brd_addr {};
+    try {
+        default_brd_addr = asio::ip::address_v4::broadcast().to_string();
+    } catch(const asio::system_error& error) {
+        default_brd_addr = "255.255.255.255";
+    }
+    parser.add_argument("--brd").help("broadcast address").default_value(default_brd_addr);
+
+    // Any address (--any)
+    std::string default_any_addr {};
+    try {
+        default_any_addr = asio::ip::address_v4::any().to_string();
+    } catch(const asio::system_error& error) {
+        default_any_addr = "0.0.0.0";
+    }
+    parser.add_argument("--any").help("any address").default_value(default_any_addr);
 
     parser.parse_args(argc, argv);
 }
@@ -103,6 +112,7 @@ int main(int argc, char** argv) {
     // Retrieve name and group from the parser
     const auto listener_name = get_arg(parser, "name");
     const auto listener_group = get_arg(parser, "group");
+    const auto canonical_name = "protolisten." + listener_name;
 
     // Set log level
     const auto default_level = magic_enum::enum_cast<Level>(get_arg(parser, "level"), magic_enum::case_insensitive);
@@ -113,9 +123,25 @@ int main(int argc, char** argv) {
     }
     SinkManager::getInstance().setGlobalConsoleLevel(default_level.value());
 
+    // Check broadcast and any address
+    asio::ip::address brd_addr {};
+    try {
+        brd_addr = asio::ip::address::from_string(get_arg(parser, "brd"));
+    } catch(const asio::system_error& error) {
+        LOG(logger, CRITICAL) << "Invalid broadcast address \"" << get_arg(parser, "brd") << "\"";
+        return 1;
+    }
+    asio::ip::address any_addr {};
+    try {
+        any_addr = asio::ip::address::from_string(get_arg(parser, "any"));
+    } catch(const asio::system_error& error) {
+        LOG(logger, CRITICAL) << "Invalid any address \"" << get_arg(parser, "any") << "\"";
+        return 1;
+    }
+
     LOG(logger, STATUS) << "Prototype listener " << listener_name << " started in Constellation group " << listener_group;
 
-    auto chirp_manager = chirp::Manager("255.255.255.255", "0.0.0.0", listener_group, "listener_group");
+    auto chirp_manager = chirp::Manager(brd_addr, any_addr, listener_group, canonical_name);
     chirp_manager.setAsDefaultInstance();
     chirp_manager.start();
 
