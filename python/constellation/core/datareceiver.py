@@ -246,7 +246,7 @@ class H5DataReceiverWriter(DataReceiver):
         """Initialize and configure the satellite."""
         # what pattern to use for the file names?
         self.file_name_pattern = self.config.setdefault(
-            "file_name_pattern", "default_name_{run_number}_{date}.h5"
+            "file_name_pattern", "run_{run_number}_{date}.h5"
         )
         # what directory to store files in?
         self.output_path = self.config.setdefault("output_path", "data")
