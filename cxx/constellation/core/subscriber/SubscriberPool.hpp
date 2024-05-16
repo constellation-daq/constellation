@@ -112,7 +112,7 @@ namespace constellation::utils {
 
         chirp::ServiceIdentifier service_;
 
-        const log::Logger& logger_;
+        const log::Logger& logger_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
         zmq::context_t context_;
         zmq::active_poller_t poller_;
         std::map<chirp::DiscoveredService, zmq::socket_t> sockets_;
