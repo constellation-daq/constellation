@@ -11,6 +11,8 @@
 
 #include "constellation/satellite/Satellite.hpp"
 
+#include "aida_include/AidaTluController.hh"
+
 using namespace constellation::config;
 using namespace constellation::satellite;
 
@@ -28,10 +30,14 @@ public:
     void running(const std::stop_token& stop_token) override;
 
 private:
-    // ToDo: are these needed?
-    std::string device_class_;
-    Configuration config_;
-    std::mutex device_mutex_;
+    bool m_exit_of_run;
+    std::mutex m_mtx_tlu;
 
-    std::uint64_t frame_nr_;
+    std::unique_ptr<tlu::AidaTluController> m_tlu;
+    uint64_t m_starttime = 0;
+    uint64_t m_lasttime = 0;
+    double m_duration = 0;
+
+    uint8_t m_verbose;
+    uint32_t m_delayStart;
 };

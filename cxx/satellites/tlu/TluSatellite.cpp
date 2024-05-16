@@ -19,15 +19,29 @@ extern "C" std::shared_ptr<Satellite> generator(std::string_view type_name, std:
     return std::make_shared<TluSatellite>(type_name, satellite_name);
 }
 
-TluSatellite::TluSatellite(std::string_view type, std::string_view name) : Satellite(type, name) {
+TluSatellite::TluSatellite(std::string_view type, std::string_view name) : Satellite(type, name), m_starttime(0), m_lasttime(0), m_duration(0){
     LOG(logger_, STATUS) << "TluSatellite " << getCanonicalName() << " created";
 }
 
 void TluSatellite::initializing(constellation::config::Configuration& config) {
     LOG(logger_, INFO) << "Initializing " << getCanonicalName();
 
-    // Dummy use of configuration
+    // Dummy use of configuration for something to supress warning
     config.setDefault("banana", 1337);
+
+    // generate controler using hard coded paths
+    // ToDo: get from configuration
+
+    //auto ini = GetInitConfiguration();
+    //EUDAQ_INFO("TLU INITIALIZE ID: " + std::to_string(ini->Get("initid", 0)));
+    //std::string uhal_conn;
+    //std::string uhal_node;
+    //uhal_conn = ini->Get("ConnectionFile", uhal_conn);
+    //uhal_node = ini->Get("DeviceName",uhal_node);
+
+    std::string uhal_conn = "file://./../user/eudet/misc/hw_conf/aida_tlu/fmctlu_connection.xml";
+    std::string uhal_node = "fmctlu.udp";
+    m_tlu = std::unique_ptr<tlu::AidaTluController>(new tlu::AidaTluController(uhal_conn, uhal_node));
 }
 
 void TluSatellite::launching() {
