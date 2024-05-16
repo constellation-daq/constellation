@@ -207,6 +207,10 @@ namespace constellation::utils {
 
             // Try to get the lock, if fails just continue
             using namespace std::literals::chrono_literals;
+
+            // FIXME something here gets optimized away which leads to a deadlock. Adding even a 1ns wait fixes it:
+            std::this_thread::sleep_for(1ns);
+
             const auto locked = lock.try_lock_for(50ms);
             if(!locked) {
                 continue;
