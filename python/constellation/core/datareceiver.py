@@ -9,11 +9,6 @@ Base module for Constellation Satellites that receive data.
 import datetime
 import logging
 import os
-import re
-import threading
-import time
-from queue import Empty, Queue, Full
-from typing import Optional
 import pathlib
 
 import h5py
@@ -30,118 +25,35 @@ from .fsm import SatelliteState
 from .satellite import Satellite
 
 
-class PullThread(threading.Thread):
-    """Thread that pulls DataBlocks from a ZMQ socket and enqueues them."""
-
-    def __init__(
-        self,
-        name: str,
-        stopevt: threading.Event,
-        interface: str,
-        queue: Queue,
-        *args,
-        context: Optional[zmq.Context] = None,
-        **kwargs,
-    ):
-        """Initialize values.
-
-        Arguments:
-        - stopevt    :: Event that if set triggers the thread to shut down.
-        - port       :: The port to bind to.
-        - queue      :: The Queue to process DataBlocks from.
-        - context    :: ZMQ context to use (optional).
-        """
-        super().__init__(*args, **kwargs)
-        self.name = name
-        self.stopevt = stopevt
-        self.queue = queue
-        ctx = context or zmq.Context()
-        self._socket = ctx.socket(zmq.PULL)
-        self._socket.connect(interface)
-        self._logger = logging.getLogger(f"PullThread_port_{interface}")
-
-    def run(self):
-        """Start receiving data."""
-        transmitter = DataTransmitter(self.name, self._socket)
-        while not self.stopevt.is_set():
-            try:
-                # non-blocking call to prevent deadlocks
-                item = transmitter.recv(flags=zmq.NOBLOCK)
-                if item:
-                    self.queue.put(item)
-                    self._logger.debug(
-                        f"Received packet as packet number {item.sequence_number}"
-                    )
-            except zmq.ZMQError:
-                # no thing to process, sleep instead
-                # TODO consider adjust sleep value
-                time.sleep(0.02)
-                continue
-
-            # TODO consider case where queue is full
-            # NOTE: Due to data_queue being a shared resource it is probably safer to handle the exception
-            #       rather than checking
-            except Full:
-                self._logger.error(
-                    f"Queue is full. Data {item.sequence_number} from {item.name} was lost."
-                )
-                continue
-
-    def join(self, *args, **kwargs):
-        self._socket.close()
-        return super().join(*args, **kwargs)
-
-
-def extract_num(key, pattern: re.Pattern, ret=0):
-    """Help function used for sorting data keys in write_data_virtual"""
-    search = pattern.search(key)
-    if search:
-        return int(search.groups()[0])
-    else:
-        return ret
-
-
 class DataReceiver(Satellite):
     """Constellation Satellite which receives data via ZMQ."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        self.data_queue = Queue()
-        self._stop_pulling = None
         self._pull_interfaces = {}
-        self._puller_threads = dict[str, PullThread]()
-        self._stop_pulling = threading.Event()
-
+        self._pull_sockets = {}
+        self.poller = None
         self.request(CHIRPServiceIdentifier.DATA)
 
     def do_initializing(self, payload: any) -> str:
         return super().do_initializing(payload)
 
     def do_launching(self, payload: any) -> str:
-        """Set up threads to listen to interfaces.
-
-        Stops any still-running threads.
-
-        """
-        # Set up the data pusher which will transmit
-        # data placed into the queue via ZMQ socket.
-        self._stop_pulling = threading.Event()
-        # TODO self._pull_interfaces should be filled via configuration options
+        """Set up pull sockets to listen to incoming data."""
+        # Set up the data poller which will monitor all ZMQ sockets
+        self.poller = zmq.Poller()
+        # TODO implement a filter based on configuration values
         for uuid, host in self._pull_interfaces.items():
             address, port = host
-            self._start_thread(uuid, address, port)
-
-        return super().do_launching(payload)
+            self._add_socket(uuid, address, port)
+        return "Established connections to data senders."
 
     def do_landing(self, payload: any) -> str:
-        """Stop pull threads."""
-        self._stop_pull_threads(10.0)
-        return super().do_landing(payload)
-
-    def on_failure(self):
-        """Stop all threads."""
-        self._stop_pull_threads(2.0)
+        """Close all open sockets."""
+        for uuid in self._pull_interfaces.keys():
+            self._remove_socket(uuid)
+        self.poller = None
+        return "Closed connections to data senders."
 
     def do_run(self, run_number: int) -> str:
         """Handle the data enqueued by the pull threads.
@@ -156,6 +68,15 @@ class DataReceiver(Satellite):
         """
         raise NotImplementedError
 
+    def fail_gracefully(self):
+        """Method called when reaching 'ERROR' state."""
+        for uuid in self._pull_interfaces.keys():
+            try:
+                self._remove_socket(uuid)
+            except KeyError:
+                pass
+        self.poller = None
+
     @cscp_requestable
     def get_data_sources(self, _request: CSCPMessage = None) -> (str, None, None):
         """Get list of connected data sources.
@@ -168,7 +89,6 @@ class DataReceiver(Satellite):
         for uuid, host in self._pull_interfaces.items():
             address, port = host
             res.append(f"{address}:{port} ({uuid})")
-
         return f"{num} connected data sources", res, None
 
     @chirp_callback(CHIRPServiceIdentifier.DATA)
@@ -188,49 +108,33 @@ class DataReceiver(Satellite):
         self.log.info(
             f"Adding interface tcp://{service.address}:{service.port} to listen to."
         )
-
-        # NOTE: Not sure this is the right way to handle late-coming satellite offers
+        # handle late-coming satellite offers
         if self.fsm.current_state.id in [SatelliteState.ORBIT, SatelliteState.RUN]:
             uuid = str(service.host_uuid)
-            self._start_thread(uuid, service.address, service.port)
+            self._add_socket(uuid, service.address, service.port)
 
     def _remove_sender(self, service: DiscoveredService):
         """Removes sender from pool"""
         uuid = str(service.host_uuid)
-        self._puller_threads[uuid].join()
         self._pull_interfaces.pop(uuid)
-        self._puller_threads.pop(uuid)
+        try:
+            self._remove_socket(uuid)
+        except KeyError:
+            pass
 
-    def _start_thread(self, uuid: str, address, port: int):
-        thread = PullThread(
-            name=uuid,
-            stopevt=self._stop_pulling,
-            interface=f"tcp://{address}:{port}",
-            queue=self.data_queue,
-            context=self.context,
-            daemon=True,  # terminate with the main thread
-        )
-        thread.name = f"{self.name}_{address}_{port}_pull-thread"
-        thread.start()
-        self._puller_threads[uuid] = thread
-        self.log.info(f"Connected and ready to pull data from {address}:{port}")
+    def _add_socket(self, uuid, address, port):
+        interface = f"tcp://{address}:{port}"
+        self.log.info(f"Connecting to {interface}")
+        socket = self.context.socket(zmq.PULL)
+        socket.connect(interface)
+        self._pull_sockets[uuid] = socket
+        self.poller.register(socket, zmq.POLLIN)
 
-    def _stop_pull_threads(self, timeout=None) -> None:
-        """Stop any running threads that pull data."""
-        # check that the Event for stopping exists
-        if self._stop_pulling:
-            # stop any running threads
-            self._stop_pulling.set()
-            for _, t in self._puller_threads.items():
-                if t.is_alive():
-                    t.join(timeout)
-                    # check in case we timed out:
-                    if t.is_alive():
-                        raise RuntimeError(
-                            "Could not stop data-pulling thread {t.name} in time."
-                        )
-            self._stop_pulling = None
-            self._puller_threads = dict[str, PullThread]()
+    def _remove_socket(self, uuid):
+        socket = self._pull_sockets.pop(uuid)
+        if self.poller:
+            self.poller.unregister(socket)
+        socket.close()
 
 
 class H5DataReceiverWriter(DataReceiver):
@@ -339,39 +243,40 @@ class H5DataReceiverWriter(DataReceiver):
         self._add_version(h5file)
         last_flush = datetime.datetime.now()
         last_msg = datetime.datetime.now()
+        # keep the data collection alive for a few seconds after stopping
+        keep_alive = datetime.datetime.now()
+        transmitter = DataTransmitter(None, None)
         try:
             # processing loop
-            while not self._state_thread_evt.is_set() or not self.data_queue.empty():
-                try:
-                    # blocking call but with timeout to prevent deadlocks
-                    item = self.data_queue.get(block=True, timeout=0.1)
+            while (
+                not self._state_thread_evt.is_set()
+                and (datetime.datetime.now() - keep_alive).total_seconds() < 4
+            ):
+                # refresh keep_alive timestamp
+                if not self._state_thread_evt.is_set():
+                    keep_alive = datetime.datetime.now()
+                # request available data from zmq poller; timeout prevents
+                # deadlock when stopping.
+                sockets_ready = dict(self.poller.poll(timeout=250))
 
+                for socket in sockets_ready.keys():
+                    binmsg = socket.recv_multipart()
+                    item = transmitter.decode(binmsg)
+                    self._write_data(h5file, item)
                     if (datetime.datetime.now() - last_msg).total_seconds() > 1.0:
                         if self._state_thread_evt.is_set():
                             msg = "Finishing with"
                         else:
                             msg = "Processing"
                         self.log.debug(
-                            "%s data packet %s from %s with a remaining queue of size %s",
+                            "%s data packet %s from %s",
                             msg,
                             item.sequence_number,
                             item.name,
-                            self.data_queue.qsize(),
                         )
                         last_msg = datetime.datetime.now()
 
-                    # if we have data, write it
-                    self._write_data(h5file, item)
-                    self.data_queue.task_done()
-
-                except Empty:
-                    # nothing to process
-                    pass
                 # time to flush data to file?
-                # NOTE: could instead move this into
-                # the 'except Empty' above (and reduce the timeout); this would
-                # not guarantee a flush but only flush when there is nothing
-                # else to do
                 if (
                     self.flush_interval > 0
                     and (datetime.datetime.now() - last_flush).total_seconds()
@@ -382,7 +287,7 @@ class H5DataReceiverWriter(DataReceiver):
         finally:
             h5file.close()
             self.running_sats = []
-            return "Finished Acquisition"
+        return "Finished Acquisition"
 
     def _open_file(self) -> h5py.File:
         """Open the hdf5 file and return the file object."""
