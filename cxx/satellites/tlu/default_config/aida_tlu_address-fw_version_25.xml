@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<node id="TLU">
+
+<!-- Registers for the DUTs. These should be correct -->
+<node id="DUTInterfaces" address="0x1000" description="DUT Interfaces control registers" fwinfo="endpoint;width=4">
+  <node id="DUTMaskW"           address="0x0" permission="w" description="" />
+  <node id="IgnoreDUTBusyW"     address="0x1" permission="w" description="" />
+  <node id="IgnoreShutterVetoW" address="0x2" permission="w" description="" />
+  <node id="DUTInterfaceModeW"  address="0x3" permission="w" description="" />
+  <node id="DUTInterfaceModeModifierW"  address="0x4" permission="w" description="" />
+  <node id="DUTMaskR"           address="0x8" permission="r" description="" />
+  <node id="IgnoreDUTBusyR"     address="0x9" permission="r" description="" />
+  <node id="IgnoreShutterVetoR" address="0xA" permission="r" description="" />
+  <node id="DUTInterfaceModeR"  address="0xB" permission="r" description="" />
+  <node id="DUTInterfaceModeModifierR"  address="0xC" permission="r" description="" />
+</node>
+
+<node id="Shutter"    address="0x2000" description="Shutter/T0 control" fwinfo="endpoint;width=4">
+  <node id="ControlRW"               address="0x0" permission="rw" description="Bit-0 controls if shutter pulses are active. 1 = active"/>
+  <node id="ShutterSelectRW"         address="0x1" permission="rw" description="Selects which input is used to trigger shutter"/>
+  <node id="InternalShutterPeriodRW" address="0x2" permission="rw" description="Internal trig generator period ( units = number of strobe pulses)"/>
+  <node id="ShutterOnTimeRW"         address="0x3" permission="rw" description="Time between input trigger being received and shutter asserted(T1) ( units = number of strobe pulses)"/>
+  <node id="ShutterVetoOffTimeRW"         address="0x4" permission="rw" description="time between input trigger and veto being de-asserted(T2) ( units = number of strobe pulses)"/>
+  <node id="ShutterOffTimeRW"         address="0x5" permission="rw" description="time between input trigger and time at which shutter de-asserted and veto reasserted(T3) ( units = number of strobe pulses)"/>  
+  <node id="RunActiveRW"                address="0x6" permission="rw" description="Writing '1' to Bit-0 of this register raises the run_active line and causes sync line to pulse for one strobe-pulse interval"/>
+</node>
+
+<!-- I2C registers. Tested ok.-->
+<node id="i2c_master"      address="0x3000" description="I2C Master interface" fwinfo="endpoint;width=3">
+  <node id="i2c_pre_lo"    address="0x0" mask="0x000000ff" permission="rw" description="" />
+  <node id="i2c_pre_hi"    address="0x1" mask="0x000000ff" permission="rw" description="" />
+  <node id="i2c_ctrl"      address="0x2" mask="0x000000ff" permission="rw" description="" />
+  <node id="i2c_rxtx"      address="0x3" mask="0x000000ff" permission="rw" description="" />
+  <node id="i2c_cmdstatus" address="0x4" mask="0x000000ff" permission="rw" description="" />
+</node>
+<!-- Not sure about the FillLevelFlags register -->
+<node id="eventBuffer" address="0x4000" description="Event buffer" fwinfo="endpoint;width=2">
+  <node id="EventFifoData" address="0x0" mode="non-incremental" size="32000" permission="r" description="" />
+  <node id="EventFifoFillLevel" address="0x1" permission="r" description="" />
+  <node id="EventFifoCSR" address="0x2" permission="rw" description="" />
+  <node id="EventFifoFillLevelFlags" address="0x3" permission="r" description="" />
+</node>
+<!-- Event formatter registers. Should be ok -->
+<node id="Event_Formatter"      address="0x5000" description="Event formatter configuration" fwinfo="endpoint;width=3">
+  <node id="Enable_Record_Data" address="0x0" permission="rw" description="" />
+  <node id="ResetTimestampW"    address="0x1" permission="w" description="" />
+  <node id="CurrentTimestampLR" address="0x2" permission="r" description="" />
+  <node id="CurrentTimestampHR" address="0x3" permission="r" description="" />
+</node>
+<!-- This needs checking. The counters work, not sure about the reset -->
+<node id="triggerInputs" address="0x6000" description="Inputs configuration" fwinfo="endpoint;width=4">
+  <node id="SerdesRstW"  address="0x0" permission="w" description="" />
+  <node id="InvertEdgeW" address="0x1" permission="w" description="Set bit high to invert sense of leading edge" />
+  <node id="SerdesRstR" address="0x8" permission="r" description="" />
+  <node id="ThrCount0R" address="0x9" permission="r" description="" />
+  <node id="ThrCount1R" address="0xa" permission="r" description="" />
+  <node id="ThrCount2R" address="0xb" permission="r" description="" />
+  <node id="ThrCount3R" address="0xc" permission="r" description="" />
+  <node id="ThrCount4R" address="0xd" permission="r" description="" />
+  <node id="ThrCount5R" address="0xe" permission="r" description="" />
+</node>
+<!-- Checked. Seems ok now, except for the TriggerVeto that do nothing.-->
+<node id="triggerLogic" address="0x7000" description="Trigger logic configuration" fwinfo="endpoint;width=4">
+  <node id="PostVetoTriggersR" address="0x10" permission="r" description="" />
+  <node id="PreVetoTriggersR" address="0x11" permission="r" description="" />
+  <node id="InternalTriggerIntervalW" address="0x2" permission="w" description="" />
+  <node id="InternalTriggerIntervalR" address="0x12" permission="r" description="" />
+  <!--<node id="TriggerPatternW" address="0x3" permission="w" description="" />-->
+  <!--<node id="TriggerPatternR" address="0x13" permission="r" description="" />-->
+  <node id="TriggerVetoW" address="0x4" permission="w" description="" />
+  <node id="TriggerVetoR" address="0x14" permission="r" description="" /><!--Wait, this does nothing at the moment...-->
+  <node id="ExternalTriggerVetoR" address="0x15" permission="r" description="" />
+  <node id="PulseStretchW" address="0x6" permission="w" description="" />
+  <node id="PulseStretchR" address="0x16" permission="r" description="" />
+  <node id="PulseDelayW" address="0x7" permission="w" description="" />
+  <node id="PulseDelayR" address="0x17" permission="r" description="" />
+  <node id="TriggerHoldOffW" address="0x8" permission="w" description="" /><!--Wait, this does nothing at the moment...-->
+  <node id="TriggerHoldOffR" address="0x18" permission="r" description="" /><!--Wait, this does nothing at the moment...-->
+  <node id="AuxTriggerCountR" address="0x19" permission="r" description="" />
+  <node id="TriggerPattern_lowW" address="0xA" permission="w" description="" />
+  <node id="TriggerPattern_lowR" address="0x1A" permission="r" description="" />
+  <node id="TriggerPattern_highW" address="0xB" permission="w" description="" />
+  <node id="TriggerPattern_highR" address="0x1B" permission="r" description="" />
+
+  <!--<node id="PulseStretchW" address="0x6" permission="w" description="" /> OLD REGISTER MAP. WAS BUGGED-->
+  <!--<node id="PulseStretchR" address="0x16" permission="r" description="" /> OLD REGISTER MAP. WAS BUGGED-->
+
+  <!--
+  <node id="ResetCountersW" address="0x6" permission="w" description="" />
+  <node id="PulseStretchR" address="0x17" permission="r" description="" />
+  <node id="PulseStretchW" address="0x7" permission="w" description="" />
+  <node id="TriggerHoldOffR" address="0x18" permission="r" description="" />
+  <node id="TriggerHoldOffW" address="0x8" permission="w" description="" />
+  <node id="AuxTriggerCountR" address="0x19" permission="r" description="" />
+-->
+</node>
+
+<node id="logic_clocks" address="0x8000" description="Clocks configuration" fwinfo="endpoint;width=2">
+  <node id="LogicClocksCSR" address="0x0" permission="rw" description="" />
+  <node id="LogicRst" address="0x1" permission="w" description="" />
+</node>
+
+<node id="version" address="0x1" description="firmware version" permission="r" fwinfo="endpoint;width=0">
+</node>
+
+<!--
+PulseStretchW			0x00000066     0xffffffff    0    1
+PulseDelayW 			0x00000067     0xffffffff    0    1
+PulseDelayR 			0x00000077     0xffffffff    1    0
+-->
+</node>
