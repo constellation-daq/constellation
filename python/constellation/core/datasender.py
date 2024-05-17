@@ -175,7 +175,7 @@ class RandomDataSender(DataSender):
 
 
 class DataSenderArgumentParser(SatelliteArgumentParser):
-    """Customized Argument parser providing common Satellite options."""
+    """Customized Argument parser providing DataSender-specific options."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

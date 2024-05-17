@@ -24,7 +24,7 @@ def destroy_satellites():
 
 
 class ConstellationArgumentParser(ArgumentParser):
-    """Customized Argument parser providing common Satellite options."""
+    """Customized Argument parser providing basic Satellite options."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
