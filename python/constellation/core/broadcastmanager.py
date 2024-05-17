@@ -123,6 +123,13 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
         self._chirp_thread = None
         self._chirp_callbacks = get_chirp_callbacks(self)
 
+        # verify networking setup
+        if interface != "*" and not broadcast:
+            self.log.warning(
+                "Interface specified but no broadcasting address given. "
+                "It is possible that CHIRP broadcasts will be"
+                "sent to the wrong interface!"
+            )
 
     def _add_com_thread(self):
         """Add the CHIRP broadcaster thread to the communication thread pool."""
