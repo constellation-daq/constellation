@@ -124,14 +124,25 @@ class CHIRPBeaconTransmitter:
         self,
         name: str,
         group: str,
-        interface: str,
+        broadcast: list[str] = None,
     ) -> None:
-        """Initialize attributes and open broadcast socket."""
+        """Initialize attributes and open broadcast socket.
+
+        broadcast :: list of broadcast addresses to sent CHIRP broadcasts to.
+        Defaults to the default interface (with the lowest 'metric' value).
+
+        """
         self._host_uuid = get_uuid(name)
         self._group_uuid = get_uuid(group)
 
         # whether or not to filter broadcasts on group
         self._filter_group = True
+
+        # set default value if no broadcasting target address has been specified
+        if not broadcast:
+            self._broadcast = ["<broadcast>"]
+        else:
+            self._broadcast = broadcast
 
         # Create UPP broadcasting socket
         #
@@ -149,17 +160,10 @@ class CHIRPBeaconTransmitter:
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         # non-blocking (i.e. a timeout of 0.0 seconds for recv calls)
         self._sock.setblocking(0)
-        # bind to all interfaces to listen to incoming broadcast.
-        #
+        # listen to broadcast services on all interfaces
         # NOTE: this only works for IPv4
-        #
-        # Preferably, we would bind only to the specified interface; however, we
-        # would have to determine the correct broadcast address and would need
-        # to know the netmask. For now, broadcast services on all interfaces:
-        #
-        # INADDR_ANY for IPv4
-        interface = ""
-        self._sock.bind((interface, CHIRP_PORT))
+        # '' == INADDR_ANY for IPv4
+        self._sock.bind(("", CHIRP_PORT))
 
     @property
     def host(self) -> UUID:
@@ -189,7 +193,8 @@ class CHIRPBeaconTransmitter:
     ) -> None:
         """Broadcast a given service."""
         msg = CHIRPMessage(msgtype, self._group_uuid, self._host_uuid, serviceid, port)
-        self._sock.sendto(msg.pack(), ("<broadcast>", CHIRP_PORT))
+        for addr in self._broadcast:
+            self._sock.sendto(msg.pack(), (addr, CHIRP_PORT))
 
     def listen(self) -> CHIRPMessage:
         """Listen in on CHIRP port and return message if data was received."""
