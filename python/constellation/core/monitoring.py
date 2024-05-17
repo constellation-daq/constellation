@@ -206,6 +206,8 @@ class ZeroMQSocketLogListener(QueueListener):
         super().__init__(transmitter, *handlers, **kwargs)
 
     def dequeue(self, block):
+        # FIXME it is quite likely that this blocking call causes errors when
+        # shutting down as the ZMQ context is removed before this call ends.
         return self.queue.recv()
 
     def stop(self):
@@ -266,6 +268,7 @@ class MonitoringListener(CHIRPBroadcaster):
             target=self._run_task_handler, daemon=True
         )
         self._task_handler_thread.start()
+        self._metrics_receiver_shutdown = threading.Event()
 
     @chirp_callback(CHIRPServiceIdentifier.MONITORING)
     def _add_satellite_callback(self, service: DiscoveredService):
@@ -321,7 +324,7 @@ class MonitoringListener(CHIRPBroadcaster):
 
     def receive_metrics(self):
         """Main loop to receive metrics."""
-        while True:
+        while not self._metrics_receiver_shutdown.is_set():
             time.sleep(0.1)
             for uuid, tm in self._metric_transmitters.items():
                 try:
@@ -356,6 +359,8 @@ class MonitoringListener(CHIRPBroadcaster):
 
     def reentry(self):
         """Shutdown Monitor."""
+        self._metrics_receiver_shutdown.set()
+        time.sleep(0.2)
         for _uuid, listener in self._log_listeners.items():
             listener.stop()
         for _uuid, tm in self._metric_transmitters.items():
