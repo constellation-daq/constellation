@@ -236,6 +236,7 @@ class BaseController(CHIRPBroadcaster):
             ct = self._transmitters[uuid]
             ct.socket.close()
             self._transmitters.pop(uuid)
+            self._uuid_lookup.pop(uuid)
         except KeyError:
             pass
 
