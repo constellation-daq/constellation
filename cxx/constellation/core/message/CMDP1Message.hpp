@@ -47,14 +47,19 @@ namespace constellation::message {
         constexpr const Header& getHeader() const { return header_; }
 
         /**
+         * @return If the message is a log message
+         */
+        CNSTLN_API bool isLogMessage() const;
+
+        /**
          * @return CMDP message topic
          */
         std::string_view getTopic() const { return topic_; };
 
         /**
-         * @return If the message is a log message
+         * @return Return the payload buffer as string view
          */
-        CNSTLN_API bool isLogMessage() const;
+        std::string_view getPayloadString() const { return getPayload().to_string_view(); };
 
         /**
          * Assemble full message to frames for ZeroMQ
