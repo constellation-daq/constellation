@@ -14,7 +14,7 @@ import time
 from uuid import UUID
 from queue import Queue
 
-from .base import BaseSatelliteFrame
+from .base import BaseSatelliteFrame, ConstellationArgumentParser
 
 from .chirp import (
     CHIRPServiceIdentifier,
@@ -278,6 +278,25 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
         # it can take a moment for the network buffers to be flushed
         time.sleep(0.5)
         self._beacon.close()
+
+
+class BroadcasterArgumentParser(ConstellationArgumentParser):
+    """Customized Argument parser providing CHIRPBroadcaster options."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.network.add_argument(
+            "--broadcast",
+            "--chirp",
+            action="extend",
+            nargs="+",
+            type=str,
+            help="The broadcasting address to use for CHIRP broadcasts. "
+            "Can be specified multiple times in case several network interfaces are to be used. "
+            "NOTE: If no broadcast address is specified, the broadcast will be sent to "
+            "'<broadcast>'. This will only reach the default network "
+            "interface with the lowest 'metric' value.",
+        )
 
 
 def main(args=None):
