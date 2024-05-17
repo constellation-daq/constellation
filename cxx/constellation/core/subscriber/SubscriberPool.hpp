@@ -34,7 +34,7 @@ namespace constellation::utils {
      * This class registers a CHIRP callback for the services defined via the template parameter, listens to incoming
      * messages and forwards them to a callback registered upon creation of the subscriber socket
      */
-    template <typename MESSAGE> class CNSTLN_API SubscriberPool {
+    template <typename MESSAGE> class SubscriberPool {
     public:
         /**
          * @brief Construct SubscriberPool

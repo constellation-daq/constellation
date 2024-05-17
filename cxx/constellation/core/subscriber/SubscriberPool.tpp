@@ -205,12 +205,11 @@ namespace constellation::utils {
         while(!stop_token.stop_requested()) {
             std::unique_lock lock {sockets_mutex_, std::defer_lock};
 
-            // Try to get the lock, if fails just continue
-            using namespace std::literals::chrono_literals;
-
             // FIXME something here gets optimized away which leads to a deadlock. Adding even a 1ns wait fixes it:
+            using namespace std::literals::chrono_literals;
             std::this_thread::sleep_for(1ns);
 
+            // Try to get the lock, if fails just continue
             const auto locked = lock.try_lock_for(50ms);
             if(!locked) {
                 continue;
@@ -220,6 +219,7 @@ namespace constellation::utils {
             if(sockets_.empty()) {
                 // Unlock so that other threads can modify sockets_
                 lock.unlock();
+
                 // Wait to get notified that either sockets_ was modified or a stop was requested
                 af_.wait(false);
                 af_.clear();
