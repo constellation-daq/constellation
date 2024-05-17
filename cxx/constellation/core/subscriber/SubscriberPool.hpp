@@ -34,28 +34,28 @@ namespace constellation::utils {
      * This class registers a CHIRP callback for the services defined via the template parameter, listens to incoming
      * messages and forwards them to a callback registered upon creation of the subscriber socket
      */
-    template <typename MESSAGE> class SubscriberPool {
+    template <typename MESSAGE> class CNSTLN_API SubscriberPool {
     public:
         /**
          * @brief Construct SubscriberPool
          *
          * @param service CHIRP service identifier for which a subscription should be made
-         * @param logger_name Name of the logger to be used for this component
+         * @param logger Reference to a logger to be used for this component
          * @param callback Callback function pointer for received messages
          * @param default_topics List of default subscription topics to which this component subscribes directly upon
          *        opening the socket
          */
-        CNSTLN_API SubscriberPool(chirp::ServiceIdentifier service,
-                                  const std::string& logger_name,
-                                  std::function<void(const MESSAGE&)> callback,
-                                  std::initializer_list<std::string> default_topics = {});
+        SubscriberPool(chirp::ServiceIdentifier service,
+                       const log::Logger& logger,
+                       std::function<void(const MESSAGE&)> callback,
+                       std::initializer_list<std::string> default_topics = {});
 
         /**
          * @brief Destruct SubscriberPool
          *
          * This closes all connections and unregisters the CHIRP service discovery callback
          */
-        CNSTLN_API virtual ~SubscriberPool();
+        virtual ~SubscriberPool();
 
         // No copy/move constructor/assignment
         SubscriberPool(const SubscriberPool& other) = delete;
@@ -73,9 +73,22 @@ namespace constellation::utils {
          * @param depart Boolean to indicate discovery or departure
          * @param user_data Pointer to the SubscriberPool instance
          */
-        CNSTLN_API static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
+        static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
 
+        /**
+         * @brief Subscribe to a given topic of a specific host
+         *
+         * @param host Canonical name of the host to subscribe to
+         * @param topic Topic to subscribe to
+         */
         void subscribe(std::string_view host, std::string_view topic);
+
+        /**
+         * @brief Unsubscribe from a given topic of a specific host
+         *
+         * @param host Canonical name of the host to unsubscribe from
+         * @param topic Topic to unsubscribe
+         */
         void unsubscribe(std::string_view host, std::string_view topic);
 
     private:
@@ -99,7 +112,7 @@ namespace constellation::utils {
 
         chirp::ServiceIdentifier service_;
 
-        log::Logger logger_;
+        const log::Logger& logger_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
         zmq::context_t context_;
         zmq::active_poller_t poller_;
         std::map<chirp::DiscoveredService, zmq::socket_t> sockets_;

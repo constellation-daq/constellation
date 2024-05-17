@@ -33,14 +33,17 @@ namespace constellation::heartbeat {
      * services in the constellation and listens for heartbeat and extrasystole messages from remote satellites and forwards
      * them to a callback registered upon creation of the receiver
      */
-    class HeartbeatRecv : public SubscriberPool<message::CHP1Message> {
+    class HeartbeatRecv : public utils::SubscriberPool<message::CHP1Message> {
     public:
         /**
          * @brief Construct heartbeat receiver
          *
          * @param callback Callback function pointer for received heartbeat messages
          */
-        CNSTLN_API HeartbeatRecv(std::function<void(const message::CHP1Message&)> callback)
-            : SubscriberPool<message::CHP1Message>(chirp::HEARTBEAT, "CHP", std::move(callback), {""}) {}
+        HeartbeatRecv(std::function<void(const message::CHP1Message&)> callback)
+            : SubscriberPool<message::CHP1Message>(chirp::HEARTBEAT, logger_, std::move(callback), {""}), logger_("CHP") {}
+
+    private:
+        log::Logger logger_;
     };
 } // namespace constellation::heartbeat
