@@ -1,4 +1,4 @@
-#include "aida_include/AidaTluHardware.hh"
+#include "AidaTluHardware.hh"
 #include <iostream>
 #include <ostream>
 #include <vector>
@@ -60,14 +60,9 @@ void AD5665R::SetDACValue(unsigned char channel, uint32_t value, uint8_t verbose
   if (verbose > 1){
     std::cout << "\tSetting DAC channel " << (unsigned int)channel << " to " << value << std::endl;
   }
-  if (( (unsigned int)channel < 0 ) || ( 7 < (unsigned int)channel )){
+  if (7 < (unsigned int)channel ){
     std::cout << "\tAD5665R - ERROR: channel " << int(channel)  << " not in range 0-7" << std::endl;
     return;
-  }
-
-  if (value<0){
-    std::cout << "\tAD5665R - ERROR: value" << value << "<0. Default to 0" << std::endl;
-    value=0;
   }
   if (value>0xFFFF){
     std::cout << "\tAD5665R - ERROR: value" << value << ">0xFFFF. Default to 0xFFFF" << std::endl;
@@ -92,9 +87,9 @@ void PCA9539PW::SetI2CPar( i2cCore *mycore, char addr ) {
   m_i2cAddr= addr;
 }
 
-void PCA9539PW::writeReg(unsigned int memAddr, unsigned char regContent, uint8_t verbose){
+void PCA9539PW::writeReg(unsigned int memAddr, unsigned char regContent){
   //Basic functionality to write to register.
-  if ((memAddr < 0) || (memAddr > 7)){
+  if (memAddr > 7){
     std::cout << "PCA9539PW - ERROR: register number should be in range [0:7]" << std::endl;
     return;
   }
@@ -102,10 +97,10 @@ void PCA9539PW::writeReg(unsigned int memAddr, unsigned char regContent, uint8_t
   m_IOXcore->WriteI2CChar(m_i2cAddr, (unsigned char)memAddr, (unsigned char)regContent);
 }
 
-char PCA9539PW::readReg(unsigned int memAddr, uint8_t verbose){
+char PCA9539PW::readReg(unsigned int memAddr){
   //Basic functionality to read from register.
   char res;
-  if ((memAddr < 0) || (memAddr > 7)){
+  if (memAddr > 7){
     std::cout << "PCA9539PW - ERROR: register number should be in range [0:7]" << std::endl;
     return -1;
   }
@@ -128,7 +123,7 @@ void PCA9539PW::setInvertReg(unsigned int memAddr, unsigned char polarity= 0x00,
   m_IOXcore->WriteI2CChar(m_i2cAddr, (unsigned char)memAddr+4, (unsigned char)polarity);
 }
 
-char PCA9539PW::getInvertReg(unsigned int memAddr, uint8_t verbose){
+char PCA9539PW::getInvertReg(unsigned int memAddr){
   //Read the content of register 4 or 5 which determine the polarity of the
   //ports (0= normal, 1= inverted).
   char res;
@@ -154,7 +149,7 @@ void PCA9539PW::setIOReg(unsigned int memAddr, unsigned char direction= 0xFF, ui
   m_IOXcore->WriteI2CChar(m_i2cAddr, (unsigned char)memAddr+6, (unsigned char)direction);
 }
 
-char PCA9539PW::getIOReg(unsigned int memAddr,uint8_t  verbose){
+char PCA9539PW::getIOReg(unsigned int memAddr){
   //Read the content of register 6 or 7 which determine the direction of the
   //ports (0= output, 1= input).
   char res;
@@ -166,7 +161,7 @@ char PCA9539PW::getIOReg(unsigned int memAddr,uint8_t  verbose){
   return res;
 }
 
-char PCA9539PW::getInputs(unsigned int memAddr, uint8_t verbose){
+char PCA9539PW::getInputs(unsigned int memAddr){
   //Read the incoming values of the pins for one of the two 8-bit banks.
   char res;
   if ((memAddr != 0) && (memAddr != 1)){
@@ -191,7 +186,7 @@ void PCA9539PW::setOutputs(unsigned int memAddr, unsigned char direction= 0xFF, 
   m_IOXcore->WriteI2CChar(m_i2cAddr, (unsigned char)memAddr+2, (unsigned char)direction);
 }
 
-char PCA9539PW::getOutputs(unsigned int memAddr, uint8_t verbose){
+char PCA9539PW::getOutputs(unsigned int memAddr){
   //Read the incoming values of the pins for one of the two 8-bit banks.
   char res;
   if ((memAddr != 0) && (memAddr != 1)){

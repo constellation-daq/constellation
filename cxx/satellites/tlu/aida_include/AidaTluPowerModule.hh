@@ -1,6 +1,7 @@
 #ifndef H_AIDATLUPOWERMODULE_HH
 #define H_AIDATLUPOWERMODULE_HH
 
+#include <cstdint>
 #include <string>
 #include <iostream>
 #include <vector>
@@ -38,7 +39,7 @@ public:
   void initI2Cslaves(bool intRef, uint8_t verbose);
   uint32_t _set_bit(uint32_t v, int index, bool x);
   void setIndicatorRGB(int indicator, const std::array<int, 3>& RGB, uint8_t verbose);
-  void setI2CPar( i2cCore  *mycore , char DACaddr, char Exp1Add, char Exp2Add, char IdAdd, uint8_t verbose);
+  void setI2CPar( i2cCore  *mycore , char DACaddr, char Exp1Add, char Exp2Add, char IdAdd);
   void setVchannel(int channel, float voltage, uint8_t verbose);
   void testme();
   void testLED();

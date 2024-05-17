@@ -1,6 +1,7 @@
 #ifndef H_AIDATLUHARDWARE_HH
 #define H_AIDATLUHARDWARE_HH
 
+#include <cstdint>
 #include <string>
 #include <iostream>
 #include <vector>
@@ -32,18 +33,18 @@ private:
   char m_i2cAddr;
   i2cCore * m_IOXcore;
 
-  void writeReg(unsigned int memAddr, unsigned char regContent, uint8_t verbose);
-  char readReg(unsigned int memAddr, uint8_t verbose);
+  void writeReg(unsigned int memAddr, unsigned char regContent);
+  char readReg(unsigned int memAddr);
 public:
   PCA9539PW();
   void SetI2CPar( i2cCore  *mycore , char addr);
   void setInvertReg(unsigned int memAddr, unsigned char polarity, uint8_t verbose);
-  char getInvertReg(unsigned int memAddr, uint8_t verbose);
+  char getInvertReg(unsigned int memAddr);
   void setIOReg(unsigned int memAddr, unsigned char direction, uint8_t verbose);
-  char getIOReg(unsigned int memAddr, uint8_t verbose);
-  char getInputs(unsigned int memAddr, uint8_t verbose);
+  char getIOReg(unsigned int memAddr);
+  char getInputs(unsigned int memAddr);
   void setOutputs(unsigned int memAddr, unsigned char direction, uint8_t verbose);
-  char getOutputs(unsigned int memAddr, uint8_t verbose);
+  char getOutputs(unsigned int memAddr);
 };
 //////////////////////////////////////////////////////////////////////
 class Si5345{

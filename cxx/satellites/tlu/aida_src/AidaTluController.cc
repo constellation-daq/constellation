@@ -3,21 +3,23 @@
 #include "../aida_include/AidaTluPowerModule.hh"
 #include "../aida_include/AidaTluDisplay.hh"
 #include "../aida_include/AidaTluI2c.hh"
+#include <cstdint>
 #include <iomanip>
 #include <thread>
 #include <chrono>
 #include <string>
 #include <bitset>
 #include <iomanip>
-#include "eudaq/Logger.hh"
+#include "constellation/core/logging/log.hpp"
 
 #include "uhal/uhal.hpp"
 
-namespace tlu {
-  AidaTluController::AidaTluController(const std::string & connectionFilename, const std::string & deviceName) : m_hw(0), m_DACaddr(0), m_IDaddr(0) {
+using namespace constellation;
 
-    std::string myMsg= "CONFIGURING FROM " + connectionFilename + " THE DEVICE " + deviceName + "\t";
-    EUDAQ_INFO(myMsg);
+namespace tlu {
+  AidaTluController::AidaTluController(const std::string & connectionFilename, const std::string & deviceName) : m_hw(0), m_DACaddr(0), m_IDaddr(0), logger_("AIDATLU") {
+
+    LOG(logger_, INFO) << "CONFIGURING FROM " + connectionFilename + " THE DEVICE " + deviceName;
     if(!m_hw) {
       ConnectionManager manager ( connectionFilename );
       SetUhalLogLevel(2); //  Get rid of initial flood of messages for address map
@@ -31,7 +33,7 @@ namespace tlu {
   }
 
   void AidaTluController::configureHDMI(unsigned int hdmiN, unsigned int enable, uint8_t verbose){
-    int nDUTs;
+    unsigned int nDUTs;
     unsigned char oldStatus;
     unsigned char newStatus;
     unsigned char mask;
@@ -50,7 +52,7 @@ namespace tlu {
         std::cout << "\tBank " << bank << " Nibble " << nibble << std::endl;
       }
       // Modify the expander responsible for CONT, TRIG, SPARE and BUSY
-      oldStatus= m_IOexpander1.getOutputs(bank, false);
+      oldStatus= m_IOexpander1.getOutputs(bank);
       newnibble= (enable & 0xF) << 4*nibble;
       mask = 0xF << 4*nibble; // bits we want to change are marked with 1
       newStatus= (oldStatus & (~mask)) | (newnibble & mask);
@@ -85,7 +87,7 @@ namespace tlu {
     unsigned char oldStatus;
     unsigned char newStatus;
 
-    oldStatus= m_IOexpander2.getOutputs(bank, false);
+    oldStatus= m_IOexpander2.getOutputs(bank);
     newStatus= oldStatus & ~mask;
     if (enable){ //1 activates the output. 0 disables it.
       newStatus= newStatus | mask;
@@ -98,7 +100,7 @@ namespace tlu {
   }
 
   void AidaTluController::enableHDMI(unsigned int hdmiN, bool enable, uint8_t verbose){
-    int nDUTs;
+    unsigned int nDUTs;
     unsigned char oldStatus;
     unsigned char newStatus;
     unsigned char mask;
@@ -115,7 +117,7 @@ namespace tlu {
       if (verbose){
         std::cout << "\tBank " << bank << " Nibble " << nibble << std::endl;
       }
-      oldStatus= m_IOexpander1.getOutputs(bank, false);
+      oldStatus= m_IOexpander1.getOutputs(bank);
       mask= 0xF << 4*nibble;
       newStatus= oldStatus & (~mask);
       if (!enable){ // we want to write 0 to activate the outputs so check opposite of "enable"
@@ -167,7 +169,6 @@ namespace tlu {
 
   uint32_t AidaTluController::GetEventFifoFillLevel() {
     uint32_t res;
-    uint32_t fifomax= 8192;
 
     res= ReadRRegister("eventBuffer.EventFifoFillLevel");
     //std::cout << std::fixed << std::setw( 3 ) << std::setprecision( 2 ) << std::setfill( '0' ) << "  FIFO level " << (float)res/fifomax << "% (" << res << "/" << fifomax << ")" << std::endl;
@@ -177,10 +178,7 @@ namespace tlu {
   uint32_t AidaTluController::GetFW(){
     uint32_t res;
     res= ReadRRegister("version");
-    std::stringstream ss; //Use a string stream to do all the manipulation necessary
-    ss << "AIDA TLU FIRMWARE VERSION " << std::hex << std::showbase  << res << "\t";
-    std::string myMsg = ss.str();
-    EUDAQ_INFO(myMsg);
+    LOG(logger_,INFO) << "AIDA TLU FIRMWARE VERSION " << std::hex << std::showbase  << res;
     return res;
   }
 
@@ -318,7 +316,7 @@ namespace tlu {
       myURI = myURI.substr(myURI.find(delimiter)+3);
       delimiter = ":";
       myURI = myURI.substr(0, myURI.find(delimiter));
-      ss << "USING IPBus WITH IP= " << myURI << "\t";
+      LOG(logger_,INFO)<< "USING IPBus WITH IP= " << myURI;
     }
     if (myURI.find("chtcp") != std::string::npos) {
       //std::cout << myURI << std::endl;
@@ -326,10 +324,8 @@ namespace tlu {
       myURI = myURI.substr(myURI.find(delimiter)+3);
       delimiter = ":";
       myURI = myURI.substr(0, myURI.find(delimiter));
-      ss << "USING ControlHub WITH IP= " << myURI << "\t";
+      LOG(logger_,INFO) << "USING ControlHub WITH IP= " << myURI;
     }
-    std::string myMsg = ss.str();
-    EUDAQ_INFO(myMsg);
     return myURI;
   }
 
@@ -338,7 +334,6 @@ namespace tlu {
     unsigned char myaddr= 0xfa;
     int nwords= 6;
 
-    std::ios::fmtflags coutflags( std::cout.flags() );
     for(int iaddr =0; iaddr < nwords; iaddr++) {
       char nibble = m_i2c->ReadI2CChar(m_IDaddr, myaddr + iaddr);
       m_BoardID[iaddr]= ((uint)nibble)&0xff;
@@ -349,16 +344,13 @@ namespace tlu {
     for(int iaddr =0; iaddr < nwords/2; iaddr++) {
       ss << " " << std::setw(2) << std::setfill('0') << std::hex <<  m_BoardID[2*iaddr] << m_BoardID[2*iaddr+1];
     }
-    ss << "\t";
     std::string myMsg = ss.str();
-    EUDAQ_INFO(myMsg);
+    LOG(logger_,INFO) << myMsg;
 
-    //std::cout << " " << std::endl;
-    //std::cout.flags( coutflags );
     return m_BoardID;
   }
 
-  uint64_t AidaTluController::GetTriggerMask(uint8_t verbose){
+  uint64_t AidaTluController::GetTriggerMask(){
     uint32_t maskHi, maskLo;
     maskLo= ReadRRegister("triggerLogic.TriggerPattern_lowR");
     maskHi= ReadRRegister("triggerLogic.TriggerPattern_highR");
@@ -367,13 +359,10 @@ namespace tlu {
     return triggerPattern;
   }
 
-  uint32_t AidaTluController::GetTriggerVeto(uint8_t verbose){
+  uint32_t AidaTluController::GetTriggerVeto(){
     uint32_t vetoState;
-    std::stringstream ss;
     vetoState= ReadRRegister("triggerLogic.TriggerVetoR");
-    ss << "TRIGGER VETO: triggers are " << m_myStates[!bool(vetoState)] << "\t";
-    std::string myMsg = ss.str();
-    EUDAQ_INFO(myMsg);
+    LOG(logger_,INFO) << "TRIGGER VETO: triggers are " << m_myStates[!bool(vetoState)];
     return vetoState;
   };
 
@@ -387,7 +376,7 @@ namespace tlu {
     if (resbit.test(7))
       {
 	       std::cout << "\tWarning: enabling Enclustra I2C bus might have failed. This could prevent from talking to the I2C slaves on the TLU." << int(res) << std::endl;
-         EUDAQ_WARN("The Enclustra I2C bus is not correctly enabled.");
+         LOG(logger_,WARNING) << "The Enclustra I2C bus is not correctly enabled.";
       }else{
       std::cout << "\tSuccess." << std::endl;
     }
@@ -396,7 +385,6 @@ namespace tlu {
 
   int AidaTluController::InitializeClkChip(const std::string & filename, uint8_t verbose){
     std::vector< std::vector< unsigned int> > tmpConf;
-    std::stringstream ss;
     m_zeClock.SetI2CPar(m_i2c, m_I2C_address.clockChip);
     m_zeClock.getDeviceVersion(verbose);
     //std::string filename = "/users/phpgb/workspace/myFirmware/AIDA/bitFiles/TLU_CLK_Config.txt";
@@ -406,9 +394,7 @@ namespace tlu {
     }
     m_zeClock.writeConfiguration(tmpConf, false);
 
-    ss << "Si5345 design Id: " << m_zeClock.checkDesignID(verbose) << "\t";
-    std::string myMsg = ss.str();
-    EUDAQ_INFO(myMsg);
+    LOG(logger_,INFO) << "Si5345 design Id: " << m_zeClock.checkDesignID(verbose);
     return 0;
   }
 
@@ -545,7 +531,7 @@ namespace tlu {
     std::cout.flags( coutflags ); // Restore cout flags
 
     if (m_hasDisplay){
-      EUDAQ_INFO("AIDA TLU: LCD display detected. This is a 19-inch rack unit.\t");
+      LOG(logger_,INFO) << "AIDA TLU: LCD display detected. This is a 19-inch rack unit.";
       m_lcddisp->setParameters(m_i2c, m_I2C_address.lcdDisp, 2, 16);
       std::cout << "  AIDA_TLU LCD: Initialising" << std::endl;
 
@@ -558,7 +544,7 @@ namespace tlu {
 
   void AidaTluController::pwrled_Initialize(uint8_t verbose, unsigned int type) {
     std::cout << "  TLU_POWERMODULE: Initialising" << std::endl;
-    m_pwrled->setI2CPar( m_i2c , m_I2C_address.pwraddr, m_I2C_address.ledxp1addr, m_I2C_address.ledxp2addr, type, verbose);
+    m_pwrled->setI2CPar( m_i2c , m_I2C_address.pwraddr, m_I2C_address.ledxp1addr, m_I2C_address.ledxp2addr, type);
     m_pwrled->initI2Cslaves(false, verbose);
     std::cout << "  TLU_POWERMODULE: Testing LEDs (check front panel)... " << std::flush;
     m_pwrled->led_allOff();
@@ -587,11 +573,11 @@ namespace tlu {
 
   uint32_t AidaTluController::PackBits(std::vector< unsigned int>  rawValues){
     //Pack 6 number using only 5-bits for each.
-    int nChannels= m_nTrgIn;
+    unsigned int nChannels= m_nTrgIn;
     uint32_t packedbits= 0;
     int tmpint= 0;
     if (nChannels== rawValues.size()){
-      for (int iCh=0; iCh < nChannels; iCh++){
+      for (unsigned int iCh=0; iCh < nChannels; iCh++){
         tmpint= ((int)rawValues.at(iCh))<< iCh*5;
         packedbits = packedbits | tmpint;
       }
@@ -603,12 +589,11 @@ namespace tlu {
     return packedbits;
   }
 
-  void AidaTluController::SetRunActive(uint8_t state, uint8_t verbose){
+  void AidaTluController::SetRunActive(uint8_t state){
   /// Writes to IPBus register to instruct the TLU to start/stop a run.
   //  state= 1 when running, 0 when stopped.
   //  On start, the internal registers are reset and the TLU issues a T0 pulse to DUTs.
     SetWRegister("Shutter.RunActiveRW", state);
-    std::stringstream ss;
     std::string runState;
 
     if (state){
@@ -617,14 +602,14 @@ namespace tlu {
     else{
       runState= "STOP";
     }
-    EUDAQ_INFO("TLU SET TO " + runState);
+    LOG(logger_,INFO) << "TLU SET TO " << runState;
   }
 
   fmctludata* AidaTluController::PopFrontEvent(){
     fmctludata *e = m_data.front();
     m_data.pop_front();
     return e;
-  }
+}
 
   uint32_t AidaTluController::ReadRRegister(const std::string & name) {
     try {
@@ -661,7 +646,7 @@ namespace tlu {
           std::cout<<"receive error"<<std::endl;
         }
         for ( std::vector<uint32_t>::const_iterator i ( fifoContent.begin() ); i!=fifoContent.end(); i+=6 ) { //0123
-          m_data.push_back(new fmctludata(*i, *(i+1), *(i+2), *(i+3), *(i+4), *(i+5)));
+          m_data.push_back(new fmctludata(*i, *(i+1), *(i+2), *(i+3), *(i+4)));
           if (verbose > 1){
             std::cout<< *(m_data.back());
           }
@@ -678,10 +663,9 @@ namespace tlu {
   }
 
   void AidaTluController::SetDutClkSrc(unsigned int hdmiN, unsigned int source, uint8_t verbose){
-    int nDUTs;
+    unsigned int nDUTs;
     unsigned char oldStatus;
     unsigned char newStatus;
-    unsigned char newnibble;
     unsigned char mask, maskLow, maskHigh;
     std::ostringstream bufferString;
     int bank= 0;
@@ -691,7 +675,7 @@ namespace tlu {
       std::cout << "\tSetDutClkSrc - ERROR: HDMI must be in range [1, 4]" << std::endl;
       return;
     }
-    if ((source < 0 ) || ( source > 2 )){
+    if (source > 2){
       std::cout << "\tSetDutClkSrc - ERROR: Clock source can only be 0 (disabled), 1 (Si5345) or 2 (FPGA)" << std::endl;
       return;
     }
@@ -701,7 +685,7 @@ namespace tlu {
     maskLow= 1 << (1* hdmiN); //CLK FROM FPGA
     maskHigh= 1<< (1* hdmiN +4); //CLK FROM Si5345
     mask= maskLow | maskHigh;
-    oldStatus= m_IOexpander2.getOutputs(bank, false);
+    oldStatus= m_IOexpander2.getOutputs(bank);
     //newStatus= oldStatus & ~mask;
     switch(source){
       case 0 : {
@@ -741,7 +725,7 @@ namespace tlu {
   void AidaTluController::SetDUTMask(int32_t value, uint8_t verbose){
     uint32_t res;
     if (value < 0){
-      EUDAQ_ERROR("DUTMask can  not be a negavite number.");
+      LOG(logger_,CRITICAL) << "DUTMask can  not be a negavite number.";
       return;
     }
     SetWRegister("DUTInterfaces.DUTMaskW",value);
@@ -756,7 +740,7 @@ namespace tlu {
   void AidaTluController::SetDUTMaskMode(int32_t value, uint8_t verbose){
     uint32_t res;
     if (value < 0){
-      EUDAQ_ERROR("DUTMaskMode can  not be a negavite number.");
+      LOG(logger_,CRITICAL) << "DUTMaskMode can  not be a negavite number.";
       return;
     }
     SetWRegister("DUTInterfaces.DUTInterfaceModeW",value);
@@ -771,7 +755,7 @@ namespace tlu {
   void AidaTluController::SetDUTMaskModeModifier(int32_t value, uint8_t verbose){
     uint32_t res;
     if (value < 0){
-      EUDAQ_ERROR("DUTMaskModeModifier can  not be a negavite number.");
+      LOG(logger_,CRITICAL) << "DUTMaskModeModifier can  not be a negavite number.";
       return;
     }
     SetWRegister("DUTInterfaces.DUTInterfaceModeModifierW",value);
@@ -786,7 +770,7 @@ namespace tlu {
   void AidaTluController::SetDUTIgnoreBusy(int32_t value, uint8_t verbose){
     uint32_t res;
     if (value < 0){
-      EUDAQ_ERROR("DUTIgnoreBusy can  not be a negavite number.");
+      LOG(logger_,CRITICAL) << "DUTIgnoreBusy can  not be a negavite number.";
       return;
     }
     SetWRegister("DUTInterfaces.IgnoreDUTBusyW",value);
@@ -801,15 +785,15 @@ namespace tlu {
   void AidaTluController::SetShutterControl(int32_t value, uint8_t verbose){
     uint32_t res;
     if (value < 0){
-      EUDAQ_ERROR("ShutterControl can  not be a negavite number.");
+      LOG(logger_,CRITICAL) << "ShutterControl can  not be a negavite number.";
       return;
     }
     if (value & 0x1){
-      EUDAQ_INFO("TLU is configured to use shutter.\t");
+      LOG(logger_,INFO) << "TLU is configured to use shutter.";
     }
 
     if (value > 3){
-      EUDAQ_WARN("Shutter control: only bit 0 and 1 are considered for this value.\t");
+      LOG(logger_,WARNING) << "Shutter control: only bit 0 and 1 are considered for this value.";
       value= value & 0x3;
     }
     SetWRegister("Shutter.ControlRW",value);
@@ -824,7 +808,7 @@ namespace tlu {
   void AidaTluController::SetShutterInternalInterval(int32_t value, uint8_t verbose){
     uint32_t res;
     if (value < 0){
-      EUDAQ_ERROR("ShutterInternalInterval can  not be a negavite number.");
+      LOG(logger_,CRITICAL) << "ShutterInternalInterval can  not be a negavite number.";
       return;
     }
     SetWRegister("Shutter.InternalShutterPeriodRW",value);
@@ -840,7 +824,7 @@ namespace tlu {
     // Selects the input to be used as shutter source (0, 5)
     uint32_t res;
     if ((value < 0) | (value > 5)){
-      EUDAQ_ERROR("Shutter source can only be in range [0, 5]. Value " + std::to_string(value) + " ignored.\t");
+      LOG(logger_,CRITICAL) << "Shutter source can only be in range [0, 5]. Value " + std::to_string(value) + " ignored.";
       return;
     }
     else{
@@ -857,7 +841,7 @@ namespace tlu {
   void AidaTluController::SetShutterOnTime(int32_t value, uint8_t verbose){
     uint32_t res;
     if (value < 0){
-      EUDAQ_ERROR("ShutterOnTime can  not be a negavite number.");
+      LOG(logger_,CRITICAL) << "ShutterOnTime can not be a negavite number.";
       return;
     }
     SetWRegister("Shutter.ShutterOnTimeRW",value);
@@ -872,7 +856,7 @@ namespace tlu {
   void AidaTluController::SetShutterOffTime(int32_t value, uint8_t verbose){
     uint32_t res;
     if (value < 0){
-      EUDAQ_ERROR("ShutterOffTime can  not be a negavite number.");
+      LOG(logger_,CRITICAL) << "ShutterOffTime can not be a negavite number.";
       return;
     }
     SetWRegister("Shutter.ShutterOffTimeRW",value);
@@ -887,7 +871,7 @@ namespace tlu {
   void AidaTluController::SetShutterVetoOffTime(int32_t value, uint8_t verbose){
     uint32_t res;
     if (value < 0){
-      EUDAQ_ERROR("ShutterVetoOffTime can  not be a negavite number.");
+      LOG(logger_,CRITICAL) << "ShutterVetoOffTime can  not be a negavite number.";
       return;
     }
     SetWRegister("Shutter.ShutterVetoOffTimeRW",value);
@@ -902,7 +886,7 @@ namespace tlu {
   void AidaTluController::SetDUTIgnoreShutterVeto(int32_t value, uint8_t verbose){
     uint32_t res;
     if (value < 0){
-      EUDAQ_ERROR("DUTIgnoreShutterVeto can  not be a negavite number.");
+      LOG(logger_,CRITICAL) << "DUTIgnoreShutterVeto can  not be a negavite number.";
       return;
     }
     SetWRegister("DUTInterfaces.IgnoreShutterVetoW",value);
@@ -936,17 +920,17 @@ namespace tlu {
       // Check that
       // onTime < vetoOffTime < offTime
       if (vetoOffTime < onTime){
-        EUDAQ_ERROR("ShutterVetoOffTime can not be shorter than ShutterOnTime. Please review configuration parameters.\t");
+        LOG(logger_,CRITICAL) << "ShutterVetoOffTime can not be shorter than ShutterOnTime. Please review configuration parameters.";
         std::cout << "\tENSURE THAT ShutterOnTime <= ShutterVetoOffTime < ShutterOffTime" << std::endl;
         return;
       }
       if (offTime <= onTime){
-        EUDAQ_ERROR("ShutterOffTime must be longer than ShutterOnTime. Please review configuration parameters.\t");
+        LOG(logger_,CRITICAL) << "ShutterOffTime must be longer than ShutterOnTime. Please review configuration parameters.";
         std::cout << "\tENSURE THAT ShutterOnTime <= ShutterVetoOffTime < ShutterOffTime" << std::endl;
         return;
       }
       if (offTime <= vetoOffTime){
-        EUDAQ_ERROR("ShutterOffTime must be longer than ShutterVetoOffTime. Please review configuration parameters.\t");
+        LOG(logger_,CRITICAL) << "ShutterOffTime must be longer than ShutterVetoOffTime. Please review configuration parameters.";
         std::cout << "\tENSURE THAT ShutterOnTime <= ShutterVetoOffTime < ShutterOffTime" << std::endl;
         return;
       }
@@ -962,15 +946,11 @@ namespace tlu {
     return;
   }
 
-  void AidaTluController::SetInternalTriggerFrequency(int32_t user_freq, uint8_t verbose){
+  void AidaTluController::SetInternalTriggerFrequency(uint32_t user_freq, uint8_t verbose){
     uint32_t max_freq= 160000000;
     uint32_t interval;
     uint32_t read_freq;
 
-    if (user_freq < 0){
-      EUDAQ_ERROR("InternalTriggerFrequency can  not be a negavite number.");
-      return;
-    }
     if (user_freq > max_freq){
       std::cout << "  SetInternalTriggerFrequency: Max frequency allowed is "<< max_freq << " Hz. Coerced to this value." << std::endl;
       user_freq= max_freq;
@@ -1026,8 +1006,6 @@ namespace tlu {
   void AidaTluController::SetThresholdValue(unsigned char channel, float thresholdVoltage, uint8_t verbose ) {
     // Channel can either be [0, 5] or 7 (all channels).
     int nChannels= m_nTrgIn; //We should read this from conf file, ideally.
-    bool intRef= false; //We should read this from conf file, ideally.
-    float vref;
 
     if ( std::abs(thresholdVoltage) > m_vref ){
       thresholdVoltage= m_vref*thresholdVoltage/std::abs(thresholdVoltage);
@@ -1037,7 +1015,7 @@ namespace tlu {
     float vdac = ( thresholdVoltage + m_vref ) / 2;
     float dacCode =  0xFFFF * vdac / m_vref;
 
-    if( (channel != 7) && ((channel < 0) || (channel > (nChannels-1)))  ){
+    if( (channel != 7) && (channel > (nChannels-1))  ){
       std::cout<<"\tError: DAC illegal DAC channel. Use 7 for all channels or 0 <= channel <= "<< nChannels-1 << std::endl;
       return;
     }
@@ -1089,10 +1067,9 @@ namespace tlu {
       SetWRegister("triggerInputs.InvertEdgeW", trgPol);
   }
 
-  void AidaTluController::SetTriggerVeto(int value, uint8_t verbose){
-    uint32_t vetoStatus;
+  void AidaTluController::SetTriggerVeto(int value){
     SetWRegister("triggerLogic.TriggerVetoW",value);
-    GetTriggerVeto(verbose);
+    GetTriggerVeto();
   }
 
   void AidaTluController::SetWRegister(const std::string & name, int value){
@@ -1138,10 +1115,7 @@ namespace tlu {
       return;
     }
     else{
-      std::stringstream ss;
-      ss << regName << ": Mismatch in values. Written: " << std::hex << std::showbase << (written & mask) << "; readback as: " << (readback & mask) << "\t";
-      std::string myMsg = ss.str();
-      EUDAQ_ERROR(myMsg);
+      LOG(logger_,CRITICAL) << regName << ": Mismatch in values. Written: " << std::hex << std::showbase << (written & mask) << "; readback as: " << (readback & mask) << "\t";
     }
   }
 

@@ -1,4 +1,4 @@
-#include "aida_include/AidaTluDisplay.hh"
+#include "AidaTluDisplay.hh"
 #include <iostream>
 #include <ostream>
 #include <vector>
@@ -40,10 +40,6 @@ void LCD09052::test(){
 void LCD09052::setBrightness(unsigned int value){
   // Sets the brightness level of the backlight.
   // Value is an integer in range [0, 250]. 0= no light, 250= maximum light.
-  if (value < 0){
-    std::cout << "\tLCD09052 setBrightness: minimum value= 0. Coherced to 0" << std::endl;
-    value = 0;
-  }
   if (value > 250){
     std::cout << "\tLCD09052 setBrightness: maximum value= 250. Coherced to 250" << std::endl;
     value = 250;
@@ -84,8 +80,6 @@ void LCD09052::posCursor(unsigned int line, unsigned int pos){
 
 void LCD09052::pulseLCD(unsigned int nCycles){
   // Pulse the LCD backlight
-  float startP= 0;
-  float endP= M_PI*nCycles;
   int stepsInCycle= 15;
   float nSteps= stepsInCycle*nCycles;
   float stepSize= M_PI/(stepsInCycle);

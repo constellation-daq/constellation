@@ -81,7 +81,7 @@ uint32_t PWRLED::_set_bit(uint32_t v, int index, bool x){
   return v;
 }
 
-void PWRLED::setI2CPar( i2cCore  *mycore , char DACaddr, char Exp1Add, char Exp2Add, char IdAdd, uint8_t verbose){
+void PWRLED::setI2CPar( i2cCore  *mycore , char DACaddr, char Exp1Add, char Exp2Add, char IdAdd){
   pwr_i2c_core = mycore;
   pwr_i2c_DACaddr= DACaddr;
   pwr_i2c_exp1Add= Exp1Add;
@@ -108,10 +108,10 @@ void PWRLED::setIndicatorRGB(int indicator, const std::array<int, 3>& RGB, uint8
   if ((1 <= indicator) && (indicator <= 11)){
       unsigned char nowStatus[4];
       unsigned char nextStatus[4];
-      nowStatus[0]= 0xFF & (pwr_ledExp1.getOutputs(0, verbose));
-      nowStatus[1]= 0xFF & (pwr_ledExp1.getOutputs(1, verbose));
-      nowStatus[2]= 0xFF & (pwr_ledExp2.getOutputs(0, verbose));
-      nowStatus[3]= 0xFF & (pwr_ledExp2.getOutputs(1, verbose));
+      nowStatus[0]= 0xFF & (pwr_ledExp1.getOutputs(0));
+      nowStatus[1]= 0xFF & (pwr_ledExp1.getOutputs(1));
+      nowStatus[2]= 0xFF & (pwr_ledExp2.getOutputs(0));
+      nowStatus[3]= 0xFF & (pwr_ledExp2.getOutputs(1));
       //std::cout << "NOW STATUS "<< (unsigned int)nowStatus[0] << " " << (unsigned int)nowStatus[1] << " " << (unsigned int)nowStatus[2] << " " << (unsigned int)nowStatus[3] << " " << std::endl;
       uint32_t nowWrd= 0x00000000;
       nowWrd= nowWrd | (unsigned int)nowStatus[0];
@@ -211,7 +211,6 @@ void PWRLED::led_allWhite(){
 }
 
 void PWRLED::testLED(){
-  std::array<int, 3> RGB{{0, 1, 0}};
   led_allOff();
   for (int iInd=1; iInd < 12; iInd++){
     setIndicatorRGB(iInd, {{1, 0, 0}}, false);

@@ -5,10 +5,12 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <cstdint>
 #include "AidaTluI2c.hh"
 #include "AidaTluHardware.hh"
 #include "AidaTluPowerModule.hh"
 #include "AidaTluDisplay.hh"
+#include "constellation/core/logging/Logger.hpp"
 
 typedef unsigned char uchar_t;
 
@@ -16,6 +18,7 @@ namespace uhal{
   class HwInterface;
 }
 using namespace uhal;
+using namespace constellation;
 
 namespace tlu {
 
@@ -32,13 +35,13 @@ namespace tlu {
     uint32_t PackBits(std::vector< unsigned int>  rawValues);
     void SetSerdesRst(int value) { SetWRegister("triggerInputs.SerdesRstW",value); };
     void SetInternalTriggerInterval(int value) { SetWRegister("triggerLogic.InternalTriggerIntervalW",value); };
-    void SetInternalTriggerFrequency(int32_t user_freq, uint8_t verbose);
+    void SetInternalTriggerFrequency(uint32_t user_freq, uint8_t verbose);
     //void SetTriggerMask(int value) { SetWRegister("triggerLogic.TriggerMaskW",value); };
     void SetTriggerMask(uint64_t value);
     void SetTriggerMask(uint32_t maskHi, uint32_t maskLo);
     void SetTriggerPolarity(uint64_t value);
     //void SetTriggerVeto(int value) { SetWRegister("triggerLogic.TriggerVetoW",value); };
-    void SetTriggerVeto(int value, uint8_t verbose);
+    void SetTriggerVeto(int value);
     void SetPulseStretch(int value) { SetWRegister("triggerLogic.PulseStretchW",value); };
     void SetPulseDelay(int value) { SetWRegister("triggerLogic.PulseDelayW",value); };
     void SetPulseStretchPack(std::vector< unsigned int>  valuesVec, uint8_t verbose);
@@ -69,7 +72,7 @@ namespace tlu {
     uint32_t GetPulseStretch(){ return ReadRRegister("triggerLogic.PulseStretchR"); };
     uint32_t GetPulseDelay() { return ReadRRegister("triggerLogic.PulseDelayR"); };
     //uint32_t GetTriggerMask() { return ReadRRegister("triggerLogic.TriggerMaskR"); };
-    uint64_t GetTriggerMask(uint8_t verbose);
+    uint64_t GetTriggerMask();
     uint32_t GetDUTMask(uint8_t verbose);
     uint32_t GetDUTMaskMode(uint8_t verbose);
     uint32_t GetDUTMaskModeModifier(uint8_t verbose);
@@ -81,7 +84,7 @@ namespace tlu {
     uint32_t GetShutterOnTime(uint8_t verbose);
     uint32_t GetShutterOffTime(uint8_t verbose);
     uint32_t GetShutterVetoOffTime(uint8_t verbose);
-    uint32_t GetTriggerVeto(uint8_t verbose);
+    uint32_t GetTriggerVeto();
     uint32_t GetPreVetoTriggers() { return ReadRRegister("triggerLogic.PreVetoTriggersR"); };
     uint32_t GetPostVetoTriggers() { return ReadRRegister("triggerLogic.PostVetoTriggersR"); };
     uint64_t GetCurrentTimestamp(){
@@ -159,7 +162,7 @@ namespace tlu {
     void InitializeI2C(uint8_t verbose);
     void pwrled_Initialize(uint8_t verbose, unsigned int type);
     void pwrled_setVoltages(float v1, float v2, float v3, float v4, uint8_t verbose);
-    void SetRunActive(uint8_t state, uint8_t verbose);
+    void SetRunActive(uint8_t state);
 
     void SetDACValue(unsigned char channel, uint32_t value, uint8_t verbose);
     void SetShutterParameters(bool status, int8_t source, int32_t onTime, int32_t offTime, int32_t vetoOffTime, int32_t intInterval, uint8_t verbose);
@@ -229,6 +232,7 @@ namespace tlu {
 
     std::deque<fmctludata*> m_data;
 
+    log::Logger logger_;
 
   };
 
@@ -252,7 +256,7 @@ namespace tlu {
       eventnumber(wh&0xffffffff){
     }
 
-    fmctludata(uint32_t w0, uint32_t w1, uint32_t w2, uint32_t w3, uint32_t w4, uint32_t w): // w0 w1 w2 w3  wl= w0 w1; wh= w2 w3
+    fmctludata(uint32_t w0, uint32_t w1, uint32_t w2, uint32_t w3, uint32_t w4): // w0 w1 w2 w3  wl= w0 w1; wh= w2 w3
        eventtype((w0>>28)&0xf),
        input0((w0>>16)&0x1),
        input1((w0>>17)&0x1),

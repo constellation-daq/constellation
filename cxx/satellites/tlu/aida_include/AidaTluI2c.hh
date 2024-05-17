@@ -1,6 +1,7 @@
 #ifndef H_I2CBUS_HH
 #define H_I2CBUS_HH
 
+#include <cstdint>
 #include <deque>
 #include <string>
 #include <iostream>
