@@ -8,6 +8,10 @@ Provide path when setting up meson. E.g.
 ```
 meson setup build -Dcactus_root=/opt/cactus/
 ```
+Requires to set `LD_LIBRARY_PREFIX` to execute. E.g.
+```
+LD_LIBRARY_PREFIX=/opt/cactus/lib ./satellite_tlu -g cnstln1
+```
 
 ## ToDo
 * Aida files are copied from EUDAQ2, fixing only compiler warnings. Might need revision
