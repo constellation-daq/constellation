@@ -19,12 +19,12 @@ from .heartbeatchecker import HeartbeatChecker
 
 from .cscp import CSCPMessage
 from .chirp import CHIRPServiceIdentifier
-from .broadcastmanager import CHIRPBroadcaster
+from .broadcastmanager import CHIRPBroadcaster, BroadcasterArgumentParser
 from .commandmanager import CommandReceiver, cscp_requestable
 from .configuration import Configuration
 from .monitoring import MonitoringSender
 from .error import debug_log, handle_error
-from .base import EPILOG, ConstellationArgumentParser
+from .base import EPILOG
 
 
 class Satellite(
@@ -42,6 +42,7 @@ class Satellite(
         cmd_port: int,
         hb_port: int,
         mon_port: int,
+        broadcast: list[str],
         interface: str,
     ):
         """Set up class attributes."""
@@ -51,6 +52,7 @@ class Satellite(
             cmd_port=cmd_port,
             hb_port=hb_port,
             mon_port=mon_port,
+            broadcast=broadcast,
             interface=interface,
         )
 
@@ -397,7 +399,7 @@ class Satellite(
 # -------------------------------------------------------------------------
 
 
-class SatelliteArgumentParser(ConstellationArgumentParser):
+class SatelliteArgumentParser(BroadcasterArgumentParser):
     """Customized Argument parser providing common Satellite options."""
 
     def __init__(self, *args, **kwargs):

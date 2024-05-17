@@ -64,7 +64,9 @@ def mock_monitoringsender():
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context
-        m = MyStatProducer("mock_sender", send_port, interface="127.0.0.1")
+        m = MyStatProducer(
+            "mock_sender", send_port, interface="127.0.0.1", broadcast=None
+        )
         yield m
 
 
@@ -86,6 +88,7 @@ def mock_monitoringlistener(mock_chirp_socket):
                 name="mock_monitor",
                 group="mockstellation",
                 interface="127.0.0.1",
+                broadcast=None,
                 output_path=tmpdirname,
             )
             t = threading.Thread(target=m.receive_metrics)

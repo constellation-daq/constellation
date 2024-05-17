@@ -71,6 +71,7 @@ def mock_sender_satellite(mock_chirp_socket):
             mon_port=22222,
             hb_port=33333,
             data_port=DATA_PORT,
+            broadcast=None,
             interface="127.0.0.1",
         )
         t = threading.Thread(target=s.run_satellite)
@@ -102,6 +103,7 @@ def mock_receiver_satellite(mock_socket_sender: mocket, mock_socket_receiver: mo
             cmd_port=CMD_PORT,
             mon_port=22222,
             hb_port=33333,
+            broadcast=None,
             interface="127.0.0.1",
         )
         t = threading.Thread(target=s.run_satellite)

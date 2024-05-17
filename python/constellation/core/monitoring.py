@@ -14,10 +14,15 @@ from functools import wraps
 from datetime import datetime
 from logging.handlers import QueueHandler, QueueListener
 
-from .base import BaseSatelliteFrame, ConstellationArgumentParser, EPILOG
+from .base import BaseSatelliteFrame, EPILOG
 from .cmdp import CMDPTransmitter, Metric, MetricsType
 from .chirp import CHIRPServiceIdentifier
-from .broadcastmanager import CHIRPBroadcaster, chirp_callback, DiscoveredService
+from .broadcastmanager import (
+    CHIRPBroadcaster,
+    chirp_callback,
+    DiscoveredService,
+    BroadcasterArgumentParser,
+)
 
 
 def schedule_metric(handling: MetricsType, interval: float):
@@ -211,7 +216,7 @@ class ZeroMQSocketLogListener(QueueListener):
 class MonitoringListener(CHIRPBroadcaster):
     """Simple monitor class to receive logs and metrics from a Constellation."""
 
-    def __init__(self, name: str, group: str, interface: str, output_path: str = None):
+    def __init__(self, group: str, output_path: str = None, **kwargs):
         """Initialize values.
 
         Arguments:
@@ -220,7 +225,7 @@ class MonitoringListener(CHIRPBroadcaster):
         - interface :: the interface to connect to
         - output_path :: the directory to write logs and metric data to
         """
-        super().__init__(name=name, group=group, interface=interface)
+        super().__init__(group=group, **kwargs)
 
         self._log_listeners: dict[str, ZeroMQSocketLogListener] = {}
         self._metric_transmitters: dict[str, CMDPTransmitter] = {}
@@ -362,7 +367,7 @@ def main(args=None):
     """Start a simple log listener service."""
     import coloredlogs
 
-    parser = ConstellationArgumentParser(description=main.__doc__, epilog=EPILOG)
+    parser = BroadcasterArgumentParser(description=main.__doc__, epilog=EPILOG)
     parser.add_argument(
         "-o", "--output", type=str, help="The path to write log and metric data to."
     )

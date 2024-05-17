@@ -24,7 +24,10 @@ offer_data_666 = b"CHIRP\x01\x02\xd4fl\x89\x14g7=*b#\xeb4fy\xda\x17\x7f\xd1\xa7t
 def mock_bm(mock_chirp_socket):
     """Create mock BroadcastManager."""
     bm = CHIRPBroadcaster(
-        name="mock-satellite", group="mockstellation", interface="127.0.0.1"
+        name="mock-satellite",
+        group="mockstellation",
+        interface="127.0.0.1",
+        broadcast=None,
     )
     bm._add_com_thread()
     bm._start_com_threads()
@@ -43,7 +46,10 @@ def mock_bm_parent(mock_chirp_socket):
             self.callback_triggered = True
 
     bm = MockBroadcaster(
-        name="mock-satellite", group="mockstellation", interface="127.0.0.1"
+        name="mock-satellite",
+        group="mockstellation",
+        interface="127.0.0.1",
+        broadcast=None,
     )
     bm._add_com_thread()
     bm._start_com_threads()
@@ -65,7 +71,10 @@ def mock_bm_alt_parent(mock_chirp_socket):
             self.alt_callback_triggered = True
 
     bm = MockAltBroadcaster(
-        name="mock-satellite", group="mockstellation", interface="127.0.0.1"
+        name="mock-satellite",
+        group="mockstellation",
+        interface="127.0.0.1",
+        broadcast=None,
     )
     bm._add_com_thread()
     bm._start_com_threads()

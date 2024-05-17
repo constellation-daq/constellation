@@ -13,13 +13,18 @@ from typing import Dict
 
 import zmq
 
-from .broadcastmanager import CHIRPBroadcaster, chirp_callback, DiscoveredService
+from .broadcastmanager import (
+    CHIRPBroadcaster,
+    chirp_callback,
+    DiscoveredService,
+    BroadcasterArgumentParser,
+)
 from .chirp import CHIRPServiceIdentifier, get_uuid
 
 from .cscp import CommandTransmitter
 from .error import debug_log
 from .satellite import Satellite
-from .base import EPILOG, ConstellationArgumentParser
+from .base import EPILOG
 from .commandmanager import get_cscp_commands
 from .configuration import load_config, flatten_config
 
@@ -362,7 +367,7 @@ def main(args=None):
     import coloredlogs
     from IPython import embed
 
-    parser = ConstellationArgumentParser(description=main.__doc__, epilog=EPILOG)
+    parser = BroadcasterArgumentParser(description=main.__doc__, epilog=EPILOG)
     parser.add_argument(
         "-c", "--config", type=str, help="Path to the TOML configuration file to load."
     )

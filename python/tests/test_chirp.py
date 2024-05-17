@@ -17,8 +17,8 @@ from constellation.core.chirp import (
 @pytest.mark.forked
 def test_chirp_beacon_send_recv(mock_chirp_socket):
     """Test interplay between two transmitters (sender/receiver)."""
-    sender = CHIRPBeaconTransmitter("mock_sender", "mockstellation", "127.0.0.1")
-    receiver = CHIRPBeaconTransmitter("mock_receiver", "mockstellation", "127.0.0.1")
+    sender = CHIRPBeaconTransmitter("mock_sender", "mockstellation")
+    receiver = CHIRPBeaconTransmitter("mock_receiver", "mockstellation")
     sender.broadcast(CHIRPServiceIdentifier.DATA, CHIRPMessageType.OFFER, 666)
     res = receiver.listen()
     assert (

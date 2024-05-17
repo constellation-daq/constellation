@@ -56,7 +56,7 @@ def mock_device_satellite(mock_chirp_socket):
         mock_context.socket = mocket_factory
         mock.return_value = mock_context
         s = MockDeviceSatellite(
-            "mydevice1", "mockstellation", 11111, 22222, 33333, "127.0.0.1"
+            "mydevice1", "mockstellation", 11111, 22222, 33333, None, "127.0.0.1"
         )
         t = threading.Thread(target=s.run_satellite)
         t.start()
@@ -83,7 +83,7 @@ def mock_fail_satellite(mock_chirp_socket):
         mock_context.socket = mocket_factory
         mock.return_value = mock_context
         s = MockFailSatellite(
-            "fail1", "mockstellation", 11111, 22222, 33333, "127.0.0.1"
+            "fail1", "mockstellation", 11111, 22222, 33333, None, "127.0.0.1"
         )
         t = threading.Thread(target=s.run_satellite)
         t.start()
