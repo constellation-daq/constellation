@@ -3,7 +3,7 @@
 
 # Example configuration for a Keithley6517B satellite
 # Load it in the controller via `python -m constellation.core.controller --config python/constellation/satellites/psu_cfg.toml`
-# Then initialise via `constellation.initialize(cfg.get("satellites").get("Keithley6517B").get("device1"))`
+# Then initialise via `constellation.initialize(cfg["satellites"]["Keithley6517B"]["device1"])`
 
 
 # The layers of a configuration file should consist of:
