@@ -1,7 +1,5 @@
 """This module provides a Constellation Satellite for controlling a Keithley power supply."""
 
-import yaml
-
 from constellation.core.satellite import Satellite
 from constellation.core.configuration import Configuration
 from constellation.core.commandmanager import cscp_requestable
@@ -11,19 +9,9 @@ import logging
 
 from functools import partial
 
-METRICS_PERIOD = 5.0
-
 
 class Keithley_Satellite(Satellite):
     """Constellation Satellite to control a Keithley6517."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.config_file = "./python/constellation/satellites/powerSupplyControl/config_keithley_SourceVmeasureI.yaml"
-        with open(self.config_file, "r") as configFile:
-            self.yaml_config = yaml.safe_load(configFile)
-
-        self.current_publish_interval = self.yaml_config["CurrentPublish"]["Interval"]
 
     def do_initializing(self, config: Configuration) -> str:
         """Method for the device-specific code of 'initializing' transition.
@@ -31,14 +19,15 @@ class Keithley_Satellite(Satellite):
         This should set configuration variables.
 
         """
-        self.log.info("Loading Keithley configuration file " + self.config_file + ".")
 
         # Create the device, which loads the config
-        self.device = KeithleySMU6517Series(self.yaml_config)
+        self.device = KeithleySMU6517Series(self.config)
 
         # Voltage from config file
-        self.v_step = self.yaml_config["SetVoltage"]["V_Step"]
-        self.v_set = self.yaml_config["SetVoltage"]["V_Set"]
+        self.v_step = self.config["voltage_step"]
+        self.v_set = self.config["voltage_set"]
+        self.settle_time = self.config["settle_time"]
+
         return "Initialized."
 
     def do_launching(self, payload: any) -> str:
@@ -63,18 +52,18 @@ class Keithley_Satellite(Satellite):
         self.device.enable_output()
 
         # ramp to V_Set
-        self.device.ramp_v(self.v_set, self.v_step, "V")
+        self.device.ramp_v(self.v_set, self.v_step, "V", self.settle_time)
 
         # How to stop it, though?
         self.schedule_metric(
             "Current",
             partial(self.device.get_current_timestamp_voltage, "current"),
-            interval=METRICS_PERIOD,
+            interval=self.config["stat_publishing_interval"],
         )
         self.schedule_metric(
             "Voltage",
             partial(self.device.get_current_timestamp_voltage, "voltage"),
-            interval=METRICS_PERIOD,
+            interval=self.config["stat_publishing_interval"],
         )
 
         return "Launched."
@@ -175,32 +164,8 @@ class Keithley_Satellite(Satellite):
         return ("Current current is " + str(current[0]) + " " + current[1]), None, None
 
     def _get_current_is_allowed(self, request: CSCPMessage):
-        """Allow in the states INIT and ORBIT, but not during RUN"""
+        """Allow in the states INIT, ORBIT, RUN, SAFE, ERROR"""
         return self.fsm.current_state.id in ["INIT", "ORBIT", "RUN", "SAFE", "ERROR"]
-
-    """Class for handling incoming CSCP requests.
-
-    Commands will call specific methods of the inheriting class which should
-    have the following signature:
-
-    def COMMAND(self, request: cscp.CSCPMessage) -> (str, any, dict):
-
-    The expected return values are:
-    - reply message (string)
-    - payload (any)
-    - map (dictionary) (e.g. for meta information)
-
-    Inheriting classes need to decorate such command methods with
-    '@cscp_requestable' to make them callable through CSCP requests.
-
-    If a method
-
-    def _COMMAND_is_allowed(self, request: cscp.CSCPMessage) -> bool:
-
-    exists, it will be called first to determine whether the command is
-    currently allowed or not.
-
-    """
 
 
 # -------------------------------------------------------------------------

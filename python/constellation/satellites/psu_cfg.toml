@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2023 DESY and the Constellation authors
+# SPDX-License-Identifier: CC0-1.0
+
+# Example configuration for a Keithley6517B satellite
+# Load it in the controller via `python -m constellation.core.controller --config python/constellation/satellites/psu_cfg.toml`
+# Then initialise via `constellation.initialize(cfg.get("satellites").get("Keithley6517B").get("device1"))`
+
+
+# The layers of a configuration file should consist of:
+# [Category] -> [Class] -> [Device]
+
+[satellites.Keithley6517B.device1]
+# Config for the Keithley
+port = "/dev/ttyUSB0"   #use 'COM<n>' for Windows (n is integer)
+                        #use '/dev/ttyUSB<n>' for Linux/MAC (n is integer)
+                        #might need to: 'sudo chmod a+rw /dev/ttyUSB<n>'
+baud_rate = 19200 #NOTE: On Keithley: set RS-232 connection to have this baud rate, 8 bits, even partiy, <CR+LF> terminator
+measure = "I" #Can be V, I, or R
+autorange = "ON" #Autorange for the current measurement
+voltage_limit = 20 # Overvoltage protection
+minimum_allowed_voltage = -0.4 #How far we can go, software limit level
+maximum_allowed_voltage = 0.4
+
+stat_publishing_interval = 5.0
+safe_voltage_level = 0.0 # Safe level, to start ramping from and ramping back to on going to safe mode
+voltage_step = 0.05
+voltage_set = 0.4
+settle_time = 0.1 #Default number of seconds between steps in ramping
+
+sample_points = 2 # Size of the buffer (in samples) that is used to read the voltage and current
+trigger_delay = 0.001 #Time between sampling to the buffer

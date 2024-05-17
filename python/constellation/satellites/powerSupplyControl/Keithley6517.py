@@ -22,8 +22,8 @@ Mode = {
 class KeithleySMU6517Series:
     ser = None
 
-    def __init__(self, conf):
-        self.configuration_file = conf
+    def __init__(self, constellationConfig):
+        self.constellationConfig = constellationConfig
         self.set_device_configuration()
 
     # ===========================================================================
@@ -31,10 +31,7 @@ class KeithleySMU6517Series:
     # ===========================================================================
     def open_device_interface(self):
         self._ser.open()
-        print(
-            "Device Ready at Port "
-            + self.configuration_file["Device"]["Configuration"]["Port"]
-        )
+        print("Device Ready at Port " + self.constellationConfig["port"])
 
     # ===========================================================================
     # Switch on the output
@@ -52,10 +49,7 @@ class KeithleySMU6517Series:
     # ===========================================================================
     def close_device_interface(self):
         self._ser.close()
-        print(
-            "Device Closed at Port "
-            + self.configuration_file["Device"]["Configuration"]["Port"]
-        )
+        print("Device Closed at Port " + self.constellationConfig["port"])
 
     # ===========================================================================
     # Do initial configuration
@@ -64,53 +58,27 @@ class KeithleySMU6517Series:
         # Initialization of the Serial interface
         try:
             self._ser = Serial(
-                port=self.configuration_file["Device"]["Configuration"]["Port"],
-                baudrate=self.configuration_file["Device"]["Configuration"]["Baudrate"],
+                port=self.constellationConfig["port"],
+                baudrate=self.constellationConfig["baud_rate"],
                 timeout=2,  # ,
                 # parity = 'E',
                 # rtscts = False,
                 # xonxoff = False,
                 # stopbits = 2
             )
-            self._measure = Mode["Measure"][
-                self.configuration_file["Device"]["Configuration"]["Measure"]
-            ]
+            self._measure = Mode["Measure"][self.constellationConfig["measure"]]
 
             # Specifies the size of data buffer
-            self._triggerCount = self.configuration_file["Device"]["Configuration"][
-                "TriggerCount"
-            ]
+            self._triggerCount = self.constellationConfig["sample_points"]
             # Specifies trigger delay in seconds
-            self._triggerDelay = self.configuration_file["Device"]["Configuration"][
-                "TriggerDelay"
-            ]
+            self._triggerDelay = self.constellationConfig["trigger_delay"]
 
             # Specifies source and measurement
-            self._rangeSource = self.configuration_file["Device"]["Configuration"][
-                "RangeSource"
-            ]
-            self._OVPSource = self.configuration_file["Device"]["Configuration"][
-                "OVPSource"
-            ]
-            self._MinAllowedSource = self.configuration_file["Device"]["Configuration"][
-                "MinAllowedSource"
-            ]
-            self._MaxAllowedSource = self.configuration_file["Device"]["Configuration"][
-                "MaxAllowedSource"
-            ]
-            self._SafeLevelSource = self.configuration_file["Device"]["Configuration"][
-                "SafeLevelSource"
-            ]
-
-            self._rangeMeasure = self.configuration_file["Device"]["Configuration"][
-                "RangeMeasure"
-            ]
-            self._autorangeMeasure = self.configuration_file["Device"]["Configuration"][
-                "AutoRangeMeasure"
-            ]
-            self._complianceMeasure = self.configuration_file["Device"][
-                "Configuration"
-            ]["ComplianceMeasure"]
+            self._OVPSource = self.constellationConfig["voltage_limit"]
+            self._MinAllowedSource = self.constellationConfig["minimum_allowed_voltage"]
+            self._MaxAllowedSource = self.constellationConfig["maximum_allowed_voltage"]
+            self._SafeLevelSource = self.constellationConfig["safe_voltage_level"]
+            self._autorangeMeasure = self.constellationConfig["autorange"]
 
             # Set up the source
 
@@ -160,12 +128,6 @@ class KeithleySMU6517Series:
             )  # Specifies the number of measurements to do
             self._ser.write(
                 str.encode(":TRIG:DELay " + str(self._triggerDelay) + "\r\n")
-            )
-
-            print(
-                "Device at Port "
-                + self.configuration_file["Device"]["Configuration"]["Port"]
-                + " Configured"
             )
 
         except ValueError:
@@ -246,27 +208,6 @@ class KeithleySMU6517Series:
             (":SENS:" + self._measure + ":PROT:TRIPped?" + "\r\n").encode("utf-8")
         )
 
-    # ===========================================================================
-    # Returns a list with format [voltage,current]
-    # ===========================================================================
-
-    def get_value(self, with_error=False):
-        self.sample()
-        self.get_mean()
-        dmean = eval(
-            self.read(self.configuration_file["Device"]["Configuration"]["WaitRead"])
-        )
-        if with_error:
-            self.get_std()
-            dstd = eval(
-                self.read(
-                    self.configuration_file["Device"]["Configuration"]["WaitRead"]
-                )
-            )
-            return dmean, dstd
-        else:
-            return dmean
-
     def get_current_timestamp_voltage(self, observable="all"):
         self.sample(1)
         self._ser.write(b"*WAI\r\n")
@@ -332,39 +273,3 @@ class KeithleySMU6517Series:
             print("Error occurred. Check compliance and voltage. Going to safe state")
             self.set_voltage(self._SafeLevelSource, unit)
             raise ValueError("Voltage ramp failed")
-
-    def simpleFill(self):
-        self._ser.write(b"*RST\r\n")
-        self._ser.write(b":TRACE:CLEAR\r\n")
-        self._ser.write(b":TRAC:POINTS 1000\r\n")
-        self._ser.write(b":TRIG:COUNT 1000\r\n")
-        self._ser.write(b":SENSE:FUNC CURR\r\n")
-        self._ser.write(b":SENSE:CURR:RANGE 1e-6\r\n")
-        self._ser.write(b":SENSE:CURR:AVER:STAT OFF\r\n")
-        self._ser.write(b":SENSE:CURR:MED:STAT OFF\r\n")
-        self._ser.write(b":TRIG:DEL 0.0\r\n")
-        self._ser.write(b":SENSE:CURR:NPLC 0.01\r\n")
-        self._ser.write(b":FORM:ELEM READ, TST\r\n")
-        self._ser.write(b":CALC:STAT OFF\r\n")
-        self._ser.write(b":SYSTEM:LSYN:STAT OFF\r\n")
-        self._ser.write(b":DISP:ENAB OFF\r\n")
-        self._ser.write(b":TRAC:FEED:CONT NEXT\r\n")
-        self._ser.write(b":SYST:ZCH OFF\r\n")
-        self._ser.write(b":INIT\r\n")
-        # *RST
-        # :TRACE:CLEAR
-        # :TRAC:POINTS 1000
-        # :TRIG:COUNT 1000
-        # :SENSE:FUNC 'CURR'
-        # :SENSE:CURR:RANGE 1e-6
-        # :SENSE:CURR:AVER:STAT OFF
-        # :SENSE:CURR:MED:STAT OFF
-        # :TRIG:DEL 0.0
-        # :SENSE:CURR:NPLC 0.01
-        # :FORM:ELEM READ, TST
-        # :CALC:STAT OFF
-        # :SYSTEM:LSYN:STAT OFF
-        # :DISP:ENAB OFF
-        # :TRAC:FEED:CONT NEXT
-        # :SYST:ZCH OFF
-        # :INIT
