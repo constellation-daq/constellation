@@ -13,11 +13,14 @@
 #include <stop_token>
 
 #include <argparse/argparse.hpp>
+#include <spdlog/details/log_msg.h>
 
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/subscriber/SubscriberPool.hpp"
+
+using namespace constellation;
 
 namespace constellation::loglistener {
     class LogListener : public SubscriberPool<message::CMDP1Message> {
@@ -29,8 +32,19 @@ namespace constellation::loglistener {
         CNSTLN_API ~LogListener() = default;
         void treat_message(const message::CMDP1Message& msg) {
             if(msg.isLogMessage()) {
-                LOG(logger_, INFO) << "Remote " << msg.getHeader().getSender() << " spoke. ";
-                //<< reinterpret_cast<const message::CMDP1LogMessage>(msg).getLogMessage();
+                auto header = msg.getHeader();
+                auto payload = to_string(msg.getPayloadString());
+                auto topic = msg.getTopic();
+                // Search topic for second slash after "LOG/" to get substring with log level
+                const auto level_endpos = topic.find_first_of('/', 4);
+                const auto level_str = topic.substr(4, level_endpos - 4);
+                const auto level_opt = magic_enum::enum_cast<Level>(level_str, magic_enum::case_insensitive);
+                if(!level_opt.has_value()) {
+                    throw MessageDecodingError("\"" + to_string(level_str) + "\" is not a valid log level");
+                }
+                LOG(logger_, INFO) << "Remote " << msg.getHeader().getSender() << " spoke. "
+                                   << " with topic " << to_string(topic) << " with log level " << to_string(level_str)
+                                   << " with payload " << payload;
             }
         }
 
@@ -45,8 +59,6 @@ std::function<void(int)> signal_handler_f {}; // NOLINT(cppcoreguidelines-avoid-
 extern "C" void signal_hander(int signal) {
     signal_handler_f(signal);
 }
-
-using namespace constellation;
 
 void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser) {
     // Listener name (-n)
