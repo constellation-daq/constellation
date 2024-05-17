@@ -1,11 +1,12 @@
 """This module provides a Constellation Satellite for controlling a Keithley power supply."""
 
-from constellation.core.satellite import Satellite
+from constellation.core.satellite import Satellite, SatelliteArgumentParser
 from constellation.core.configuration import Configuration
 from constellation.core.commandmanager import cscp_requestable
 from constellation.core.cscp import CSCPMessage
 from powerSupplyControl.Keithley6517 import KeithleySMU6517Series
 import logging
+from constellation.core.base import EPILOG
 
 from functools import partial
 
@@ -173,33 +174,28 @@ class Keithley_Satellite(Satellite):
 
 def main(args=None):
     """Start the base Satellite server."""
-    import argparse
+    """Start a Keithley control satellite.
+
+    Set up to control a Keithley 6517B power supply.
+    """
     import coloredlogs
 
-    parser = argparse.ArgumentParser(description=main.__doc__)
-    parser.add_argument("--log-level", default="info")
-    parser.add_argument("--cmd-port", type=int, default=23999)
-    parser.add_argument("--mon-port", type=int, default=55556)
-    parser.add_argument("--hb-port", type=int, default=61234)
-    parser.add_argument("--interface", type=str, default="*")
-    parser.add_argument("--name", type=str, default="satellite_demo")
-    parser.add_argument("--group", type=str, default="constellation")
-    args = parser.parse_args(args)
+    parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
+    # this sets the defaults for our "demo" Satellite
+    parser.set_defaults(
+        name="SatelliteKeithley6517B", cmd_port=23999, mon_port=55556, hb_port=61234
+    )
+    # get a dict of the parsed arguments
+    args = vars(parser.parse_args(args))
 
     # set up logging
-    logger = logging.getLogger(args.name)
-    coloredlogs.install(level=args.log_level.upper(), logger=logger)
+    logger = logging.getLogger(args["name"])
+    log_level = args.pop("log_level")
+    coloredlogs.install(level=log_level.upper(), logger=logger)
 
     logger.info("Starting up satellite!")
     # start server with remaining args
-    s = Keithley_Satellite(
-        name=args.name,
-        group=args.group,
-        cmd_port=args.cmd_port,
-        hb_port=args.hb_port,
-        mon_port=args.mon_port,
-        interface=args.interface,
-    )
+    s = Keithley_Satellite(**args)
     s.run_satellite()
 
 
