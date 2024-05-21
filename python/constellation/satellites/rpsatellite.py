@@ -238,6 +238,26 @@ class RedPitayaSatellite(DataSender):
         self.reset_axi_array_contents.data_type = self.config["data_type"]
         self._readpos = 0
 
+    def do_stopping(self, payload: any):
+        """Stop acquisition and read out last buffer"""
+        time.sleep(1)  # add sleep to make sure that everything has stopped
+
+        # Read last buffer
+        payload = self.get_data()
+
+        if payload is not None:
+
+            # Include data type as part of meta
+            meta = {
+                "dtype": f"{payload.dtype}",
+            }
+
+            # Format payload to serializable
+            self.data_queue.put((payload.tobytes(), meta))
+
+        # TODO:read out registers and store in EOF
+        self.reset()
+
     def get_data(
         self,
     ):
@@ -259,14 +279,14 @@ class RedPitayaSatellite(DataSender):
         # Check if the amount of data is greater than 1000,
         # otherwise wait 0.1 s to not send excessive amount of packages.
         if cycled:
-            if (self._writepos+BUFFER_SIZE) < (self._readpos+1000):
+            if (self._writepos + BUFFER_SIZE) < (self._readpos + 1000):
                 time.sleep(0.1)
         else:
-            if self._writepos < (self._readpos+1000):
+            if self._writepos < (self._readpos + 1000):
                 time.sleep(0.1)
 
         for i, channel in enumerate(self.active_channels):
-            # Read out data buffers and adding them togheter befor returning
+            # Read out data buffers and adding them together before returning
 
             if cycled:
                 buffer = np.concatenate((

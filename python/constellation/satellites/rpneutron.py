@@ -127,15 +127,11 @@ class RPNeutron(RedPitayaSatellite):
         """Stop acquisition by writing to address."""
         if self.master:
             self.write_start_stop_bit_to_FPGA(0)
-        # TODO:read out registers and store in EOF
-        # TODO:read out last buffer before stop?
-        super().reset()
         return super().do_stopping(payload)
 
     def do_starting(self, payload: any) -> str:
         """Start acquisition by writing to address."""
         if self.master:
-
             self.write_start_stop_bit_to_FPGA(3)
         return super().do_starting(payload)
 
