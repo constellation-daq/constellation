@@ -158,7 +158,7 @@ A configuration file can be loaded into the initialiser by using the flag `--con
 
 ```python
 python -m constellation.core.controller --config python/constellation/satellites/example_config.conf
-In [1]: constellation.initialize(cfg["satellites"]["example_satellite"]["device1"])
+In [1]: constellation.Example_Satellite.initialize(cfg["satellites"]["example_satellite"]["device1"])
 ```
 
 ```TOML
