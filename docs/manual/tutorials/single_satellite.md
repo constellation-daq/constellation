@@ -151,6 +151,23 @@ Out[2]:
 Similarly, all satellite states can be called. A full list of available commands, along with a description of the finite
 state machine can be found in the [concepts chapter on satellites](../concepts/satellite).
 
+
+#### Using a configuration file
+
+A configuration file can be loaded into the initialiser by using the flag `--config` when launching the controller. This loads the provided configuration into a dictionary named `cfg`, which can be used e.g. when calling `initialize`. An example using the `example_satellite` is shown below, along with the used example configuration file.
+
+```python
+python -m constellation.core.controller --config python/constellation/satellites/example_config.conf
+In [1]: constellation.initialize(cfg["satellites"]["example_satellite"]["device1"])
+```
+
+```TOML
+[satellites.example_satellite.device1]
+voltage = 5
+current = 0.1
+sample_period = 3.0
+```
+
 :::
 
 ::::
