@@ -125,7 +125,34 @@ class RedPitayaSatellite(DataSender):
                                            buf=axi_mmap_gpio)
         self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
 
+        # Define axi array for custom registers
+        memory_file_handle_custom_registers = os.open("/dev/mem",
+                                                        os.O_RDWR)
+        axi_mmap_custom_registers = mmap.mmap(
+            fileno=memory_file_handle_custom_registers,
+            length=mmap.PAGESIZE, offset=self.config["offset"]
+        )
+        axi_numpy_array_reset = np.recarray(1, axi_regset_reset,
+                                            buf=axi_mmap_custom_registers)
+        self.reset_axi_array_contents = axi_numpy_array_reset[0]
+
+        # Setting configuration values to FPGA registers
+        axi_numpy_array_config = np.recarray(1, self.axi_regset_config,
+                                                buf=axi_mmap_custom_registers)
+        self.config_axi_array_contents = axi_numpy_array_config[0]
+
+        # Define the axi array for parameters and status
+        axi_numpy_array_param = np.recarray(1, self.regset_readout,
+                                            buf=axi_mmap_custom_registers)
+        self.axi_array_contents_param = axi_numpy_array_param[0]
+
         rp.rp_Init()
+
+    def do_reconfiguring(self, payload: any) -> str:
+        # Writes FPGA configurations to register
+        names = [field[0] for field in self.axi_regset_config.descr]
+        for name, value in zip(names, self.config_axi_array_contents):
+            setattr(self.config_axi_array_contents, name, self.config[name])
 
     def do_initializing(self, payload: any) -> str:
         try:
@@ -137,31 +164,10 @@ class RedPitayaSatellite(DataSender):
                 raise ConfigError(msg)
             time.sleep(2)
 
-            # Define axi array for custom registers
-            memory_file_handle_custom_registers = os.open("/dev/mem",
-                                                          os.O_RDWR)
-            axi_mmap_custom_registers = mmap.mmap(
-                fileno=memory_file_handle_custom_registers,
-                length=mmap.PAGESIZE, offset=self.config["offset"]
-            )
-            axi_numpy_array_reset = np.recarray(1, axi_regset_reset,
-                                                buf=axi_mmap_custom_registers)
-            self.reset_axi_array_contents = axi_numpy_array_reset[0]
-
-            # Setting configuration values to FPGA registers
-            axi_numpy_array_config = np.recarray(1, self.axi_regset_config,
-                                                 buf=axi_mmap_custom_registers)
-            config_axi_array_contents = axi_numpy_array_config[0]
-
+            # Writes FPGA configurations to register
             names = [field[0] for field in self.axi_regset_config.descr]
-            for name, value in zip(names, config_axi_array_contents):
-                setattr(config_axi_array_contents, name, self.config[name])
-
-            # Define the axi array for parameters and status
-
-            axi_numpy_array_param = np.recarray(1, self.regset_readout,
-                                                buf=axi_mmap_custom_registers)
-            self.axi_array_contents_param = axi_numpy_array_param[0]
+            for name, value in zip(names, self.config_axi_array_contents):
+                setattr(self.config_axi_array_contents, name, self.config[name])
 
             # Setup metrics
             if self.config["read_gpio"]:
