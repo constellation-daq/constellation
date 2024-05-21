@@ -111,39 +111,32 @@ class RPNeutron(RedPitayaSatellite):
         self.master = self.config["master"]
         return super().do_initializing(payload)
 
+    def write_start_stop_bit_to_FPGA(self, start_stop):
+        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
+        axi_mmap0 = mmap.mmap(
+            fileno=memory_file_handle, length=mmap.PAGESIZE,
+            offset=0x40001000
+        )
+
+        axi_numpy_array0 = np.recarray(1, axi_regset_start_stop,
+                                       buf=axi_mmap0)
+        axi_array_contents0 = axi_numpy_array0[0]
+        axi_array_contents0.Externaltrigger = (start_stop)
+
     def do_stopping(self, payload: any):
         """Stop acquisition by writing to address."""
         if self.master:
-            memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-            axi_mmap0 = mmap.mmap(
-                fileno=memory_file_handle, length=mmap.PAGESIZE,
-                offset=0x40001000
-            )
-
-            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop,
-                                           buf=axi_mmap0)
-            axi_array_contents0 = axi_numpy_array0[0]
-            axi_array_contents0.Externaltrigger = (
-                0  # Don'tOverride GPIO_N_0 to output ADC or DAC trigger
-            )
+            self.write_start_stop_bit_to_FPGA(0)
+        # TODO:read out registers and store in EOF
+        # TODO:read out last buffer before stop?
+        super().reset()
         return super().do_stopping(payload)
 
     def do_starting(self, payload: any) -> str:
         """Start acquisition by writing to address."""
-        self.reset()
-
         if self.master:
-            memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-            axi_mmap0 = mmap.mmap(
-                fileno=memory_file_handle, length=mmap.PAGESIZE,
-                offset=0x40001000
-            )
-            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop,
-                                           buf=axi_mmap0)
-            axi_array_contents0 = axi_numpy_array0[0]
-            axi_array_contents0.Externaltrigger = (
-                3  # Override GPIO_N_0 to output ADC or DAC trigger
-            )
+
+            self.write_start_stop_bit_to_FPGA(3)
         return super().do_starting(payload)
 
 # -------------------------------------------------------------------------

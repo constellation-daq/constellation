@@ -214,8 +214,6 @@ class RedPitayaSatellite(DataSender):
         """Run the satellite. Collect data from buffers and send it."""
         self.log.info("Red Pitaya satellite running, publishing events.")
 
-        self._readpos = self._get_write_pointer()
-
         while not self._state_thread_evt.is_set():
             # Main DAQ-loop
             payload = self.get_data()
@@ -238,6 +236,7 @@ class RedPitayaSatellite(DataSender):
         self.reset_axi_array_contents.data_type = 16
         time.sleep(0.1)
         self.reset_axi_array_contents.data_type = self.config["data_type"]
+        self._readpos = 0
 
     def get_data(
         self,
@@ -257,11 +256,18 @@ class RedPitayaSatellite(DataSender):
         else:
             cycled = False
 
-        data = np.empty(len(self.active_channels), dtype=object)
-        for i, channel in enumerate(self.active_channels):
-            # Buffer all data for channel before adding it together
+        # Check if the amount of data is greater than 1000,
+        # otherwise wait 0.1 s to not send excessive amount of packages.
+        if cycled:
+            if (self._writepos+BUFFER_SIZE) < (self._readpos+1000):
+                time.sleep(0.1)
+        else:
+            if self._writepos < (self._readpos+1000):
+                time.sleep(0.1)
 
-            # Append last part of buffer before resetting
+        for i, channel in enumerate(self.active_channels):
+            # Read out data buffers and adding them togheter befor returning
+
             if cycled:
                 buffer = np.concatenate((
                     self._sample_raw32(
@@ -287,8 +293,6 @@ class RedPitayaSatellite(DataSender):
 
         # Update readpointer
         self._readpos = self._writepos
-
-        # data = np.vstack(data, dtype=int).transpose().flatten()
         return data
 
     @cscp_requestable
@@ -425,9 +429,9 @@ class RedPitayaSatellite(DataSender):
         elif channel == rp.RP_CH_2:
             offset = 0x40120000
         elif channel == rp.RP_CH_3:
-            offset = 0x40130000
+            offset = 0x40210000
         elif channel == rp.RP_CH_4:
-            offset = 0x40140000
+            offset = 0x40220000
 
         # Call the C function
         result = lib.readData(0, 16384, offset)
