@@ -130,7 +130,37 @@ class RedPitayaSatellite(DataSender):
         axi_numpy_array_gpio = np.recarray(1, axi_gpio_regset_pins, buf=axi_mmap_gpio)
         self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
 
+        # Define axi array for custom registers
+        memory_file_handle_custom_registers = os.open("/dev/mem", os.O_RDWR)
+        axi_mmap_custom_registers = mmap.mmap(
+            fileno=memory_file_handle_custom_registers,
+            length=mmap.PAGESIZE,
+            offset=self.config["offset"],
+        )
+        axi_numpy_array_reset = np.recarray(
+            1, axi_regset_reset, buf=axi_mmap_custom_registers
+        )
+        self.reset_axi_array_contents = axi_numpy_array_reset[0]
+
+        # Setting configuration values to FPGA registers
+        axi_numpy_array_config = np.recarray(
+            1, self.axi_regset_config, buf=axi_mmap_custom_registers
+        )
+        self.config_axi_array_contents = axi_numpy_array_config[0]
+
+        # Define the axi array for parameters and status
+        axi_numpy_array_param = np.recarray(
+            1, self.regset_readout, buf=axi_mmap_custom_registers
+        )
+        self.axi_array_contents_param = axi_numpy_array_param[0]
+
         rp.rp_Init()
+
+    def do_reconfiguring(self, payload: any) -> str:
+        # Writes FPGA configurations to register
+        names = [field[0] for field in self.axi_regset_config.descr]
+        for name, value in zip(names, self.config_axi_array_contents):
+            setattr(self.config_axi_array_contents, name, self.config[name])
 
     def do_initializing(self, payload: any) -> str:
         try:
@@ -142,34 +172,10 @@ class RedPitayaSatellite(DataSender):
                 raise ConfigError(msg)
             time.sleep(2)
 
-            # Define axi array for custom registers
-            memory_file_handle_custom_registers = os.open("/dev/mem", os.O_RDWR)
-            axi_mmap_custom_registers = mmap.mmap(
-                fileno=memory_file_handle_custom_registers,
-                length=mmap.PAGESIZE,
-                offset=self.config["offset"],
-            )
-            axi_numpy_array_reset = np.recarray(
-                1, axi_regset_reset, buf=axi_mmap_custom_registers
-            )
-            self.reset_axi_array_contents = axi_numpy_array_reset[0]
-
-            # Setting configuration values to FPGA registers
-            axi_numpy_array_config = np.recarray(
-                1, self.axi_regset_config, buf=axi_mmap_custom_registers
-            )
-            config_axi_array_contents = axi_numpy_array_config[0]
-
+            # Writes FPGA configurations to register
             names = [field[0] for field in self.axi_regset_config.descr]
-            for name, value in zip(names, config_axi_array_contents):
-                setattr(config_axi_array_contents, name, self.config[name])
-
-            # Define the axi array for parameters and status
-
-            axi_numpy_array_param = np.recarray(
-                1, self.regset_readout, buf=axi_mmap_custom_registers
-            )
-            self.axi_array_contents_param = axi_numpy_array_param[0]
+            for name, value in zip(names, self.config_axi_array_contents):
+                setattr(self.config_axi_array_contents, name, self.config[name])
 
             # Setup metrics
             if self.config["read_gpio"]:
@@ -222,8 +228,6 @@ class RedPitayaSatellite(DataSender):
         """Run the satellite. Collect data from buffers and send it."""
         self.log.info("Red Pitaya satellite running, publishing events.")
 
-        self._readpos = self._get_write_pointer()
-
         while not self._state_thread_evt.is_set():
             # Main DAQ-loop
             payload = self.get_data()
@@ -246,6 +250,27 @@ class RedPitayaSatellite(DataSender):
         self.reset_axi_array_contents.data_type = 16
         time.sleep(0.1)
         self.reset_axi_array_contents.data_type = self.config["data_type"]
+        self._readpos = 0
+
+    def do_stopping(self, payload: any):
+        """Stop acquisition and read out last buffer"""
+        time.sleep(1)  # add sleep to make sure that everything has stopped
+
+        # Read last buffer
+        payload = self.get_data()
+
+        if payload is not None:
+
+            # Include data type as part of meta
+            meta = {
+                "dtype": f"{payload.dtype}",
+            }
+
+            # Format payload to serializable
+            self.data_queue.put((payload.tobytes(), meta))
+
+        # TODO:read out registers and store in EOF
+        self.reset()
 
     def get_data(
         self,
@@ -265,11 +290,18 @@ class RedPitayaSatellite(DataSender):
         else:
             cycled = False
 
-        data = np.empty(len(self.active_channels), dtype=object)
-        for i, channel in enumerate(self.active_channels):
-            # Buffer all data for channel before adding it together
+        # Check if the amount of data is greater than 1000,
+        # otherwise wait 0.1 s to not send excessive amount of packages.
+        if cycled:
+            if (self._writepos + BUFFER_SIZE) < (self._readpos + 1000):
+                time.sleep(0.1)
+        else:
+            if self._writepos < (self._readpos + 1000):
+                time.sleep(0.1)
 
-            # Append last part of buffer before resetting
+        for i, channel in enumerate(self.active_channels):
+            # Read out data buffers and adding them together before returning
+
             if cycled:
                 buffer = np.concatenate(
                     (
@@ -297,8 +329,6 @@ class RedPitayaSatellite(DataSender):
 
         # Update readpointer
         self._readpos = self._writepos
-
-        # data = np.vstack(data, dtype=int).transpose().flatten()
         return data
 
     @cscp_requestable
@@ -431,9 +461,9 @@ class RedPitayaSatellite(DataSender):
         elif channel == rp.RP_CH_2:
             offset = 0x40120000
         elif channel == rp.RP_CH_3:
-            offset = 0x40130000
+            offset = 0x40210000
         elif channel == rp.RP_CH_4:
-            offset = 0x40140000
+            offset = 0x40220000
 
         # Call the C function
         result = lib.readData(0, 16384, offset)
