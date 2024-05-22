@@ -44,9 +44,13 @@ DemoSatellite = "constellation.core.satellite:main"
 DemoDataSender = "constellation.core.datasender:main"
 DemoHeartbeatChecker = "constellation.core.heartbeatchecker:main"
 DemoHeartbeatSender = "constellation.core.heartbeater:main"
-SatelliteCaenHv = "constellation.satellites.caenhv:main"
 # tools
 Constellation_list_interfaces = "constellation.tools.list_interfaces:main"
+# 3rd-party Satellites
+SatelliteCaenHv = "constellation.satellites.caenhv:main"
+SatelliteRPNeutron = "constellation.satellites.rpneutron:main"
+SatelliteRPGamma = "constellation.satellites.rpgamma:main"
+
 
 [project.urls]
 Homepage = "https://constellation.pages.desy.de/"
