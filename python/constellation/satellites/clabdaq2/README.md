@@ -14,6 +14,7 @@ This section will describe the functionality of the satellite and any relevant i
 ## Prerequisites
 
 - The satellites must be run as `root` user to access the necessary registers to read data, set parameters on the FPGA and access GPIO pins.
+- The RedPitaya Python module `rp` is required.
 
 ## Parameters
 
