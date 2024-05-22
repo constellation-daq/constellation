@@ -20,8 +20,10 @@
 #include <zmq.hpp>
 
 #include "constellation/build.hpp"
+#include "constellation/core/heartbeat/HeartbeatManager.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
+#include "constellation/core/message/payload_buffer.hpp"
 #include "constellation/core/utils/ports.hpp"
 #include "constellation/satellite/FSM.hpp"
 #include "constellation/satellite/Satellite.hpp"
@@ -53,20 +55,23 @@ namespace constellation::satellite {
         // join main_loop
         CNSTLN_API void join();
 
-        // shut down satellite
-        CNSTLN_API void shutDown();
+        // Terminate satellite
+        CNSTLN_API void terminate();
 
     private:
         // get next command
         std::optional<message::CSCP1Message> getNextCommand();
 
         // reply to command
-        void sendReply(std::pair<message::CSCP1Message::Type, std::string> reply_verb,
-                       std::shared_ptr<zmq::message_t> payload = {});
+        void sendReply(std::pair<message::CSCP1Message::Type, std::string> reply_verb, message::payload_buffer payload = {});
 
         // handle get commands
-        std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, std::shared_ptr<zmq::message_t>>>
-        handleGetCommand(std::string_view command);
+        std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::payload_buffer>>
+        handleStandardCommand(std::string_view command);
+
+        // handle user commands
+        std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::payload_buffer>>
+        handleUserCommand(std::string_view command, const message::payload_buffer& payload);
 
         // main loop
         void main_loop(const std::stop_token& stop_token);
@@ -76,6 +81,7 @@ namespace constellation::satellite {
         zmq::socket_t rep_;
         utils::Port port_;
         std::shared_ptr<Satellite> satellite_;
+        std::shared_ptr<heartbeat::HeartbeatManager> heartbeat_manager_;
         FSM fsm_;
         log::Logger logger_;
         std::jthread main_thread_;

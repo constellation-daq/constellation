@@ -6,6 +6,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <limits>
 #include <string>
 
 #include <catch2/catch_test_macros.hpp>
@@ -19,6 +20,7 @@
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace Catch::Matchers;
 using namespace constellation::config;
@@ -124,15 +126,13 @@ TEST_CASE("Header Packing / Unpacking (invalid protocol)", "[core][core::message
     // then time
     msgpack::pack(sbuf, std::chrono::system_clock::now());
     // then tags
-    msgpack::pack(sbuf, Dictionary {});
+    msgpack::pack(sbuf, Dictionary());
 
     // Check for wrong protocol to be picked up
-    REQUIRE_THROWS_AS(CMDP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}), InvalidProtocolError);
     REQUIRE_THROWS_MATCHES(CMDP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}),
                            InvalidProtocolError,
                            Message("Invalid protocol identifier \"INVALID\""));
     // CDTP1 has separate header implementation, also test this:
-    REQUIRE_THROWS_AS(CDTP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}), InvalidProtocolError);
     REQUIRE_THROWS_MATCHES(CDTP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}),
                            InvalidProtocolError,
                            Message("Invalid protocol identifier \"INVALID\""));
@@ -146,12 +146,10 @@ TEST_CASE("Header Packing / Unpacking (unexpected protocol)", "[core][core::mess
     msgpack::pack(sbuf, cscp1_header);
 
     // Check for wrong protocol to be picked up
-    REQUIRE_THROWS_AS(CMDP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}), UnexpectedProtocolError);
     REQUIRE_THROWS_MATCHES(CMDP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}),
                            UnexpectedProtocolError,
                            Message("Received protocol \"CSCP1\" does not match expected identifier \"CMDP1\""));
     // CDTP1 has separate header implementation, also test this:
-    REQUIRE_THROWS_AS(CDTP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}), UnexpectedProtocolError);
     REQUIRE_THROWS_MATCHES(CDTP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()}),
                            UnexpectedProtocolError,
                            Message("Received protocol \"CSCP1\" does not match expected identifier \"CDTP1\""));
@@ -162,11 +160,11 @@ TEST_CASE("Message Assembly / Disassembly (CMDP1)", "[core][core::message]") {
     CMDP1LogMessage log_msg {Level::STATUS, "Logger_Topic", {"senderCMDP"}, "log message"};
     auto log_frames = log_msg.assemble();
 
-    const auto log_msg2_raw = CMDP1Message::disassemble(log_frames);
+    auto log_msg2_raw = CMDP1Message::disassemble(log_frames);
     REQUIRE(log_msg2_raw.isLogMessage());
     REQUIRE_THAT(to_string(log_msg2_raw.getTopic()), Equals("LOG/STATUS/LOGGER_TOPIC"));
 
-    const auto log_msg2 = CMDP1LogMessage(log_msg2_raw);
+    const auto log_msg2 = CMDP1LogMessage(std::move(log_msg2_raw));
     REQUIRE_THAT(log_msg2.getHeader().to_string(), ContainsSubstring("Sender: senderCMDP"));
     REQUIRE(log_msg2.isLogMessage());
     REQUIRE(log_msg2.getLogLevel() == Level::STATUS);
@@ -261,21 +259,20 @@ TEST_CASE("Message Payload (CSCP1)", "[core][core::message]") {
     auto tp = std::chrono::system_clock::now();
 
     CSCP1Message cscp1_msg {{"senderCSCP", tp}, {CSCP1Message::Type::SUCCESS, ""}};
-    REQUIRE(cscp1_msg.getPayload() == nullptr);
+    REQUIRE(cscp1_msg.getPayload().empty());
 
     // Add payload frame
     msgpack::sbuffer sbuf_header {};
     msgpack::pack(sbuf_header, "this is fine");
-    auto payload = std::make_shared<zmq::message_t>(sbuf_header.data(), sbuf_header.size());
-    cscp1_msg.addPayload(std::move(payload));
+    cscp1_msg.addPayload(std::move(sbuf_header));
 
     // Assemble and disassemble message
     auto frames = cscp1_msg.assemble();
     auto cscp1_msg2 = CSCP1Message::disassemble(frames);
 
     // Retrieve payload
-    auto data = cscp1_msg2.getPayload();
-    auto py_string = msgpack::unpack(to_char_ptr(data->data()), data->size());
+    const auto& data = cscp1_msg2.getPayload();
+    const auto py_string = msgpack::unpack(to_char_ptr(data.span().data()), data.span().size());
     REQUIRE_THAT(py_string->as<std::string>(), Equals("this is fine"));
 }
 
@@ -288,11 +285,11 @@ TEST_CASE("Message Payload (CSCP1, too many frames)", "[core][core::message]") {
     // Attach additional frames:
     msgpack::sbuffer sbuf_header {};
     msgpack::pack(sbuf_header, "this is fine");
-    frames.addmem(sbuf_header.data(), sbuf_header.size());
-    frames.addmem(sbuf_header.data(), sbuf_header.size());
+    auto payload = payload_buffer(std::move(sbuf_header));
+    frames.add(payload.to_zmq_msg_copy());
+    frames.add(payload.to_zmq_msg_release());
 
     // Check for excess frame detection
-    REQUIRE_THROWS_AS(CSCP1Message::disassemble(frames), MessageDecodingError);
     REQUIRE_THROWS_MATCHES(CSCP1Message::disassemble(frames),
                            MessageDecodingError,
                            Message("Error decoding message: Incorrect number of message frames"));
@@ -307,8 +304,7 @@ TEST_CASE("Message Payload (CDTP1)", "[core][core::message]") {
     for(int i = 0; i < 3; i++) {
         msgpack::sbuffer sbuf_header {};
         msgpack::pack(sbuf_header, "this is fine");
-        auto payload = std::make_shared<zmq::message_t>(sbuf_header.data(), sbuf_header.size());
-        cdtp1_msg.addPayload(std::move(payload));
+        cdtp1_msg.addPayload(std::move(sbuf_header));
     }
 
     // Assemble and disassemble message
@@ -316,10 +312,11 @@ TEST_CASE("Message Payload (CDTP1)", "[core][core::message]") {
     auto cdtp1_msg2 = CDTP1Message::disassemble(frames);
 
     // Retrieve payload
-    auto data = cdtp1_msg2.getPayload();
+    const auto& data = cdtp1_msg2.getPayload();
     REQUIRE(data.size() == 3);
 
-    auto py_string = msgpack::unpack(to_char_ptr(data.front()->data()), data.front()->size());
+    const auto front_span = data.front().span();
+    const auto py_string = msgpack::unpack(to_char_ptr(front_span.data()), front_span.size());
     REQUIRE_THAT(py_string->as<std::string>(), Equals("this is fine"));
 }
 

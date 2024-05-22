@@ -10,17 +10,16 @@
 #pragma once
 
 #include <map>
-#include <memory>
 #include <string>
 #include <vector>
 
 #include <msgpack/object_decl.hpp>
 #include <msgpack/pack_decl.hpp>
 #include <msgpack/sbuffer_decl.hpp>
-#include <zmq.hpp>
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Value.hpp"
+#include "constellation/core/message/payload_buffer.hpp"
 
 namespace constellation::config {
 
@@ -34,6 +33,12 @@ namespace constellation::config {
 
         /** Unpack list with msgpack */
         CNSTLN_API void msgpack_unpack(const msgpack::object& msgpack_object);
+
+        /** Assemble list via msgpack to message payload */
+        CNSTLN_API message::payload_buffer assemble() const;
+
+        /** Disassemble list from message payload */
+        CNSTLN_API static List disassemble(const message::payload_buffer& message);
     };
 
     /**
@@ -47,11 +52,11 @@ namespace constellation::config {
         /** Unpack dictionary with msgpack */
         CNSTLN_API void msgpack_unpack(const msgpack::object& msgpack_object);
 
-        /** Assemble dictionary via msgpack for ZeroMQ */
-        CNSTLN_API std::shared_ptr<zmq::message_t> assemble() const;
+        /** Assemble dictionary via msgpack to message payload */
+        CNSTLN_API message::payload_buffer assemble() const;
 
-        /** Disassemble dictionary from ZeroMQ */
-        CNSTLN_API static Dictionary disassemble(const zmq::message_t& message);
+        /** Disassemble dictionary from message payload */
+        CNSTLN_API static Dictionary disassemble(const message::payload_buffer& message);
 
         /**
          * @brief Convert dictionary to human readable string

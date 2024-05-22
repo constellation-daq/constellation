@@ -46,6 +46,21 @@ TEST_CASE("Basic logging", "[logging]") {
     LOG(logger, CRITICAL) << "critical"sv;
 }
 
+TEST_CASE("Logging from const function", "[logging]") {
+
+    class LogTest {
+    public:
+        void log_message() const { LOG(logger, CRITICAL) << "const critical"sv; }
+
+    private:
+        Logger logger {"ConstLogging"};
+    };
+
+    SinkManager::getInstance().setGlobalConsoleLevel(TRACE);
+    const LogTest log_test {};
+    log_test.log_message();
+}
+
 TEST_CASE("Logging macros", "[logging]") {
     auto logger = Logger("LoggingMacros");
 

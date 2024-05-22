@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2023 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 <!-- markdownlint-disable-next-line first-line-heading -->
-[![Logo](docs/logo_small.png)](https://constellation.pages.desy.de/)
+[![Logo](docs/logo/logo_small.png)](https://constellation.pages.desy.de/)
 
 # Constellation
 

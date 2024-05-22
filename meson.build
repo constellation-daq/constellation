@@ -11,6 +11,8 @@ project('Constellation',
 impl_cxx = add_languages('cpp', required: get_option('impl_cxx'))
 if impl_cxx
   subdir('cxx')
+elif get_option('impl_cxx').auto()
+  warning('No C++ compiler found, set one with CXX=/path/to/c++-compiler or disable the C++ implementation with impl_cxx=disabled')
 endif
 
 # Python implementation

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 satellite_src = files(
+  'CommandRegistry.cpp',
   'FSM.cpp',
   'Satellite.cpp',
   'SatelliteImplementation.cpp',
@@ -17,20 +18,15 @@ satellite_lib = library('ConstellationSatellite',
   install_rpath: constellation_rpath,
 )
 
-# We do not provide a C ABI, so we are fine with exporting C++ symbols via extern C
-satellite_compiler_args = []
-if meson.get_compiler('cpp').has_argument('-Wno-return-type-c-linkage')
-  satellite_compiler_args += '-Wno-return-type-c-linkage'
-endif
-
 satellite_dep = declare_dependency(
   link_with: satellite_lib,
-  compile_args: satellite_compiler_args,
   include_directories: constellation_inc,
   dependencies: [core_dep, cppzmq_dep, magic_enum_dep],
 )
 
 install_headers(
+  'CommandRegistry.hpp',
+  'CommandRegistry.tpp',
   'exceptions.hpp',
   'FSM.hpp',
   'fsm_definitions.hpp',

@@ -10,6 +10,7 @@ import msgpack
 import zmq
 import logging
 from enum import Enum
+from threading import Lock
 
 from .protocol import MessageHeader, Protocol
 
@@ -59,6 +60,7 @@ class CMDPTransmitter:
         self.name = name
         self.msgheader = MessageHeader(name, Protocol.CMDP)
         self._socket = socket
+        self._lock = Lock()
 
     def send(self, data: logging.LogRecord | Metric):
         if isinstance(data, logging.LogRecord):
@@ -119,7 +121,8 @@ class CMDPTransmitter:
     def recv(self, flags=0) -> logging.LogRecord | Metric | None:
         """Receive a Constellation monitoring message and return log or metric."""
         try:
-            msg = self._socket.recv_multipart(flags)
+            with self._lock:
+                msg = self._socket.recv_multipart(flags)
             topic = msg[0].decode("utf-8")
         except zmq.ZMQError as e:
             if "Resource temporarily unavailable" not in e.strerror:
@@ -128,9 +131,9 @@ class CMDPTransmitter:
                 ) from e
             return None
         if topic.startswith("STATS/"):
-            return self._recv_metric(topic, msg)
+            return self.decode_metric(topic, msg)
         elif topic.startswith("LOG/"):
-            return self._recv_log(topic, msg)
+            return self.decode_log(topic, msg)
         else:
             raise RuntimeError(
                 f"CMDPTransmitter cannot decode messages of topic '{topic}'"
@@ -144,9 +147,10 @@ class CMDPTransmitter:
 
     def close(self) -> None:
         """Close the socket."""
-        self._socket.close()
+        with self._lock:
+            self._socket.close()
 
-    def _recv_log(self, topic: str, msg: list[bytes]) -> logging.LogRecord:
+    def decode_log(self, topic: str, msg: list[bytes]) -> logging.LogRecord:
         """Receive a Constellation log message."""
         # Read header
         sender, time, record = self.msgheader.decode(msg[1])
@@ -160,7 +164,7 @@ class CMDPTransmitter:
         record["levelname"] = topic.split("/")[1]
         return logging.makeLogRecord(record)
 
-    def _recv_metric(self, topic, msg: list) -> Metric:
+    def decode_metric(self, topic, msg: list) -> Metric:
         """Receive a Constellation STATS message and return a Metric."""
         name = topic.split("/")[1]
         # Read header
@@ -182,7 +186,8 @@ class CMDPTransmitter:
         """Dispatch a message via ZMQ socket."""
         topic = topic.upper()
         flags = zmq.SNDMORE | flags
-        self._socket.send_string(topic, flags)
-        self.msgheader.send(self._socket, meta=meta, flags=flags)
-        flags = flags & ~zmq.SNDMORE
-        self._socket.send(payload, flags=flags)
+        with self._lock:
+            self._socket.send_string(topic, flags)
+            self.msgheader.send(self._socket, meta=meta, flags=flags)
+            flags = flags & ~zmq.SNDMORE
+            self._socket.send(payload, flags=flags)

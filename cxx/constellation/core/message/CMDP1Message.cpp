@@ -9,7 +9,6 @@
 
 #include "CMDP1Message.hpp"
 
-#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -19,9 +18,11 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
+#include "constellation/core/logging/Level.hpp"
 #include "constellation/core/message/exceptions.hpp"
+#include "constellation/core/message/payload_buffer.hpp"
 #include "constellation/core/utils/casts.hpp"
-#include "constellation/core/utils/std23.hpp"
+#include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::log;
@@ -29,8 +30,8 @@ using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::string_literals;
 
-CMDP1Message::CMDP1Message(std::string topic, CMDP1Message::Header header, std::shared_ptr<zmq::message_t> payload)
-    : topic_(std::move(topic)), header_(std::move(header)), payload_(std::move(payload)) {}
+CMDP1Message::CMDP1Message(std::string topic, CMDP1Message::Header header, message::payload_buffer&& payload)
+    : topic_(std::move(topic)), header_(std::move(header)), payload_(std::forward<message::payload_buffer>(payload)) {}
 
 bool CMDP1Message::isLogMessage() const {
     return topic_.starts_with("LOG/");
@@ -45,12 +46,10 @@ zmq::multipart_t CMDP1Message::assemble() {
     // Second frame: header
     msgpack::sbuffer sbuf_header {};
     msgpack::pack(sbuf_header, header_);
-    frames.addmem(sbuf_header.data(), sbuf_header.size());
+    frames.add(payload_buffer(std::move(sbuf_header)).to_zmq_msg_release());
 
-    // Third frame: payload
-    zmq::message_t payload_frame {};
-    payload_frame.swap(*payload_);
-    frames.add(std::move(payload_frame));
+    // Third frame: move payload
+    frames.add(payload_.to_zmq_msg_release());
 
     return frames;
 }
@@ -61,7 +60,7 @@ CMDP1Message CMDP1Message::disassemble(zmq::multipart_t& frames) {
     }
 
     // Decode topic
-    const auto topic = frames.at(0).to_string();
+    const auto topic = frames.pop().to_string();
     if(!(topic.starts_with("LOG/") || topic.starts_with("STAT/"))) {
         throw MessageDecodingError("Invalid message topic, neither log or statistics message");
     }
@@ -72,11 +71,11 @@ CMDP1Message CMDP1Message::disassemble(zmq::multipart_t& frames) {
     }
 
     // Decode header
-    const auto header = Header::disassemble({to_byte_ptr(frames.at(1).data()), frames.at(1).size()});
+    const auto header_frame = frames.pop();
+    const auto header = Header::disassemble({to_byte_ptr(header_frame.data()), header_frame.size()});
 
     // Decode payload
-    auto payload = std::make_shared<zmq::message_t>();
-    frames.at(2).swap(*payload);
+    message::payload_buffer payload = {frames.pop()};
 
     // Create message
     return {topic, header, std::move(payload)};
@@ -98,13 +97,13 @@ Level CMDP1Message::getLogLevelFromTopic(std::string_view topic) {
     return level_opt.value();
 }
 
-CMDP1LogMessage::CMDP1LogMessage(Level level, std::string log_topic, CMDP1Message::Header header, std::string_view message)
+CMDP1LogMessage::CMDP1LogMessage(Level level, std::string log_topic, CMDP1Message::Header header, std::string message)
     : CMDP1Message("LOG/" + to_string(level) + (log_topic.empty() ? ""s : "/" + transform(log_topic, ::toupper)),
                    std::move(header),
-                   std::make_shared<zmq::message_t>(message)),
+                   std::move(message)),
       level_(level), log_topic_(std::move(log_topic)) {}
 
-CMDP1LogMessage::CMDP1LogMessage(CMDP1Message message) : CMDP1Message(std::move(message)) {
+CMDP1LogMessage::CMDP1LogMessage(CMDP1Message&& message) : CMDP1Message(std::forward<CMDP1Message>(message)) {
     if(!isLogMessage()) {
         throw IncorrectMessageType("Not a log message");
     }
@@ -121,7 +120,7 @@ CMDP1LogMessage::CMDP1LogMessage(CMDP1Message message) : CMDP1Message(std::move(
 }
 
 std::string_view CMDP1LogMessage::getLogMessage() const {
-    return getPayload()->to_string_view();
+    return getPayload().to_string_view();
 }
 
 CMDP1LogMessage CMDP1LogMessage::disassemble(zmq::multipart_t& frames) {

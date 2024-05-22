@@ -191,13 +191,13 @@ class SatelliteStateHandler(BaseSatelliteFrame):
     def start(self, request: CSCPMessage):
         """Initiate start state transition via a CSCP request.
 
-        Payload: run number [int].
+        Payload: run identifier [str].
 
         If the transition is not allowed, TransitionNotAllowed will be thrown by
         the FSM.
 
         """
-        if not isinstance(request.payload, int):
+        if not isinstance(request.payload, str):
             # missing payload
             return None
         return self._transition("start", request, thread=True)

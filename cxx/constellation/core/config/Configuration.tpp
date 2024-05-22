@@ -13,13 +13,13 @@
 
 #include <stdexcept>
 #include <string>
+#include <typeinfo>
 #include <vector>
 
 #include <magic_enum.hpp>
 
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
-#include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/string.hpp"
 
 namespace constellation::config {
@@ -58,8 +58,13 @@ namespace constellation::config {
             // Value held by the dictionary entry could not be cast to desired type
             throw InvalidTypeError(key, typeid(T), typeid(value_t));
         } catch(const std::overflow_error& error) {
-            // FIXME to_string utils need to be extended for us!
-            throw InvalidValueError("std::to_string(val)", key, error.what());
+            if constexpr(utils::convertible_to_string<T>) {
+                throw InvalidValueError(utils::to_string(val), key, error.what());
+            } if constexpr(utils::convertible_range_to_string<T>) {
+                throw InvalidValueError(utils::range_to_string(val), key, error.what());
+            } else {
+                throw InvalidValueError("<unknown>", key, error.what());
+            }
         }
     }
 

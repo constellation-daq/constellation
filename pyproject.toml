@@ -32,7 +32,8 @@ dependencies = [
     "python-statemachine",
     "h5py",
     "numpy",
-    "coloredlogs"
+    "coloredlogs",
+    "psutil",
 ]
 
 [project.scripts]
@@ -43,6 +44,9 @@ DemoSatellite = "constellation.core.satellite:main"
 DemoDataSender = "constellation.core.datasender:main"
 DemoHeartbeatChecker = "constellation.core.heartbeatchecker:main"
 DemoHeartbeatSender = "constellation.core.heartbeater:main"
+SatelliteCaenHv = "constellation.satellites.caenhv:main"
+# tools
+Constellation_list_interfaces = "constellation.tools.list_interfaces:main"
 
 [project.urls]
 Homepage = "https://constellation.pages.desy.de/"
@@ -51,8 +55,9 @@ Repository = "https://gitlab.desy.de/constellation/constellation"
 [project.optional-dependencies]
 cli = ["ipython"]
 dev = ["build", "black", "flake8", "flake8-pyproject"]
-docs = ["sphinx", "myst-parser", "pydata_sphinx_theme", "ablog", "sphinxcontrib.plantuml"]
+docs = ["sphinx", "pydata_sphinx_theme", "myst-parser", "breathe", "ablog", "sphinxcontrib.plantuml", "sphinx_design", "sphinx_favicon"]
 test = ["pytest", "pytest-forked", "pytest-cov", "pytest-sugar"]
+caenhv = ["pycaenhv>=0.03"]
 
 [tool.meson-python.args]
 setup = ["--wrap-mode=forcefallback", "-Dimpl_py=enabled", "-Dimpl_cxx=disabled"]  # disable C++ for now

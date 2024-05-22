@@ -14,8 +14,11 @@
 #include <utility>
 #include <vector>
 
-// Note: for now, we only support glibc
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <dlfcn.h>
+#endif
 
 #include "constellation/build.hpp"
 #include "constellation/core/logging/log.hpp"
@@ -31,9 +34,9 @@ using namespace constellation::utils;
 DSOLoader::DSOLoader(std::string dso_name, Logger& logger, std::filesystem::path hint) : dso_name_(std::move(dso_name)) {
     // Possible paths:
     // - custom executable: hint
-    // - in dev environment: builddir/satellites/XYZ/libXYZ.so
-    // - in installed environment: libdir/ConstellationSatellites/libXYZ.so
-    auto dso_file_name = "lib" + dso_name_ + ".so";
+    // - in dev environment: builddir/satellites/XYZ/libXYZ.suffix
+    // - in installed environment: libdir/ConstellationSatellites/libXYZ.suffix
+    const auto dso_file_name = "lib" + dso_name_ + CNSTLN_DSO_SUFFIX;
     auto possible_paths = std::vector<std::filesystem::path>({
         std::filesystem::path(CNSTLN_BUILDDIR) / "cxx" / "satellites" / dso_name_ / dso_file_name,
         std::filesystem::path(CNSTLN_LIBDIR) / "ConstellationSatellites" / dso_file_name,
@@ -44,8 +47,8 @@ DSOLoader::DSOLoader(std::string dso_name, Logger& logger, std::filesystem::path
 
     // Check files following priority
     std::string path_str {};
-    for(auto& path : possible_paths) {
-        auto abs_path = std::filesystem::absolute(path);
+    for(const auto& path : possible_paths) {
+        const auto abs_path = std::filesystem::absolute(path);
         LOG(logger, TRACE) << "Looking for " << dso_name_ << " in " << abs_path;
         if(std::filesystem::exists(abs_path) && std::filesystem::is_regular_file(abs_path)) {
             LOG(logger, DEBUG) << "Found " << dso_name_ << " in " << abs_path;
@@ -58,17 +61,29 @@ DSOLoader::DSOLoader(std::string dso_name, Logger& logger, std::filesystem::path
     }
 
     // Load the DSO
+#ifdef _WIN32
+    handle_ = static_cast<void*>(LoadLibrary(path_str.c_str()));
+    if(handle_ == nullptr) {
+        const auto last_win_error = std::system_category().message(GetLastError());
+        throw DSOLoadingError(dso_name_, last_win_error);
+    }
+#else
     handle_ = dlopen(path_str.c_str(), RTLD_NOW);
-    auto* error_dlopen = dlerror(); // NOLINT(concurrency-mt-unsafe)
-    if(error_dlopen != nullptr) {
+    if(handle_ == nullptr) {
+        const auto* error_dlopen = dlerror(); // NOLINT(concurrency-mt-unsafe)
         throw DSOLoadingError(dso_name_, error_dlopen);
     }
+#endif
 
     LOG(logger, DEBUG) << "Loaded shared library " << dso_file_name;
 }
 
 DSOLoader::~DSOLoader() {
+#ifdef _WIN32
+    FreeLibrary(static_cast<HMODULE>(handle_));
+#else
     dlclose(handle_);
+#endif
 }
 
 Generator* DSOLoader::loadSatelliteGenerator() {
@@ -76,10 +91,19 @@ Generator* DSOLoader::loadSatelliteGenerator() {
 }
 
 void* DSOLoader::getRawFunctionFromDSO(const std::string& function_name) {
+#ifdef _WIN32
+    void* function = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle_), function_name.c_str()));
+    if(function == nullptr) {
+        const auto last_win_error = std::system_category().message(GetLastError());
+        throw DSOFunctionLoadingError(function_name, dso_name_, last_win_error);
+    }
+#else
     void* function = dlsym(handle_, function_name.c_str());
-    auto* error_dlsym = dlerror(); // NOLINT(concurrency-mt-unsafe)
-    if(error_dlsym != nullptr) {
+    if(function == nullptr) {
+        const auto* error_dlsym = dlerror(); // NOLINT(concurrency-mt-unsafe)
         throw DSOFunctionLoadingError(function_name, dso_name_, error_dlsym);
     }
+#endif
+
     return function;
 }

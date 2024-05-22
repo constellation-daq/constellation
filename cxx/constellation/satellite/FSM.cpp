@@ -12,7 +12,6 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
-#include <memory>
 #include <stop_token>
 #include <string>
 #include <thread>
@@ -26,7 +25,9 @@
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/logging/log.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
+#include "constellation/core/message/payload_buffer.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 #include "constellation/satellite/Satellite.hpp"
@@ -50,6 +51,10 @@ FSM::~FSM() {
     }
 }
 
+void FSM::registerStateCallback(std::function<void(State)> callback) {
+    state_callbacks_.emplace_back(std::move(callback));
+}
+
 FSM::TransitionFunction FSM::findTransitionFunction(Transition transition) {
     // Get transition map for current state (never throws due to FSM design)
     const auto& transition_map = state_transition_map_.at(state_);
@@ -58,7 +63,7 @@ FSM::TransitionFunction FSM::findTransitionFunction(Transition transition) {
     if(transition_function_it != transition_map.end()) [[likely]] {
         return transition_function_it->second;
     } else {
-        throw FSMError("Transition " + to_string(transition) + " not allowed from " + to_string(state_) + " state");
+        throw InvalidFSMTransition(transition, state_);
     }
 }
 
@@ -78,6 +83,12 @@ void FSM::react(Transition transition, TransitionPayload payload) {
     // Execute transition function
     state_ = (this->*transition_function)(std::move(payload));
     LOG(logger_, STATUS) << "New state: " << to_string(state_);
+
+    // Pass state to callbacks:
+    for(const auto& callback : state_callbacks_) {
+        // Run in separate thread in case the callback takes long:
+        std::thread(callback, state_).detach();
+    }
 }
 
 bool FSM::reactIfAllowed(Transition transition, TransitionPayload payload) {
@@ -91,7 +102,7 @@ bool FSM::reactIfAllowed(Transition transition, TransitionPayload payload) {
 }
 
 std::pair<CSCP1Message::Type, std::string> FSM::reactCommand(TransitionCommand transition_command,
-                                                             const std::shared_ptr<zmq::message_t>& payload) {
+                                                             const payload_buffer& payload) {
     // Cast to normal transition, underlying values are identical
     auto transition = static_cast<Transition>(transition_command);
     LOG(logger_, INFO) << "Reacting to transition " << to_string(transition);
@@ -112,30 +123,30 @@ std::pair<CSCP1Message::Type, std::string> FSM::reactCommand(TransitionCommand t
     // Check if payload only in initialize, reconfigure, and start
     auto should_have_payload =
         (transition == Transition::initialize || transition == Transition::reconfigure || transition == Transition::start);
-    if(should_have_payload && !payload) {
+    if(should_have_payload && payload.empty()) {
         std::string payload_info {"Transition " + to_string(transition) + " requires a payload frame"};
         LOG(logger_, WARNING) << payload_info;
         return {CSCP1Message::Type::INCOMPLETE, std::move(payload_info)};
     }
     // If there is a payload, but it is not used add a note in the reply
-    const std::string payload_note = (!should_have_payload && payload) ? " (payload frame is ignored)"s : ""s;
+    const std::string payload_note = (!should_have_payload && !payload.empty()) ? " (payload frame is ignored)"s : ""s;
 
     // Try to decode the payload:
     TransitionPayload fsm_payload {};
     try {
-        if(payload && !payload->empty()) {
+        if(!payload.empty()) {
             if(transition == Transition::initialize || transition == Transition::reconfigure) {
-                fsm_payload = Configuration(Dictionary::disassemble(*payload));
+                fsm_payload = Configuration(Dictionary::disassemble(payload));
             } else if(transition == Transition::start) {
-                const auto msgpack_payload = msgpack::unpack(utils::to_char_ptr(payload->data()), payload->size());
-                fsm_payload = msgpack_payload->as<std::uint32_t>();
+                const auto msgpack_payload = msgpack::unpack(to_char_ptr(payload.span().data()), payload.span().size());
+                fsm_payload = msgpack_payload->as<std::string>();
             }
         }
-    } catch(msgpack::unpack_error& e) {
-        std::string payload_info {"Transition " + to_string(transition) + " received invalid payload: " + e.what()};
+    } catch(const msgpack::unpack_error& error) {
+        std::string payload_info {"Transition " + to_string(transition) + " received invalid payload: " + error.what()};
         LOG(logger_, WARNING) << payload_info;
         return {CSCP1Message::Type::INCOMPLETE, std::move(payload_info)};
-    } catch(std::bad_cast&) {
+    } catch(const std::bad_cast&) {
         std::string payload_info {"Transition " + to_string(transition) + " received incorrect payload"};
         LOG(logger_, WARNING) << payload_info;
         return {CSCP1Message::Type::INCOMPLETE, std::move(payload_info)};
@@ -144,6 +155,12 @@ std::pair<CSCP1Message::Type, std::string> FSM::reactCommand(TransitionCommand t
     // Execute transition function
     state_ = (this->*transition_function)(std::move(fsm_payload));
     LOG(logger_, STATUS) << "New state: " << to_string(state_);
+
+    // Pass state to callbacks:
+    for(const auto& callback : state_callbacks_) {
+        // Run in separate thread in case the callback takes long:
+        std::thread(callback, state_).detach();
+    }
 
     // Return that command is being executed
     return {CSCP1Message::Type::SUCCESS, "Transition " + to_string(transition) + " is being initiated" + payload_note};
@@ -156,7 +173,12 @@ void FSM::interrupt() {
         LOG_ONCE(logger_, DEBUG) << "Waiting for a steady state...";
     }
     // In a steady state, try to react to interrupt
-    reactIfAllowed(Transition::interrupt);
+    auto interrupted = reactIfAllowed(Transition::interrupt);
+
+    if(interrupted) {
+        LOG(logger_, WARNING) << "Interrupting satellite operation";
+    }
+
     // We could be in interrupting, so wait for steady state
     while(!is_steady(state_)) {
         LOG_ONCE(logger_, DEBUG) << "Waiting for a steady state...";
@@ -176,7 +198,8 @@ Transition call_satellite_function(Satellite* satellite, Func func, Transition s
         LOG(satellite->getLogger(), CRITICAL) << "Critical failure during transition: " << error.what();
         return Transition::failure;
     } catch(...) {
-        // Something went wrong but not with a proper exception, go to error state
+        // Something went wrong but not with a proper exception, log and go to error state
+        LOG(satellite->getLogger(), CRITICAL) << "Critical failure during transition: <unknown exception>";
         return Transition::failure;
     }
 }
@@ -191,7 +214,7 @@ template <typename... Args> void launch_assign_thread(std::thread& thread, Args.
     thread = std::thread(args...);
 }
 
-// NOLINTBEGIN(performance-unnecessary-value-param)
+// NOLINTBEGIN(performance-unnecessary-value-param,readability-convert-member-functions-to-static)
 
 State FSM::initialize(TransitionPayload payload) {
     auto call_wrapper = [this](Configuration config) {
@@ -205,6 +228,10 @@ State FSM::initialize(TransitionPayload payload) {
     return State::initializing;
 }
 
+State FSM::initialized(TransitionPayload /* payload */) {
+    return State::INIT;
+}
+
 State FSM::launch(TransitionPayload /* payload */) {
     auto call_wrapper = [this]() {
         LOG(logger_, INFO) << "Calling launching function of satellite...";
@@ -215,6 +242,10 @@ State FSM::launch(TransitionPayload /* payload */) {
     return State::launching;
 }
 
+State FSM::launched(TransitionPayload /* payload */) {
+    return State::ORBIT;
+}
+
 State FSM::land(TransitionPayload /* payload */) {
     auto call_wrapper = [this]() {
         LOG(logger_, INFO) << "Calling landing function of satellite...";
@@ -223,6 +254,10 @@ State FSM::land(TransitionPayload /* payload */) {
     };
     launch_assign_thread(transitional_thread_, call_wrapper);
     return State::landing;
+}
+
+State FSM::landed(TransitionPayload /* payload */) {
+    return State::INIT;
 }
 
 State FSM::reconfigure(TransitionPayload payload) {
@@ -237,14 +272,19 @@ State FSM::reconfigure(TransitionPayload payload) {
     return State::reconfiguring;
 }
 
+State FSM::reconfigured(TransitionPayload /* payload */) {
+    return State::ORBIT;
+}
+
 State FSM::start(TransitionPayload payload) {
-    auto call_wrapper = [this](std::uint32_t run_nr) {
+    auto call_wrapper = [this](std::string run_id) {
         LOG(logger_, INFO) << "Calling starting function of satellite...";
         const auto transition =
-            call_satellite_function(this->satellite_.get(), &Satellite::starting, Transition::started, run_nr);
+            call_satellite_function(this->satellite_.get(), &Satellite::starting, Transition::started, run_id);
+        this->satellite_->update_run_identifier(run_id);
         this->reactIfAllowed(transition);
     };
-    launch_assign_thread(transitional_thread_, call_wrapper, std::get<std::uint32_t>(std::move(payload)));
+    launch_assign_thread(transitional_thread_, call_wrapper, std::get<std::string>(std::move(payload)));
     return State::starting;
 }
 
@@ -271,6 +311,10 @@ State FSM::stop(TransitionPayload /* payload */) {
     return State::stopping;
 }
 
+State FSM::stopped(TransitionPayload /* payload */) {
+    return State::ORBIT;
+}
+
 State FSM::interrupt(TransitionPayload /* payload */) {
     auto call_wrapper = [this](State previous_state) {
         LOG(logger_, INFO) << "Calling interrupting function of satellite...";
@@ -280,6 +324,10 @@ State FSM::interrupt(TransitionPayload /* payload */) {
     };
     launch_assign_thread(transitional_thread_, call_wrapper, this->state_);
     return State::interrupting;
+}
+
+State FSM::interrupted(TransitionPayload /* payload */) {
+    return State::SAFE;
 }
 
 State FSM::failure(TransitionPayload /* payload */) {
@@ -292,4 +340,4 @@ State FSM::failure(TransitionPayload /* payload */) {
     return State::ERROR;
 }
 
-// NOLINTEND(performance-unnecessary-value-param)
+// NOLINTEND(performance-unnecessary-value-param,readability-convert-member-functions-to-static)

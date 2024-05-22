@@ -34,7 +34,7 @@ def cscp_requestable(func):
 
 
 def get_cscp_commands(cls):
-    """Loop over all class methods and return those marked as CHIRP callback."""
+    """Loop over all class methods and return those marked as CSCP commands."""
     res = {}
     for func in dir(cls):
         call = getattr(cls, func)

@@ -4,15 +4,14 @@ The central components of a Constellation network are satellites. A satellite is
 is built around a finite state machine. It is the only component in a Constellation which partakes in all Constellation
 protocols. In the following, the main features of the Constellation Satellite are described.
 
-(satellite-status)=
 ## State and Status
 
-The **state** of a Constellation satellite is governed by its [finite state machine](#satellite-fsm). By referring to the
+The **state** of a Constellation satellite is governed by its [finite state machine](#the-finite-state-machine). By referring to the
 current state of the satellite, it can be unequivocally deduced what actions the satellite is currently performing.
 
 Sometimes, however, additional information is helpful in interpreting this machine-readable state information. This
 information is supplied by the satellite **status**, a human-readable string describing e.g. the last performed action during
-a [transitional state](#transitions). The status may change while remaining in the same state. In case of a failure, the
+a [transitional state](#changing-states---transitions). The status may change while remaining in the same state. In case of a failure, the
 status string provides information on the cause of the failure, if known or available. A typical example for a regular status
 information would be:
 
@@ -25,40 +24,38 @@ or for a failure mode situation:
 * `STATUS`: "Failed to communicate with FPGA, links not locked"
 
 Unlike the state, which is for example distributed automatically through the heartbeat protocol, the
-status message has to be explicitly queried via a [command](#satellite-commands).
+status message has to be explicitly queried via a [command](#controlling-the-satellite).
 
-(satellite-commands)=
 ## Controlling the Satellite
 
 The Constellation satellite class exposes a set of remote procedure calls, called "commands" in the following, through the
-CSCP protocol. This comprises commands to initiate state transitions of the [finite state machine](#satellite-fsm) as well as
+CSCP protocol. This comprises commands to initiate state transitions of the [finite state machine](#the-finite-state-machine) as well as
 methods to query additional information from the satellite. A brief description of the CSCP protocol is provided
-[in the protocol section](/manual/concepts/protocols) of the user guide and the full protocol definition and grammar can be found in
-the [appendix](/protocols/cscp).
+[in the protocol section](../../reference/protocols.md) of the user guide and the full protocol definition and grammar can
+be found in the [appendix of the developer guide](../../protocols/cscp.md).
 
-Commands consist of a command name and an optional payload. The command name shall only contain alphanumeric characters or
-underscores and cannot start with a digit. The following commands represent the minimal set of procedures a satellite needs
-to implement:
+Commands consist of a command name and an optional payload. The following commands represent the minimal set of procedures a
+satellite needs to implement:
 
 | Command        | Description
 | -------------- | -----------
-| `get_name`     | Returns the name of the queried satellite
-| `get_version`  | Returns the Constellation version identifier string the queried satellite has been built with
+| `get_name`     | Returns the canonical name of the queried satellite
+| `get_version`  | Returns the Constellation version identifier the satellite has been built with
 | `get_commands` | Provides a full list of the available commands for the queried satellite
-| `get_state`    | Returns the [current state](#satellite-fsm) of the satellite
-| `get_status`   | Returns the current [status message](#satellite-status) of the satellite
+| `get_state`    | Returns the [current state](#the-finite-state-machine) of the satellite
+| `get_status`   | Returns the current [status message](#state-and-status) of the satellite
 | `get_config`   | Returns the applied configuration
-| `initialize`   | Requests FSM transition "initialize"
-| `launch`       | Requests FSM transition "launch"
-| `land`         | Requests FSM transition "land"
-| `reconfigure`  | Requests FSM transition "reconfigure"
-| `start`        | Requests FSM transition "start"
-| `stop`         | Requests FSM transition "stop"
-| `shutdown`     | Terminates the satellite application. This command can only be called from the `NEW`, `INIT`, `SAFE` and `ERROR` states.
+| `get_run_id`   | Returns the current or last run identifier
+| `initialize`   | Requests FSM transition "initialize". Only valid when in `INIT` or `NEW` states.
+| `launch`       | Requests FSM transition "launch". Only valid when in `INIT` state.
+| `land`         | Requests FSM transition "land". Only valid when in `ORBIT` state.
+| `reconfigure`  | Requests FSM transition "reconfigure". Only valid when in `ORBIT` state.
+| `start`        | Requests FSM transition "start". Only valid when in `ORBIT` state.
+| `stop`         | Requests FSM transition "stop". Only valid when in `RUN` state.
+| `shutdown`     | Shuts down the satellite application. This command can only be called from the `NEW`, `INIT`, `SAFE` and `ERROR` states.
 
 Satellite implementations are allowed to amend this list with custom commands.
 
-(satellite-fsm)=
 ## The Finite State Machine
 
 The finite state machine (FSM) controls the behavior of the satellite and guarantees that the system is always in a defined state.
@@ -101,8 +98,7 @@ satellite communication with the rest of the Constellation:
 
 * The `INIT` state indicates that the satellite has been initialized.
 
-  Initialization comprises the reception of the configuration from a controller and the start of heartbeat publication through
-  the CHP protocol. At this point, the satellite as been made aware of other satellites in the Constellation.
+  Initialization comprises the reception of the configuration from a controller.
   A first connection to the instrument hardware may be made at this point, using the configuration provided by the controller.
 
 * The `ORBIT` state signals that the satellite is ready for data taking.
@@ -117,51 +113,27 @@ satellite communication with the rest of the Constellation:
 
 ### Operating the Instrument - The `RUN` State
 
-The `RUN` state is special in that this is where the operation of the satellite takes place, data is collected and passed on and statistical metrics are distributed.
-Constellation provides two different ways for satellite implementations to interact with the `RUN` state:
+The `RUN` state is special in that this is where the operation of the satellite takes place, data is collected and passed on
+and statistical metrics are distributed.
+Satellite implementations interact with the `RUN` state through the `running` function.
+The method is called once upon entering the `RUN` state, and should exit as soon as a state change is requested either by a
+controller or by a failure mode.
 
-* An inheritance of the `run_sequence` function is the simplest method of implementing instrument code. The function is
-  called repeatedly by the satellite until a transition out of the RUN state is requested either by a controller or by a failure mode.
+```plantuml
+@startuml
+hide empty description
 
-  ```plantuml
-  @startuml
-  hide empty description
+State RUN {
+    State start <<entryPoint>>
+    State stop <<exitPoint>>
+    State running
+    start -right[dotted]-> running
+    running -right[dotted]-> stop
+}
 
-  State RUN {
-      State start <<entryPoint>>
-      State stop <<exitPoint>>
-      State c <<choice>>
-      State run_sequence
-      start -right-> c
-      c -[dotted]down-> run_sequence : run
-      c -[dotted]right-> stop
-      run_sequence -up[dotted]-> c : loop
-  }
+@enduml
+```
 
-  @enduml
-  ```
-
-* An inheritance of the `run_loop` function provides some more freedom in implementing device code. The method is just called
-  once upon entering the `RUN` state, and should exit as soon as a state change is requested either by a controller or by a
-  failure mode. In contrast to an inheritance of the `run_sequence` method, this function requires the implemented code to
-  implement this behavior.
-
-  ```plantuml
-  @startuml
-  hide empty description
-
-  State RUN {
-      State start <<entryPoint>>
-      State stop <<exitPoint>>
-      State run_loop
-      start -right[dotted]-> run_loop
-      run_loop -right[dotted]-> stop
-  }
-
-  @enduml
-  ```
-
-(transitions)=
 ### Changing States - Transitions
 
 Instrument code of the individual satellites is executed in so-called transitional states. They differ from steady states in
@@ -233,8 +205,8 @@ The `ERROR` state is entered whenever an unexpected event occurs within the inst
 state can only be left by a manual intervention via a controller by resetting the satellite back into its `INIT` state.
 
 The `SAFE` state on the other hand, is entered by the satellite when detecting an issue with *another* satellite in the
-Constellation. This awareness of the Constellation status is achieved with the help of CHP. Each satellite in the
-Constellation transmits its current state as a heartbeat via the CHP protocol at regular intervals. This allows other
+Constellation. This awareness of the Constellation status is achieved with the help of heartbeats. Each satellite in the
+Constellation transmits its current state as a heartbeat at regular intervals. This allows other
 satellites to react if the communicated status contains the `ERROR` state - or if the heartbeat is absent for a defined
 period of time.
 The `SAFE` state resembles that of an uncrewed spacecraft, where all non-essential systems are shut down and only essential
@@ -246,3 +218,5 @@ The main difference between the two failure states is the possible statement abo
 The `SAFE` state is achieved via a controlled shutdown of components and is a well-defined procedure, while the `ERROR` state
 is entered, for example, through a lack of control or communication with the instrument and therefore does not allow any
 statement to be made about the condition of attached hardware.
+
+More details about the autonomous operation of a Constellation can be found in [the respective section of the manual](autonomy.md).

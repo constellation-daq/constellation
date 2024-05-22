@@ -1,0 +1,33 @@
+/**
+ * @file
+ * @brief Generator for satellite DSO interface
+ *
+ * @copyright Copyright (c) 2024 DESY and the Constellation authors.
+ * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
+ * SPDX-License-Identifier: EUPL-1.2
+ */
+
+#include <memory>
+#include <string_view>
+
+#include "constellation/build.hpp"
+#include "constellation/satellite/Satellite.hpp"
+#include "satellites/@SATELLITE_CLASS@/@SATELLITE_CLASS@.hpp"
+
+using namespace constellation::satellite;
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
+#endif
+
+// generator function for loading satellite from shared library
+extern "C" {
+    CNSTLN_ABI std::shared_ptr<constellation::satellite::Satellite> generator(std::string_view type, std::string_view name) {
+        return std::make_shared<@SATELLITE_CLASS@>(type, name);
+    }
+}
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif

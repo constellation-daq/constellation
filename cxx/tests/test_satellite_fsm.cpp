@@ -53,8 +53,8 @@ public:
         Satellite::reconfiguring(partial_config);
         transitional_state();
     }
-    void starting(std::uint32_t run_number) override {
-        Satellite::starting(run_number);
+    void starting(std::string_view run_identifier) override {
+        Satellite::starting(run_identifier);
         transitional_state();
     }
     void stopping() override {
@@ -125,7 +125,7 @@ TEST_CASE("Regular FSM operation", "[satellite][satellite::fsm]") {
     satellite->progress_fsm(fsm);
     REQUIRE(fsm.getState() == State::ORBIT);
     // ORBIT -> RUN
-    fsm.react(Transition::start, 0U);
+    fsm.react(Transition::start, "run_0");
     REQUIRE(fsm.getState() == State::starting);
     satellite->progress_fsm(fsm);
     REQUIRE(fsm.getState() == State::RUN);
@@ -167,7 +167,7 @@ TEST_CASE("FSM interrupts and failures", "[satellite][satellite::fsm]") {
     fsm.react(Transition::launch);
     satellite->progress_fsm(fsm);
     REQUIRE(fsm.getState() == State::ORBIT);
-    fsm.react(Transition::start, 0U);
+    fsm.react(Transition::start, "run_0");
     satellite->progress_fsm(fsm);
     REQUIRE(fsm.getState() == State::RUN);
     fsm.react(Transition::interrupt);
@@ -338,7 +338,7 @@ TEST_CASE("Allowed FSM transitions", "[satellite][satellite::fsm]") {
     INFO("reconfiguring succeeded");
 
     satellite->progress_fsm(fsm);
-    fsm.react(start, 0U);
+    fsm.react(start, "run_0");
     REQUIRE(fsm.getState() == State::starting);
     std::this_thread::sleep_for(5ms); // Give some to log in the correct order
     // Allowed in starting: started, interrupt, failure

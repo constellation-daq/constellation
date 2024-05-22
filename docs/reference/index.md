@@ -6,6 +6,12 @@ only for implementing Constellation libraries in different languages, or for con
 ```
 
 ```{toctree}
+:caption: General
+
+contributing
+```
+
+```{toctree}
 :caption: Technical Documentation
 
 satellite
@@ -18,7 +24,6 @@ protocols
 
 cxx/core/index
 cxx/satellite
-cxx/chirp
 ```
 
 ```{toctree}

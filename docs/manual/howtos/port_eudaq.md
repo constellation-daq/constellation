@@ -7,7 +7,7 @@ similar from an interface perspective.
 
 ## Porting the Finite State Machine Transitions
 
-Constellation satellites are built around a [finite state machine](/manual/concepts/satellite) which works similar to EUDAQs
+Constellation satellites are built around a [finite state machine](../concepts/satellite.md) which works similar to EUDAQs
 Producers, with the exception that the states have different names and a few more transitions between states are possible.
 In order to port the functionality of the EUDAQ Producer, the code from its functions can directly be copied into a
 corresponding Constellation satellite skeleton. The following table helps in finding the corresponding function name:
@@ -17,20 +17,20 @@ corresponding Constellation satellite skeleton. The following table helps in fin
 | `DoInitialise` | `initializing`          | Direct equivalent. In EUDAQ, this function only receives the "init" portion of the configuration, in Constellation the entire satellite configuration is provided at this stage.
 | `DoConfigure`  | `launching`             | Direct equivalent. Powers up the attached instrument and configures it to a state where it is ready to enter data taking.
 | -              | `landing`               | Landing is the opposite action as launching and should shut down the attached instrument in a controlled manner to bring it back into the INIT state. EUDAQ does not have a direct equivalent, but `DoReset` works in a similar fashion.
-| -              | `reconfiguring`         | Reconfiguration is a concept specific to Constellation. It is an optional method which allows to alter a subset of configuration values without landing first. More information is available [here](/manual/howtos/satellite_cxx).
+| -              | `reconfiguring`         | Reconfiguration is a concept specific to Constellation. It is an optional method which allows to alter a subset of configuration values without landing first. More information is available [here](./satellite_cxx.md).
 | `DoStartRun`   | `starting`              | Direct equivalent. Starts a new data taking run.
 | `DoStopRun`    | `stopping`              | Direct equivalent. Stops the run currently in progress.
-| `RunLoop`      | `running`               | Equivalent with the difference that instead of keeping track of the running via a custom variable (like `m_running`) often found in EUDAQ Producers, Constellation provides a stop token. More information is available [here](/manual/howtos/satellite_cxx).
+| `RunLoop`      | `running`               | Equivalent with the difference that instead of keeping track of the running via a custom variable (like `m_running`) often found in EUDAQ Producers, Constellation provides a stop token. More information is available [here](./satellite_cxx.md).
 | `DoReset`      | -                       | In EUDAQ, this command puts the producer back into the initial state. In contrast, resetting a satellite in Constellation means calling its `initializing` method again.
 | `DoTerminate`  | Destructor              | The EUDAQ equivalent of the `terminate` action in Constellation is the `shutdown` command which can only be triggered when not running or in orbit. The corresponding code should be placed in the destructor of the satellite.
-| `DoStatus`     | -                       | In Constellation no `DoStatus` equivalent exists because statistical metrics are transmitted differently, more similar to log messages. More information can be found [here](/manual/concepts/statistics).
+| `DoStatus`     | -                       | In Constellation no `DoStatus` equivalent exists because statistical metrics are transmitted differently, more similar to log messages. More information can be found [here](../concepts/statistics.md).
 
 ## Transmitting Data
 
 ## Adjusting the Logging Mechanism
 
 In EUDAQ, log messages are sent via the logging macros `EUDAQ_DEBUG`, `EUDAQ_INFO`, `EUDAQ_WARN`, and `EUDAQ_ERROR` which
-take a single string as argument. In Constellation, [similar log levels](/manual/concepts/logging) exist and logging can
+take a single string as argument. In Constellation, [similar log levels](../concepts/logging.md) exist and logging can
 directly be translated to the corresponding macros. Instead of single strings, output streams are used which are more
 flexible in converting different variable types to strings automatically. For example the EUDAQ log message:
 
@@ -61,7 +61,7 @@ would become a Constellation exception of type `InvalidValueError`. This allows 
 tell the user e.g. in which configuration file and at which position the invalid value can be found:
 
 ```cpp
-auto power_output_percent = config->Get("power_output_percent");
+auto power_output_percent = config.get<int>("power_output_percent");
 if(power_output_percent > 100) {
     throw InvalidValueError(config, "power_output_percent", "Value too large, 100% is the maximum!");
 }

@@ -18,6 +18,13 @@ workflow:
       when: never
     - when: always
 
+default:
+  retry:
+    max: 2
+    when:
+      - stuck_or_timeout_failure
+      - runner_system_failure
+
 variables:
   CCACHE_DIR: $CI_PROJECT_DIR/.cache/ccache
   PIP_CACHE_DIR: $CI_PROJECT_DIR/.cache/pip
@@ -78,20 +85,18 @@ variables:
   variables:
     CXX: ccache g++
 
-.fedora-latest:
-  image: gitlab.desy.de:5555/constellation/build-images/fedora-latest:latest
+.fedora-clang:
+  image: gitlab.desy.de:5555/constellation/build-images/fedora-clang:latest
   variables:
     CXX: ccache clang++
 
-.fedora-sphinx:
-  image: gitlab.desy.de:5555/constellation/build-images/fedora-sphinx:latest
-  before_script:
-    - source /venv/bin/activate
+.fedora-mingw:
+  image: gitlab.desy.de:5555/constellation/build-images/fedora-mingw:latest
 
 .ubuntu-22.04:
   image: gitlab.desy.de:5555/constellation/build-images/ubuntu-22.04:latest
   variables:
-    CXX: ccache g++
+    CXX: ccache g++-12
 
 .ubuntu-24.04:
   image: gitlab.desy.de:5555/constellation/build-images/ubuntu-24.04:latest
@@ -142,6 +147,11 @@ variables:
       <<: *python-rules-changes
     - if: $CI_PIPELINE_SOURCE != "merge_request_event"
 
+.fedora-sphinx:
+  image: gitlab.desy.de:5555/constellation/build-images/fedora-sphinx:latest
+  before_script:
+    - source /venv/bin/activate
+
 # build stage
 
 .build-cpp:
@@ -151,7 +161,7 @@ variables:
     - *ccache
   script:
     - meson setup build -Dimpl_cxx=enabled -Dcxx_tests=enabled ${BUILD_OPTIONS}
-    - meson compile -C build
+    - meson compile -C build ${NINJA_OPTIONS}
   artifacts:
     paths:
       - build
@@ -191,19 +201,30 @@ build:debian-gcc:
     BUILD_OPTIONS: "-Dbuildtype=debug -Db_coverage=true -Dcpp_std=c++23"
   <<: *cpp-python-rules # Run on both C++ and Python changes for correct coverage reporting
 
-build:fedora-latest:
+build:fedora-clang:
   extends:
     - .build-cpp
-    - .fedora-latest
+    - .fedora-clang
   variables:
-    BUILD_OPTIONS: "-Dbuildtype=debugoptimized -Db_sanitize=address -Db_lundef=false"
+    BUILD_OPTIONS: "-Dbuildtype=debugoptimized -Dcpp_stdlib=c++ -Db_sanitize=address -Db_lundef=false"
+
+build:fedora-mingw:
+  extends:
+    - .build-cpp
+    - .fedora-mingw
+  variables:
+    BUILD_OPTIONS: "-Dbuildtype=debug --cross .cross/mingw-ucrt.ini"
+    NINJA_OPTIONS: "-l4"
+  retry: 2
 
 build:ubuntu-22.04:
   extends:
     - .build-cpp
     - .ubuntu-22.04
   variables:
-    BUILD_OPTIONS: "-Dbuildtype=release"
+    BUILD_OPTIONS: "-Dbuildtype=debugoptimized"
+    NINJA_OPTIONS: "-l4"
+  retry: 2
 
 build:ubuntu-24.04:
   extends:
@@ -274,12 +295,12 @@ test:debian-gcc:
     expire_in: 24 hour
   <<: *cpp-python-rules # Run on both C++ and Python changes for correct coverage reporting
 
-test:fedora-latest:
+test:fedora-clang:
   extends:
     - .test-cpp
-    - .fedora-latest
+    - .fedora-clang
   needs:
-    - job: build:fedora-latest
+    - job: build:fedora-clang
       artifacts: true
 
 test:ubuntu-22.04:
@@ -487,13 +508,29 @@ docs:doxygen:
     - .fedora-sphinx
   script:
     - make -C docs doxygen
+  artifacts:
+    paths:
+      - docs/doxygen
+    expire_in: 24 hour
+
+docs:html:
+  extends:
+    - .docs
+    - .fedora-sphinx
+  variables:
+    SPHINXOPTS: -W --keep-going
+  script:
+    - make -C docs html
+  needs:
+    - job: docs:doxygen
+      artifacts: true
 
 # deploy stage
 
 deploy:docs:
   stage: deploy
   needs:
-    - job: docs:doxygen
+    - job: docs:html
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   trigger:

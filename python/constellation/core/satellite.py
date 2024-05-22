@@ -24,6 +24,7 @@ from .commandmanager import CommandReceiver, cscp_requestable
 from .configuration import Configuration
 from .monitoring import MonitoringSender
 from .error import debug_log, handle_error
+from .base import EPILOG, ConstellationArgumentParser
 
 
 class Satellite(
@@ -197,6 +198,32 @@ class Satellite(
 
     @handle_error
     @debug_log
+    def _wrap_reconfigure(self, config: dict) -> str:
+        """Wrapper for the 'reconfigure' transitional state of the FSM.
+
+        This method performs the basic Satellite transition before passing
+        control to the device-specific public method.
+
+        """
+
+        # Merge with existing configuration. This will also update the internal
+        # set of used keys, so the user can choose to either update everything
+        # or only the 'unused'/updated keys.
+        self.config.update(config)
+        # reconfigure is not necessarily implemented; it is not in the this base
+        # class to allow checking for the exististance of the method to
+        # determine the reaction to a `reconfigure` CSCP command.
+        init_msg = self.do_reconfigure(self.config)  # noqa
+
+        if self.config.has_unused_values():
+            for key in self.config.get_unused_keys():
+                self.log.warning("Satellite ignored configuration value: '%s'", key)
+            init_msg += " IGNORED parameters: "
+            init_msg += ",".join(self.config.get_unused_keys())
+        return init_msg
+
+    @handle_error
+    @debug_log
     def _wrap_land(self, payload: any) -> str:
         """Wrapper for the 'landing' transitional state of the FSM.
 
@@ -214,7 +241,7 @@ class Satellite(
 
     @handle_error
     @debug_log
-    def _wrap_stop(self, payload: any):
+    def _wrap_stop(self, payload: any) -> str:
         """Wrapper for the 'stopping' transitional state of the FSM.
 
         This method performs the basic Satellite transition before passing
@@ -230,24 +257,25 @@ class Satellite(
         return self.do_stopping(payload)
 
     @debug_log
-    def do_stopping(self, payload: any):
+    def do_stopping(self, payload: any) -> str:
         """Stop the data acquisition."""
         return "Acquisition stopped."
 
     @handle_error
     @debug_log
-    def _wrap_start(self, run_number: int) -> str:
+    def _wrap_start(self, run_identifier: str) -> str:
         """Wrapper for the 'run' state of the FSM.
 
         This method performs the basic Satellite transition before passing
         control to the device-specific public method.
 
         """
-        res = self.do_starting(run_number)
+        self.run_identifier = run_identifier
+        res = self.do_starting(run_identifier)
         # complete transitional state
         self.fsm.complete(res)
         # continue to execute DAQ in this thread
-        return self.do_run(run_number)
+        return self.do_run(run_identifier)
 
     @debug_log
     def do_starting(self, payload: any) -> str:
@@ -280,7 +308,7 @@ class Satellite(
         return "Finished acquisition."
 
     @debug_log
-    def _wrap_failure(self):
+    def _wrap_failure(self) -> str:
         """Wrapper for the 'ERROR' state of the FSM.
 
         This method performs the basic Satellite transition before passing
@@ -303,13 +331,13 @@ class Satellite(
             return "Exception caught during failure handling, see logs for details."
 
     @debug_log
-    def fail_gracefully(self):
+    def fail_gracefully(self) -> str:
         """Method called when reaching 'ERROR' state."""
         return "Failed gracefully."
 
     @handle_error
     @debug_log
-    def _wrap_interrupt(self, payload):
+    def _wrap_interrupt(self, payload) -> str:
         """Wrapper for the 'interrupting' transitional state of the FSM.
 
         This method performs the basic Satellite transition before passing
@@ -326,7 +354,7 @@ class Satellite(
         return self.do_interrupting()
 
     @debug_log
-    def do_interrupting(self):
+    def do_interrupting(self) -> str:
         """Interrupt data acquisition and move to Safe state.
 
         Defaults to calling the stop and land handlers.
@@ -337,7 +365,7 @@ class Satellite(
 
     @handle_error
     @debug_log
-    def _wrap_recover(self):
+    def _wrap_recover(self) -> str:
         """Wrapper for the 'recovering' transitional state of the FSM.
 
         This method does not perform any action as the SAFE->INIT transition has
@@ -382,39 +410,75 @@ class Satellite(
         """
         return __version__, None, None
 
+    @cscp_requestable
+    def get_run_id(self, _request: CSCPMessage = None) -> (str, None, None):
+        """Get current run identifier.
+
+        No payload argument.
+
+        """
+        return self.run_identifier, None, None
+
 
 # -------------------------------------------------------------------------
 
 
+class SatelliteArgumentParser(ConstellationArgumentParser):
+    """Customized Argument parser providing common Satellite options."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.network.add_argument(
+            "--cmd-port",
+            "--command-port",
+            "--cscp",
+            type=int,
+            help="The port to listen on for commands sent via the "
+            "Constellation Satellite Control Protocol (default: %(default)s).",
+        )
+        self.network.add_argument(
+            "--mon-port",
+            "--monitoring-port",
+            "--cmdp",
+            type=int,
+            help="The port to provide data via the "
+            "Constellation Monitoring Distribution Protocol (default: %(default)s).",
+        )
+        self.network.add_argument(
+            "--hb-port",
+            "--heartbeat-port",
+            "--chp",
+            type=int,
+            help="The port for sending heartbeats via the "
+            "Constellation Heartbeat Protocol (default: %(default)s).",
+        )
+
+
 def main(args=None):
-    """Start the base Satellite server."""
-    import argparse
+    """Start a Demo Satellite server.
+
+    This Satellite only implements rudimentary functionality but can be used to
+    test basic communication.
+
+    """
     import coloredlogs
 
-    parser = argparse.ArgumentParser(description=main.__doc__)
-    parser.add_argument("--log-level", default="info")
-    parser.add_argument("--cmd-port", type=int, default=23999)
-    parser.add_argument("--mon-port", type=int, default=55556)
-    parser.add_argument("--hb-port", type=int, default=61234)
-    parser.add_argument("--interface", type=str, default="*")
-    parser.add_argument("--name", type=str, default="satellite_demo")
-    parser.add_argument("--group", type=str, default="constellation")
-    args = parser.parse_args(args)
+    parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
+    # this sets the defaults for our "demo" Satellite
+    parser.set_defaults(
+        name="satellite_demo", cmd_port=23999, mon_port=55556, hb_port=61234
+    )
+    # get a dict of the parsed arguments
+    args = vars(parser.parse_args(args))
 
     # set up logging
-    logger = logging.getLogger(args.name)
-    coloredlogs.install(level=args.log_level.upper(), logger=logger)
+    logger = logging.getLogger(args["name"])
+    log_level = args.pop("log_level")
+    coloredlogs.install(level=log_level.upper(), logger=logger)
 
     logger.info("Starting up satellite!")
     # start server with remaining args
-    s = Satellite(
-        name=args.name,
-        group=args.group,
-        cmd_port=args.cmd_port,
-        hb_port=args.hb_port,
-        mon_port=args.mon_port,
-        interface=args.interface,
-    )
+    s = Satellite(**args)
     s.run_satellite()
 
 

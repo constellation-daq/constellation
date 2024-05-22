@@ -10,6 +10,7 @@ import io
 import socket
 from uuid import UUID
 from enum import Enum
+from .network import get_broadcast
 
 
 CHIRP_PORT = 7123
@@ -149,16 +150,16 @@ class CHIRPBeaconTransmitter:
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         # non-blocking (i.e. a timeout of 0.0 seconds for recv calls)
         self._sock.setblocking(0)
-        # bind to all interfaces to listen to incoming broadcast.
-        #
-        # NOTE: this only works for IPv4
-        #
-        # Preferably, we would bind only to the specified interface; however, we
-        # would have to determine the correct broadcast address and would need
-        # to know the netmask. For now, broadcast services on all interfaces:
-        #
-        # INADDR_ANY for IPv4
-        interface = ""
+        # determine to what address(es) to send broadcasts to
+        self._broadcasts = get_broadcast(interface)
+        # bind to specified interface(s) to listen to incoming broadcast.
+        # NOTE: only support for IPv4 is implemented
+        if interface == "*":
+            # INADDR_ANY for IPv4
+            interface = ""
+        else:
+            # use broadcast address instead
+            interface = self._broadcasts[0]
         self._sock.bind((interface, CHIRP_PORT))
 
     @property
@@ -189,7 +190,8 @@ class CHIRPBeaconTransmitter:
     ) -> None:
         """Broadcast a given service."""
         msg = CHIRPMessage(msgtype, self._group_uuid, self._host_uuid, serviceid, port)
-        self._sock.sendto(msg.pack(), ("<broadcast>", CHIRP_PORT))
+        for bcast in self._broadcasts:
+            self._sock.sendto(msg.pack(), (bcast, CHIRP_PORT))
 
     def listen(self) -> CHIRPMessage:
         """Listen in on CHIRP port and return message if data was received."""

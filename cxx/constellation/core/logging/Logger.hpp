@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <source_location>
+#include <sstream>
 #include <string>
 
 #include <spdlog/async_logger.h>
@@ -33,7 +34,7 @@ namespace constellation::log {
          */
         class log_stream final : public std::ostringstream {
         public:
-            inline log_stream(Logger& logger, Level level, std::source_location src_loc)
+            inline log_stream(const Logger& logger, Level level, std::source_location src_loc)
                 : logger_(logger), level_(level), src_loc_(src_loc) {}
             inline ~log_stream() final { logger_.log(level_, this->view(), src_loc_); }
 
@@ -44,7 +45,7 @@ namespace constellation::log {
             log_stream& operator=(log_stream&& other) = delete;
 
         private:
-            Logger& logger_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+            const Logger& logger_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
             Level level_;
             std::source_location src_loc_;
         };
@@ -86,7 +87,7 @@ namespace constellation::log {
          * @param src_loc Source code location from which the log message emitted
          * @return a log_stream object
          */
-        inline log_stream log(Level level, std::source_location src_loc = std::source_location::current()) {
+        inline log_stream log(Level level, std::source_location src_loc = std::source_location::current()) const {
             return {*this, level, src_loc};
         }
 
@@ -99,7 +100,7 @@ namespace constellation::log {
          */
         inline void log(Level level,
                         std::string_view message,
-                        std::source_location src_loc = std::source_location::current()) {
+                        std::source_location src_loc = std::source_location::current()) const {
             spdlog_logger_->log({src_loc.file_name(), static_cast<int>(src_loc.line()), src_loc.function_name()},
                                 to_spdlog_level(level),
                                 message);

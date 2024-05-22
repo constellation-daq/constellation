@@ -70,7 +70,7 @@ controllers, listen to other satellites' heartbeat messages, distribute log mess
 recorded instrument data.
 
 A detailed description of the satellite structure, its features and possibilities to interact with are provided in
-[a dedicated chapter](/manual/concepts/satellite) in this user guide.
+[a dedicated chapter](./satellite.md) in this user guide.
 
 ### The Controller
 
@@ -81,7 +81,7 @@ files resides in the controller, and graphical or command-line user interfaces t
 Controllers do not possess a state, i.e. they are not a satellite of the Constellation. The main advantage of this approach
 is that controllers can be closed and reopened by the operator, or can even crash, without affecting the Constellation.
 
-The functionality of the controller in Constellation is described in detail in [this chapter](/manual/concepts/controller).
+The functionality of the controller in Constellation is described in detail in [this chapter](./controller.md).
 
 ### The Listener
 
@@ -93,4 +93,4 @@ operations.
 A typical example would be a log message interface which subscribes to log streams for any satellite in the Constellation.
 
 Possible use-cases, the functionality and limitations of listeners in Constellation are described in
-[this chapter](/manual/concepts/listener).
+[this chapter](./listener.md).

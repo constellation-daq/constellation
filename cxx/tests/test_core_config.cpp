@@ -20,13 +20,11 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
-#include "constellation/core/utils/casts.hpp"
-
-using namespace std::literals::string_view_literals;
 
 using namespace Catch::Matchers;
 using namespace constellation::config;
 using namespace constellation::utils;
+using namespace std::literals::string_view_literals;
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
 
@@ -202,7 +200,7 @@ TEST_CASE("Set & Get Path Values", "[core][core::config]") {
     // Read path array with check for existence
     REQUIRE_THROWS_MATCHES(config.getPathArray("patharray", true),
                            InvalidValueError,
-                           Message("Value [/tmp/somefile.txt,/tmp/someotherfile.txt,] of key 'patharray' is not valid: path "
+                           Message("Value [/tmp/somefile.txt, /tmp/someotherfile.txt] of key 'patharray' is not valid: path "
                                    "/tmp/somefile.txt not found"));
 
     // Attempt to read value that is not a string:
@@ -221,7 +219,7 @@ TEST_CASE("Access Values as Text", "[core][core::config]") {
     config.set("uint64", std::uint64_t(64));
     config.set("uint8", std::uint8_t(8));
     config.set("double", double(1.3));
-    config.set("float", float(3.14));
+    config.set("float", float(7.5));
     config.set("string", std::string("a"));
 
     enum MyEnum {
@@ -240,7 +238,7 @@ TEST_CASE("Access Values as Text", "[core][core::config]") {
     REQUIRE(config.getText("uint64") == "64");
     REQUIRE(config.getText("uint8") == "8");
     REQUIRE(config.getText("double") == "1.3");
-    REQUIRE(config.getText("float") == "3.14");
+    REQUIRE(config.getText("float") == "7.5");
     REQUIRE(config.getText("string") == "a");
     REQUIRE(config.getText("myenum") == "ONE");
     REQUIRE(config.getText("time") == "1970-01-01 00:00:00.000000000");
@@ -257,9 +255,9 @@ TEST_CASE("Access Arrays as Text", "[core][core::config]") {
     config.setArray<std::uint8_t>("uint8", {8, 7, 6});
 
     config.setArray<double>("double", {1.3, 3.1});
-    config.setArray<float>("float", {3.14F, 1.43F});
+    config.setArray<float>("float", {1.0F, 7.5F});
 
-    config.setArray<char>("binary", {0x1, 0x2, 0x3});
+    config.setArray<char>("binary", {0x1, 0xA, 0x1F});
 
     config.setArray<std::string>("string", {"a", "b", "c"});
 
@@ -272,17 +270,17 @@ TEST_CASE("Access Arrays as Text", "[core][core::config]") {
     const std::chrono::system_clock::time_point tp {};
     config.setArray<std::chrono::system_clock::time_point>("time", {tp, tp, tp});
 
-    REQUIRE(config.getText("bool") == "[true,false,true,]");
-    REQUIRE(config.getText("int64") == "[63,62,61,]");
-    REQUIRE(config.getText("size") == "[1,2,3,]");
-    REQUIRE(config.getText("uint64") == "[64,65,66,]");
-    REQUIRE(config.getText("uint8") == "[8,7,6,]");
-    REQUIRE(config.getText("double") == "[1.3,3.1,]");
-    REQUIRE(config.getText("float") == "[3.14,1.43,]");
-    REQUIRE(config.getText("binary") == "[0x1,0x2,0x3,]");
-    REQUIRE(config.getText("string") == "[a,b,c,]");
+    REQUIRE(config.getText("bool") == "[true, false, true]");
+    REQUIRE(config.getText("int64") == "[63, 62, 61]");
+    REQUIRE(config.getText("size") == "[1, 2, 3]");
+    REQUIRE(config.getText("uint64") == "[64, 65, 66]");
+    REQUIRE(config.getText("uint8") == "[8, 7, 6]");
+    REQUIRE(config.getText("double") == "[1.3, 3.1]");
+    REQUIRE(config.getText("float") == "[1, 7.5]");
+    REQUIRE(config.getText("binary") == "[ 0x01 0x0A 0x1F ]");
+    REQUIRE(config.getText("string") == "[a, b, c]");
     REQUIRE(config.getText("time") ==
-            "[1970-01-01 00:00:00.000000000,1970-01-01 00:00:00.000000000,1970-01-01 00:00:00.000000000,]");
+            "[1970-01-01 00:00:00.000000000, 1970-01-01 00:00:00.000000000, 1970-01-01 00:00:00.000000000]");
 }
 
 TEST_CASE("Count Key Appearances", "[core][core::config]") {
@@ -604,7 +602,7 @@ TEST_CASE("Assemble ZMQ Message from Configuration", "[core][core::config]") {
 
     // Assemble & disassemble with all used keys:
     const auto config_zmq = config.getDictionary(Configuration::Group::ALL, Configuration::Usage::USED).assemble();
-    const auto config_unpacked = Configuration(Dictionary::disassemble(*config_zmq));
+    const auto config_unpacked = Configuration(Dictionary::disassemble(config_zmq));
     REQUIRE(config_unpacked.size() == 1);
     REQUIRE(config_unpacked.get<std::int64_t>("int64") == 63);
 }

@@ -10,7 +10,6 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -20,6 +19,7 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/message/BaseHeader.hpp"
+#include "constellation/core/message/payload_buffer.hpp"
 #include "constellation/core/message/Protocol.hpp"
 
 namespace constellation::message {
@@ -83,26 +83,26 @@ namespace constellation::message {
         /**
          * @return Message payload
          */
-        std::shared_ptr<zmq::message_t> getPayload() const { return payload_; }
+        const message::payload_buffer& getPayload() const { return payload_; }
 
         /**
          * @return True if message has payload
          */
-        bool hasPayload() const { return payload_ && !payload_->empty(); }
+        bool hasPayload() const { return !payload_.empty(); }
 
         /**
-         * @param payload Shared pointer to the ZeroMQ message to be used as payload
+         * @param payload Payload buffer containing the payload to be added as ZeroMQ message
          */
-        void addPayload(std::shared_ptr<zmq::message_t> payload) { payload_ = std::move(payload); }
+        void addPayload(message::payload_buffer&& payload) { payload_ = std::forward<message::payload_buffer>(payload); }
 
         /**
          * Assemble full message to frames for ZeroMQ
          *
-         * This function moves the payload.
+         * @param keep_payload If true, the payload is kept such that the message can be send again
          *
          * @return Message assembled to ZeroMQ frames
          */
-        CNSTLN_API zmq::multipart_t assemble();
+        CNSTLN_API zmq::multipart_t assemble(bool keep_payload = false);
 
         /**
          * Disassemble message from ZeroMQ frames
@@ -117,7 +117,7 @@ namespace constellation::message {
     private:
         Header header_;
         std::pair<Type, std::string> verb_;
-        std::shared_ptr<zmq::message_t> payload_;
+        message::payload_buffer payload_;
     };
 
 } // namespace constellation::message

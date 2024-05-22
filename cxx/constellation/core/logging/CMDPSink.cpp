@@ -9,39 +9,45 @@
 
 #include "CMDPSink.hpp"
 
+#include <chrono>
+#include <cstdint>
 #include <filesystem>
+#include <mutex>
 #include <string>
+#include <thread>
+#include <utility>
 
-#include <asio.hpp>
-#include <msgpack.hpp>
+#include <spdlog/details/log_msg.h>
 #include <zmq.hpp>
 
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
-#include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/ports.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/core/utils/windows.hpp"
 
 using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::utils;
-using namespace std::literals::string_literals;
 using namespace std::literals::chrono_literals;
 
 // Find path relative to cxx/, otherwise path without any parent
-std::string get_rel_file_path(std::string file_path) {
-    const auto src_dir = std::filesystem::path::preferred_separator + "cxx"s + std::filesystem::path::preferred_separator;
+std::string get_rel_file_path(std::string file_path_char) {
+    auto file_path = to_platform_string(std::move(file_path_char));
+    const auto src_dir =
+        std::filesystem::path::preferred_separator + to_platform_string("cxx") + std::filesystem::path::preferred_separator;
     const auto src_dir_pos = file_path.find(src_dir);
-    if(src_dir_pos != std::string::npos) {
+    if(src_dir_pos != std::filesystem::path::string_type::npos) {
         // found /cxx/, start path after pattern
         file_path = file_path.substr(src_dir_pos + src_dir.length());
     } else {
         // try to find last / for filename
         const auto file_pos = file_path.find_last_of(std::filesystem::path::preferred_separator);
-        if(file_pos != std::string::npos) {
+        if(file_pos != std::filesystem::path::string_type::npos) {
             file_path = file_path.substr(file_pos + 1);
         }
     }
-    return file_path;
+    return to_std_string(std::move(file_path));
 }
 
 // Bind socket to ephemeral port on construction

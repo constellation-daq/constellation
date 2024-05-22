@@ -9,26 +9,148 @@
 
 #pragma once
 
-#include <exception>
-#include <string>
+#include "constellation/core/message/satellite_definitions.hpp"
+#include "constellation/core/utils/exceptions.hpp"
+#include "constellation/core/utils/string.hpp"
+#include "constellation/core/utils/type.hpp"
 
 namespace constellation::satellite {
 
-    /** Error thrown when a FSM transition is not allowed */
-    class FSMError : public std::exception {
+    /**
+     * @ingroup Exceptions
+     * @brief Generic Satellite Error
+     *
+     * An unspecified error occurred in the user code implementation of a satellite
+     */
+    class SatelliteError : public utils::RuntimeError {
+        explicit SatelliteError(const std::string& reason) { error_message_ = reason; }
+
+    protected:
+        SatelliteError() = default;
+    };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Satellite Error for device communication
+     *
+     * An error occurred in the user code implementation of a satellite when attempting to communicate with hardware
+     */
+    class CommunicationError : public SatelliteError {
+        explicit CommunicationError(const std::string& reason) { error_message_ = reason; }
+    };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Finite State Machine Error
+     *
+     * An error occurred in a request to the finite state machine
+     */
+    class FSMError : public utils::RuntimeError {
+        explicit FSMError(const std::string& reason) { error_message_ = reason; }
+
+    protected:
+        FSMError() = default;
+    };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Invalid transition requested
+     *
+     * A transition of the finite state machine was requested which is not allowed from the current state
+     */
+    class InvalidFSMTransition : public FSMError {
     public:
-        /**
-         * @param error_message Error message
-         */
-        FSMError(std::string error_message) : error_message_(std::move(error_message)) {}
+        explicit InvalidFSMTransition(const message::Transition transition, const message::State state) {
+            error_message_ = "Transition ";
+            error_message_ += utils::to_string(transition);
+            error_message_ += " not allowed from ";
+            error_message_ += utils::to_string(state);
+            error_message_ += " state";
+        }
+    };
 
-        /**
-         * @return Error message
-         */
-        const char* what() const noexcept final { return error_message_.c_str(); }
+    /** Error thrown for all user command errors */
+    class UserCommandError : public utils::RuntimeError {
+        explicit UserCommandError(const std::string& reason) { error_message_ = reason; }
 
-    private:
-        std::string error_message_;
+    protected:
+        UserCommandError() = default;
+    };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Invalid user command
+     *
+     * The user command is not registered
+     */
+    class UnknownUserCommand : public UserCommandError {
+    public:
+        explicit UnknownUserCommand(const std::string& command) {
+            error_message_ = "Unknown command \"";
+            error_message_ += command;
+            error_message_ += "\"";
+        }
+    };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Invalid user command
+     *
+     * The user command is not valid in the current state of the finite state machine
+     */
+    class InvalidUserCommand : public UserCommandError {
+    public:
+        explicit InvalidUserCommand(const std::string& command, const message::State state) {
+            error_message_ = "Command ";
+            error_message_ += command;
+            error_message_ += " cannot be called in state ";
+            error_message_ += utils::to_string(state);
+        }
+    };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Missing arguments for user command
+     */
+    class MissingUserCommandArguments : public UserCommandError {
+    public:
+        explicit MissingUserCommandArguments(const std::string& command, size_t args_expected, size_t args_given) {
+            error_message_ = "Command \"";
+            error_message_ += command;
+            error_message_ += "\" expects ";
+            error_message_ += utils::to_string(args_expected);
+            error_message_ += " arguments but ";
+            error_message_ += utils::to_string(args_given);
+            error_message_ += " given";
+        }
+    };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Invalid arguments for user command
+     */
+    class InvalidUserCommandArguments : public UserCommandError {
+    public:
+        explicit InvalidUserCommandArguments(const std::type_info& argtype, const std::type_info& valuetype) {
+            error_message_ = "Mismatch of argument type \"";
+            error_message_ += utils::demangle(argtype);
+            error_message_ += "\" to provided type \"";
+            error_message_ += utils::demangle(valuetype);
+            error_message_ += "\"";
+        }
+    };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Invalid return type from user command
+     */
+    class InvalidUserCommandResult : public UserCommandError {
+    public:
+        explicit InvalidUserCommandResult(const std::type_info& argtype) {
+            error_message_ = "Error casting function return type \"";
+            error_message_ += utils::demangle(argtype);
+            error_message_ += "\" to dictionary value";
+        }
     };
 
 } // namespace constellation::satellite

@@ -10,58 +10,40 @@
 #include "Value.hpp"
 
 #include <chrono>
+#include <concepts>
 #include <cstdint>
-#include <ios>
 #include <span>
-#include <sstream>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
-#include <utility>
 #include <variant>
 #include <vector>
 
 #include <msgpack.hpp>
 
-#include "constellation/core/utils/std23.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
+using namespace constellation::utils;
 
 std::string Value::str() const {
-    std::ostringstream out {};
-
-    std::visit(
-        [&](auto&& arg) {
+    return std::visit(
+        [](auto&& arg) -> std::string {
+            std::string out;
             using T = std::decay_t<decltype(arg)>;
-            if constexpr(std::is_same_v<T, std::monostate>) {
-                out << "NIL";
-            } else if constexpr(std::is_same_v<T, bool>) {
-                out << std::boolalpha << arg;
-            } else if constexpr(std::is_same_v<T, std::vector<bool>>) {
-                out << "[" << std::boolalpha;
-                for(const auto& val : arg) {
-                    out << val << ",";
-                }
-                out << "]";
-            } else if constexpr(std::is_same_v<T, std::vector<char>>) {
-                out << "[" << std::hex;
-                for(const auto& val : arg) {
-                    out << "0x" << static_cast<int>(val) << ",";
-                }
-                out << "]";
-            } else if constexpr(is_vector_v<T>) {
-                out << "[";
-                for(const auto& val : arg) {
-                    out << val << ",";
-                }
-                out << "]";
-            } else {
-                out << arg;
+            if constexpr(std::same_as<T, std::monostate>) {
+                out = "NIL";
+            } else if constexpr(convertible_to_string<T>) {
+                out = to_string(arg);
+            } else if constexpr(std::same_as<T, std::vector<char>>) {
+                // Special case: print chars in hex
+                out = "[ " + range_to_string(arg, char_to_hex_string, " ") + " ]";
+            } else if constexpr(convertible_range_to_string<T>) {
+                out = "[" + range_to_string(arg) + "]";
             }
+            return out;
         },
         *this);
-
-    return out.str();
 }
 
 const std::type_info& Value::type() const {
@@ -72,7 +54,7 @@ void Value::msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpack_packer) cons
     std::visit(
         [&](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
-            if constexpr(std::is_same_v<T, std::monostate>) {
+            if constexpr(std::same_as<T, std::monostate>) {
                 // std::monostate => nil
                 msgpack_packer.pack_nil();
             } else {

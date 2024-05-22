@@ -32,23 +32,27 @@ Shutting down a satellite application is possible in three different ways:
 ## Satellite Commands
 
 Each satellite **must** be able to understand and answer to the following commands, and it **must** accept or provide the
-corresponding payloads:
+corresponding payloads. Verbs and commands are always transmitted as native strings, payloads are always encoded as MsgPack
+objects.
 
 | Command | payload | verb reply | payload reply
 | ------- | ------- | ---------- | -------------
-| `get_name` | - | Name of the Satellite | -
+| `get_name` | - | Canonical name of the Satellite | -
 | `get_version` | - | Constellation version identifier string | -
-| `get_commands` | - | See payload | List of commands as MsgPack map/dictionary with command names as keys and descriptions as values
+| `get_commands` | - | Acknowledgement | List of commands as MsgPack map/dictionary with command names as keys and descriptions as values
 | `get_state` | - | Current state (as string) | -
 | `get_status` | - | Current status | -
-| `get_config` | - | Current config | -
+| `get_config` | - | Acknowledgement | Satellite configuration as flat MsgPack map/dictionary
+| `get_run_id` | - | Current or last run identifier (as string) | -
 | `initialize` | Satellite configuration as flat MsgPack map/dictionary | Acknowledgement | -
 | `launch` | - | Acknowledgement | -
 | `land` | - | Acknowledgement | -
 | `reconfigure` | Partial configuration as flat MsgPack map/dictionary | Acknowledgement | -
-| `start` | Run number as MsgPack integer | Acknowledgement | -
+| `start` | Run identifier as MsgPack string | Acknowledgement | -
 | `stop` | - | Acknowledgement | -
 | `shutdown` | - | Acknowledgement | -
+
+Command names shall only contain alphanumeric characters or underscores and cannot start with a digit.
 
 ## FSM States
 
@@ -141,4 +145,4 @@ The satellite **should** automatically and autonomously initiate the `interrupti
 under the following conditions:
 
 * The CHP instance reports that a previously tracked remote satellite became unavailable
-* The CHP instance reports that the state of a tracked remote satellite changed to `ERROR`
+* The CHP instance reports that the state of a tracked remote satellite changed to `ERROR` or `SAFE`

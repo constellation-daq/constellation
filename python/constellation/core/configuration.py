@@ -4,17 +4,22 @@ SPDX-License-Identifier: CC-BY-4.0
 """
 
 import tomllib
+import json
 
 
 class ConfigError(Exception):
+    """Exception class for general issues with the configuration."""
+
     pass
 
 
 class Configuration:
     """Class to track configuration variables and requests."""
 
-    def __init__(self, config: dict = {}):
+    def __init__(self, config: dict = None):
         """Initialize configuration variables"""
+        if not config:
+            config = {}
         if not isinstance(config, dict):
             raise ConfigError
         self._config = config
@@ -51,6 +56,18 @@ class Configuration:
     def get_keys(self):
         """Return list of keys in config."""
         return list(self._config.keys())
+
+    def get_json(self):
+        """Return JSON-encoded configuration data."""
+        return json.dumps(self._config)
+
+    def update(self, config: dict) -> None:
+        """Update the configuration with a new dict."""
+        # update key+values of internal dict
+        self._config.update(config)
+        # remove all new keys from our set of requested keys
+        for key in config.keys():
+            self._requested_keys.discard(key)
 
 
 def load_config(path: str) -> dict:

@@ -69,30 +69,36 @@ def mock_monitoringsender():
 
 
 @pytest.fixture
-def mock_monitoringlistener(mock_chirp_socket):
-    """Create a mock MonitoringListener instance."""
+def monitoringsender():
+    """Create a MonitoringSender instance."""
 
-    def mocket_factory(*args, **kwargs):
-        m = mocket()
-        m.endpoint = 1
-        return m
+    class MyStatProducer(MonitoringSender):
+        @schedule_metric(MetricsType.LAST_VALUE, 0.1)
+        def get_answer(self):
+            """The answer to the Ultimate Question"""
+            # self.log.info("Got the answer!")
+            return 42, "Answer"
 
-    with patch("constellation.core.base.zmq.Context") as mock:
-        mock_context = MagicMock()
-        mock_context.socket = mocket_factory
-        mock.return_value = mock_context
-        with TemporaryDirectory() as tmpdirname:
-            m = MonitoringListener(
-                name="mock_monitor",
-                group="mockstellation",
-                interface="127.0.0.1",
-                output_path=tmpdirname,
-            )
-            t = threading.Thread(target=m.receive_metrics)
-            t.start()
-            # give the thread a chance to start
-            time.sleep(0.1)
-            yield m, tmpdirname
+    m = MyStatProducer("mock_sender", send_port, interface="*")
+    yield m
+
+
+@pytest.fixture
+def monitoringlistener():
+    """Create a MonitoringListener instance."""
+
+    with TemporaryDirectory() as tmpdirname:
+        m = MonitoringListener(
+            name="mock_monitor",
+            group="mockstellation",
+            interface="*",
+            output_path=tmpdirname,
+        )
+        t = threading.Thread(target=m.receive_metrics)
+        t.start()
+        # give the thread a chance to start
+        time.sleep(0.1)
+        yield m, tmpdirname
 
 
 @pytest.fixture
@@ -182,13 +188,11 @@ def test_monitoring_sender_loop(mock_listener, mock_monitoringsender):
 
 
 @pytest.mark.forked
-def test_monitoring_file_writing(
-    mock_monitoringlistener, mock_monitoringsender, mock_chirp_socket
-):
-    ml, tmpdir = mock_monitoringlistener
-    ms = mock_monitoringsender
+def test_monitoring_file_writing(monitoringlistener, monitoringsender):
+    ml, tmpdir = monitoringlistener
+    ms = monitoringsender
     assert len(ml._log_listeners) == 0
-    chirp = CHIRPBeaconTransmitter("mock_sender", "mockstellation", "127.0.0.1")
+    chirp = CHIRPBeaconTransmitter("mock_sender", "mockstellation", interface="*")
     chirp.broadcast(
         CHIRPServiceIdentifier.MONITORING, CHIRPMessageType.OFFER, send_port
     )
@@ -197,7 +201,7 @@ def test_monitoring_file_writing(
     ms._start_com_threads()
     time.sleep(1)
     assert len(ml._log_listeners) == 1
-    assert len(ml._metric_transmitters) == 1
+    assert len(ml._metric_sockets) == 1
     assert os.path.exists(
         os.path.join(tmpdir, "logs")
     ), "Log output directory not created"

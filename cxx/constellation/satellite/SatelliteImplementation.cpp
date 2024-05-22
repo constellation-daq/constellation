@@ -11,6 +11,7 @@
 
 #include <cctype>
 #include <chrono>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -18,9 +19,12 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <typeinfo>
 #include <utility>
+#include <variant>
 
 #include <magic_enum.hpp>
+#include <msgpack.hpp>
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
@@ -29,18 +33,22 @@
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
+#include "constellation/core/heartbeat/HeartbeatManager.hpp"
 #include "constellation/core/logging/log.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/exceptions.hpp"
+#include "constellation/core/message/payload_buffer.hpp"
 #include "constellation/core/message/satellite_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/ports.hpp"
-#include "constellation/core/utils/std23.hpp"
+#include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
 using namespace constellation;
 using namespace constellation::config;
+using namespace constellation::heartbeat;
 using namespace constellation::message;
 using namespace constellation::satellite;
 using namespace constellation::utils;
@@ -48,7 +56,8 @@ using namespace std::literals::chrono_literals;
 
 SatelliteImplementation::SatelliteImplementation(std::shared_ptr<Satellite> satellite)
     : rep_(context_, zmq::socket_type::rep), port_(bind_ephemeral_port(rep_)), satellite_(std::move(satellite)),
-      fsm_(satellite_), logger_("CSCP") {
+      heartbeat_manager_(std::make_shared<HeartbeatManager>(satellite_->getCanonicalName())), fsm_(satellite_),
+      logger_("CSCP") {
     // Set receive timeout for socket
     rep_.set(zmq::sockopt::rcvtimeo, static_cast<int>(std::chrono::milliseconds(100).count()));
     // Announce service via CHIRP
@@ -59,6 +68,10 @@ SatelliteImplementation::SatelliteImplementation(std::shared_ptr<Satellite> sate
         LOG(logger_, WARNING) << "Failed to advertise command receiver on the network, satellite might not be discovered";
     }
     LOG(logger_, INFO) << "Starting to listen to commands on port " << port_;
+
+    // Start sending heartbeats
+    heartbeat_manager_->setInterruptCallback([ptr = &fsm_]() { ptr->interrupt(); });
+    fsm_.registerStateCallback(std::bind_front(&HeartbeatManager::updateState, heartbeat_manager_));
 }
 
 SatelliteImplementation::~SatelliteImplementation() {
@@ -79,12 +92,12 @@ void SatelliteImplementation::join() {
     }
 }
 
-void SatelliteImplementation::shutDown() {
+void SatelliteImplementation::terminate() {
     // Request stop on main thread
     main_thread_.request_stop();
-    // TODO(stephan.lachnit): we should join the thread, but this blocks join in satellite_main...?
-    // TODO(stephan.lachnit): stop heartbeat thread
-    // Interrupt satellite -> either in SAFE or in steady state that is not ORBIT or RUN
+    // We cannot join the main thread here since this method might be called from there and would result in a race condition
+
+    // Tell the FSM to interrupt, which will go to SAFE in case of ORBIT or RUN state:
     fsm_.interrupt();
 }
 
@@ -109,23 +122,23 @@ std::optional<CSCP1Message> SatelliteImplementation::getNextCommand() {
 }
 
 void SatelliteImplementation::sendReply(std::pair<CSCP1Message::Type, std::string> reply_verb,
-                                        std::shared_ptr<zmq::message_t> payload) {
+                                        message::payload_buffer payload) {
     auto msg = CSCP1Message({satellite_->getCanonicalName()}, std::move(reply_verb));
     msg.addPayload(std::move(payload)); // CSCP1Message handle handle nullptr and empty messages
     msg.assemble().send(rep_);
 }
 
-std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, std::shared_ptr<zmq::message_t>>>
-SatelliteImplementation::handleGetCommand(std::string_view command) {
+std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::payload_buffer>>
+SatelliteImplementation::handleStandardCommand(std::string_view command) {
     std::pair<message::CSCP1Message::Type, std::string> return_verb {};
-    std::shared_ptr<zmq::message_t> payload {};
+    message::payload_buffer return_payload {};
 
-    auto command_enum = magic_enum::enum_cast<GetCommand>(command, magic_enum::case_insensitive);
+    auto command_enum = magic_enum::enum_cast<StandardCommand>(command, magic_enum::case_insensitive);
     if(!command_enum.has_value()) {
         return std::nullopt;
     }
 
-    using enum GetCommand;
+    using enum StandardCommand;
     switch(command_enum.value()) {
     case get_name: {
         return_verb = {CSCP1Message::Type::SUCCESS, satellite_->getCanonicalName()};
@@ -146,8 +159,9 @@ SatelliteImplementation::handleGetCommand(std::string_view command) {
             command_dict["reconfigure"] =
                 "Reconfigure satellite (payload: partial config as flat MessagePack dict with strings as keys)";
         }
-        command_dict["start"] = "Start satellite (payload: run number as MessagePack integer)";
-        command_dict["stop"] = "Stop satellite";
+        command_dict["start"] = "Start new run (payload: run number as MessagePack integer)";
+        command_dict["stop"] = "Stop run";
+        command_dict["shutdown"] = "Shutdown satellite";
         // Get commands
         command_dict["get_name"] = "Get canonical name of satellite";
         command_dict["get_version"] = "Get Constellation version of satellite";
@@ -157,9 +171,15 @@ SatelliteImplementation::handleGetCommand(std::string_view command) {
         command_dict["get_status"] = "Get status of satellite";
         command_dict["get_config"] =
             "Get config of satellite (returned in payload as flat MessagePack dict with strings as keys)";
-        // TODO(stephan.lachnit): append user commands
+
+        // Append user commands
+        const auto user_commands = satellite_->getUserCommands();
+        for(const auto& cmd : user_commands) {
+            command_dict.emplace(cmd.first, cmd.second);
+        }
+
         // Pack dict
-        payload = command_dict.assemble();
+        return_payload = command_dict.assemble();
         break;
     }
     case get_state: {
@@ -172,13 +192,73 @@ SatelliteImplementation::handleGetCommand(std::string_view command) {
     }
     case get_config: {
         return_verb = {CSCP1Message::Type::SUCCESS, "Configuration attached in payload"};
-        payload = satellite_->getConfig().getDictionary(Configuration::Group::ALL, Configuration::Usage::USED).assemble();
+        return_payload =
+            satellite_->getConfig().getDictionary(Configuration::Group::ALL, Configuration::Usage::USED).assemble();
+        break;
+    }
+    case get_run_id: {
+        return_verb = {CSCP1Message::Type::SUCCESS, to_string(satellite_->getRunIdentifier())};
+        break;
+    }
+    case shutdown: {
+        if(is_shutdown_allowed(fsm_.getState())) {
+            return_verb = {CSCP1Message::Type::SUCCESS, "Shutting down satellite"};
+            terminate();
+        } else {
+            return_verb = {CSCP1Message::Type::INVALID,
+                           "Satellite cannot be shut down from current state " + to_string(fsm_.getState())};
+        }
         break;
     }
     default: std::unreachable();
     }
 
-    return std::make_pair(return_verb, payload);
+    return std::make_pair(return_verb, std::move(return_payload));
+}
+
+std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::payload_buffer>>
+SatelliteImplementation::handleUserCommand(std::string_view command, const message::payload_buffer& payload) {
+    LOG(logger_, DEBUG) << "Attempting to handle command \"" << command << "\" as user command";
+
+    std::pair<message::CSCP1Message::Type, std::string> return_verb {};
+    message::payload_buffer return_payload {};
+
+    config::List args {};
+    try {
+        if(!payload.empty()) {
+            args = config::List::disassemble(payload);
+        }
+
+        auto retval = satellite_->callUserCommand(fsm_.getState(), std::string(command), args);
+        LOG(logger_, DEBUG) << "User command \"" << command << "\" succeeded, packing return value.";
+
+        // Return the call value as payload only if it is not std::monostate
+        if(!std::holds_alternative<std::monostate>(retval)) {
+            msgpack::sbuffer sbuf {};
+            msgpack::pack(sbuf, retval);
+            return_payload = {std::move(sbuf)};
+        }
+        return_verb = {CSCP1Message::Type::SUCCESS, {}};
+    } catch(const std::bad_cast&) {
+        // Issue with obtaining parameters from payload
+        return_verb = {CSCP1Message::Type::INCOMPLETE, "Could not convert command payload to argument list"};
+    } catch(const UnknownUserCommand&) {
+        return std::nullopt;
+    } catch(const InvalidUserCommand& error) {
+        // Command cannot be called in current state
+        return_verb = {CSCP1Message::Type::INVALID, error.what()};
+    } catch(const UserCommandError& error) {
+        // Any other issue with executing the user command (missing arguments, wrong arguments, ...)
+        return_verb = {CSCP1Message::Type::INCOMPLETE, error.what()};
+    } catch(const std::exception& error) {
+        LOG(logger_, DEBUG) << "Caught exception while calling user command \"" << command << "\": " << error.what();
+        return std::nullopt;
+    } catch(...) {
+        LOG(logger_, DEBUG) << "Caught unknown exception while calling user command \"" << command << "\"";
+        return std::nullopt;
+    }
+
+    return std::make_pair(return_verb, std::move(return_payload));
 }
 
 void SatelliteImplementation::main_loop(const std::stop_token& stop_token) {
@@ -211,13 +291,18 @@ void SatelliteImplementation::main_loop(const std::stop_token& stop_token) {
             }
 
             // Try to decode as other builtin (non-transition) commands
-            auto get_command_reply = handleGetCommand(command_string);
-            if(get_command_reply.has_value()) {
-                sendReply(get_command_reply.value().first, get_command_reply.value().second);
+            auto standard_command_reply = handleStandardCommand(command_string);
+            if(standard_command_reply.has_value()) {
+                sendReply(standard_command_reply.value().first, std::move(standard_command_reply.value().second));
                 continue;
             }
 
-            // TODO(stephan.lachnit): Try to decode as user commands
+            // Handle user-registered commands:
+            auto user_command_reply = handleUserCommand(command_string, message.getPayload());
+            if(user_command_reply.has_value()) {
+                sendReply(user_command_reply.value().first, std::move(user_command_reply.value().second));
+                continue;
+            }
 
             // Command is not known
             std::string unknown_command_reply = "Command \"";

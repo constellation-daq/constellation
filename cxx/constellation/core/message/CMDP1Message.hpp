@@ -10,7 +10,6 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -21,6 +20,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/message/BaseHeader.hpp"
+#include "constellation/core/message/payload_buffer.hpp"
 #include "constellation/core/message/Protocol.hpp"
 
 namespace constellation::message {
@@ -83,12 +83,12 @@ namespace constellation::message {
          * @param header Header of the message
          * @param payload Payload of the message
          */
-        CMDP1Message(std::string topic, Header header, std::shared_ptr<zmq::message_t> payload);
+        CMDP1Message(std::string topic, Header header, message::payload_buffer&& payload);
 
         /**
          * @return Message payload
          */
-        std::shared_ptr<zmq::message_t> getPayload() const { return payload_; }
+        const message::payload_buffer& getPayload() const { return payload_; }
 
         /**
          * Extract the log level from CMDP1 message topic
@@ -101,7 +101,7 @@ namespace constellation::message {
     private:
         std::string topic_;
         Header header_;
-        std::shared_ptr<zmq::message_t> payload_;
+        message::payload_buffer payload_;
     };
 
     class CMDP1LogMessage : public CMDP1Message {
@@ -114,14 +114,14 @@ namespace constellation::message {
          * @param header CMDP1 header of the message
          * @param message Log message
          */
-        CNSTLN_API CMDP1LogMessage(log::Level level, std::string log_topic, Header header, std::string_view message);
+        CNSTLN_API CMDP1LogMessage(log::Level level, std::string log_topic, Header header, std::string message);
 
         /**
          * Construct a CMDP1LogMessage from a decoded CMDP1Message
          *
          * @throw IncorrectMessageType If the message is not a (valid) log message
          */
-        CNSTLN_API CMDP1LogMessage(CMDP1Message message);
+        CNSTLN_API CMDP1LogMessage(CMDP1Message&& message);
 
         /**
          * @return Log level of the message

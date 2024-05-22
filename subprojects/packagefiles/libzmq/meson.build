@@ -4,6 +4,8 @@ project('libzmq', ['cpp', 'c'],
 )
 
 cc = meson.get_compiler('c')
+host_os = host_machine.system()
+
 thread_dep = dependency('threads')
 
 libzmq_inc_private = include_directories('src', 'external/wepoll')
@@ -231,7 +233,7 @@ have_select = cc.has_header_symbol('sys/select.h', 'select')
 have_ppoll = cc.has_header_symbol('sys/select.h', 'pselect')
 
 # On Windows: epoll and select are available
-if build_machine.system() == 'windows'
+if host_os == 'windows'
   have_epoll = true
   have_select = true
 endif
@@ -273,7 +275,7 @@ if (poller == 'auto' or poller == 'select') and have_select
 endif
 
 # On Windows: if epoll then add wepoll.c
-if build_machine.system() == 'windows' and poller == 'epoll'
+if host_os == 'windows' and poller == 'epoll'
   libzmq_src += files('external/wepoll/wepoll.c')
 endif
 
@@ -317,15 +319,16 @@ endif
 # ZMQ_HAVE_WINDOWS
 conf_data.set('ZMQ_HAVE_WINDOWS', cc.has_header('windows.h'))
 
-# some windows specific flags
-if build_machine.system() == 'windows'
+# Some windows specific flags
+if host_os == 'windows'
   libzmq_flags_private += ['-DFD_SETSIZE=16384', '-D_CRT_SECURE_NO_WARNINGS', '-D_WINSOCK_DEPRECATED_NO_WARNINGS']
 endif
 
 # ZMQ_HAVE_IPC
 zmq_have_ipc = true
-if build_machine.system() == 'windows'
-  zmq_have_ipc = cc.has_header('winsock2.h') and cc.has_header('afunix.h') and poller == 'epoll'
+if host_os == 'windows' and poller != 'epoll'
+  zmq_have_ipc = false
+  message('Disabling IPC (requires epoll poller)')
 endif
 conf_data.set('ZMQ_HAVE_IPC', zmq_have_ipc)
 conf_data.set('ZMQ_HAVE_STRUCT_SOCKADDR_UN', zmq_have_ipc)
@@ -357,25 +360,24 @@ if rt_dep.found()
 endif
 
 # Link ws2_32 and iphlpapi on windows
-if build_machine.system() == 'windows'
+if host_os == 'windows'
   libzmq_deps_private += cc.find_library('ws2_32')
   libzmq_deps_private += cc.find_library('iphlpapi')
 endif
 
 # Enable POSIX extensions
 posix_extension_flags = ['-D_DEFAULT_SOURCE']
-os_name = build_machine.system()
-if os_name == 'linux' or os_name == 'gnu'
+if host_os == 'linux' or host_os == 'gnu'
   posix_extension_flags += '-D_GNU_SOURCE'
-elif os_name == 'freebsd'
+elif host_os == 'freebsd'
   posix_extension_flags += '-D__BSD_VISIBLE'
-elif os_name == 'netbsd'
+elif host_os == 'netbsd'
   posix_extension_flags += '-D_NETBSD_SOURCE'
-elif os_name == 'openbsd'
+elif host_os == 'openbsd'
   posix_extension_flags += '-D_OPENBSD_SOURCE'
-elif os_name == 'sunos'
+elif host_os == 'sunos'
   posix_extension_flags += '-D_PTHREADS'
-elif os_name == 'darwin'
+elif host_os == 'darwin'
   posix_extension_flags += '-D_DARWIN_C_SOURCE'
 endif
 libzmq_flags_private += posix_extension_flags
@@ -523,7 +525,7 @@ libzmq_lib = library('libzmq',
   sources: libzmq_src,
   include_directories: [libzmq_inc_private, libzmq_inc_public],
   dependencies: [libzmq_deps_private, libzmq_deps_public],
-  cpp_args: libzmq_flags_private,
+  cpp_args: [libzmq_flags_private, libzmq_flags_public],
   version: '5.2.5',
   soversion: 5,
   gnu_symbol_visibility: 'hidden',

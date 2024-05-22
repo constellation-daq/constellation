@@ -1,6 +1,12 @@
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
-# Documentation build directory
+# Documentation build directories
 /build/
 /doxygen/
+
+# index.md is generated to include/exclude news section
+/index.md
+
+# News section directory/symlink
+/news

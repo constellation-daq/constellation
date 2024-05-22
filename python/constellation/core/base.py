@@ -8,9 +8,10 @@ This module provides a base class for Constellation Satellite modules.
 import zmq
 import threading
 import logging
+from argparse import ArgumentParser
 from queue import Queue
 import atexit
-
+from .network import validate_interface, get_interfaces
 
 SATELLITE_LIST = []
 
@@ -20,6 +21,50 @@ def destroy_satellites():
     """Close down connections and perform orderly re-entry."""
     for sat in SATELLITE_LIST:
         sat.reentry()
+
+
+class ConstellationArgumentParser(ArgumentParser):
+    """Customized Argument parser providing basic Satellite options."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # generic arguments
+        self.add_argument(
+            "--log-level",
+            default="info",
+            help="The maximum level of log messages to print to the console.",
+        )
+        # add a constellation argument group
+        self.constellation = self.add_argument_group("Constellation")
+        self.constellation.add_argument(
+            "--name",
+            type=str,
+            help="The name of the Satellite. This has to be unique within "
+            "the Constellation group. Together with the Satellite class, "
+            "this forms the Canonical Name.",
+        )
+        self.constellation.add_argument(
+            "--group",
+            type=str,
+            default="constellation",
+            help="The Constellation group to connect to. This separates "
+            "different Constellations running on the same network "
+            "(default: %(default)s).",
+        )
+        # add a networking argument group
+        self.network = self.add_argument_group("Network configuration")
+        self.network.add_argument(
+            "--interface",
+            type=validate_interface,
+            choices=get_interfaces(),
+            default="*",
+            help="The network interface (i.e. IP address) to bind to. "
+            "Use '*' to bind to alla available interfaces "
+            "(default: %(default)s).",
+        )
+
+
+EPILOG = "This command is part of the Constellation Python core package."
 
 
 class BaseSatelliteFrame:

@@ -10,7 +10,6 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -22,6 +21,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/BaseHeader.hpp"
+#include "constellation/core/message/payload_buffer.hpp"
 #include "constellation/core/message/Protocol.hpp"
 
 namespace constellation::message {
@@ -75,14 +75,19 @@ namespace constellation::message {
 
         constexpr const Header& getHeader() const { return header_; }
 
-        std::vector<std::shared_ptr<zmq::message_t>> getPayload() const { return payload_frames_; }
+        const std::vector<message::payload_buffer>& getPayload() const { return payload_buffers_; }
 
-        void addPayload(std::shared_ptr<zmq::message_t> payload) { payload_frames_.emplace_back(std::move(payload)); }
+        /**
+         * @param payload Payload buffer containing a payload to be added as ZeroMQ message
+         */
+        void addPayload(message::payload_buffer&& payload) {
+            payload_buffers_.emplace_back(std::forward<message::payload_buffer>(payload));
+        }
 
         /**
          * Assemble full message to frames for ZeroMQ
          *
-         * This function moves the payload.
+         * This function always moves the payload
          */
         CNSTLN_API zmq::multipart_t assemble();
 
@@ -95,7 +100,7 @@ namespace constellation::message {
 
     private:
         Header header_;
-        std::vector<std::shared_ptr<zmq::message_t>> payload_frames_;
+        std::vector<message::payload_buffer> payload_buffers_;
     };
 
 } // namespace constellation::message

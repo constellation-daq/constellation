@@ -12,6 +12,7 @@
 #include <any>
 #include <mutex>
 #include <set>
+#include <stop_token>
 #include <string_view>
 #include <thread>
 #include <vector>
@@ -52,6 +53,9 @@ namespace constellation::chirp {
 
         /** Port of the discovered service */
         utils::Port port;
+
+        /** Convert service information to a URI */
+        CNSTLN_API std::string to_uri() const;
 
         CNSTLN_API bool operator<(const DiscoveredService& other) const;
     };

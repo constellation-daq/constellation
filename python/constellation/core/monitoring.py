@@ -9,12 +9,13 @@ import zmq
 import threading
 import os
 import pathlib
+from uuid import UUID
 from queue import Empty
 from functools import wraps
 from datetime import datetime
 from logging.handlers import QueueHandler, QueueListener
 
-from .base import BaseSatelliteFrame
+from .base import BaseSatelliteFrame, ConstellationArgumentParser, EPILOG
 from .cmdp import CMDPTransmitter, Metric, MetricsType
 from .chirp import CHIRPServiceIdentifier
 from .broadcastmanager import CHIRPBroadcaster, chirp_callback, DiscoveredService
@@ -199,13 +200,29 @@ class ZeroMQSocketLogListener(QueueListener):
 
     def __init__(self, transmitter, /, *handlers, **kwargs):
         super().__init__(transmitter, *handlers, **kwargs)
+        self._stop_recv = threading.Event()
 
     def dequeue(self, block):
-        return self.queue.recv()
+        # FIXME it is quite likely that this blocking call causes errors when
+        # shutting down as the ZMQ context is removed before this call ends.
+        record = None
+        while not record and not self._stop_recv.is_set():
+            try:
+                record = self.queue.recv()
+            except zmq.ZMQError:
+                pass
+        if self._stop_recv.is_set():
+            # close down
+            return self._sentinel
+        return record
 
     def stop(self):
         """Close socket and stop thread."""
+        super().stop()
         self.queue.close()
+
+    def enqueue_sentinel(self):
+        self._stop_recv.set()
 
 
 class MonitoringListener(CHIRPBroadcaster):
@@ -223,7 +240,7 @@ class MonitoringListener(CHIRPBroadcaster):
         super().__init__(name=name, group=group, interface=interface)
 
         self._log_listeners: dict[str, ZeroMQSocketLogListener] = {}
-        self._metric_transmitters: dict[str, CMDPTransmitter] = {}
+        self._metric_sockets: dict[UUID, zmq.socket] = {}
 
         # create output directories and configure file writer logger
         if output_path:
@@ -249,6 +266,8 @@ class MonitoringListener(CHIRPBroadcaster):
             handler.setFormatter(formatter)
             handler.setLevel(logging.DEBUG)
             self.log.addHandler(handler)
+        else:
+            self.output_path = None
 
         super()._add_com_thread()
         super()._start_com_threads()
@@ -261,6 +280,11 @@ class MonitoringListener(CHIRPBroadcaster):
             target=self._run_task_handler, daemon=True
         )
         self._task_handler_thread.start()
+        self._metrics_receiver_shutdown = threading.Event()
+        # Set up the metric poller which will monitor all ZMQ metric
+        # subscription sockets
+        self.poller = zmq.Poller()
+        self._poller_lock = threading.Lock()
 
     @chirp_callback(CHIRPServiceIdentifier.MONITORING)
     def _add_satellite_callback(self, service: DiscoveredService):
@@ -280,6 +304,8 @@ class MonitoringListener(CHIRPBroadcaster):
         )
         # create socket for logs
         socket = self.context.socket(zmq.SUB)
+        # add timeout to avoid deadlocks
+        socket.setsockopt(zmq.RCVTIMEO, 250)
         socket.connect(address)
         socket.setsockopt_string(zmq.SUBSCRIBE, "LOG/")
         listener = ZeroMQSocketLogListener(
@@ -294,7 +320,8 @@ class MonitoringListener(CHIRPBroadcaster):
         socket = self.context.socket(zmq.SUB)
         socket.connect(address)
         socket.setsockopt_string(zmq.SUBSCRIBE, "STATS/")
-        self._metric_transmitters[uuid] = CMDPTransmitter(self.name, socket)
+        self._metric_sockets[uuid] = socket
+        self.poller.register(socket, zmq.POLLIN)
 
     def _remove_satellite(self, service: DiscoveredService):
         # departure
@@ -304,34 +331,41 @@ class MonitoringListener(CHIRPBroadcaster):
             service.host_uuid,
         )
         try:
-            self._log_listeners[uuid].stop()
-            self._log_listeners.pop(uuid)
+            listener = self._log_listeners.pop(uuid)
+            listener.stop()
         except KeyError:
             pass
         try:
-            self._metric_transmitters[uuid].close()
-            self._metric_transmitters.pop(uuid)
+            with self._poller_lock:
+                socket = self._metric_sockets.pop(uuid)
+                self.poller.unregister(socket)
+                socket.close()
         except KeyError:
             pass
 
     def receive_metrics(self):
         """Main loop to receive metrics."""
-        while True:
-            time.sleep(0.1)
-            for uuid, tm in self._metric_transmitters.items():
-                try:
-                    m = tm.recv(flags=zmq.NOBLOCK)
-                except Exception as e:
-                    self.log.error("Error receiving metric: %s", repr(e))
-                if not m:
-                    continue
-                if self.output_path:
-                    # append to file
-                    path = self.output_path / f"stats/{m.sender}_{m.name.lower()}.csv"
-                    with open(path, "a") as csv:
-                        csv.write(f"{m.time.to_unix()}, {m.value}, '{m.unit}'\n")
-                else:
-                    print(m)
+        # set up transmitter for decoding metrics
+        transmitter = CMDPTransmitter(None, None)
+
+        while not self._metrics_receiver_shutdown.is_set():
+            try:
+                with self._poller_lock:
+                    sockets_ready = dict(self.poller.poll(timeout=250))
+                    for socket in sockets_ready.keys():
+                        binmsg = socket.recv_multipart()
+                        m = transmitter.decode_metric(binmsg[0].decode("utf-8"), binmsg)
+                        if self.output_path:
+                            # append to file
+                            fname = f"stats/{m.sender}_{m.name.lower()}.csv"
+                            path = self.output_path / fname
+                            ts = m.time.to_unix()
+                            with open(path, "a") as csv:
+                                csv.write(f"{ts}, {m.value}, '{m.unit}'\n")
+                        else:
+                            print(m)
+            except KeyboardInterrupt:
+                break
 
     def _run_task_handler(self):
         """Event loop for task handler-routine"""
@@ -351,39 +385,38 @@ class MonitoringListener(CHIRPBroadcaster):
 
     def reentry(self):
         """Shutdown Monitor."""
+        self._metrics_receiver_shutdown.set()
         for _uuid, listener in self._log_listeners.items():
             listener.stop()
-        for _uuid, tm in self._metric_transmitters.items():
-            tm.close()
+        with self._poller_lock:
+            for _uuid, socket in self._metric_sockets.items():
+                self.poller.unregister(socket)
+                socket.close()
         super().reentry()
 
 
 def main(args=None):
     """Start a simple log listener service."""
-    import argparse
     import coloredlogs
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--log-level", default="info")
-    parser.add_argument("--name", type=str, default="simple_monitor")
-    parser.add_argument("--group", type=str, default="constellation")
-    parser.add_argument("--interface", type=str, default="*")
+    parser = ConstellationArgumentParser(description=main.__doc__, epilog=EPILOG)
     parser.add_argument(
-        "-o", "--output", type=str, help="The path to write log and metric data to."
+        "-o",
+        "--output-path",
+        type=str,
+        help="The path to write log and metric data to.",
     )
-
-    args = parser.parse_args(args)
+    # set the default arguments
+    parser.set_defaults(name="basic_monitor")
+    # get a dict of the parsed arguments
+    args = vars(parser.parse_args(args))
 
     # set up logging
-    logger = logging.getLogger(args.name)
-    coloredlogs.install(level=args.log_level.upper(), logger=logger)
+    logger = logging.getLogger(args["name"])
+    log_level = args.pop("log_level")
+    coloredlogs.install(level=log_level.upper(), logger=logger)
 
-    mon = MonitoringListener(
-        name=args.name,
-        group=args.group,
-        interface=args.interface,
-        output_path=args.output,
-    )
+    mon = MonitoringListener(**args)
     mon.receive_metrics()
 
 

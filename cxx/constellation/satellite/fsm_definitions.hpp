@@ -12,7 +12,7 @@
 #include <utility>
 
 #include "constellation/core/message/satellite_definitions.hpp"
-#include "constellation/core/utils/std23.hpp"
+#include "constellation/core/utils/std_future.hpp"
 
 namespace constellation::satellite {
 
@@ -28,6 +28,11 @@ namespace constellation::satellite {
     inline constexpr bool is_steady(State state) {
         // Lower four bytes are 0
         return (static_cast<unsigned int>(std::to_underlying(state)) & 0x0FU) == 0x00U;
+    }
+
+    inline constexpr bool is_shutdown_allowed(State state) {
+        // Regular shutdown only allowed from states NEW, INIT, SAFE and ERROR:
+        return (state == State::NEW || state == State::INIT || state == State::SAFE || state == State::ERROR);
     }
 
 } // namespace constellation::satellite

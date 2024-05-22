@@ -9,3 +9,4 @@ Core Library
    log
    message
    utils
+   chirp

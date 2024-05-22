@@ -13,14 +13,12 @@ The five Constellation communication protocols are described in the following, o
 
 ## Heartbeating
 
-(cscp)=
 ## Command & Controlling
 
 Commands from controller instances to satellites are transmitted via the Constellation Satellite Control Protocol (CSCP). It
 resembles a client-server architecture with the typical request-reply pattern. Here, the satellite acts as the server while
 the controller assumes the role of the client.
 
-(cdtp)=
 ## Data Transmission
 
 Data are transferred within a Constellation network using the Constellation Data Transmission Protocol (CDTP). It uses point-to-point
@@ -41,7 +39,6 @@ message types, indicated by a flag in the header frame:
 
 Only `DATA` messages can be transmitted by satellite implementations, both `BOR` and `EOR` messages are handled automatically.
 
-(cmdp)=
 ## Monitoring
 
 The distribution of log messages and performance metrics within Constellation is handled by the Constellation Monitoring Distribution Protocol (CMDP).
@@ -67,7 +64,6 @@ subscribing to the topic `TRACE/NETWORKING`.
 Apart from log messages, CMDP is also used to transmit performance metrics such as the current trigger rate, the number of recorded events, temperature or CPU loads.
 These messages are published under their respective topics and subscribers can choose the variables they want to follow.
 
-(chirp)=
 ## Network Discovery
 
 A common nuisance in volatile networking environments with devices appearing and disappearing is the discovery of available devices and services.

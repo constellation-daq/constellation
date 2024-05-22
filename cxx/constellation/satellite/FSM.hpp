@@ -8,11 +8,13 @@
  */
 
 #include <any>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include <zmq.hpp>
 
@@ -20,6 +22,7 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
+#include "constellation/core/message/payload_buffer.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
 namespace constellation::satellite {
@@ -27,8 +30,8 @@ namespace constellation::satellite {
 
     class FSM final {
     public:
-        /** Payload of a transition function: variant with config, partial_config or run_nr */
-        using TransitionPayload = std::variant<std::monostate, config::Configuration, std::uint32_t>;
+        /** Payload of a transition function: variant with config, partial_config or run identifier */
+        using TransitionPayload = std::variant<std::monostate, config::Configuration, std::string>;
 
         /** Function pointer for a transition function: takes the variant mentioned above, returns new State */
         using TransitionFunction = State (FSM::*)(TransitionPayload);
@@ -97,8 +100,8 @@ namespace constellation::satellite {
          * @param payload Payload frame from CSCP
          * @return Tuple containing the CSCP message type and a description
          */
-        CNSTLN_API std::pair<message::CSCP1Message::Type, std::string>
-        reactCommand(TransitionCommand transition_command, const std::shared_ptr<zmq::message_t>& payload);
+        CNSTLN_API std::pair<message::CSCP1Message::Type, std::string> reactCommand(TransitionCommand transition_command,
+                                                                                    const message::payload_buffer& payload);
 
         /**
          * @brief Try to perform an interrupt as soon as possible
@@ -110,6 +113,16 @@ namespace constellation::satellite {
          */
         CNSTLN_API void interrupt();
 
+        /**
+         * @brief Registering a callback to be executed when a new state was entered
+         *
+         * This function adds a new state update callback. Registered callbacks are used to distribute the state of the FSM
+         * whenever it was changed
+         *
+         * @param callback Callback taking the new state as argument
+         */
+        void registerStateCallback(std::function<void(State)> callback);
+
     private:
         /**
          * Find the transition function for a given transition in the current state
@@ -120,23 +133,21 @@ namespace constellation::satellite {
          */
         TransitionFunction findTransitionFunction(Transition transition);
 
-        // NOLINTBEGIN(performance-unnecessary-value-param,readability-convert-member-functions-to-static)
-        CNSTLN_API auto initialize(TransitionPayload /* payload */) -> State;
-        CNSTLN_API auto initialized(TransitionPayload /* payload */) -> State { return State::INIT; }
-        CNSTLN_API auto launch(TransitionPayload /* payload */) -> State;
-        CNSTLN_API auto launched(TransitionPayload /* payload */) -> State { return State::ORBIT; }
-        CNSTLN_API auto land(TransitionPayload /* payload */) -> State;
-        CNSTLN_API auto landed(TransitionPayload /* payload */) -> State { return State::INIT; }
-        CNSTLN_API auto reconfigure(TransitionPayload /* payload */) -> State;
-        CNSTLN_API auto reconfigured(TransitionPayload /* payload */) -> State { return State::ORBIT; }
-        CNSTLN_API auto start(TransitionPayload /* payload */) -> State;
-        CNSTLN_API auto started(TransitionPayload /* payload */) -> State;
-        CNSTLN_API auto stop(TransitionPayload /* payload */) -> State;
-        CNSTLN_API auto stopped(TransitionPayload /* payload */) -> State { return State::ORBIT; }
-        CNSTLN_API auto interrupt(TransitionPayload /* payload */) -> State;
-        CNSTLN_API auto interrupted(TransitionPayload /* payload */) -> State { return State::SAFE; }
-        CNSTLN_API auto failure(TransitionPayload /* payload */) -> State;
-        // NOLINTEND(performance-unnecessary-value-param,readability-convert-member-functions-to-static)
+        CNSTLN_API auto initialize(TransitionPayload payload) -> State;
+        CNSTLN_API auto initialized(TransitionPayload payload) -> State;
+        CNSTLN_API auto launch(TransitionPayload payload) -> State;
+        CNSTLN_API auto launched(TransitionPayload payload) -> State;
+        CNSTLN_API auto land(TransitionPayload payload) -> State;
+        CNSTLN_API auto landed(TransitionPayload payload) -> State;
+        CNSTLN_API auto reconfigure(TransitionPayload payload) -> State;
+        CNSTLN_API auto reconfigured(TransitionPayload payload) -> State;
+        CNSTLN_API auto start(TransitionPayload payload) -> State;
+        CNSTLN_API auto started(TransitionPayload payload) -> State;
+        CNSTLN_API auto stop(TransitionPayload payload) -> State;
+        CNSTLN_API auto stopped(TransitionPayload payload) -> State;
+        CNSTLN_API auto interrupt(TransitionPayload payload) -> State;
+        CNSTLN_API auto interrupted(TransitionPayload payload) -> State;
+        CNSTLN_API auto failure(TransitionPayload payload) -> State;
 
         // clang-format off
         const StateTransitionMap state_transition_map_ { // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -206,6 +217,9 @@ namespace constellation::satellite {
         std::thread transitional_thread_;
         std::jthread run_thread_;
         std::thread failure_thread_;
+
+        /** State update callback */
+        std::vector<std::function<void(State)>> state_callbacks_;
     };
 
 } // namespace constellation::satellite

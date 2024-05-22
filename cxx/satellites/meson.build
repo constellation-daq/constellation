@@ -3,4 +3,4 @@
 
 satellite_libdir = get_option('libdir') / 'ConstellationSatellites'
 
-subdir('prototype')
+subdir('Prototype')

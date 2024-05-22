@@ -28,6 +28,18 @@ executable('chirp_send',
   dependencies: [core_dep, magic_enum_dep],
 )
 
+# Core/ Heartbeat
+
+executable('chp_sender',
+  sources: 'chp_sender.cpp',
+  dependencies: [core_dep, magic_enum_dep],
+)
+
+executable('chp_receiver',
+  sources: 'chp_receiver.cpp',
+  dependencies: [core_dep],
+)
+
 # Core / Logging
 
 executable('cmdp_log_send',

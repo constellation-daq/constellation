@@ -14,7 +14,8 @@
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/external/md5.h"
 #include "constellation/core/message/exceptions.hpp"
-#include "constellation/core/utils/std23.hpp"
+#include "constellation/core/utils/std_future.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace constellation::chirp;
 using namespace constellation::message;
@@ -94,7 +95,7 @@ CHIRPMessage CHIRPMessage::disassemble(std::span<const std::byte> assembled_mess
 
     // Check size
     if(assembled_message.size() != CHIRP_MESSAGE_LENGTH) {
-        throw MessageDecodingError("message length is not " + std::to_string(CHIRP_MESSAGE_LENGTH) + " bytes");
+        throw MessageDecodingError("message length is not " + utils::to_string(CHIRP_MESSAGE_LENGTH) + " bytes");
     }
     // Check protocol identifier
     for(std::size_t n = 0; n < CHIRP_IDENTIFIER.length(); ++n) {

@@ -8,10 +8,9 @@
  */
 
 #include <chrono>
-#include <cstdint>
 #include <iostream>
-#include <memory>
 #include <string>
+#include <utility>
 
 #include <msgpack.hpp>
 #include <zmq.hpp>
@@ -22,7 +21,7 @@
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/satellite_definitions.hpp"
-#include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace constellation;
 using namespace constellation::config;
@@ -50,7 +49,7 @@ int main(int argc, char* argv[]) {
         std::this_thread::sleep_for(100ms);
         discovered_services = chirp_manager.getDiscoveredServices(chirp::ServiceIdentifier::CONTROL);
     }
-    auto uri = "tcp://" + discovered_services[0].address.to_string() + ":" + std::to_string(discovered_services[0].port);
+    auto uri = "tcp://" + discovered_services[0].address.to_string() + ":" + to_string(discovered_services[0].port);
     std::cout << "Connecting to " << uri << std::endl;
 
     zmq::context_t context {};
@@ -69,11 +68,11 @@ int main(int argc, char* argv[]) {
             send_msg.addPayload(Dictionary().assemble());
             std::cout << "Added empty configuration to message" << std::endl;
         } else if(command == "start") {
-            const std::uint32_t run_nr = 1234U;
+            const std::string run_identifier = "1234";
             msgpack::sbuffer sbuf {};
-            msgpack::pack(sbuf, run_nr);
-            send_msg.addPayload(std::make_shared<zmq::message_t>(sbuf.data(), sbuf.size()));
-            std::cout << "Added run number " << run_nr << " to message" << std::endl;
+            msgpack::pack(sbuf, run_identifier);
+            send_msg.addPayload(std::move(sbuf));
+            std::cout << "Added run identifier \"" << run_identifier << "\" to message" << std::endl;
         }
         send_msg.assemble().send(req);
 
@@ -89,13 +88,9 @@ int main(int argc, char* argv[]) {
         // Print payload if dict
         if(recv_msg.hasPayload()) {
             try {
-                const auto dict = Dictionary::disassemble(*recv_msg.getPayload());
+                const auto dict = Dictionary::disassemble(recv_msg.getPayload());
                 if(!dict.empty()) {
-                    std::cout << "Payload:";
-                    for(const auto& [key, value] : dict) {
-                        std::cout << "\n " << key << ": " << value.str();
-                    }
-                    std::cout << std::endl;
+                    std::cout << "Payload:" << dict.to_string() << std::endl;
                 }
             } catch(...) {
                 std::cout << "Payload: <could not unpack payload>" << std::endl;

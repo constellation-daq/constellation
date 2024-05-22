@@ -33,7 +33,7 @@
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/utils/casts.hpp"
-#include "constellation/core/utils/std23.hpp"
+#include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/exec/DSOLoader.hpp"
 #include "constellation/exec/exceptions.hpp"
@@ -214,8 +214,8 @@ int constellation::exec::satellite_main(int argc,
     std::once_flag shut_down_flag {};
     signal_handler_f = [&](int /*signal*/) -> void {
         std::call_once(shut_down_flag, [&]() {
-            LOG(logger, STATUS) << "Shutting down satellite";
-            satellite_implementation.shutDown();
+            LOG(logger, STATUS) << "Terminating satellite";
+            satellite_implementation.terminate();
         });
     };
     // NOLINTBEGIN(cert-err33-c)

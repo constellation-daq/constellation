@@ -25,8 +25,8 @@ class CHPTransmitter:
         stream.write(packer.pack(Protocol.CHP))
         stream.write(packer.pack(self.name))
         stream.write(packer.pack(msgpack.Timestamp.from_unix_nano(time.time_ns())))
-        stream.write(packer.pack(state.to_bytes(length=1, byteorder="big")))
-        stream.write(packer.pack(interval.to_bytes(length=2, byteorder="big")))
+        stream.write(packer.pack(state))
+        stream.write(packer.pack(interval))
         self._socket.send(stream.getbuffer(), flags=flags)
 
     def recv(self, flags: int = zmq.NOBLOCK):
@@ -44,8 +44,8 @@ class CHPTransmitter:
         protocol = unpacker.unpack()
         host = unpacker.unpack()
         timestamp = unpacker.unpack()
-        state = int.from_bytes(unpacker.unpack(), byteorder="big")
-        interval = int.from_bytes(unpacker.unpack(), byteorder="big")
+        state = unpacker.unpack()
+        interval = unpacker.unpack()
         if not protocol == Protocol.CHP.value:
             raise RuntimeError(
                 f"Received message with malformed CHP header: {protocol}!"

@@ -75,7 +75,7 @@ def mock_fail_satellite(mock_chirp_socket):
 
     class MockFailSatellite(Satellite):
 
-        def do_run(self, run_number):
+        def do_run(self, run_identifier):
             raise RuntimeError("mock failure")
 
     with patch("constellation.core.base.zmq.Context") as mock:
@@ -231,7 +231,7 @@ def test_satellite_fsm_transition_walk(mock_cmd_transmitter, mock_satellite):
         if cmd == "initialize":
             payload = {"mock_cfg_key": "mock config string"}
         elif cmd == "start":
-            payload = 5001
+            payload = "5001"
         else:
             # send a dict, why not?
             payload = {"mock key": "mock argument string"}
@@ -264,7 +264,7 @@ def test_satellite_run_fail(mock_cmd_transmitter, mock_fail_satellite):
         if cmd == "initialize":
             payload = {"mock_cfg_key": "mock config string"}
         elif cmd == "start":
-            payload = 5001
+            payload = "5001"
         else:
             # send a dict, why not?
             payload = {"mock key": "mock argument string"}

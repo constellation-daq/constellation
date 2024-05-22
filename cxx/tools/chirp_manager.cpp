@@ -31,7 +31,6 @@ using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::string_literals;
-using namespace std::literals::string_view_literals;
 
 enum class Command {
     list_registered_services,
@@ -118,8 +117,8 @@ int main(int argc, char* argv[]) {
 
             // Split command by spaces to vector of string views
             std::vector<std::string_view> cmd_split {};
-            for(const auto word_range : std::ranges::views::split(cmd_input, " "sv)) {
-                cmd_split.emplace_back(&*word_range.begin(), std::ranges::distance(word_range));
+            for(const auto word_range : std::ranges::split_view(cmd_input, ' ')) {
+                cmd_split.emplace_back(std::ranges::cdata(word_range), std::ranges::size(word_range));
             }
 
             // If not a command, continue

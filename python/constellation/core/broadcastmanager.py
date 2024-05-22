@@ -122,9 +122,6 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
         self._chirp_thread = None
         self._chirp_callbacks = get_chirp_callbacks(self)
 
-        # set up logging
-        self._logger = logging.getLogger(name + ".broadcast")
-
     def _add_com_thread(self):
         """Add the CHIRP broadcaster thread to the communication thread pool."""
         super()._add_com_thread()
@@ -148,7 +145,7 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
     ) -> None:
         """Register new callback for ServiceIdentifier."""
         if serviceid in self._chirp_callbacks:
-            self._logger.info("Overwriting callback")
+            self.log.warning("Overwriting CHIRP callback")
         self._chirp_callbacks[serviceid] = callback
         # make a callback if a service has already been discovered
         for known in self.get_discovered(serviceid):
@@ -157,7 +154,7 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
     def register_offer(self, serviceid: CHIRPServiceIdentifier, port: int) -> None:
         """Register new offered service or overwrite existing service."""
         if port in self._registered_services:
-            self._logger.warning("Replacing service registration for port %d", port)
+            self.log.warning("Replacing service registration for port %d", port)
         self._registered_services[port] = serviceid
 
     def request(self, serviceid: CHIRPServiceIdentifier) -> None:
@@ -168,7 +165,7 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
 
         """
         if serviceid not in self._chirp_callbacks:
-            self._logger.warning(
+            self.log.warning(
                 "Serviceid %s does not have a registered callback", serviceid
             )
         self._beacon.broadcast(serviceid, CHIRPMessageType.REQUEST)
@@ -181,19 +178,19 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
         """
         for port, sid in self._registered_services.items():
             if not serviceid or serviceid == sid:
-                self._logger.debug("Broadcasting service OFFER on %s for %s", port, sid)
+                self.log.debug("Broadcasting service OFFER on %s for %s", port, sid)
                 self._beacon.broadcast(sid, CHIRPMessageType.OFFER, port)
 
     def broadcast_requests(self) -> None:
         """Broadcast all requests registered via register_request()."""
         for serviceid in self._chirp_callbacks:
-            self._logger.debug("Broadcasting service REQUEST for %s", serviceid)
+            self.log.debug("Broadcasting service REQUEST for %s", serviceid)
             self._beacon.broadcast(serviceid, CHIRPMessageType.REQUEST)
 
     def broadcast_depart(self) -> None:
         """Broadcast DEPART for all registered services."""
         for port, sid in self._registered_services.items():
-            self._logger.debug("Broadcasting service DEPART on %d for %s", port, sid)
+            self.log.debug("Broadcasting service DEPART on %d for %s", port, sid)
             self._beacon.broadcast(sid, CHIRPMessageType.DEPART, port)
 
     def _discover_service(self, msg: CHIRPMessage) -> None:
@@ -202,7 +199,7 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
             msg.host_uuid, msg.serviceid, msg.from_address, msg.port
         )
         if service in self.discovered_services:
-            self._logger.debug(
+            self.log.debug(
                 "Service already discovered: %s on host %s",
                 msg.serviceid,
                 msg.from_address,
@@ -212,7 +209,7 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
             # now reconnecting. But then the bookkeeping has to be done higher up.
         else:
             # add service to internal list and queue callback (if registered)
-            self._logger.info(
+            self.log.info(
                 "Received new OFFER for service: %s on host %s:%s",
                 msg.serviceid,
                 msg.from_address,
@@ -222,7 +219,7 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
                 callback = self._chirp_callbacks[msg.serviceid]
                 self.task_queue.put((callback, [service]))
             except KeyError:
-                self._logger.debug("No callback for service %s set up.", msg.serviceid)
+                self.log.debug("No callback for service %s set up.", msg.serviceid)
             self.discovered_services.append(service)
 
     def _depart_service(self, msg: CHIRPMessage) -> None:
@@ -232,7 +229,7 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
                 msg.host_uuid, msg.serviceid, msg.from_address, msg.port
             )
             self.discovered_services.remove(service)
-            self._logger.debug(
+            self.log.debug(
                 "Received depart for service %s on host %s: Removed.",
                 msg.serviceid,
                 msg.from_address,
@@ -243,9 +240,9 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
                 callback = self._chirp_callbacks[msg.serviceid]
                 self.task_queue.put((callback, [service]))
             except KeyError:
-                self._logger.debug("No callback for service %s set up.", msg.serviceid)
+                self.log.debug("No callback for service %s set up.", msg.serviceid)
         except ValueError:
-            self._logger.debug(
+            self.log.debug(
                 "Received depart for service %s on host %s: Not in use.",
                 msg.serviceid,
                 msg.from_address,

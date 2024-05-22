@@ -47,7 +47,7 @@ def mock_chirp_sock_sendto(buf, addr):
 def mock_chirp_sock_recvfrom(bufsize):
     """Pop entry from queue."""
     try:
-        return mock_chirp_packet_queue.pop(0), ["somehost", CHIRP_PORT]
+        return mock_chirp_packet_queue.pop(0), ["localhost", CHIRP_PORT]
     except IndexError:
         raise BlockingIOError("no mock data")
 
@@ -240,7 +240,9 @@ def mock_controller(mock_chirp_socket):
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context
-        c = BaseController("mock_controller", "mockstellation", "127.0.0.1")
+        c = BaseController(
+            name="mock_controller", group="mockstellation", interface="127.0.0.1"
+        )
         # give the threads a chance to start
         time.sleep(0.1)
         yield c
@@ -296,4 +298,6 @@ def wait_for_state(fsm, state: str, timeout: float = 2.0):
         time.sleep(0.05)
         timeout -= 0.05
     if timeout < 0:
-        raise RuntimeError(f"Never reached {state}")
+        raise RuntimeError(
+            f"Never reached {state}, now in state {fsm.current_state.id}"
+        )

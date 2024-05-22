@@ -20,7 +20,7 @@
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
-#include "constellation/core/utils/std23.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
 using namespace constellation::message;
@@ -29,39 +29,45 @@ using namespace std::literals::string_view_literals;
 
 // Similar to CDTP1Header::disassemble in CDTP1Header.cpp, check when modifying
 BaseHeader BaseHeader::disassemble(Protocol protocol, std::span<const std::byte> data) {
-    // Offset since we decode four separate msgpack objects
-    std::size_t offset = 0;
-
-    // Unpack protocol
-    const auto msgpack_protocol_identifier = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-    const auto protocol_identifier = msgpack_protocol_identifier->as<std::string>();
-
-    // Try to decode protocol identifier into protocol
-    Protocol protocol_recv {};
     try {
-        protocol_recv = get_protocol(protocol_identifier);
-    } catch(std::invalid_argument& e) {
-        throw InvalidProtocolError(e.what());
+        // Offset since we decode four separate msgpack objects
+        std::size_t offset = 0;
+
+        // Unpack protocol
+        const auto msgpack_protocol_identifier = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
+        const auto protocol_identifier = msgpack_protocol_identifier->as<std::string>();
+
+        // Try to decode protocol identifier into protocol
+        Protocol protocol_recv {};
+        try {
+            protocol_recv = get_protocol(protocol_identifier);
+        } catch(std::invalid_argument& e) {
+            throw InvalidProtocolError(e.what());
+        }
+
+        if(protocol_recv != protocol) {
+            throw UnexpectedProtocolError(protocol_recv, protocol);
+        }
+
+        // Unpack sender
+        const auto msgpack_sender = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
+        const auto sender = msgpack_sender->as<std::string>();
+
+        // Unpack time
+        const auto msgpack_time = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
+        const auto time = msgpack_time->as<std::chrono::system_clock::time_point>();
+
+        // Unpack tags
+        const auto msgpack_tags = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
+        const auto tags = msgpack_tags->as<Dictionary>();
+
+        // Construct header
+        return {protocol, sender, time, tags};
+    } catch(const msgpack::type_error&) {
+        throw MessageDecodingError("malformed data");
+    } catch(const msgpack::unpack_error&) {
+        throw MessageDecodingError("could not unpack data");
     }
-
-    if(protocol_recv != protocol) {
-        throw UnexpectedProtocolError(protocol_recv, protocol);
-    }
-
-    // Unpack sender
-    const auto msgpack_sender = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-    const auto sender = msgpack_sender->as<std::string>();
-
-    // Unpack time
-    const auto msgpack_time = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-    const auto time = msgpack_time->as<std::chrono::system_clock::time_point>();
-
-    // Unpack tags
-    const auto msgpack_tags = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-    const auto tags = msgpack_tags->as<Dictionary>();
-
-    // Construct header
-    return {protocol, sender, time, tags};
 }
 
 void BaseHeader::msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpack_packer) const {
@@ -80,11 +86,8 @@ std::string BaseHeader::to_string() const {
     std::boolalpha(out);
     out << "Header: "sv << get_readable_protocol(protocol_) << '\n' //
         << "Sender: "sv << sender_ << '\n'                          //
-        << "Time:   "sv << time_ << '\n'                            //
-        << "Tags:"sv;
+        << "Time:   "sv << utils::to_string(time_) << '\n'          //
+        << "Tags:"sv << tags_.to_string();
 
-    for(const auto& entry : tags_) {
-        out << "\n "sv << entry.first << ": "sv << entry.second.str();
-    }
     return out.str();
 }

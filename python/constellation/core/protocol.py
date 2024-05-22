@@ -11,7 +11,6 @@ import zmq
 
 import io
 import time
-import platform
 from enum import StrEnum
 
 
@@ -69,90 +68,3 @@ class MessageHeader:
         stream.write(packer.pack(msgpack.Timestamp.from_unix_nano(time.time_ns())))
         stream.write(packer.pack(meta))
         return stream.getbuffer()
-
-
-class DataTransmitter:
-    """Base class for sending Constellation data packets via ZMQ."""
-
-    def __init__(self, socket: zmq.Socket = None, host: str = None):
-        """Initialize transmitter.
-
-        socket: the ZMQ socket to use if no other is specified on send()/recv()
-        calls.
-
-        host: the name to use in the message header. Defaults to system host name.
-
-        """
-        if not host:
-            host = platform.node()
-        self.host = host
-        self._socket = socket
-
-    def send(
-        self, payload, meta: dict = None, socket: zmq.Socket = None, flags: int = 0
-    ):
-        """Send a payload over a ZMQ socket.
-
-        Follows the Constellation Data Transmission Protocol.
-
-        payload: data to send.
-
-        meta: dictionary to include in the map of the message header.
-
-        socket: ZMQ socket to use for transmission. If none is specified, use
-        the one the class was initialized with.
-
-        flags: additional ZMQ socket flags to use during transmission.
-
-        Returns: return of socket.send(payload) call.
-
-        """
-        if not meta:
-            meta = {}
-        # use default socket if none was specified
-        if not socket:
-            socket = self._socket
-        flags = zmq.SNDMORE | flags
-        # message header
-        socket.send(msgpack.packb(Protocol.CDTP), flags=flags)
-        socket.send(msgpack.packb(self.host), flags=flags)
-        socket.send(msgpack.packb(time.time_ns()), flags=flags)
-        socket.send(msgpack.packb(meta), flags=flags)
-        # payload
-        flags = flags & (~zmq.SNDMORE)  # flip SNDMORE bit
-        return socket.send(msgpack.packb(payload), flags=flags)
-
-    def recv(self, socket: zmq.Socket = None, flags: int = 0):
-        """Receive a multi-part data transmission.
-
-        Follows the Constellation Data Transmission Protocol.
-
-        socket: ZMQ socket to use for transmission. If none is specified, use
-        the one the class was initialized with.
-
-        flags: additional ZMQ socket flags to use during transmission.
-
-        Returns: payload, map (meta data), timestamp and sending host.
-
-        """
-        # use default socket if none was specified
-        if not socket:
-            socket = self._socket
-        msg = socket.recv_multipart(flags=flags)
-        if not len(msg) == 5:
-            raise RuntimeError(
-                f"Received message with wrong length of {len(msg)} parts!"
-            )
-        if not msgpack.unpackb(msg[0]) == Protocol.CDTP:
-            raise RuntimeError(
-                f"Received message with malformed CDTP header: {msgpack.unpackb(msg[0])}!"
-            )
-        payload = msgpack.unpackb(msg[4])
-        meta = msgpack.unpackb(msg[3])
-        ts = msgpack.unpackb(msg[2])
-        host = msgpack.unpackb(msg[1])
-        return payload, meta, host, ts
-
-    def close(self):
-        """Close the socket."""
-        self._socket.close()

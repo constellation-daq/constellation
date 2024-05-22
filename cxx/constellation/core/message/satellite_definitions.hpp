@@ -15,7 +15,7 @@
 
 #include <magic_enum.hpp>
 
-#include "constellation/core/utils/std23.hpp"
+#include "constellation/core/utils/std_future.hpp"
 
 namespace constellation::message {
 
@@ -66,13 +66,15 @@ namespace constellation::message {
     };
 
     /** Possible get_* commands via CSCP */
-    enum class GetCommand : std::underlying_type_t<TransitionCommand> {
+    enum class StandardCommand : std::underlying_type_t<TransitionCommand> {
         get_name,
         get_version,
         get_commands,
         get_state,
         get_status,
         get_config,
+        get_run_id,
+        shutdown,
     };
 
 } // namespace constellation::message

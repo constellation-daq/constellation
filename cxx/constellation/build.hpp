@@ -10,14 +10,16 @@
 #pragma once
 
 #if(defined _WIN32 && !defined __CYGWIN__)
+#define CNSTLN_ABI __declspec(dllexport)
 #if CNSTLN_BUILDLIB
-#define CNSTLN_API __declspec(dllexport)
+#define CNSTLN_API CNSTLN_ABI
 #else
 #define CNSTLN_API __declspec(dllimport)
 #endif
 #else
+#define CNSTLN_ABI __attribute__((__visibility__("default")))
 #if CNSTLN_BUILDLIB
-#define CNSTLN_API __attribute__((__visibility__("default")))
+#define CNSTLN_API CNSTLN_ABI
 #else
 #define CNSTLN_API
 #endif
@@ -30,5 +32,7 @@
 #define CNSTLN_LIBDIR "@libdir@"
 
 #define CNSTLN_BUILDDIR "@builddir@"
+
+#define CNSTLN_DSO_SUFFIX "@dso_suffix@"
 
 // NOLINTEND(cppcoreguidelines-macro-usage)
