@@ -23,6 +23,7 @@ core_files = files(
   'core/network.py',
   'core/protocol.py',
   'core/satellite.py',
+  
 )
 
 satellites_files = files(
@@ -32,6 +33,9 @@ satellites_files = files(
   'satellites/clabdaq2/rpsatellite.py',
   'satellites/clabdaq2/rpneutron.py',
   'satellites/clabdaq2/rpgamma.py',
+)
+tools_files = files(
+  'tools/H5datareader.py',
 )
 
 tools_files = files(

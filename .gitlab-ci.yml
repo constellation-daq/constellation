@@ -67,6 +67,7 @@ variables:
   key: ccache-$CI_JOB_IMAGE
   paths:
     - $CCACHE_DIR/
+  when: always
 
 .alma9-cern:
   image: gitlab.desy.de:5555/constellation/build-images/alma9-cern:latest
