@@ -14,6 +14,7 @@ import os
 import coloredlogs
 import numpy as np
 from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
+from ..core.satellite import SatelliteArgumentParser
 
 axi_regset_config = np.dtype(
     [
@@ -147,37 +148,28 @@ class RPNeutron(RedPitayaSatellite):
 
 
 def main(args=None):
-    "Start a RedPitaya satellite"
-    import argparse
-
-    parser = argparse.ArgumentParser(description=main.__doc__)
-    parser.add_argument("--log-level", default="info")
-    parser.add_argument("--cmd-port", type=int, default=23999)
-    parser.add_argument("--mon-port", type=int, default=55556)
-    parser.add_argument("--hb-port", type=int, default=61234)
-    parser.add_argument("--data-port", type=int, default=55557)
-    parser.add_argument("--interface", type=str, default="*")
-    parser.add_argument("--name", type=str, default=str(os.uname().nodename))
-    parser.add_argument("--group", type=str, default="constellation")
-    args = parser.parse_args(args)
+    "Start a RedPitaya neutron detector DAQ satellite"
+    parser = SatelliteArgumentParser(
+        description=main.__doc__,
+        epilog="This is a 3rd-party component of Constellation.",
+    )
+    # this sets the defaults for our Satellite
+    parser.set_defaults(
+        name=str(os.uname().nodename),
+        cmd_port=233999,
+        mon_port=55556,
+        hb_port=61234,
+        data_port=55557,
+    )
+    args = vars(parser.parse_args(args))
 
     # set up logging
-    logger = logging.getLogger(args.name)
-    coloredlogs.install(level=args.log_level.upper(), logger=logger)
-
-    logger.info("Starting up satellite!")
+    logger = logging.getLogger(args["name"])
+    log_level = args.pop("log_level")
+    coloredlogs.install(level=log_level.upper(), logger=logger)
 
     # start server with remaining args
-    s = RPNeutron(
-        name=args.name,
-        group=args.group,
-        cmd_port=args.cmd_port,
-        hb_port=args.hb_port,
-        mon_port=args.mon_port,
-        data_port=args.data_port,
-        interface=args.interface,
-    )
-
+    s = RPNeutron(**args)
     s.run_satellite()
 
 
