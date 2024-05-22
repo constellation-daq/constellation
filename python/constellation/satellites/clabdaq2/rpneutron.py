@@ -27,7 +27,7 @@ axi_regset_config = np.dtype(
         ("ToT_ch2_3", "uint32"),
         ("dist_ch0_1", "uint32"),
         ("dist_ch2_3", "uint32"),
-        ("ratio", "uint32")
+        ("ratio", "uint32"),
     ]
 )
 
@@ -116,12 +116,10 @@ class RPNeutron(RedPitayaSatellite):
         if self.master:
             memory_file_handle = os.open("/dev/mem", os.O_RDWR)
             axi_mmap0 = mmap.mmap(
-                fileno=memory_file_handle, length=mmap.PAGESIZE,
-                offset=0x40001000
+                fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
             )
 
-            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop,
-                                           buf=axi_mmap0)
+            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
             axi_array_contents0 = axi_numpy_array0[0]
             axi_array_contents0.Externaltrigger = (
                 0  # Don'tOverride GPIO_N_0 to output ADC or DAC trigger
@@ -135,16 +133,15 @@ class RPNeutron(RedPitayaSatellite):
         if self.master:
             memory_file_handle = os.open("/dev/mem", os.O_RDWR)
             axi_mmap0 = mmap.mmap(
-                fileno=memory_file_handle, length=mmap.PAGESIZE,
-                offset=0x40001000
+                fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
             )
-            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop,
-                                           buf=axi_mmap0)
+            axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
             axi_array_contents0 = axi_numpy_array0[0]
             axi_array_contents0.Externaltrigger = (
                 3  # Override GPIO_N_0 to output ADC or DAC trigger
             )
         return super().do_starting(payload)
+
 
 # -------------------------------------------------------------------------
 
@@ -160,8 +157,7 @@ def main(args=None):
     parser.add_argument("--hb-port", type=int, default=61234)
     parser.add_argument("--data-port", type=int, default=55557)
     parser.add_argument("--interface", type=str, default="*")
-    parser.add_argument("--name", type=str,
-                        default=str(os.uname().nodename))
+    parser.add_argument("--name", type=str, default=str(os.uname().nodename))
     parser.add_argument("--group", type=str, default="constellation")
     args = parser.parse_args(args)
 

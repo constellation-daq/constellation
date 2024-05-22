@@ -102,6 +102,7 @@ class RPGamma(RedPitayaSatellite):
         axi_array_contents0.Externaltrigger = 0
         return super().do_stopping(payload)
 
+
 # -------------------------------------------------------------------------
 
 
@@ -116,8 +117,7 @@ def main(args=None):
     parser.add_argument("--hb-port", type=int, default=61234)
     parser.add_argument("--data-port", type=int, default=55557)
     parser.add_argument("--interface", type=str, default="*")
-    parser.add_argument("--name", type=str,
-                        default=str(os.uname().nodename))
+    parser.add_argument("--name", type=str, default=str(os.uname().nodename))
     parser.add_argument("--group", type=str, default="constellation")
     args = parser.parse_args(args)
 

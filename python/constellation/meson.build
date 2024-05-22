@@ -29,9 +29,9 @@ satellites_files = files(
   'satellites/example_satellite.py',
   'satellites/caenhv/caenhv.py',
   'satellites/__init__.py',
-  'satellites/rpsatellite.py',
-  'satellites/rpneutron.py',
-  'satellites/rpgamma.py',
+  'satellites/clabdaq2/rpsatellite.py',
+  'satellites/clabdaq2/rpneutron.py',
+  'satellites/clabdaq2/rpgamma.py',
 )
 
 tools_files = files(

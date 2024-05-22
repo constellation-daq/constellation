@@ -65,19 +65,25 @@ class RedPitayaSatellite(DataSender):
         try:
             self.cpu_temperature_offset_file_reader = open(
                 "/sys/devices/soc0/axi/83c00000.xadc_wiz/"
-                "iio:device1/in_temp0_offset", "r")
+                "iio:device1/in_temp0_offset",
+                "r",
+            )
             self.cpu_temperature_raw_file_reader = open(
-                "/sys/devices/soc0/axi/83c00000.xadc_wiz/"
-                "iio:device1/in_temp0_raw", "r")
+                "/sys/devices/soc0/axi/83c00000.xadc_wiz/" "iio:device1/in_temp0_raw",
+                "r",
+            )
             self.cpu_temperature_scale_file_reader = open(
-                "/sys/devices/soc0/axi/83c00000.xadc_wiz/"
-                "iio:device1/in_temp0_scale", "r")
+                "/sys/devices/soc0/axi/83c00000.xadc_wiz/" "iio:device1/in_temp0_scale",
+                "r",
+            )
             self.cpu_times_file_reader = open("/proc/stat", "r")
             self.memor_load_file_reader = open("/proc/meminfo", "r")
             self.network_tx_file_reader = open(
-                "/sys/class/net/eth0/statistics/tx_bytes", "r")
+                "/sys/class/net/eth0/statistics/tx_bytes", "r"
+            )
             self.network_rx_file_reader = open(
-                "/sys/class/net/eth0/statistics/rx_bytes", "r")
+                "/sys/class/net/eth0/statistics/rx_bytes", "r"
+            )
         except FileNotFoundError:
             self.log.warning("Failed to find path")
 
@@ -118,11 +124,9 @@ class RedPitayaSatellite(DataSender):
         memory_file_handle_gpio = os.open("/dev/mem", os.O_RDWR)
 
         axi_mmap_gpio = mmap.mmap(
-            fileno=memory_file_handle_gpio, length=mmap.PAGESIZE,
-            offset=0x40000000
+            fileno=memory_file_handle_gpio, length=mmap.PAGESIZE, offset=0x40000000
         )
-        axi_numpy_array_gpio = np.recarray(1, axi_gpio_regset_pins,
-                                           buf=axi_mmap_gpio)
+        axi_numpy_array_gpio = np.recarray(1, axi_gpio_regset_pins, buf=axi_mmap_gpio)
         self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
 
         rp.rp_Init()
@@ -138,19 +142,21 @@ class RedPitayaSatellite(DataSender):
             time.sleep(2)
 
             # Define axi array for custom registers
-            memory_file_handle_custom_registers = os.open("/dev/mem",
-                                                          os.O_RDWR)
+            memory_file_handle_custom_registers = os.open("/dev/mem", os.O_RDWR)
             axi_mmap_custom_registers = mmap.mmap(
                 fileno=memory_file_handle_custom_registers,
-                length=mmap.PAGESIZE, offset=self.config["offset"]
+                length=mmap.PAGESIZE,
+                offset=self.config["offset"],
             )
-            axi_numpy_array_reset = np.recarray(1, axi_regset_reset,
-                                                buf=axi_mmap_custom_registers)
+            axi_numpy_array_reset = np.recarray(
+                1, axi_regset_reset, buf=axi_mmap_custom_registers
+            )
             self.reset_axi_array_contents = axi_numpy_array_reset[0]
 
             # Setting configuration values to FPGA registers
-            axi_numpy_array_config = np.recarray(1, self.axi_regset_config,
-                                                 buf=axi_mmap_custom_registers)
+            axi_numpy_array_config = np.recarray(
+                1, self.axi_regset_config, buf=axi_mmap_custom_registers
+            )
             config_axi_array_contents = axi_numpy_array_config[0]
 
             names = [field[0] for field in self.axi_regset_config.descr]
@@ -159,8 +165,9 @@ class RedPitayaSatellite(DataSender):
 
             # Define the axi array for parameters and status
 
-            axi_numpy_array_param = np.recarray(1, self.regset_readout,
-                                                buf=axi_mmap_custom_registers)
+            axi_numpy_array_param = np.recarray(
+                1, self.regset_readout, buf=axi_mmap_custom_registers
+            )
             self.axi_array_contents_param = axi_numpy_array_param[0]
 
             # Setup metrics
@@ -263,27 +270,29 @@ class RedPitayaSatellite(DataSender):
 
             # Append last part of buffer before resetting
             if cycled:
-                buffer = np.concatenate((
-                    self._sample_raw32(
-                        start=self._readpos,
-                        stop=BUFFER_SIZE,
-                        channel=channel,
-                    ),
-                    self._sample_raw32(
-                        start=0,
-                        stop=self._writepos,
-                        channel=channel)))
+                buffer = np.concatenate(
+                    (
+                        self._sample_raw32(
+                            start=self._readpos,
+                            stop=BUFFER_SIZE,
+                            channel=channel,
+                        ),
+                        self._sample_raw32(
+                            start=0, stop=self._writepos, channel=channel
+                        ),
+                    )
+                )
             else:
                 buffer = self._sample_raw32(
-                    start=self._readpos,
-                    stop=self._writepos,
-                    channel=channel)
+                    start=self._readpos, stop=self._writepos, channel=channel
+                )
 
-            if (i == 0):
-                data = np.empty((len(self.active_channels), len(buffer)),
-                                dtype=np.uint32)
+            if i == 0:
+                data = np.empty(
+                    (len(self.active_channels), len(buffer)), dtype=np.uint32
+                )
 
-            data[i] = (buffer)
+            data[i] = buffer
 
         # Update readpointer
         self._readpos = self._writepos
@@ -316,8 +325,7 @@ class RedPitayaSatellite(DataSender):
         idle_cpu_time, total_cpu_time = self._get_cpu_times()
         total_cpu_time2 = total_cpu_time - self._prev_cpu_time
         idle_cpu_time2 = idle_cpu_time - self._prev_cpu_idle
-        utilization = ((
-            total_cpu_time2 - idle_cpu_time2) * 100) / total_cpu_time2
+        utilization = ((total_cpu_time2 - idle_cpu_time2) * 100) / total_cpu_time2
         self._prev_cpu_time = total_cpu_time
         self._prev_cpu_idle = idle_cpu_time
         return round(utilization, 1), "%"
@@ -352,10 +360,8 @@ class RedPitayaSatellite(DataSender):
 
     def get_digital_gpio_pins(self):
         """Read out values at digital gpio P and N ports."""
-        p_pins = self.axi_array_contents_gpio.p_pins.astype(
-            dtype=np.uint8).item()
-        n_pins = self.axi_array_contents_gpio.n_pins.astype(
-            dtype=np.uint8).item()
+        p_pins = self.axi_array_contents_gpio.p_pins.astype(dtype=np.uint8).item()
+        n_pins = self.axi_array_contents_gpio.n_pins.astype(dtype=np.uint8).item()
 
         pins = [p_pins, n_pins]
         return pins, "bits"
@@ -400,8 +406,7 @@ class RedPitayaSatellite(DataSender):
 
         return data_raw
 
-    def _sample_raw32(self, start: int = 0, stop: int = 16384,
-                      channel: int = 1):
+    def _sample_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
         """Read out data in 32 bit form."""
 
         class Array(ctypes.Structure):
@@ -434,8 +439,7 @@ class RedPitayaSatellite(DataSender):
 
         # Convert the result to a NumPy array
 
-        data_array = np.ctypeslib.as_array(result.data,
-                                           shape=(16384,))[start:stop]
+        data_array = np.ctypeslib.as_array(result.data, shape=(16384,))[start:stop]
         stored_data = data_array.copy()
         lib.freeData(result.data)
         return stored_data
@@ -454,6 +458,7 @@ class RedPitayaSatellite(DataSender):
                 idle_cpu_time = int(val)
 
         return idle_cpu_time, total_cpu_time
+
 
 # -------------------------------------------------------------------------
 
