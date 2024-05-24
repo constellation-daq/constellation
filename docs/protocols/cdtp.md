@@ -75,5 +75,13 @@ If the CDTP sender host provides the relevant information, the map SHOULD contai
 
 ### Message Payload
 
-The message cargo payload frames MAY consist of any binary data.
+For BOR type messages, a single payload frame MUST be attached containing a [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) encoded map containing the configuration of the CDTP sender host.
+The map MAY contain a sequence of key-value pairs.
+The key MUST be of string-type and the values MAY be any of the types supported by the [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) specification.
+
+For DATA type messages, any number of payload frames MAY be attached consisting of any binary data.
 The interpretation and decoding of this data is not part of this protocol and left for user code implementations.
+
+For EOR type messages, a single payload frame MUST be attached containing a [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) encoded map containing additional meta information of the measurement run.
+The map MAY contain a sequence of key-value pairs.
+The key MUST be of string-type and the values MAY be any of the types supported by the [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) specification.
