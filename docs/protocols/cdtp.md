@@ -40,7 +40,7 @@ OPTIONAL frames with message payload MAY be sent afterwards.
 
 ### Overall Behavior
 
-A CDTP sender host SHALL advertise its CDTP service through [CHIRP](https://gitlab.desy.de/constellation/constellation/-/blob/main/docs/protocols/chirp.md).
+A CDTP sender host SHALL advertise its CDTP service through [CHIRP](https://gitlab.desy.de/constellation/constellation/-/blob/main/docs/protocols/chirp.md). A CDTP receiver host SHALL NOT advertise its CDTP service through [CHIRP](https://gitlab.desy.de/constellation/constellation/-/blob/main/docs/protocols/chirp.md).
 
 Upon service discovery through [CHIRP](https://gitlab.desy.de/constellation/constellation/-/blob/main/docs/protocols/chirp.md), a CDTP receiver host SHOULD connect its PULL socket to the PUSH socket of one CDTP sender host as defined by [30/PIPELINE](http://rfc.zeromq.org/spec:30/PIPELINE).
 
