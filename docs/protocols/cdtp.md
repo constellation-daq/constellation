@@ -71,8 +71,6 @@ The 64-bit integer SHALL contain the message sequence number of the sender, i.e.
 The map MAY contain a sequence of key-value pairs.
 The key MUST be of string-type and the values MAY be any of the types supported by the [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) specification.
 
-If the CDTP sender host provides the relevant information, the map SHOULD contain key-value pairs with keys `timestamp_begin` and `timestamp_end`, containing integer values with the timestamps in picoseconds counted since the start of the measurement marking the begin and end of this data block, respectively.
-
 ### Message Payload
 
 For BOR type messages, a single payload frame MUST be attached containing a [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) encoded map containing the configuration of the CDTP sender host.
