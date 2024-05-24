@@ -47,6 +47,13 @@ executable('cmdp_log_send',
   dependencies: [core_dep],
 )
 
+# Controller
+
+executable('config_parser',
+  sources: 'config_parser.cpp',
+  dependencies: [core_dep, controller_dep],
+)
+
 # Satellite
 
 executable('dummy_controller',

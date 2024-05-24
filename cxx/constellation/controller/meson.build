@@ -5,6 +5,7 @@
 tomlplusplus_dep = dependency('tomlplusplus')
 
 controller_src = files(
+  'ConfigParser.cpp',
   'Controller.cpp',
 )
 
@@ -21,10 +22,12 @@ controller_lib = library('ConstellationController',
 controller_dep = declare_dependency(
   link_with: controller_lib,
   include_directories: constellation_inc,
-  dependencies: [core_dep, cppzmq_dep, magic_enum_dep],
+  dependencies: [core_dep, cppzmq_dep, magic_enum_dep, msgpack_cxx_dep, tomlplusplus_dep],
 )
 
 install_headers(
+  'ConfigParser.hpp',
   'Controller.hpp',
+  'exceptions.hpp',
   subdir: 'constellation/controller',
 )
