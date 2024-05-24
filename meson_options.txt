@@ -9,4 +9,5 @@ option('cxx_tests', type: 'feature', value: 'auto', description: 'Build C++ test
 
 # Satellite features - check code/manual if build by default
 option('satellite_random_sender', type: 'feature', value: 'auto', description: 'Build RandomSender satellite')
+option('satellite_raw_file_writer', type: 'feature', value: 'auto', description: 'Build RawFileWriter satellite')
 option('satellite_sputnik', type: 'feature', value: 'auto', description: 'Build Sputnik satellite')
