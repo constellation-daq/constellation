@@ -21,6 +21,7 @@
 #include <zmq.hpp>
 
 #include "constellation/core/logging/Level.hpp"
+#include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/ports.hpp"
 #include "constellation/core/utils/string.hpp"
@@ -51,7 +52,60 @@ std::string get_rel_file_path(std::string file_path_char) {
 }
 
 // Bind socket to ephemeral port on construction
-CMDPSink::CMDPSink() : publisher_(context_, zmq::socket_type::pub), port_(bind_ephemeral_port(publisher_)) {}
+CMDPSink::CMDPSink() : publisher_(context_, zmq::socket_type::xpub), port_(bind_ephemeral_port(publisher_)) {
+    // Set reception timeout for subscription messages on XPUB socket
+    publisher_.set(zmq::sockopt::rcvtimeo, static_cast<int>(std::chrono::milliseconds(300).count()));
+    // Start thread monitoring the socket for subscription messages
+    subscription_thread_ = std::jthread(std::bind_front(&CMDPSink::loop, this));
+}
+
+CMDPSink::~CMDPSink() {
+    subscription_thread_.request_stop();
+    if(subscription_thread_.joinable()) {
+        subscription_thread_.join();
+    }
+}
+
+void CMDPSink::loop(const std::stop_token& stop_token) {
+    while(!stop_token.stop_requested()) {
+        zmq::multipart_t recv_msg {};
+        auto received = recv_msg.recv(publisher_);
+
+        // Return if timed out or wrong number of frames received:
+        if(!received || recv_msg.size() != 1) {
+            continue;
+        }
+
+        const auto& frame = recv_msg.front();
+
+        // First byte \x01 is subscription, \0x00 is unsubscription
+        const auto subscribe = static_cast<bool>(*frame.data<uint8_t>());
+
+        const auto topic = frame.to_string_view();
+
+        // TODO(simonspa) At some point we also have to treat STAT here
+        // FIXME we need to allow also without `/` or empty subscriptions?
+        if(!topic.starts_with("LOG/")) {
+            continue;
+        }
+
+        const auto level_endpos = topic.find_first_of('/', 4);
+        const auto level_str = topic.substr(4, level_endpos - 4);
+
+        // Empty level means subscription to everything
+        const auto level = (level_str.empty() ? std::optional<Level>(TRACE) : magic_enum::enum_cast<Level>(level_str));
+
+        // Only accept valid levels
+        if(!level.has_value()) {
+            continue;
+        }
+
+        // FIXME this only subscribes and only sets the global level not topics
+        if(subscribe) {
+            SinkManager::getInstance().setCMDPLevelsCustom(level.value());
+        }
+    }
+}
 
 void CMDPSink::setSender(std::string sender_name) {
     sender_name_ = std::move(sender_name);

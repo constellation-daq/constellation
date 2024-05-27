@@ -31,6 +31,11 @@ namespace constellation::log {
         CMDPSink();
 
         /**
+         * Deconstruct the CMDPSink
+         */
+        virtual ~CMDPSink();
+
+        /**
          * Get ephemeral port this logger sink is bound to
          *
          * @return Port number
@@ -51,6 +56,10 @@ namespace constellation::log {
     private:
         zmq::context_t context_;
         zmq::socket_t publisher_;
+
+        std::jthread subscription_thread_;
+        void loop(const std::stop_token& stop_token);
+
         utils::Port port_;
         std::string sender_name_;
         std::once_flag setup_flag_;
