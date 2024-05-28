@@ -9,6 +9,7 @@ RedPitaya device.
 """
 
 import ctypes
+import importlib.resources
 import mmap
 import os
 import time
@@ -443,11 +444,11 @@ class RedPitayaSatellite(DataSender):
 
             _fields_ = [("data", ctypes.POINTER(ctypes.c_uint32))]
 
-        # Load the shared library.
-        # NOTE: I don't think this path will work well when packaging
-        # NOTE: This might have some answers when the time comes:
-        # https://stackoverflow.com/questions/51468432/refer-to-a-file-within-python-package
-        lib = ctypes.CDLL("python/constellation/satellites/read_data32bit.so")
+        # Load the shared library
+        dso_path = importlib.resources.files(
+            "constellation.satellites.clabdaq2"
+        ).joinpath("libread_data32bit.so")
+        lib = ctypes.CDLL(str(dso_path))
 
         # Define the argument and return types of the function
         lib.readData.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
