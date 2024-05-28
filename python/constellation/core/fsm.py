@@ -325,9 +325,10 @@ class SatelliteStateHandler(BaseSatelliteFrame):
                 f"State transition to steady state completed ({prev} -> {now})."
             )
         except TransitionNotAllowed:
-            # no need to do more than set the status, we are in a steady
-            # operational state
-            self.fsm.status = res
+            if self.fsm.current_state.value != SatelliteState.ERROR.value:
+                # no need to do more than set the status, we are in a steady
+                # operational state
+                self.fsm.status = res
 
     @debug_log
     def _start_transition_thread(self, fcn: callable, payload: any) -> None:
@@ -363,9 +364,10 @@ class SatelliteStateHandler(BaseSatelliteFrame):
                 f"State transition to steady state completed ({prev} -> {now})."
             )
         except TransitionNotAllowed:
-            # no need to do more than set the status, we are in a steady
-            # operational state
-            self.fsm.status = res
+            if self.fsm.current_state.value != SatelliteState.ERROR.value:
+                # no need to do more than set the status, we are in a steady
+                # operational state
+                self.fsm.status = res
 
     @cscp_requestable
     def get_state(self, _request: CSCPMessage = None) -> (str, None, None):
