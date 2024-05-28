@@ -268,8 +268,8 @@ class DataReceiver(Satellite):
     def _remove_sender(self, service: DiscoveredService):
         """Removes sender from pool"""
         uuid = str(service.host_uuid)
-        self._pull_interfaces.pop(uuid)
         try:
+            self._pull_interfaces.pop(uuid)
             self._remove_socket(uuid)
         except KeyError:
             pass
