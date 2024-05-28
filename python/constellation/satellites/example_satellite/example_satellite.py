@@ -6,11 +6,13 @@ SPDX-License-Identifier: CC-BY-4.0
 This module provides the class for a Constellation Satellite.
 """
 
-from constellation.core.satellite import Satellite, SatelliteArgumentParser
 import time
 import logging
-from constellation.core.configuration import ConfigError, Configuration
 from constellation.core.base import EPILOG
+from constellation.core.commandmanager import cscp_requestable
+from constellation.core.configuration import ConfigError, Configuration
+from constellation.core.cscp import CSCPMessage
+from constellation.core.satellite import Satellite, SatelliteArgumentParser
 
 
 """
@@ -19,9 +21,9 @@ Mock class representing a device that can be utilised by a satellite
 
 
 class Example_Device1:
-    def __init__(self, voltage, ampere, sample_period=0.1):
+    def __init__(self, voltage, current, sample_period=0.1):
         self.voltage = voltage
-        self.ampere = ampere
+        self.current = current
         self.sample_period = sample_period
 
 
@@ -48,6 +50,24 @@ class Example_Satellite(Satellite):
             time.sleep(self.device.sample_period)
             print(f"New sample at {self.device.voltage} V")
         return "Finished acquisition."
+
+    @cscp_requestable
+    def get_current(self, request: CSCPMessage):
+        """
+        Example custom command. Returns a message containing the current value. Takes unit as argument.
+        Allowed in the states ORBIT and RUN.
+        """
+        paramList = request.payload
+        currentUnit = paramList[0]
+        return (
+            "Device current is " + str(self.device.current) + " " + str(currentUnit),
+            None,
+            None,
+        )
+
+    def _get_current_is_allowed(self, request: CSCPMessage):
+        """Controls when custom command is allowed. Allow in the states ORBIT and RUN."""
+        return self.fsm.current_state.id in ["ORBIT", "RUN"]
 
 
 # -------------------------------------------------------------------------
