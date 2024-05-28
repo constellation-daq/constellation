@@ -110,7 +110,12 @@ class Satellite(
                     callback(*args)
                 except Exception as e:
                     # TODO consider whether to go into error state if anything goes wrong here
-                    self.log.error("Caught exception handling task: %s", repr(e))
+                    self.log.exception(
+                        "Caught exception handling task '%s' with args '%s': %s",
+                        callback,
+                        args,
+                        repr(e),
+                    )
             except Empty:
                 # nothing to process
                 pass
