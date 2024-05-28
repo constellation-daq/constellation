@@ -35,7 +35,7 @@ A minimal configuration would be:
 system="SY5527"
 link="TCPIP"
 link_argument="192.168.8.2"
-user="myuser"
+username="myuser"
 password="mypassword!"
 
 board1_ch1_V0Set = 1

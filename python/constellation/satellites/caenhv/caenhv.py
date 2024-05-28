@@ -23,6 +23,10 @@ class CaenHvSatellite(Satellite):
 
     def do_initializing(self, configuration):
         """Set up connection to HV module and configure settings."""
+        self.log.info(
+            "Received configuration with parameters: %s",
+            ", ".join(configuration.get_keys()),
+        )
         if getattr(self, "caen", None):
             # old connection
             self.caen.disconnect()
@@ -33,7 +37,17 @@ class CaenHvSatellite(Satellite):
         pw = configuration["password"]
         link = configuration["link"]
         link_arg = configuration["link_argument"]
-        self.caen.connect(system, link, link_arg, user, pw)
+        self.log.info(
+            "Connecting to %s via %s and %s using username '%s' and password '%s'",
+            system,
+            link,
+            link_arg,
+            user,
+            pw,
+        )
+        self.caen.connect(
+            system=system, link=link, argument=link_arg, user=user, password=pw
+        )
         if not self.caen.is_connected():
             raise RuntimeError("No connection to Caen HV crate established")
 
@@ -123,13 +137,14 @@ class CaenHvSatellite(Satellite):
         chno = int(request.payload["channel"])
         par = request.payload["parameter"]
         with self.caen as crate:
-            val = crate.boards[board].channels[chno].parameters[par]
+            val = crate.boards[board].channels[chno].parameters[par].value
         return val, None, None
 
     @cscp_requestable
     def about(self, _request):
         """Get info about the Satellite"""
-        res = "{__name__} "
+        # TODO extend with info on connected crate (FW release, etc)
+        res = f"{__name__} "
         return res, None, None
 
     def _power_down(self):
