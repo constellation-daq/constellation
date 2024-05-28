@@ -501,7 +501,7 @@ def main(args=None):
     # this sets the defaults for our Satellite
     parser.set_defaults(
         name="RedPitaya_data_sender",
-        cmd_port=233999,
+        cmd_port=23999,
         mon_port=55556,
         hb_port=61234,
         data_port=55557,
