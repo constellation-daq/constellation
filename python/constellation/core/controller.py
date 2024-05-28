@@ -23,6 +23,30 @@ from .commandmanager import get_cscp_commands
 from .configuration import load_config, flatten_config
 
 
+class SatelliteClassCommLink:
+    """A link to a Satellite Class."""
+
+    def __init__(self, name):
+        self._class_name = name
+
+    def __str__(self):
+        """Convert to class name."""
+        return self._class_name
+
+
+class SatelliteCommLink(SatelliteClassCommLink):
+    """A link to a Satellite."""
+
+    def __init__(self, name, cls):
+        self._name = name
+        self._uuid = str(get_uuid(f"{cls}.{name}"))
+        super().__init__(cls)
+
+    def __str__(self):
+        """Convert to canonical name."""
+        return f"{self._class_name}.{self._name}"
+
+
 class SatelliteArray:
     """Provide object-oriented control of connected Satellites."""
 
@@ -37,6 +61,12 @@ class SatelliteArray:
     def satellites(self):
         """Return the list of known Satellite."""
         return self._satellites
+
+    def get_satellite(self, sat_class: str, sat_name: str) -> SatelliteCommLink | None:
+        """Return a link to a Satellite given by its class and name."""
+        for sat in self._satellites:
+            if sat._name == sat_name and sat._class_name == sat_class:
+                return sat
 
     def _add_class(self, name: str, commands: dict[str]):
         """Add a new class to the array."""
@@ -59,7 +89,7 @@ class SatelliteArray:
             cl = self._add_class(cls, commands)
         sat = SatelliteCommLink(name, cls)
         self._add_cmds(sat, self._handler, commands)
-        setattr(cl, name, sat)
+        setattr(cl, self._sanitize_name(name), sat)
         self._satellites.append(sat)
         return sat
 
@@ -67,7 +97,7 @@ class SatelliteArray:
         """Remove a Satellite."""
         name, cls = self._get_name_from_uuid(uuid)
         # remove attribute
-        delattr(getattr(self, cls), name)
+        delattr(getattr(self, cls), self._sanitize_name(name))
         # clear from list
         self._satellites = [sat for sat in self._satellites if sat._uuid != uuid]
 
@@ -94,6 +124,10 @@ class SatelliteArray:
             w.call.__func__.__doc__ = doc
             setattr(obj, cmd, w.call)
 
+    def _sanitize_name(self, name):
+        """Remove characters not suited for Python methods from names."""
+        return name.replace("-", "_")
+
 
 class CommandWrapper:
     """Class to wrap command calls.
@@ -111,30 +145,6 @@ class CommandWrapper:
     def call(self, payload=None):
         """Perform call. This doc string will be overwritten."""
         return self.fcn(sat=self.sat, satcls=self.satcls, cmd=self.cmd, payload=payload)
-
-
-class SatelliteClassCommLink:
-    """A link to a Satellite Class."""
-
-    def __init__(self, name):
-        self._class_name = name
-
-    def __str__(self):
-        """Convert to class name."""
-        return self._class_name
-
-
-class SatelliteCommLink(SatelliteClassCommLink):
-    """A link to a Satellite."""
-
-    def __init__(self, name, cls):
-        self._name = name
-        self._uuid = str(get_uuid(f"{cls}.{name}"))
-        super().__init__(cls)
-
-    def __str__(self):
-        """Convert to canonical name."""
-        return f"{self._class_name}.{self._name}"
 
 
 class BaseController(CHIRPBroadcaster):
@@ -260,7 +270,7 @@ class BaseController(CHIRPBroadcaster):
                 satcls,
             )
         else:
-            targets = [getattr(getattr(self.constellation, satcls), sat)._uuid]
+            targets = [self.constellation.get_satellite(satcls, sat)._uuid]
             self.log.info("Sending %s to Satellite %s.", cmd, targets[0])
 
         res = {}
@@ -324,8 +334,11 @@ class BaseController(CHIRPBroadcaster):
             if any(isinstance(i, dict) for i in payload.values()):
                 # have a nested dict
                 cls, name = self._uuid_lookup[uuid]
-                self.log.debug("Flattening dictionary for %s.%s", cls, name)
-                return flatten_config(payload, cls, name)
+                cfg = flatten_config(payload, cls, name)
+                self.log.debug(
+                    "Flattening and sending configuration for %s.%s", cls, name
+                )
+                return cfg
         return payload
 
     def _run_task_handler(self):
