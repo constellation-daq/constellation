@@ -25,6 +25,7 @@ from constellation.core.datasender import DataSender
 from constellation.core import __version__
 
 DATA_PORT = 50101
+MON_PORT = 22222
 CMD_PORT = 10101
 FILE_NAME = "mock_file_{run_identifier}.h5"
 
@@ -104,13 +105,17 @@ def receiver_satellite():
     """A receiver Satellite."""
 
     class MockReceiverSatellite(H5DataReceiverWriter):
-        pass
+        def do_initializing(self, config: dict[str]) -> str:
+            res = super().do_initializing(config)
+            # configure monitoring with higher frequency
+            self._configure_monitoring(0.1)
+            return res
 
     s = MockReceiverSatellite(
         name="mock_receiver",
         group="mockstellation",
         cmd_port=CMD_PORT,
-        mon_port=22222,
+        mon_port=MON_PORT,
         hb_port=33333,
         interface="127.0.0.1",
     )
@@ -128,11 +133,29 @@ def test_datatransmitter(
     sender = mock_data_transmitter
     rx = mock_data_receiver
 
-    sender.send_start("mock payload")
+    payload = "mock payload"
+    sender.send_start(payload)
     msg = rx.recv()
-
-    assert msg.payload == "mock payload"
+    assert msg.payload == payload
     assert msg.msgtype == CDTPMessageIdentifier.BOR
+
+    payload = ["mock payload", "more mock data"]
+    sender.send_data(payload)
+    msg = rx.recv()
+    assert msg.payload == payload
+    assert msg.msgtype == CDTPMessageIdentifier.DAT
+
+    payload = None
+    sender.send_data(payload)
+    msg = rx.recv()
+    assert msg.payload == payload
+    assert msg.msgtype == CDTPMessageIdentifier.DAT
+
+    payload = {"mock": True}
+    sender.send_end(payload)
+    msg = rx.recv()
+    assert msg.payload == payload
+    assert msg.msgtype == CDTPMessageIdentifier.EOR
 
 
 @pytest.mark.forked
@@ -213,11 +236,10 @@ def test_receive_writing_package(
 
         for run_num in range(1, 3):
             # Send new data to handle
-            tx.send_start(["mock_start"])
+            tx.send_start({"mock_cfg": 1, "other_val": "mockval"})
             # send once as byte array with and once w/o dtype
             tx.send_data(payload.tobytes(), {"dtype": f"{payload.dtype}"})
             tx.send_data(payload.tobytes())
-            tx.send_end(["mock_end"])
             time.sleep(0.1)
 
             # Running satellite
@@ -227,6 +249,13 @@ def test_receive_writing_package(
                 receiver.fsm.current_state.id == "RUN"
             ), "Could not set up test environment"
             commander.request_get_response("stop")
+            time.sleep(0.5)
+            # receiver should still be in 'stopping' as no EOR has been sent
+            assert (
+                receiver.fsm.current_state.id.lower() == "stopping"
+            ), "Receiver stopped before receiving EORE"
+            # send EORE
+            tx.send_end({"mock_end": "whatanend"})
             wait_for_state(receiver.fsm, "ORBIT", 1)
             assert receiver.run_identifier == str(run_num)
 
@@ -235,17 +264,15 @@ def test_receive_writing_package(
             eor = "EOR"
             dat = [f"data_{run_num}_{i}" for i in range(1, 3)]
 
-            file = FILE_NAME.format(run_identifier=run_num)
-            assert os.path.exists(os.path.join(tmpdir, file))
-            h5file = h5py.File(tmpdir / pathlib.Path(file))
+            fn = FILE_NAME.format(run_identifier=run_num)
+            assert os.path.exists(os.path.join(tmpdir, fn))
+            h5file = h5py.File(tmpdir / pathlib.Path(fn))
             assert "simple_sender" in h5file.keys()
             assert bor in h5file["simple_sender"].keys()
-            assert "mock_start" in str(
-                h5file["simple_sender"][bor]["payload"][0], encoding="utf-8"
-            )
+            assert h5file["simple_sender"][bor]["mock_cfg"][()] == 1
             assert eor in h5file["simple_sender"].keys()
-            assert "mock_end" in str(
-                h5file["simple_sender"][eor]["payload"][0], encoding="utf-8"
+            assert "whatanend" in str(
+                h5file["simple_sender"][eor]["mock_end"][()], encoding="utf-8"
             )
             assert set(dat).issubset(
                 h5file["simple_sender"].keys()
@@ -262,3 +289,61 @@ def test_receive_writing_package(
                 == __version__.encode()
             )
             h5file.close()
+
+
+@pytest.mark.forked
+def test_receiver_stats(
+    receiver_satellite,
+    monitoringlistener,
+    commander,
+):
+    dp = 23242
+    ctx = zmq.Context()
+    socket = ctx.socket(zmq.PUSH)
+    socket.bind(f"tcp://127.0.0.1:{dp}")
+    tx = DataTransmitter("simple_sender", socket)
+
+    service = DiscoveredService(
+        get_uuid("simple_sender"),
+        CHIRPServiceIdentifier.DATA,
+        "127.0.0.1",
+        port=dp,
+    )
+
+    receiver = receiver_satellite
+    ml, tmpdir = monitoringlistener
+    commander.request_get_response(
+        "initialize", {"file_name_pattern": FILE_NAME, "output_path": tmpdir}
+    )
+    wait_for_state(receiver.fsm, "INIT", 1)
+    receiver._add_sender(service)
+    commander.request_get_response("launch")
+    wait_for_state(receiver.fsm, "ORBIT", 1)
+
+    payload = np.array(np.arange(1000), dtype=np.int16)
+
+    for run_num in range(1, 3):
+        # Send new data to handle
+        tx.send_start({"mock_cfg": 1, "other_val": "mockval"})
+        # send once as byte array with and once w/o dtype
+        tx.send_data(payload.tobytes(), {"dtype": f"{payload.dtype}"})
+        tx.send_data(payload.tobytes())
+        time.sleep(0.2)
+
+        # Running satellite
+        commander.request_get_response("start", str(run_num))
+        wait_for_state(receiver.fsm, "RUN", 1)
+        commander.request_get_response("stop")
+        # send EORE
+        tx.send_end({"mock_end": 22})
+        wait_for_state(receiver.fsm, "ORBIT", 1)
+    time.sleep(0.5)
+    assert len(receiver.receiver_stats) == 2
+    assert len(receiver._metrics_callbacks) > 1
+    assert len(ml._metric_sockets) == 1
+    assert os.path.exists(
+        os.path.join(tmpdir, "stats")
+    ), "Stats output directory not created"
+    assert os.path.exists(
+        os.path.join(tmpdir, "stats", "mock_receiver_nbytes.csv")
+    ), "Expected output metrics csv not found"

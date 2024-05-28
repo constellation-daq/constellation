@@ -134,6 +134,12 @@ State RUN {
 @enduml
 ```
 
+Each run is assigned a run identifier via the `start` transition command. Run identifiers can consist of alphanumeric
+characters, underscores or dashes. The `get_run_id` command always returns the currently active run identifier if the
+satellite is in the `RUN` state, or the last active run identifier in other cases. When the satellite has not yet entered
+the `RUN` state, the returned run identifier is empty.
+
+
 ### Changing States - Transitions
 
 Instrument code of the individual satellites is executed in so-called transitional states. They differ from steady states in

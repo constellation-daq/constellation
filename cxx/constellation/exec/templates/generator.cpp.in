@@ -23,9 +23,10 @@ using namespace constellation::satellite;
 
 // generator function for loading satellite from shared library
 extern "C" {
-    CNSTLN_ABI std::shared_ptr<constellation::satellite::Satellite> generator(std::string_view type, std::string_view name) {
-        return std::make_shared<@SATELLITE_CLASS@>(type, name);
-    }
+CNSTLN_DLL_EXPORT
+std::shared_ptr<constellation::satellite::Satellite> generator(std::string_view type, std::string_view name) {
+    return std::make_shared<@SATELLITE_CLASS@>(type, name);
+}
 }
 
 #ifdef __clang__

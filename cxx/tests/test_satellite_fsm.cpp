@@ -15,6 +15,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
+#include <msgpack.hpp>
 #include <zmq.hpp>
 
 #include "constellation/core/config/Configuration.hpp"
@@ -171,7 +172,7 @@ TEST_CASE("FSM interrupts and failures", "[satellite][satellite::fsm]") {
     satellite->progress_fsm(fsm);
     REQUIRE(fsm.getState() == State::RUN);
     fsm.react(Transition::interrupt);
-    std::this_thread::sleep_for(100ms); // Give some time call stopping and landing
+    std::this_thread::sleep_for(150ms); // Give some time call stopping and landing
     satellite->progress_fsm(fsm);
     REQUIRE(fsm.getState() == State::SAFE);
 }
@@ -203,6 +204,15 @@ TEST_CASE("React via CSCP", "[satellite][satellite::fsm][cscp]") {
     REQUIRE(ret.first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(ret.second, Equals("Transition launch is being initiated (payload frame is ignored)"));
     satellite->progress_fsm(fsm);
+
+    // INVALID when invalid run ID is provided
+    msgpack::sbuffer sbuf {};
+    msgpack::pack(sbuf, "run_12&34");
+    const auto payload_string = constellation::message::payload_buffer(std::move(sbuf));
+    ret = fsm.reactCommand(TransitionCommand::start, payload_string);
+    REQUIRE(ret.first == CSCP1Message::Type::INCOMPLETE);
+    REQUIRE_THAT(ret.second,
+                 Equals("Transition start received invalid payload: Run identifier contains invalid characters"));
 
     // NOTIMPLEMENTED if reconfigure not supported
     satellite->dummy_support_reconfigure(false);

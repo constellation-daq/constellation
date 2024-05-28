@@ -92,7 +92,7 @@ export CXX="g++-13"
 ## Building the C++ Version
 
 ```sh
-meson setup build
+meson setup build -Dbuildtype=debugoptimized
 meson compile -C build
 ```
 

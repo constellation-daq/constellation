@@ -5,7 +5,6 @@ SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 """
 
-import logging
 import threading
 import time
 from queue import Empty
@@ -19,7 +18,7 @@ from .chirp import CHIRPServiceIdentifier, get_uuid
 from .cscp import CommandTransmitter
 from .error import debug_log
 from .satellite import Satellite
-from .base import EPILOG, ConstellationArgumentParser
+from .base import EPILOG, ConstellationArgumentParser, setup_cli_logging
 from .commandmanager import get_cscp_commands
 from .configuration import load_config, flatten_config
 
@@ -364,7 +363,6 @@ def main(args=None):
     Constellation group via IPython terminal.
 
     """
-    import coloredlogs
     from IPython import embed
 
     parser = ConstellationArgumentParser(description=main.__doc__, epilog=EPILOG)
@@ -377,9 +375,7 @@ def main(args=None):
     args = vars(parser.parse_args(args))
 
     # set up logging
-    logger = logging.getLogger(args["name"])
-    log_level = args.pop("log_level")
-    coloredlogs.install(level=log_level.upper(), logger=logger)
+    logger = setup_cli_logging(args["name"], args.pop("log_level"))
 
     cfg_file = args.pop("config")
 

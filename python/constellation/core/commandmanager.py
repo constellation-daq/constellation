@@ -145,10 +145,10 @@ class CommandReceiver(BaseSatelliteFrame):
                     "WrongImplementation", CSCPMessageVerb.NOTIMPLEMENTED, repr(e)
                 )
                 continue
-            except TransitionNotAllowed:
-                self.log.error("Transition %s not allowed", req.msg)
+            except TransitionNotAllowed as e:
+                self.log.error("Transition '%s' not allowed: %s", req.msg, e)
                 self._cmd_tm.send_reply(
-                    "Transition not allowed", CSCPMessageVerb.INVALID, None
+                    f"Transition not allowed: {e}", CSCPMessageVerb.INVALID, None
                 )
                 continue
             except Exception as e:
@@ -204,3 +204,23 @@ class CommandReceiver(BaseSatelliteFrame):
 
         """
         return self.name, None, None
+
+    @cscp_requestable
+    def shutdown(self, _request: CSCPMessage = None):
+        """Queue the Satellite's reentry.
+
+        No payload argument.
+
+        """
+
+        # initialize shutdown with delay (so that CSCP response reaches
+        # Controller)
+        def reentry_timer(sat):
+            time.sleep(0.5)
+            sat.reentry()
+
+        # This command is put into the queue: it will only execute after
+        # previously queued actions (e.g. state transitions) have been
+        # completed.
+        self.task_queue.put((reentry_timer, [self]))
+        return f"{self.name} queued for reentry", None, None

@@ -71,7 +71,11 @@ class DiscoveredService:
 
     def __eq__(self, other):
         """Comparison operator for network-related properties."""
-        return self.address == other.address and self.port == other.port
+        return (
+            self.host_uuid == other.host_uuid
+            and self.serviceid == other.serviceid
+            and self.port == other.port
+        )
 
     def __str__(self):
         """Pretty-print a string for this service."""

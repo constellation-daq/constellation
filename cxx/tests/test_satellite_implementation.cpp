@@ -139,6 +139,15 @@ TEST_CASE("Get commands", "[satellite]") {
     REQUIRE(config.size() == 0);
     // TODO(stephan.lachnit): test with a non-empty configuration
 }
+
+TEST_CASE("Satellite name", "[satellite]") {
+    class InvalidSatellite : public Satellite {
+    public:
+        InvalidSatellite() : Satellite("Invalid", "invalid_satellite&name") {}
+    };
+    REQUIRE_THROWS_MATCHES(std::make_shared<InvalidSatellite>(), RuntimeError, Message("Satellite name is invalid"));
+}
+
 TEST_CASE("User commands", "[satellite]") {
     // Create and start satellite
     auto satellite = std::make_shared<DummySatellite>();
@@ -225,7 +234,7 @@ TEST_CASE("Transitions", "[satellite]") {
     REQUIRE_THAT(to_string(recv_msg_initialize.getVerb().second), Equals("Transition initialize is being initiated"));
 
     // Check state
-    std::this_thread::sleep_for(100ms);
+    std::this_thread::sleep_for(150ms);
     sender.send_command("get_state");
     auto recv_msg_get_status = sender.recv();
     REQUIRE(recv_msg_get_status.getVerb().first == CSCP1Message::Type::SUCCESS);
@@ -247,13 +256,14 @@ TEST_CASE("Shutdown", "[satellite]") {
     sender.send(initialize_msg);
     auto recv_msg_initialize = sender.recv();
     REQUIRE(recv_msg_initialize.getVerb().first == CSCP1Message::Type::SUCCESS);
+    std::this_thread::sleep_for(150ms);
 
     // Send launch
     auto launch_msg = CSCP1Message({"cscp_sender"}, {CSCP1Message::Type::REQUEST, "launch"});
     sender.send(launch_msg);
     auto recv_msg_launch = sender.recv();
     REQUIRE(recv_msg_launch.getVerb().first == CSCP1Message::Type::SUCCESS);
-    std::this_thread::sleep_for(100ms);
+    std::this_thread::sleep_for(150ms);
 
     // Try shutdown & fail
     auto shutdown1_msg = CSCP1Message({"cscp_sender"}, {CSCP1Message::Type::REQUEST, "shutdown"});
@@ -268,7 +278,7 @@ TEST_CASE("Shutdown", "[satellite]") {
     sender.send(land_msg);
     auto recv_msg_land = sender.recv();
     REQUIRE(recv_msg_land.getVerb().first == CSCP1Message::Type::SUCCESS);
-    std::this_thread::sleep_for(100ms);
+    std::this_thread::sleep_for(150ms);
 
     // Try shutdown & succeed
     auto shutdown2_msg = CSCP1Message({"cscp_sender"}, {CSCP1Message::Type::REQUEST, "shutdown"});
@@ -386,7 +396,7 @@ TEST_CASE("Catch incorrect payload", "[satellite]") {
                  Equals("Transition initialize received incorrect payload"));
 
     // Check state
-    std::this_thread::sleep_for(100ms);
+    std::this_thread::sleep_for(150ms);
     sender.send_command("get_state");
     auto recv_msg_get_status = sender.recv();
     REQUIRE(recv_msg_get_status.getVerb().first == CSCP1Message::Type::SUCCESS);
@@ -401,7 +411,16 @@ TEST_CASE("Catch invalid user command registrations", "[satellite]") {
     public:
         MySatellite() { register_command("", "A User Command", {}, &MySatellite::cmd, this); }
     };
-    REQUIRE_THROWS_MATCHES(std::make_shared<MySatellite>(), LogicError, Message("Can not register command with empty name"));
+    REQUIRE_THROWS_MATCHES(std::make_shared<MySatellite>(), LogicError, Message("Command name is invalid"));
+
+    class MySatelliteI : public DummySatellite {
+        // NOLINTNEXTLINE(readability-convert-member-functions-to-static,readability-make-member-function-const)
+        int cmd() { return 2; }
+
+    public:
+        MySatelliteI() { register_command("command_with_amper&sand", "A User Command", {}, &MySatelliteI::cmd, this); }
+    };
+    REQUIRE_THROWS_MATCHES(std::make_shared<MySatelliteI>(), LogicError, Message("Command name is invalid"));
 
     class MySatellite2 : public DummySatellite {
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static,readability-make-member-function-const)

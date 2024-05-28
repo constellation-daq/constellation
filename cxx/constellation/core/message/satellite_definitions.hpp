@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cstdint>
+#include <regex>
 #include <type_traits>
 #include <utility>
 
@@ -76,6 +77,17 @@ namespace constellation::message {
         get_run_id,
         shutdown,
     };
+
+    inline bool is_valid_name(const std::string& name) {
+        // Alphanumeric characters and dashes
+        return (!name.empty() && std::regex_match(name, std::regex("[\\w\\d-]+")));
+    }
+
+    inline bool is_valid_command_name(const std::string& name) {
+        // Alphanumeric characters, do not start with a digit
+        return (!name.empty() && std::regex_match(name, std::regex("[\\w\\d]+")) &&
+                !static_cast<bool>(std::isdigit(static_cast<unsigned char>(name[0]))));
+    }
 
 } // namespace constellation::message
 

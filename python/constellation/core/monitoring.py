@@ -15,7 +15,12 @@ from functools import wraps
 from datetime import datetime
 from logging.handlers import QueueHandler, QueueListener
 
-from .base import BaseSatelliteFrame, ConstellationArgumentParser, EPILOG
+from .base import (
+    BaseSatelliteFrame,
+    ConstellationArgumentParser,
+    EPILOG,
+    setup_cli_logging,
+)
 from .cmdp import CMDPTransmitter, Metric, MetricsType
 from .chirp import CHIRPServiceIdentifier
 from .broadcastmanager import CHIRPBroadcaster, chirp_callback, DiscoveredService
@@ -136,6 +141,14 @@ class MonitoringSender(BaseSatelliteFrame):
     def send_metric(self, metric: Metric):
         """Send a single metric via ZMQ."""
         return self._mon_tm.send_metric(metric)
+
+    def reset_scheduled_metrics(self):
+        """Reset all previously scheduled metrics.
+
+        Will only schedule metrics provided via decorator.
+
+        """
+        self._metrics_callbacks = get_scheduled_metrics(self)
 
     def _add_com_thread(self):
         """Add the metric sender thread to the communication thread pool."""
@@ -397,8 +410,6 @@ class MonitoringListener(CHIRPBroadcaster):
 
 def main(args=None):
     """Start a simple log listener service."""
-    import coloredlogs
-
     parser = ConstellationArgumentParser(description=main.__doc__, epilog=EPILOG)
     parser.add_argument(
         "-o",
@@ -412,9 +423,7 @@ def main(args=None):
     args = vars(parser.parse_args(args))
 
     # set up logging
-    logger = logging.getLogger(args["name"])
-    log_level = args.pop("log_level")
-    coloredlogs.install(level=log_level.upper(), logger=logger)
+    setup_cli_logging(args["name"], args.pop("log_level"))
 
     mon = MonitoringListener(**args)
     mon.receive_metrics()

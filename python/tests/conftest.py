@@ -7,6 +7,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 import operator
 import threading
+from tempfile import TemporaryDirectory
 import time
 import zmq
 import os
@@ -16,6 +17,10 @@ from constellation.core.satellite import Satellite
 from constellation.core.chirp import (
     CHIRP_PORT,
     CHIRPBeaconTransmitter,
+)
+
+from constellation.core.monitoring import (
+    MonitoringListener,
 )
 
 from constellation.core.cscp import CommandTransmitter
@@ -293,11 +298,29 @@ def mock_example_satellite(mock_chirp_socket):
         yield s
 
 
+@pytest.fixture
+def monitoringlistener():
+    """Create a MonitoringListener instance."""
+
+    with TemporaryDirectory() as tmpdirname:
+        m = MonitoringListener(
+            name="mock_monitor",
+            group="mockstellation",
+            interface="*",
+            output_path=tmpdirname,
+        )
+        t = threading.Thread(target=m.receive_metrics)
+        t.start()
+        # give the thread a chance to start
+        time.sleep(0.1)
+        yield m, tmpdirname
+
+
 def wait_for_state(fsm, state: str, timeout: float = 2.0):
     while timeout > 0 and fsm.current_state.id != state:
         time.sleep(0.05)
         timeout -= 0.05
     if timeout < 0:
         raise RuntimeError(
-            f"Never reached {state}, now in state {fsm.current_state.id}"
+            f"Never reached {state}, now in state {fsm.current_state.id} with status '{fsm.status}'"
         )

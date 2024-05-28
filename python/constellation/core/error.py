@@ -28,7 +28,7 @@ def handle_error(func):
             # set the FSM into failure
             self.fsm.failure(err_msg)
             self._wrap_failure()
-            self.log.error(err_msg + traceback.format_exc())
+            self.log.critical(err_msg + traceback.format_exc())
             return None
 
     return wrapper
@@ -39,9 +39,16 @@ def debug_log(func):
 
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-        self.log.debug("-> Entering %s with args: %s", func.__name__, args)
+        self.log.trace(
+            "-> Entering %s.%s with args: %s", type(self).__name__, func.__name__, args
+        )
         output = func(self, *args, **kwargs)
-        self.log.debug("<- Exiting %s with output: %s", func.__name__, output)
+        self.log.trace(
+            "<- Exiting %s.%s with output: %s",
+            type(self).__name__,
+            func.__name__,
+            output,
+        )
         return output
 
     return wrapper

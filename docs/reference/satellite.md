@@ -12,7 +12,7 @@ minimal set of functionality for them to interoperate with each other.
 
 The full canonical name of a satellite consists of its type and its name:
 
-* The name of the satellite is a user-chosen name.
+* The name of the satellite is a user-chosen name. This name can only consist of alphanumeric characters, underscores and dashes (in regex: `[\w\d-]+`)
 * The type the satellite corresponds to the class name of the satellite implementation
 * The canonical name of the satellite consists of the above information in the form "type.name"
 
@@ -53,6 +53,7 @@ objects.
 | `shutdown` | - | Acknowledgement | -
 
 Command names shall only contain alphanumeric characters or underscores and cannot start with a digit.
+The run identifier shall only contain alphanumeric characters, underscores or dashes (in regex: `[\w\d-]+`).
 
 ## FSM States
 

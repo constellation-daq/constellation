@@ -8,7 +8,6 @@ This module provides the class for a Constellation Satellite.
 
 import time
 from queue import Empty
-import logging
 import threading
 import traceback
 
@@ -24,7 +23,7 @@ from .commandmanager import CommandReceiver, cscp_requestable
 from .configuration import Configuration
 from .monitoring import MonitoringSender
 from .error import debug_log, handle_error
-from .base import EPILOG, ConstellationArgumentParser
+from .base import EPILOG, ConstellationArgumentParser, setup_cli_logging
 
 
 class Satellite(
@@ -253,7 +252,6 @@ class Satellite(
             self._state_thread_evt.set()
         # wait for result, will raise TimeoutError if not successful
         self._state_thread_fut.result(timeout=10)
-        self._state_thread_evt = None
         return self.do_stopping(payload)
 
     @debug_log
@@ -283,7 +281,7 @@ class Satellite(
         return "Finished preparations, starting."
 
     @debug_log
-    def do_run(self, payload: any) -> str:
+    def do_run(self, run_identifier: str) -> str:
         """The acquisition event loop.
 
         This method will be started by the Satellite and run in a thread. It
@@ -461,8 +459,6 @@ def main(args=None):
     test basic communication.
 
     """
-    import coloredlogs
-
     parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
     # this sets the defaults for our "demo" Satellite
     parser.set_defaults(
@@ -472,9 +468,7 @@ def main(args=None):
     args = vars(parser.parse_args(args))
 
     # set up logging
-    logger = logging.getLogger(args["name"])
-    log_level = args.pop("log_level")
-    coloredlogs.install(level=log_level.upper(), logger=logger)
+    logger = setup_cli_logging(args["name"], args.pop("log_level"))
 
     logger.info("Starting up satellite!")
     # start server with remaining args

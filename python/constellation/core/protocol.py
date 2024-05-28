@@ -28,7 +28,9 @@ class MessageHeader:
         self.name = name
         self.protocol = protocol
 
-    def send(self, socket: zmq.Socket, flags: int = zmq.SNDMORE, meta: dict = None):
+    def send(
+        self, socket: zmq.Socket, flags: int = zmq.SNDMORE, meta: dict = None, **kwargs
+    ):
         """Send a message header via socket.
 
         meta is an optional dictionary that is sent as a map of string/value
@@ -37,7 +39,7 @@ class MessageHeader:
         Returns: return value from socket.send().
 
         """
-        return socket.send(self.encode(meta), flags)
+        return socket.send(self.encode(meta, **kwargs), flags)
 
     def recv(self, socket: zmq.Socket, flags: int = 0):
         """Receive header from socket and return all decoded fields."""
@@ -48,17 +50,27 @@ class MessageHeader:
         unpacker = msgpack.Unpacker()
         unpacker.feed(header)
         protocol = unpacker.unpack()
-        host = unpacker.unpack()
-        timestamp = unpacker.unpack()
-        meta = unpacker.unpack()
         if not protocol == self.protocol.value:
             raise RuntimeError(
                 f"Received message with malformed {self.protocol.name} header: {header}!"
             )
+        host = unpacker.unpack()
+        timestamp = unpacker.unpack()
+        if protocol == Protocol.CDTP:
+            msgtype = unpacker.unpack()
+            seqno = unpacker.unpack()
+            meta = unpacker.unpack()
+            return host, timestamp, msgtype, seqno, meta
+        meta = unpacker.unpack()
         return host, timestamp, meta
 
-    def encode(self, meta: dict = None):
-        """Generate and return a header as list."""
+    def encode(self, meta: dict = None, **kwargs):
+        """Generate and return a header as list.
+
+        Additional keyword arguments are required for protocols specifying
+        additional fields.
+
+        """
         if not meta:
             meta = {}
         stream = io.BytesIO()
@@ -66,5 +78,8 @@ class MessageHeader:
         stream.write(packer.pack(self.protocol.value))
         stream.write(packer.pack(self.name))
         stream.write(packer.pack(msgpack.Timestamp.from_unix_nano(time.time_ns())))
+        if self.protocol == Protocol.CDTP:
+            stream.write(packer.pack(kwargs["msgtype"]))
+            stream.write(packer.pack(kwargs["seqno"]))
         stream.write(packer.pack(meta))
         return stream.getbuffer()

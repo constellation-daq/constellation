@@ -71,6 +71,11 @@ if host_machine.system() == 'windows'
   constellation_args += ['-DWIN32_LEAN_AND_MEAN', '-DNOGDI']
 endif
 
+# Globally add flags for static libraries
+if get_option('default_library') == 'static'
+  add_project_arguments(['-DCNSTLN_STATIC=1', '-DZMQ_STATIC=1'], language: 'cpp')
+endif
+
 constellation_inc = include_directories('.')
 
 # RPATH for non-default install locations

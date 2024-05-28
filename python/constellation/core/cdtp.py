@@ -8,7 +8,6 @@ Module implementing the Constellation Data Transmission Protocol.
 
 from enum import Enum
 
-import io
 import msgpack
 import zmq
 
@@ -38,10 +37,24 @@ class CDTPMessage:
     meta: dict[str, any] = {}
     payload: any = None
 
-    def set_header(self, name, timestamp, meta):
+    def set_header(
+        self,
+        name: str,
+        timestamp: msgpack.Timestamp,
+        msgtype: int,
+        seqno: int,
+        meta: dict,
+    ):
         """Sets information retrieved from a message header."""
         self.name = name
         self.timestamp = timestamp
+        try:
+            self.msgtype = CDTPMessageIdentifier(msgtype)
+        except ValueError as exc:
+            raise RuntimeError(
+                f"Received invalid sequence identifier with msg: {msgtype}"
+            ) from exc
+        self.sequence_number = seqno
         self.meta = meta
 
     def __str__(self):
@@ -87,7 +100,7 @@ class DataTransmitter:
         """
         self.sequence_number = 0
         return self._dispatch(
-            run_identifier=CDTPMessageIdentifier.BOR,
+            msgtype=CDTPMessageIdentifier.BOR,
             payload=payload,
             meta=meta,
             flags=flags,
@@ -109,7 +122,7 @@ class DataTransmitter:
         """
         self.sequence_number += 1
         return self._dispatch(
-            run_identifier=CDTPMessageIdentifier.DAT,
+            msgtype=CDTPMessageIdentifier.DAT,
             payload=payload,
             meta=meta,
             flags=flags,
@@ -128,54 +141,11 @@ class DataTransmitter:
         """
 
         return self._dispatch(
-            run_identifier=CDTPMessageIdentifier.EOR,
+            msgtype=CDTPMessageIdentifier.EOR,
             payload=payload,
             meta=meta,
             flags=flags,
         )
-
-    def _dispatch(
-        self,
-        run_identifier: CDTPMessageIdentifier,
-        payload: any = None,
-        meta: dict = None,
-        flags: int = 0,
-    ):
-        """Send a payload over a ZMQ socket.
-
-        Follows the Constellation Data Transmission Protocol.
-
-        run_identifier: flag identifying start, middle and end of run
-
-        payload: data to send.
-
-        meta: dictionary to include in the map of the message header.
-
-        flags: additional ZMQ socket flags to use during transmission.
-
-        Returns: return of socket.send(payload) call.
-
-        """
-
-        stream = io.BytesIO()
-        packer = msgpack.Packer()
-        stream.write(packer.pack(run_identifier.value))
-        stream.write(packer.pack(self.sequence_number))
-        # Set option to send more based on flag input
-        flags = zmq.SNDMORE | flags
-        # message header
-        self.msgheader.send(self._socket, meta=meta, flags=flags)
-        if payload is None:
-            flags = flags & (~zmq.SNDMORE)  # flip SNDMORE bit
-        self._socket.send(
-            stream.getbuffer(),
-            flags=flags,
-        )
-
-        # payload
-        if payload is not None:
-            flags = flags & (~zmq.SNDMORE)  # flip SNDMORE bit
-            self._socket.send(packer.pack(payload), flags=flags)
 
     def recv(self, flags: int = 0) -> CDTPMessage:
         """Receive a multi-part data transmission.
@@ -197,22 +167,52 @@ class DataTransmitter:
         """Decode a binary message into a CTDPMessage."""
         msg = CDTPMessage()
         msg.set_header(*self.msgheader.decode(binmsg[0]))
-        unpacker = msgpack.Unpacker()
-        unpacker.feed(binmsg[1])
 
-        # Retrieve sequence identifier and number
-        try:
-            msg.msgtype = CDTPMessageIdentifier(unpacker.unpack())
-        except ValueError as exc:
-            raise RuntimeError(
-                f"Received invalid sequence identifier with msg: {msg.msgtype}"
-            ) from exc
-        msg.sequence_number = unpacker.unpack()
-
-        try:
-            # Retrieve payload
-            unpacker.feed(binmsg[2])
-            msg.payload = unpacker.unpack()
-        except IndexError:
-            pass
+        # Retrieve payload
+        if len(binmsg[1:]) > 1:
+            msg.payload = [msgpack.unpackb(frame) for frame in binmsg[1:]]
+        else:
+            try:
+                msg.payload = msgpack.unpackb(binmsg[1])
+            except IndexError:
+                # no payload
+                pass
         return msg
+
+    def _dispatch(
+        self,
+        msgtype: CDTPMessageIdentifier,
+        payload: any = None,
+        meta: dict = None,
+        flags: int = 0,
+    ):
+        """Dispatch CDTP message.
+
+        msgtype: flag identifying whether transmitting beginning-of-run, data or end-of-run
+
+        payload: data to send.
+
+        meta: dictionary to include in the map of the message header.
+
+        flags: additional ZMQ socket flags to use during transmission.
+
+        Returns: None
+
+        """
+
+        if payload:
+            flags = zmq.SNDMORE | flags
+        # message header
+        self.msgheader.send(
+            self._socket,
+            meta=meta,
+            flags=flags,
+            msgtype=msgtype.value,
+            seqno=self.sequence_number,
+        )
+
+        # payload
+        if payload:
+            packer = msgpack.Packer()
+            flags = flags & (~zmq.SNDMORE)  # flip SNDMORE bit
+            self._socket.send(packer.pack(payload), flags=flags)

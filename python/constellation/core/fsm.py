@@ -318,8 +318,12 @@ class SatelliteStateHandler(BaseSatelliteFrame):
             res = "Transition completed!"
         # try to advance the FSM for finishing transitional states
         try:
+            prev = self.fsm.current_state.id
             self.fsm.complete(res)
-            self.log.info("State transition to steady state completed.")
+            now = self.fsm.current_state.id
+            self.log.info(
+                f"State transition to steady state completed ({prev} -> {now})."
+            )
         except TransitionNotAllowed:
             # no need to do more than set the status, we are in a steady
             # operational state
@@ -330,37 +334,38 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         """Start a transition thread with the given fcn and arguments."""
         self._state_thread_evt = Event()
         self._state_thread_fut = self._state_thread_exc.submit(fcn, payload)
-        # add a callback when transition is complete
+        # add a callback triggered when transition is complete
         self._state_thread_fut.add_done_callback(self._state_transition_thread_complete)
 
     @handle_error
     def _state_transition_thread_complete(self, fut: Future) -> None:
         """Callback method when a transition thread is done."""
-        self.log.debug("Transition completed and callback received.")
+        self.log.trace("Transition thread completed and callback received.")
         # Get the thread's return value. This raises any exception thrown in the
         # thread, which will be handled by the @handle_error decorator to put us
         # into ERROR state.
-        # TODO: test that this is the case
         res = fut.result()
         if not res:
             res = "Transition completed!"
+        if self._state_thread_evt.is_set():
+            # Cancelled; do not advance state. This handles stopping RUN state
+            # and avoids premature progression out of STOPPING
+            self._state_thread_evt = None
+            return
+        # cleanup
+        self._state_thread_evt = None
         # try to advance the FSM for finishing transitional states
-        #
-        # TODO take into account that we might have cancelled the transition, so
-        # check whether the event is set here and abort if so
-        #
-        # TODO/NOTE the Event might also be set in case we are shutting down; then
-        # the abort FSM transition might not be allowed and we just want to
-        # close things down; take this case into account as well
         try:
+            prev = self.fsm.current_state.id
             self.fsm.complete(res)
-            self.log.info("State transition to steady state completed.")
+            now = self.fsm.current_state.id
+            self.log.info(
+                f"State transition to steady state completed ({prev} -> {now})."
+            )
         except TransitionNotAllowed:
             # no need to do more than set the status, we are in a steady
             # operational state
             self.fsm.status = res
-        # cleanup
-        self._state_thread_evt = None
 
     @cscp_requestable
     def get_state(self, _request: CSCPMessage = None) -> (str, None, None):

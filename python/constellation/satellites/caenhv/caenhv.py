@@ -5,13 +5,12 @@ SPDX-License-Identifier: CC-BY-4.0
 
 This module provides the class for a Constellation Satellite.
 """
-import logging
-import coloredlogs
 from functools import partial
 
 from ..core.satellite import Satellite, SatelliteArgumentParser
 from ..core.fsm import SatelliteState
 from ..core.commandmanager import cscp_requestable
+from ..core.base import setup_cli_logging
 import pycaenhv
 
 
@@ -143,17 +142,23 @@ class CaenHvSatellite(Satellite):
 
     def _configure_monitoring(self):
         """Schedule monitoring for certain parameters."""
+        self.reset_scheduled_metrics()
         with self.caen as crate:
             for brdno, brd in crate.boards.items():
                 # loop over boards
-                self.log.info("Configuring board %s", brd)
+                self.log.info("Configuring monitoring for board %s", brd)
                 for chno, ch in enumerate(brd.channels):
                     # loop over channels
                     for par in ["IMon", "VMon"]:
                         # add a callback using partial
                         self.schedule_metric(
                             f"b{brdno}_ch{chno}_{par}",
-                            partial(self.get_channel_value(brdno, chno, par)),
+                            partial(
+                                self.get_channel_value,
+                                board=brdno,
+                                channel=chno,
+                                par=par,
+                            ),
                             10.0,
                         )
 
@@ -178,7 +183,6 @@ class CaenHvSatellite(Satellite):
 
 def main(args=None):
     """The CAEN high-voltage Satellite for controlling a SY5527 HV crate."""
-
     parser = SatelliteArgumentParser(
         description=main.__doc__,
         epilog="This is a 3rd-party component of Constellation.",
@@ -193,9 +197,7 @@ def main(args=None):
     args = vars(parser.parse_args(args))
 
     # set up logging
-    logger = logging.getLogger(args["name"])
-    log_level = args.pop("log_level")
-    coloredlogs.install(level=log_level.upper(), logger=logger)
+    setup_cli_logging(args["name"], args.pop("log_level"))
 
     # start server with remaining args
     s = CaenHvSatellite(**args)

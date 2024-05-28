@@ -18,6 +18,7 @@
 
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/logging/log.hpp"
+#include "constellation/core/message/satellite_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
@@ -25,7 +26,11 @@ using namespace constellation::satellite;
 using namespace constellation::utils;
 
 Satellite::Satellite(std::string_view type, std::string_view name)
-    : logger_("SATELLITE"), satellite_type_(type), satellite_name_(name) {}
+    : logger_("SATELLITE"), satellite_type_(type), satellite_name_(name) {
+    if(!message::is_valid_name(std::string(name))) {
+        throw RuntimeError("Satellite name is invalid");
+    }
+}
 
 std::string Satellite::getCanonicalName() const {
     return to_string(satellite_type_) + "." + to_string(satellite_name_);

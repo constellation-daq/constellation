@@ -13,6 +13,7 @@
 #include <ctime>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -24,6 +25,10 @@
 #include <spdlog/pattern_formatter.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
+
+#ifdef _WIN32
+#include <wincon.h>
+#endif
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
@@ -100,7 +105,14 @@ SinkManager::SinkManager() : cmdp_global_level_(OFF) {
     console_sink_->set_formatter(std::move(formatter));
 
     // Set colors of console sink
-#ifndef _WIN32
+#ifdef _WIN32
+    console_sink_->set_color(to_spdlog_level(CRITICAL), FOREGROUND_RED | FOREGROUND_INTENSITY);
+    console_sink_->set_color(to_spdlog_level(STATUS), FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+    console_sink_->set_color(to_spdlog_level(WARNING), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+    console_sink_->set_color(to_spdlog_level(INFO), FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+    console_sink_->set_color(to_spdlog_level(DEBUG), FOREGROUND_GREEN | FOREGROUND_BLUE);
+    console_sink_->set_color(to_spdlog_level(TRACE), FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+#else
     console_sink_->set_color(to_spdlog_level(CRITICAL), "\x1B[31;1m"); // Bold red
     console_sink_->set_color(to_spdlog_level(STATUS), "\x1B[32;1m");   // Bold green
     console_sink_->set_color(to_spdlog_level(WARNING), "\x1B[33;1m");  // Bold yellow

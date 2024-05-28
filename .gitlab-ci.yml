@@ -79,7 +79,7 @@ variables:
   image: gitlab.desy.de:5555/constellation/build-images/debian-clang:latest
   variables:
     CXX: ccache clang++
-    CXX_LD: mold
+    CXX_LD: lld
 
 .debian-gcc:
   image: gitlab.desy.de:5555/constellation/build-images/debian-gcc:latest
@@ -90,6 +90,7 @@ variables:
   image: gitlab.desy.de:5555/constellation/build-images/fedora-clang:latest
   variables:
     CXX: ccache clang++
+    CXX_LD: mold
 
 .fedora-mingw:
   image: gitlab.desy.de:5555/constellation/build-images/fedora-mingw:latest
@@ -161,7 +162,7 @@ variables:
     - *meson-wrap-cache
     - *ccache
   script:
-    - meson setup build -Dimpl_cxx=enabled -Dcxx_tests=enabled ${BUILD_OPTIONS}
+    - meson setup build -Dimpl_cxx=enabled -Dcxx_tests=enabled -Dbuildtype=${BUILD_TYPE} ${BUILD_OPTIONS}
     - meson compile -C build ${NINJA_OPTIONS}
   artifacts:
     paths:
@@ -185,21 +186,24 @@ build:alma9-cern:
       policy: pull-push
     - *ccache
   variables:
-    BUILD_OPTIONS: "-Dbuildtype=release -Db_lto=true -Db_lto_mode=thin"
+    BUILD_TYPE: "release"
+    BUILD_OPTIONS: "-Db_lto=true -Db_lto_mode=thin"
 
 build:debian-clang:
   extends:
     - .build-cpp
     - .debian-clang
   variables:
-    BUILD_OPTIONS: "-Dbuildtype=debugoptimized -Db_sanitize=address -Db_lundef=false"
+    BUILD_TYPE: "debug"
+    BUILD_OPTIONS: "-Dcpp_stdlib=c++ -Db_sanitize=address -Db_lundef=false"
 
 build:debian-gcc:
   extends:
     - .build-cpp
     - .debian-gcc
   variables:
-    BUILD_OPTIONS: "-Dbuildtype=debug -Db_coverage=true -Dcpp_std=c++23"
+    BUILD_TYPE: "debug"
+    BUILD_OPTIONS: "-Dcpp_std=c++23 -Db_coverage=true"
   <<: *cpp-python-rules # Run on both C++ and Python changes for correct coverage reporting
 
 build:fedora-clang:
@@ -207,14 +211,15 @@ build:fedora-clang:
     - .build-cpp
     - .fedora-clang
   variables:
-    BUILD_OPTIONS: "-Dbuildtype=debugoptimized -Dcpp_stdlib=c++ -Db_sanitize=address -Db_lundef=false"
+    BUILD_TYPE: "debugoptimized"
 
 build:fedora-mingw:
   extends:
     - .build-cpp
     - .fedora-mingw
   variables:
-    BUILD_OPTIONS: "-Dbuildtype=debug --cross .cross/mingw-ucrt.ini"
+    BUILD_TYPE: "release"
+    BUILD_OPTIONS: "--cross .cross/mingw-ucrt.ini"
     NINJA_OPTIONS: "-l4"
   retry: 2
 
@@ -223,7 +228,7 @@ build:ubuntu-22.04:
     - .build-cpp
     - .ubuntu-22.04
   variables:
-    BUILD_OPTIONS: "-Dbuildtype=debugoptimized"
+    BUILD_TYPE: "debugoptimized"
     NINJA_OPTIONS: "-l4"
   retry: 2
 
@@ -232,7 +237,7 @@ build:ubuntu-24.04:
     - .build-cpp
     - .ubuntu-24.04
   variables:
-    BUILD_OPTIONS: "-Dbuildtype=release"
+    BUILD_TYPE: "debugoptimized"
 
 build:python-3.11:
   extends:

@@ -139,6 +139,9 @@ std::pair<CSCP1Message::Type, std::string> FSM::reactCommand(TransitionCommand t
                 fsm_payload = Configuration(Dictionary::disassemble(payload));
             } else if(transition == Transition::start) {
                 const auto msgpack_payload = msgpack::unpack(to_char_ptr(payload.span().data()), payload.span().size());
+                if(!is_valid_name(msgpack_payload->as<std::string>())) {
+                    throw msgpack::unpack_error("Run identifier contains invalid characters");
+                }
                 fsm_payload = msgpack_payload->as<std::string>();
             }
         }

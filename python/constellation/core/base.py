@@ -11,6 +11,7 @@ import logging
 from argparse import ArgumentParser
 from queue import Queue
 import atexit
+import coloredlogs
 from .network import validate_interface, get_interfaces
 
 SATELLITE_LIST = []
@@ -67,6 +68,53 @@ class ConstellationArgumentParser(ArgumentParser):
 EPILOG = "This command is part of the Constellation Python core package."
 
 
+class ConstellationLogger(logging.getLoggerClass()):
+    """Custom Logger class for Constellation.
+
+    Defines the following log levels:
+
+    - logging.NOTSET : 0
+    - logging.TRACE : 5
+    - logging.DEBUG : 10
+    - logging.INFO : 20
+    - logging.STATUS : 25
+    - logging.WARNING : 30
+    - logging.ERROR : mapped to CRITICAL
+    - logging.CRITICAL : 50
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Init logger and define extra levels."""
+        super().__init__(*args, **kwargs)
+        logging.TRACE = logging.DEBUG - 5
+        logging.addLevelName(logging.DEBUG - 5, "TRACE")
+        logging.STATUS = logging.INFO + 5
+        logging.addLevelName(logging.INFO + 5, "STATUS")
+
+    def trace(self, msg, *args, **kwargs):
+        """Define level for verbose information which allows to follow the call
+        stack of the host program."""
+        self.log(logging.TRACE, msg, *args, **kwargs)
+
+    def status(self, msg, *args, **kwargs):
+        """Define level for important information about the host program to the
+        end user with low frequency."""
+        self.log(logging.STATUS, msg, *args, **kwargs)
+
+    def error(self, msg, *args, **kwargs):
+        """Map error level to CRITICAL."""
+        self.log(logging.CRITICAL, msg, *args, **kwargs)
+
+
+def setup_cli_logging(name: str, level: str) -> ConstellationLogger:
+    logging.setLoggerClass(ConstellationLogger)
+    logger = logging.getLogger(name)
+    log_level = level
+    coloredlogs.install(level=log_level.upper(), logger=logger)
+    return logger
+
+
 class BaseSatelliteFrame:
     """Base class for all Satellite components to inherit from.
 
@@ -79,6 +127,7 @@ class BaseSatelliteFrame:
     def __init__(self, name, **_kwds):
         # add class name to create the canonical name
         self.name = f"{type(self).__name__}.{name}"
+        logging.setLoggerClass(ConstellationLogger)
         self.log = logging.getLogger(name)
         self.context = zmq.Context()
 

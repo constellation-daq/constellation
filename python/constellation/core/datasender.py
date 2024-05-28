@@ -18,7 +18,7 @@ import zmq
 
 from .cdtp import DataTransmitter, CDTPMessageIdentifier
 from .satellite import Satellite, SatelliteArgumentParser
-from .base import EPILOG
+from .base import EPILOG, setup_cli_logging
 from .broadcastmanager import CHIRPServiceIdentifier
 
 
@@ -90,8 +90,8 @@ class DataSender(Satellite):
     def __init__(self, *args, data_port: int, **kwargs):
         # initialize local attributes first:
         # beginning and end-of-run events: payloads and meta information
-        self._beg_of_run = {"payload": None, "meta": {"dtype": None}}
-        self._end_of_run = {"payload": None, "meta": {"dtype": None}}
+        self._beg_of_run = {"payload": {}, "meta": {}}
+        self._end_of_run = {"payload": {}, "meta": {}}
         # set up the data pusher which will transmit data placed into the queue
         # via ZMQ socket
         self.data_queue = Queue()
@@ -165,7 +165,7 @@ class DataSender(Satellite):
         # Beginning of run event. If nothing was provided by the user, use the
         # configuration dictionary as a payload
         if not self.BOR:
-            self.BOR = self.config.get_json()
+            self.BOR = self.config._config
         self.log.debug("Sending BOR")
         self.data_queue.put((self._beg_of_run, CDTPMessageIdentifier.BOR))
         return super()._wrap_start(run_identifier)
@@ -252,8 +252,6 @@ def main(args=None):
     protocol.
 
     """
-    import coloredlogs
-
     parser = DataSenderArgumentParser(description=main.__doc__, epilog=EPILOG)
     # this sets the defaults for our "demo" Satellite
     parser.set_defaults(
@@ -266,9 +264,7 @@ def main(args=None):
     args = vars(parser.parse_args(args))
 
     # set up logging
-    logger = logging.getLogger(args["name"])
-    log_level = args.pop("log_level")
-    coloredlogs.install(level=log_level.upper(), logger=logger)
+    setup_cli_logging(args["name"], args.pop("log_level"))
 
     # start server with remaining args
     s = RandomDataSender(**args)

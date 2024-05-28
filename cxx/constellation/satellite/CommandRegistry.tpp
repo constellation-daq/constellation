@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "constellation/core/config/Value.hpp"
+#include "constellation/core/message/satellite_definitions.hpp"
 #include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
@@ -45,8 +46,8 @@ namespace constellation::satellite {
                                      std::string description,
                                      std::initializer_list<State> states,
                                      std::function<R(Args...)> func) {
-        if(name.empty()) {
-            throw utils::LogicError("Can not register command with empty name");
+        if(!message::is_valid_command_name(name)) {
+            throw utils::LogicError("Command name is invalid");
         }
 
         if(magic_enum::enum_cast<message::StandardCommand>(name).has_value()) {

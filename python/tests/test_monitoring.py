@@ -6,9 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 import pytest
 import logging
 import time
-import threading
 import os
-from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 
 from constellation.core.cmdp import CMDPTransmitter, Metric, MetricsType
@@ -17,7 +15,6 @@ from constellation.core.monitoring import (
     ZeroMQSocketLogListener,
     MonitoringSender,
     schedule_metric,
-    MonitoringListener,
 )
 
 from constellation.core.chirp import (
@@ -81,24 +78,6 @@ def monitoringsender():
 
     m = MyStatProducer("mock_sender", send_port, interface="*")
     yield m
-
-
-@pytest.fixture
-def monitoringlistener():
-    """Create a MonitoringListener instance."""
-
-    with TemporaryDirectory() as tmpdirname:
-        m = MonitoringListener(
-            name="mock_monitor",
-            group="mockstellation",
-            interface="*",
-            output_path=tmpdirname,
-        )
-        t = threading.Thread(target=m.receive_metrics)
-        t.start()
-        # give the thread a chance to start
-        time.sleep(0.1)
-        yield m, tmpdirname
 
 
 @pytest.fixture
@@ -167,6 +146,35 @@ def test_log_monitoring(mock_listener, mock_monitoringsender):
     time.sleep(0.1)
     assert len(mock_packet_queue_sender[send_port]) == 0
     assert len(stream.mock_calls) == 2
+
+
+@pytest.mark.forked
+def test_log_levels(mock_listener, mock_monitoringsender):
+    listener, stream = mock_listener
+    # ROOT logger needs to have a level set
+    logger = logging.getLogger()
+    logger.setLevel(1)
+    # get a "remote" logger
+    lr = logging.getLogger("mock_sender")
+    # log a custom level
+    lr.trace("mock trace message")
+    lr.status("mock status message")
+    time.sleep(0.1)
+    mock_packet_queue_sender[send_port][0].startswith(b"LOG/TRACE")
+    mock_packet_queue_sender[send_port][3].startswith(b"LOG/STATUS")
+    # error mapped to critical?
+    lr.error("mock critical!!!!")
+    time.sleep(0.1)
+    mock_packet_queue_sender[send_port][3].startswith(b"LOG/CRITICAL")
+    # check reconstruction
+    listener.start()
+    time.sleep(0.1)
+    assert isinstance(stream.mock_calls[0][1][0], logging.LogRecord)
+    assert isinstance(stream.mock_calls[1][1][0], logging.LogRecord)
+    assert isinstance(stream.mock_calls[2][1][0], logging.LogRecord)
+    assert stream.mock_calls[0][1][0].levelname == "TRACE"
+    assert stream.mock_calls[1][1][0].levelname == "STATUS"
+    assert stream.mock_calls[2][1][0].levelname == "CRITICAL"
 
 
 @pytest.mark.forked
