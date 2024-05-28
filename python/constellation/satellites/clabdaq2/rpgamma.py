@@ -8,14 +8,13 @@ This module provides an implementation for a Constellation Satellite on a
 RedPitaya device.
 """
 
-import logging
 import mmap
 import os
-import coloredlogs
 import numpy as np
 import rp
 
 from ..core.satellite import SatelliteArgumentParser
+from .base import setup_cli_logging
 from constellation.core.configuration import ConfigError
 from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
 
@@ -125,9 +124,7 @@ def main(args=None):
     args = vars(parser.parse_args(args))
 
     # set up logging
-    logger = logging.getLogger(args["name"])
-    log_level = args.pop("log_level")
-    coloredlogs.install(level=log_level.upper(), logger=logger)
+    setup_cli_logging(args["name"], args.pop("log_level"))
 
     # start server with remaining args
     s = RPGamma(**args)

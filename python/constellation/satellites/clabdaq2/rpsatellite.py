@@ -9,13 +9,11 @@ RedPitaya device.
 """
 
 import ctypes
-import logging
 import mmap
 import os
 import time
 
 import re
-import coloredlogs
 import numpy as np
 import rp
 
@@ -24,6 +22,7 @@ from constellation.core.cscp import CSCPMessage
 from constellation.core.datasender import DataSender
 from constellation.core.configuration import ConfigError
 from constellation.core.satellite import SatelliteArgumentParser
+from .base import setup_cli_logging
 
 axi_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 
@@ -510,9 +509,7 @@ def main(args=None):
     args = vars(parser.parse_args(args))
 
     # set up logging
-    logger = logging.getLogger(args["name"])
-    log_level = args.pop("log_level")
-    coloredlogs.install(level=log_level.upper(), logger=logger)
+    setup_cli_logging(args["name"], args.pop("log_level"))
 
     # start server with remaining args
     s = RedPitayaSatellite(**args)
