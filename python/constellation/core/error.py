@@ -24,7 +24,7 @@ def handle_error(func):
             err_msg += f"Not possible in {exc.state.name} state."
             raise RuntimeError(err_msg) from exc
         except Exception as exc:
-            err_msg = f"Unable to execute {func.__name__}: {exc}"
+            err_msg = f"Unable to execute {func.__name__}: {repr(exc)}"
             # set the FSM into failure
             self.fsm.failure(err_msg)
             self._wrap_failure()
