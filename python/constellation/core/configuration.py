@@ -82,15 +82,30 @@ def load_config(path: str) -> dict:
     return config
 
 
+def make_lowercase(obj):
+    """Recursively lower-case all keys of a nested dictionary."""
+    if isinstance(obj, dict):
+        ret = {}
+        for k, v in obj.items():
+            ret[k.lower()] = make_lowercase(v)
+        return ret
+    else:
+        # anything else
+        return obj
+
+
 def flatten_config(
     config: dict,
-    host_class: str,
-    host_device: str | None = None,
+    sat_class: str,
+    sat_name: str | None = None,
 ):
     """Get configuration of satellite. Specify category to only get part of config."""
 
     res = {}
 
+    # make all input strings lower case, including keys
+    config = make_lowercase(config)
+    sat_class = sat_class.lower()
     # set global values
     for category in ["constellation", "satellites"]:
         try:
@@ -103,16 +118,17 @@ def flatten_config(
     # set class values
     for category in ["constellation", "satellites"]:
         try:
-            for key, value in config[category][host_class].items():
+            for key, value in config[category][sat_class].items():
                 if not isinstance(value, dict):
                     res[key] = value
         except KeyError:
             pass
 
-    if host_device:
+    if sat_name:
+        sat_name = sat_name.lower()
         for category in ["constellation", "satellites"]:
             try:
-                for key, value in config[category][host_class][host_device].items():
+                for key, value in config[category][sat_class][sat_name].items():
                     if not isinstance(value, dict):
                         res[key] = value
             except KeyError:
