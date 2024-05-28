@@ -13,7 +13,7 @@ import os
 import numpy as np
 from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
 from ..core.satellite import SatelliteArgumentParser
-from ..base import setup_cli_logging
+from constellation.core.base import setup_cli_logging
 
 axi_regset_config = np.dtype(
     [

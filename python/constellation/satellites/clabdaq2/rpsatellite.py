@@ -22,7 +22,7 @@ from constellation.core.cscp import CSCPMessage
 from constellation.core.datasender import DataSender
 from constellation.core.configuration import ConfigError
 from constellation.core.satellite import SatelliteArgumentParser
-from ..base import setup_cli_logging
+from constellation.core.base import setup_cli_logging
 
 axi_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 
