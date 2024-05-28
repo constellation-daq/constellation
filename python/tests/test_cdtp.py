@@ -133,13 +133,29 @@ def test_datatransmitter(
     sender = mock_data_transmitter
     rx = mock_data_receiver
 
+    # string
     payload = "mock payload"
     sender.send_start(payload)
     msg = rx.recv()
     assert msg.payload == payload
     assert msg.msgtype == CDTPMessageIdentifier.BOR
 
+    # simple list
     payload = ["mock payload", "more mock data"]
+    sender.send_data(payload)
+    msg = rx.recv()
+    assert msg.payload == payload
+    assert msg.msgtype == CDTPMessageIdentifier.DAT
+
+    # bytes
+    payload = np.arange(0, 1000).tobytes()
+    sender.send_data(payload)
+    msg = rx.recv()
+    assert msg.payload == payload
+    assert msg.msgtype == CDTPMessageIdentifier.DAT
+
+    # multi-frame bytes
+    payload = [np.arange(0, 1000).tobytes(), np.arange(10000, 20000).tobytes()]
     sender.send_data(payload)
     msg = rx.recv()
     assert msg.payload == payload
@@ -328,11 +344,11 @@ def test_receiver_stats(
         # send once as byte array with and once w/o dtype
         tx.send_data(payload.tobytes(), {"dtype": f"{payload.dtype}"})
         tx.send_data(payload.tobytes())
-        time.sleep(0.2)
 
         # Running satellite
         commander.request_get_response("start", str(run_num))
         wait_for_state(receiver.fsm, "RUN", 1)
+        time.sleep(0.2)
         commander.request_get_response("stop")
         # send EORE
         tx.send_end({"mock_end": 22})

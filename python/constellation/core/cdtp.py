@@ -99,9 +99,10 @@ class DataTransmitter:
 
         """
         self.sequence_number = 0
+        packer = msgpack.Packer()
         return self._dispatch(
             msgtype=CDTPMessageIdentifier.BOR,
-            payload=payload,
+            payload=packer.pack(payload),
             meta=meta,
             flags=flags,
         )
@@ -139,10 +140,10 @@ class DataTransmitter:
         flags: additional ZMQ socket flags to use during transmission.
 
         """
-
+        packer = msgpack.Packer()
         return self._dispatch(
             msgtype=CDTPMessageIdentifier.EOR,
-            payload=payload,
+            payload=packer.pack(payload),
             meta=meta,
             flags=flags,
         )
@@ -169,14 +170,18 @@ class DataTransmitter:
         msg.set_header(*self.msgheader.decode(binmsg[0]))
 
         # Retrieve payload
-        if len(binmsg[1:]) > 1:
-            msg.payload = [msgpack.unpackb(frame) for frame in binmsg[1:]]
+        if msg.msgtype in [CDTPMessageIdentifier.EOR, CDTPMessageIdentifier.BOR]:
+            # decode single-frame EOR/BOR payload
+            msg.payload = msgpack.unpackb(binmsg[1])
         else:
-            try:
-                msg.payload = msgpack.unpackb(binmsg[1])
-            except IndexError:
-                # no payload
-                pass
+            # one-or-many binary frames
+            msg.payload = binmsg[1:]
+            if len(msg.payload) <= 1:
+                # unpack list
+                try:
+                    msg.payload = binmsg[1]
+                except IndexError:
+                    msg.payload = None
         return msg
 
     def _dispatch(
@@ -213,6 +218,14 @@ class DataTransmitter:
 
         # payload
         if payload:
-            packer = msgpack.Packer()
-            flags = flags & (~zmq.SNDMORE)  # flip SNDMORE bit
-            self._socket.send(packer.pack(payload), flags=flags)
+            # send multiple frames?
+            if isinstance(payload, list):
+                for idx, frame in enumerate(payload):
+                    # final package?
+                    if idx == len(payload) - 1:
+                        flags = flags & (~zmq.SNDMORE)  # flip SNDMORE bit
+                    self._socket.send(frame, flags=flags)
+            else:
+                # single frame
+                flags = flags & (~zmq.SNDMORE)  # flip SNDMORE bit
+                self._socket.send(payload, flags=flags)

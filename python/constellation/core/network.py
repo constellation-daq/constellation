@@ -35,8 +35,11 @@ def get_broadcast(interface: str) -> str:
         if_addr = get_addr(if_name)
         if_netmask = get_netmask(if_name)
         if if_name == interface or if_addr == interface or interface == "*":
-            net = ipaddress.IPv4Network(f"{if_addr}/{if_netmask}", strict=False)
-            broadcasts.append(str(net.broadcast_address))
+            try:
+                net = ipaddress.IPv4Network(f"{if_addr}/{if_netmask}", strict=False)
+                broadcasts.append(str(net.broadcast_address))
+            except ipaddress.AddressValueError:
+                pass
     return broadcasts
 
 

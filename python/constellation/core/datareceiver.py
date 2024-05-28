@@ -125,7 +125,15 @@ class DataReceiver(Satellite):
                     # strings, which is not exactly what went over the network
                     self.receiver_stats["nbytes"] += sys.getsizeof(binmsg)
                     self.receiver_stats["npackets"] += 1
-                    item = transmitter.decode(binmsg)
+                    try:
+                        item = transmitter.decode(binmsg)
+                    except Exception as e:
+                        self.log.critical(
+                            "Could not decode message '%s' due to exception: %s",
+                            binmsg,
+                            repr(e),
+                        )
+                        raise RuntimeError("Could not decode message") from e
                     try:
                         if item.msgtype == CDTPMessageIdentifier.BOR:
                             self.active_satellites.append(item.name)
