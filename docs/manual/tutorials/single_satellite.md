@@ -69,7 +69,7 @@ The Python implementation of Constellation provides a powerful command line inte
 needs to be installed (`pip install ipython`) in the virtual environment that was created during the installation of the
 framework and can be reactivated using `source venv/bin/activate`.
 
-The controller is started via its Python module, and it is possible to pass it some (optional) arguments, for example:
+The controller can be started via its Python module via `python -m constellation.core.controller`, but an entry point is also created on installation which allows starting via the command `Controller`. It is possible to pass the controller some (optional) arguments, for example:
 
 - `--name`. A name for the controller (default: cli_controller)
 - `--group`. The constellation group to which the controller should belong (default: constellation)
@@ -78,7 +78,7 @@ The controller is started via its Python module, and it is possible to pass it s
 To control the satellite created in the first part of this tutorial, the controller needs to be in the same group.
 
 ```sh
-python -m constellation.core.controller --group myLabPlanet
+Controller --group myLabPlanet
 ```
 
 The interactive command line provides the `constellation` object which holds all information about connected satellites and
@@ -157,7 +157,7 @@ state machine can be found in the [concepts chapter on satellites](../concepts/s
 A configuration file can be loaded into the initialiser by using the flag `--config` when launching the controller. This loads the provided configuration into a dictionary named `cfg`, which can be used e.g. when calling `initialize`. An example using the `example_satellite` is shown below, along with the used example configuration file.
 
 ```python
-python -m constellation.core.controller --config python/constellation/satellites/example_config.conf
+Controller --config python/constellation/satellites/example_config.conf
 In [1]: constellation.Example_Satellite.initialize(cfg["satellites"]["example_satellite"]["device1"])
 ```
 
