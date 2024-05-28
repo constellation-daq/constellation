@@ -69,7 +69,7 @@ The Python implementation of Constellation provides a powerful command line inte
 needs to be installed (`pip install ipython`) in the virtual environment that was created during the installation of the
 framework and can be reactivated using `source venv/bin/activate`.
 
-The controller can be started via its Python module via `python -m constellation.core.controller`, but an entry point is also created on installation which allows starting via the command `Controller`. It is possible to pass the controller some (optional) arguments, for example:
+The controller can be started via its Python module via `python -m constellation.core.controller`, but an entry point is also created on installation which allows starting directly via the command `Controller`. It is possible to pass the controller some (optional) arguments, for example:
 
 - `--name`. A name for the controller (default: cli_controller)
 - `--group`. The constellation group to which the controller should belong (default: constellation)

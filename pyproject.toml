@@ -39,6 +39,7 @@ dependencies = [
 Controller = "constellation.core.controller:main"
 Monitor = "constellation.core.monitoring:main"
 DemoSatellite = "constellation.core.satellite:main"
+ExampleSatellite = "constellation.satellites.example_satellite:main"
 DemoHeartbeatChecker = "constellation.core.heartbeatchecker:main"
 DemoHeartbeatSender = "constellation.core.heartbeater:main"
 
