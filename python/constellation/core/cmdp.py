@@ -162,6 +162,7 @@ class CMDPTransmitter:
         record["created"] = time.to_datetime().timestamp()
         record["name"] = sender
         record["levelname"] = topic.split("/")[1]
+        record["levelno"] = logging.getLevelName(topic.split("/")[1])
         return logging.makeLogRecord(record)
 
     def decode_metric(self, topic, msg: list) -> Metric:
