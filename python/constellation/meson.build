@@ -23,30 +23,17 @@ core_files = files(
   'core/network.py',
   'core/protocol.py',
   'core/satellite.py',
-  
 )
 
-satellites_files = files(
-  'satellites/example_satellite.py',
-  'satellites/caenhv/caenhv.py',
-  'satellites/__init__.py',
-  'satellites/clabdaq2/rpsatellite.py',
-  'satellites/clabdaq2/rpneutron.py',
-  'satellites/clabdaq2/rpgamma.py',
-)
 tools_files = files(
   'tools/H5datareader.py',
-)
-
-tools_files = files(
   'tools/list_interfaces.py',
 )
 
 py.install_sources(core_files,
   subdir: 'constellation/core')
 
-py.install_sources(satellites_files,
-  subdir: 'constellation/satellites')
-
 py.install_sources(tools_files,
   subdir: 'constellation/tools')
+
+subdir('satellites')
