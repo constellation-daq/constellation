@@ -30,7 +30,6 @@ dependencies = [
     "pyzmq",
     "msgpack",
     "python-statemachine",
-    "h5py",
     "numpy",
     "coloredlogs",
     "psutil",
@@ -45,22 +44,22 @@ DemoDataSender = "constellation.core.datasender:main"
 DemoHeartbeatChecker = "constellation.core.heartbeatchecker:main"
 DemoHeartbeatSender = "constellation.core.heartbeater:main"
 # tools
-Constellation_list_interfaces = "constellation.tools.list_interfaces:main"
+ConstellationListInterfaces = "constellation.tools.list_interfaces:main"
 # 3rd-party Satellites
-SatelliteCaenHv = "constellation.satellites.caenhv:main"
-SatelliteRPNeutron = "constellation.satellites.rpneutron:main"
-SatelliteRPGamma = "constellation.satellites.rpgamma:main"
-
+SatelliteCaenHv = "constellation.satellites.caenhv.caenhv:main"
+SatelliteRPNeutron = "constellation.satellites.clabdaq2.rpneutron:main"
+SatelliteRPGamma = "constellation.satellites.clabdaq2.rpgamma:main"
 
 [project.urls]
 Homepage = "https://constellation.pages.desy.de/"
 Repository = "https://gitlab.desy.de/constellation/constellation"
 
 [project.optional-dependencies]
-cli = ["ipython"]
 dev = ["build", "black", "flake8", "flake8-pyproject"]
-docs = ["sphinx", "pydata_sphinx_theme", "myst-parser", "breathe", "ablog", "sphinxcontrib.plantuml", "sphinx_design", "sphinx_favicon"]
 test = ["pytest", "pytest-forked", "pytest-cov", "pytest-sugar"]
+docs = ["sphinx", "pydata_sphinx_theme", "myst-parser", "breathe", "ablog", "sphinxcontrib.plantuml", "sphinx_design", "sphinx_favicon"]
+cli = ["ipython"]
+hdf5 = ["h5py"]
 caenhv = ["pycaenhv>=0.03"]
 
 [tool.meson-python.args]

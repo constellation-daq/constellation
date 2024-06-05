@@ -65,8 +65,9 @@ void HeartbeatManager::process_heartbeat(const message::CHP1Message& msg) {
     const auto remote_it = remotes_.find(to_string(msg.getSender()));
     if(remote_it != remotes_.end()) {
 
-        if(now - msg.getTime() > 3s) [[unlikely]] {
-            LOG(logger_, WARNING) << "Detected time deviation of " << now - msg.getTime() << " to " << msg.getSender();
+        const auto deviation = std::chrono::duration_cast<std::chrono::seconds>(now - msg.getTime());
+        if(std::chrono::abs(deviation) > 3s) [[unlikely]] {
+            LOG(logger_, WARNING) << "Detected time deviation of " << deviation << " to " << msg.getSender();
         }
 
         remote_it->second.interval = msg.getInterval();
@@ -107,8 +108,7 @@ void HeartbeatManager::run(const std::stop_token& stop_token) {
                 // We have lives left, reduce them by one
                 remote.lives--;
                 remote.last_checked = now;
-                LOG(logger_, TRACE) << "Missed heartbeat from " << key << ", reduced lives to "
-                                    << static_cast<int>(remote.lives);
+                LOG(logger_, TRACE) << "Missed heartbeat from " << key << ", reduced lives to " << to_string(remote.lives);
 
                 if(remote.lives == 0 && interrupt_callback_) {
                     // This parrot is dead, it is no more
@@ -117,8 +117,12 @@ void HeartbeatManager::run(const std::stop_token& stop_token) {
                 }
             }
 
-            // Update time point until we have to wait:
-            wakeup = std::min(wakeup, remote.last_heartbeat + remote.interval);
+            // Update time point until we have to wait (if not in the past)
+            const auto next_heartbeat = remote.last_heartbeat + remote.interval;
+            if(next_heartbeat - now > std::chrono::system_clock::duration::zero()) {
+                wakeup = std::min(wakeup, next_heartbeat);
+            }
+            LOG(logger_, TRACE) << "Updated heartbeat wakeup timer to " << (wakeup - now);
         }
 
         cv_.wait_until(lock, wakeup);

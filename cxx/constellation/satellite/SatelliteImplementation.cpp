@@ -37,7 +37,7 @@
 #include "constellation/core/logging/log.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/exceptions.hpp"
-#include "constellation/core/message/payload_buffer.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/message/satellite_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/ports.hpp"
@@ -101,7 +101,7 @@ void SatelliteImplementation::terminate() {
     fsm_.interrupt();
 }
 
-std::optional<CSCP1Message> SatelliteImplementation::getNextCommand() {
+std::optional<CSCP1Message> SatelliteImplementation::get_next_command() {
     // Receive next message
     zmq::multipart_t recv_msg {};
     auto received = recv_msg.recv(rep_);
@@ -121,17 +121,17 @@ std::optional<CSCP1Message> SatelliteImplementation::getNextCommand() {
     return message;
 }
 
-void SatelliteImplementation::sendReply(std::pair<CSCP1Message::Type, std::string> reply_verb,
-                                        message::payload_buffer payload) {
+void SatelliteImplementation::send_reply(std::pair<CSCP1Message::Type, std::string> reply_verb,
+                                         message::PayloadBuffer payload) {
     auto msg = CSCP1Message({satellite_->getCanonicalName()}, std::move(reply_verb));
     msg.addPayload(std::move(payload)); // CSCP1Message handle handle nullptr and empty messages
     msg.assemble().send(rep_);
 }
 
-std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::payload_buffer>>
-SatelliteImplementation::handleStandardCommand(std::string_view command) {
+std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::PayloadBuffer>>
+SatelliteImplementation::handle_standard_command(std::string_view command) {
     std::pair<message::CSCP1Message::Type, std::string> return_verb {};
-    message::payload_buffer return_payload {};
+    message::PayloadBuffer return_payload {};
 
     auto command_enum = magic_enum::enum_cast<StandardCommand>(command, magic_enum::case_insensitive);
     if(!command_enum.has_value()) {
@@ -216,12 +216,12 @@ SatelliteImplementation::handleStandardCommand(std::string_view command) {
     return std::make_pair(return_verb, std::move(return_payload));
 }
 
-std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::payload_buffer>>
-SatelliteImplementation::handleUserCommand(std::string_view command, const message::payload_buffer& payload) {
+std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::PayloadBuffer>>
+SatelliteImplementation::handle_user_command(std::string_view command, const message::PayloadBuffer& payload) {
     LOG(logger_, DEBUG) << "Attempting to handle command \"" << command << "\" as user command";
 
     std::pair<message::CSCP1Message::Type, std::string> return_verb {};
-    message::payload_buffer return_payload {};
+    message::PayloadBuffer return_payload {};
 
     config::List args {};
     try {
@@ -265,7 +265,7 @@ void SatelliteImplementation::main_loop(const std::stop_token& stop_token) {
     while(!stop_token.stop_requested()) {
         try {
             // Receive next command
-            auto message_opt = getNextCommand();
+            auto message_opt = get_next_command();
 
             // Timeout, continue
             if(!message_opt.has_value()) {
@@ -276,7 +276,7 @@ void SatelliteImplementation::main_loop(const std::stop_token& stop_token) {
             // Ensure we have a REQUEST message
             if(message.getVerb().first != CSCP1Message::Type::REQUEST) {
                 LOG(logger_, WARNING) << "Received message via CSCP that is not REQUEST type - ignoring";
-                sendReply({CSCP1Message::Type::ERROR, "Can only handle CSCP messages with REQUEST type"});
+                send_reply({CSCP1Message::Type::ERROR, "Can only handle CSCP messages with REQUEST type"});
                 continue;
             }
 
@@ -286,21 +286,21 @@ void SatelliteImplementation::main_loop(const std::stop_token& stop_token) {
             // Try to decode as transition
             auto transition_command = magic_enum::enum_cast<TransitionCommand>(command_string, magic_enum::case_insensitive);
             if(transition_command.has_value()) {
-                sendReply(fsm_.reactCommand(transition_command.value(), message.getPayload()));
+                send_reply(fsm_.reactCommand(transition_command.value(), message.getPayload()));
                 continue;
             }
 
             // Try to decode as other builtin (non-transition) commands
-            auto standard_command_reply = handleStandardCommand(command_string);
+            auto standard_command_reply = handle_standard_command(command_string);
             if(standard_command_reply.has_value()) {
-                sendReply(standard_command_reply.value().first, std::move(standard_command_reply.value().second));
+                send_reply(standard_command_reply.value().first, std::move(standard_command_reply.value().second));
                 continue;
             }
 
             // Handle user-registered commands:
-            auto user_command_reply = handleUserCommand(command_string, message.getPayload());
+            auto user_command_reply = handle_user_command(command_string, message.getPayload());
             if(user_command_reply.has_value()) {
-                sendReply(user_command_reply.value().first, std::move(user_command_reply.value().second));
+                send_reply(user_command_reply.value().first, std::move(user_command_reply.value().second));
                 continue;
             }
 
@@ -309,7 +309,7 @@ void SatelliteImplementation::main_loop(const std::stop_token& stop_token) {
             unknown_command_reply += command_string;
             unknown_command_reply += "\" is not known";
             LOG(logger_, WARNING) << "Received unknown command \"" << command_string << "\" - ignoring";
-            sendReply({CSCP1Message::Type::UNKNOWN, std::move(unknown_command_reply)});
+            send_reply({CSCP1Message::Type::UNKNOWN, std::move(unknown_command_reply)});
 
         } catch(const zmq::error_t& error) {
             LOG(logger_, CRITICAL) << "ZeroMQ error while trying to receive a message: " << error.what();
@@ -317,7 +317,7 @@ void SatelliteImplementation::main_loop(const std::stop_token& stop_token) {
             break;
         } catch(const MessageDecodingError& error) {
             LOG(logger_, WARNING) << error.what();
-            sendReply({CSCP1Message::Type::ERROR, error.what()});
+            send_reply({CSCP1Message::Type::ERROR, error.what()});
         }
     }
 }

@@ -50,4 +50,16 @@ namespace std {
 } // namespace std
 #endif
 
+// std::ranges::constant_range
+#ifndef __cpp_lib_ranges_as_const
+#include <concepts>
+#include <ranges>
+#include <utility>
+namespace std::ranges {
+    template <typename R>
+    concept constant_range = std::ranges::input_range<R> &&
+                             std::same_as<std::ranges::iterator_t<R>, decltype(std::ranges::cbegin(std::declval<R&>()))>;
+} // namespace std::ranges
+#endif
+
 // NOLINTEND(cert-dcl58-cpp)

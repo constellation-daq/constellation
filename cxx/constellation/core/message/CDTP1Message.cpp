@@ -22,7 +22,7 @@
 
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/exceptions.hpp"
-#include "constellation/core/message/payload_buffer.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/message/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std_future.hpp"
@@ -124,11 +124,11 @@ zmq::multipart_t CDTP1Message::assemble() {
     // First frame: header
     msgpack::sbuffer sbuf_header {};
     msgpack::pack(sbuf_header, header_);
-    frames.add(payload_buffer(std::move(sbuf_header)).to_zmq_msg_release());
+    frames.add(PayloadBuffer(std::move(sbuf_header)).to_zmq_msg_release());
 
     // Second frame until Nth frame: always move payload (no reuse)
-    for(auto& payload_buffer : payload_buffers_) {
-        frames.add(payload_buffer.to_zmq_msg_release());
+    for(auto& PayloadBuffer : payload_buffers_) {
+        frames.add(PayloadBuffer.to_zmq_msg_release());
     }
     // clear payload_frames_ member as payload buffers has been released
     payload_buffers_.clear();

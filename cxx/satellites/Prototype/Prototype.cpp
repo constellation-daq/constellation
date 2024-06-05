@@ -17,5 +17,5 @@
 using namespace constellation::satellite;
 
 Prototype::Prototype(std::string_view type, std::string_view name) : Satellite(type, name) {
-    LOG(logger_, STATUS) << "Dummy satellite " << getCanonicalName() << " created";
+    LOG(STATUS) << "Dummy satellite " << getCanonicalName() << " created";
 }

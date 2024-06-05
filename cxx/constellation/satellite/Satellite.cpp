@@ -37,36 +37,36 @@ std::string Satellite::getCanonicalName() const {
 }
 
 void Satellite::initializing(config::Configuration& /* config */) {
-    LOG(logger_, INFO) << "Initializing - default";
+    LOG(INFO) << "Initializing - default";
 }
 
 void Satellite::launching() {
-    LOG(logger_, INFO) << "Launching - default";
+    LOG(INFO) << "Launching - default";
 }
 
 void Satellite::landing() {
-    LOG(logger_, INFO) << "Landing - default";
+    LOG(INFO) << "Landing - default";
 }
 
 void Satellite::reconfiguring(const config::Configuration& /* partial_config */) {
     // TODO(stephan.lachnit): throw if not supported
-    LOG(logger_, INFO) << "Reconfiguring - default";
+    LOG(INFO) << "Reconfiguring - default";
 }
 
 void Satellite::starting(std::string_view run_identifier) {
-    LOG(logger_, INFO) << "Starting run " << run_identifier << " - default";
+    LOG(INFO) << "Starting run " << run_identifier << " - default";
 }
 
 void Satellite::stopping() {
-    LOG(logger_, INFO) << "Stopping - default";
+    LOG(INFO) << "Stopping - default";
 }
 
 void Satellite::running(const std::stop_token& /* stop_token */) {
-    LOG(logger_, INFO) << "Running - default";
+    LOG(INFO) << "Running - default";
 }
 
 void Satellite::interrupting(State previous_state) {
-    LOG(logger_, INFO) << "Interrupting from " << to_string(previous_state) << " - default";
+    LOG(INFO) << "Interrupting from " << to_string(previous_state) << " - default";
     if(previous_state == State::RUN) {
         LOG(logger_, DEBUG) << "Interrupting: execute stopping";
         stopping();
@@ -76,7 +76,7 @@ void Satellite::interrupting(State previous_state) {
 }
 
 void Satellite::on_failure(State previous_state) {
-    LOG(logger_, INFO) << "Failure from " << to_string(previous_state) << " - default";
+    LOG(INFO) << "Failure from " << to_string(previous_state) << " - default";
 }
 
 void Satellite::store_config(config::Configuration&& config) {

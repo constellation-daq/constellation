@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
 
     // Only log to CMDP
     SinkManager::getInstance().setGlobalConsoleLevel(OFF);
-    SinkManager::getInstance().setCMDPLevelsCustom(TRACE);
+    SinkManager::getInstance().updateCMDPLevels(TRACE);
 
     const Logger logger {std::move(topic)};
     std::cout << "Starting logging on port " << SinkManager::getInstance().getCMDPPort() << std::endl;

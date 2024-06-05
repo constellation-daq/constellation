@@ -136,9 +136,6 @@ namespace constellation::satellite {
         /** Return the current run identifier */
         std::string_view getRunIdentifier() const { return run_identifier_; }
 
-        /** Return a reference to the satellite logger */
-        log::Logger& getLogger() { return logger_; }
-
     protected:
         /**
          * @brief Construct a satellite
@@ -153,9 +150,6 @@ namespace constellation::satellite {
 
         /** Set status of the satellite */
         void set_status(std::string status) { status_ = std::move(status); }
-
-        /** Logger to use */
-        log::Logger logger_; // NOLINT(*-non-private-member-variables-in-classes)
 
         /**
          * @brief Register a new user command
@@ -189,6 +183,9 @@ namespace constellation::satellite {
         void update_run_identifier(std::string_view run_identifier) { run_identifier_ = run_identifier; }
 
     private:
+        /** Logger to use */
+        log::Logger logger_;
+
         bool support_reconfigure_ {false};
         std::string status_;
         std::string_view satellite_type_;

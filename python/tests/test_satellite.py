@@ -105,7 +105,7 @@ def test_device_satellite_instantiation(mock_device_satellite):
 
 @pytest.mark.forked
 def test_satellite_unknown_cmd_recv(mock_socket_sender, mock_satellite):
-    """Test cmd reception."""
+    """Test unknown cmd reception."""
     sender = CommandTransmitter("mock_sender", mock_socket_sender)
     # send a request
     sender.send_request("make", "sandwich")
@@ -116,8 +116,32 @@ def test_satellite_unknown_cmd_recv(mock_socket_sender, mock_satellite):
 
 
 @pytest.mark.forked
+def test_satellite_wrong_type_payload(mock_socket_sender, mock_satellite):
+    """Test unknown cmd reception."""
+    sender = CommandTransmitter("mock_sender", mock_socket_sender)
+    # send a request with wrong type payload
+    sender.send_request("start", 12233.0)
+    time.sleep(0.2)
+    req = sender.get_message()
+    assert "wrong argument" in req.msg.lower()
+    assert req.msg_verb == CSCPMessageVerb.INCOMPLETE
+    # send a request with wrong type payload
+    sender.send_request("initialize", 12233.0)
+    time.sleep(0.2)
+    req = sender.get_message()
+    assert "wrong argument" in req.msg.lower()
+    assert req.msg_verb == CSCPMessageVerb.INCOMPLETE
+    # send a request with wrong type payload
+    sender.send_request("initialize", None)
+    time.sleep(0.2)
+    req = sender.get_message()
+    assert "wrong argument" in req.msg.lower()
+    assert req.msg_verb == CSCPMessageVerb.INCOMPLETE
+
+
+@pytest.mark.forked
 def test_satellite_fsm_change_on_cmd(mock_cmd_transmitter, mock_satellite):
-    """Test cmd reception."""
+    """Test fsm state change cmd reception."""
     sender = mock_cmd_transmitter
     # send a request
     sender.send_request("get_state")

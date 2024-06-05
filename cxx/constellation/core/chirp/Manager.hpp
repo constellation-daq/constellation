@@ -257,7 +257,7 @@ namespace constellation::chirp {
          * @param type CHIRP broadcast message type
          * @param service Service with identifier and port
          */
-        void sendMessage(MessageType type, RegisteredService service);
+        void send_message(MessageType type, RegisteredService service);
 
         /**
          * Main loop listening and responding to incoming CHIRP broadcasts

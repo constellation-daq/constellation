@@ -157,7 +157,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         """
         if not isinstance(request.payload, dict):
             # missing payload
-            return None
+            raise TypeError("Payload must be a dictionary with configuration values")
         return self._transition("initialize", request, thread=False)
 
     @debug_log
@@ -198,8 +198,8 @@ class SatelliteStateHandler(BaseSatelliteFrame):
 
         """
         if not isinstance(request.payload, str):
-            # missing payload
-            return None
+            # missing/wrong payload
+            raise TypeError("Payload must be a run identification string")
         return self._transition("start", request, thread=True)
 
     @debug_log
@@ -234,6 +234,9 @@ class SatelliteStateHandler(BaseSatelliteFrame):
             raise NotImplementedError(
                 "Reconfigure not supported: missing function 'do_reconfiguring'"
             )
+        if not isinstance(request.payload, str):
+            # missing/wrong payload
+            raise TypeError("Payload must be a run identification string")
         return self._transition("reconfigure", request, thread=False)
 
     @debug_log

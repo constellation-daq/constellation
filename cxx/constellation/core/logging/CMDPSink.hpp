@@ -9,12 +9,15 @@
 
 #pragma once
 
+#include <map>
 #include <mutex>
 #include <string>
+#include <thread>
 
 #include <spdlog/sinks/base_sink.h>
 #include <zmq.hpp>
 
+#include "constellation/core/logging/Level.hpp"
 #include "constellation/core/utils/ports.hpp"
 
 namespace constellation::log {
@@ -29,6 +32,17 @@ namespace constellation::log {
          * Construct a new CMDPSink
          */
         CMDPSink();
+
+        /**
+         * Deconstruct the CMDPSink
+         */
+        ~CMDPSink() override;
+
+        // No copy/move constructor/assignment
+        CMDPSink(const CMDPSink& other) = delete;
+        CMDPSink& operator=(const CMDPSink& other) = delete;
+        CMDPSink(CMDPSink&& other) = delete;
+        CMDPSink& operator=(CMDPSink&& other) = delete;
 
         /**
          * Get ephemeral port this logger sink is bound to
@@ -51,6 +65,11 @@ namespace constellation::log {
     private:
         zmq::context_t context_;
         zmq::socket_t publisher_;
+
+        std::jthread subscription_thread_;
+        void subscription_loop(const std::stop_token& stop_token);
+        std::map<std::string, std::map<Level, std::size_t>> log_subscriptions_;
+
         utils::Port port_;
         std::string sender_name_;
         std::once_flag setup_flag_;

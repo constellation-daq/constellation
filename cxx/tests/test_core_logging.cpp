@@ -18,11 +18,11 @@ using namespace constellation::log;
 
 TEST_CASE("Delayed first message", "[logging]") {
     // First message is delayed by 500ms, so call this here for better timing analysis
-    SinkManager::getInstance().setCMDPLevelsCustom(TRACE);
+    SinkManager::getInstance().updateCMDPLevels(TRACE);
     SinkManager::getInstance().setGlobalConsoleLevel(OFF);
     auto logger = Logger("DelayedFirstMessage");
     LOG(logger, TRACE) << "";
-    SinkManager::getInstance().setCMDPLevelsCustom(OFF);
+    SinkManager::getInstance().updateCMDPLevels(OFF);
 }
 
 TEST_CASE("Default logger", "[logging]") {
@@ -46,19 +46,31 @@ TEST_CASE("Basic logging", "[logging]") {
     LOG(logger, CRITICAL) << "critical"sv;
 }
 
+TEST_CASE("Logging with default logger", "[logging]") {
+
+    SinkManager::getInstance().setGlobalConsoleLevel(TRACE);
+
+    LOG(TRACE) << "trace"sv;
+    LOG(DEBUG) << "debug"sv;
+    LOG(INFO) << "info"sv;
+    LOG(STATUS) << "status"sv;
+    LOG(WARNING) << "warning"sv;
+    LOG(CRITICAL) << "critical"sv;
+}
+
 TEST_CASE("Logging from const function", "[logging]") {
 
     class LogTest {
     public:
-        void log_message() const { LOG(logger, CRITICAL) << "const critical"sv; }
+        void log() const { LOG(logger_, CRITICAL) << "const critical"sv; }
 
     private:
-        Logger logger {"ConstLogging"};
+        Logger logger_ {"ConstLogging"};
     };
 
     SinkManager::getInstance().setGlobalConsoleLevel(TRACE);
     const LogTest log_test {};
-    log_test.log_message();
+    log_test.log();
 }
 
 TEST_CASE("Logging macros", "[logging]") {
@@ -85,25 +97,25 @@ TEST_CASE("Log levels", "[logging]") {
     auto logger = Logger("LogLevels", INFO);
 
     SinkManager::getInstance().setGlobalConsoleLevel(STATUS);
-    SinkManager::getInstance().setCMDPLevelsCustom(STATUS);
+    SinkManager::getInstance().updateCMDPLevels(STATUS);
 
     REQUIRE_FALSE(logger.shouldLog(DEBUG));
     REQUIRE(logger.shouldLog(INFO));
 
     // Test global CMDP subscription
-    SinkManager::getInstance().setCMDPLevelsCustom(DEBUG);
+    SinkManager::getInstance().updateCMDPLevels(DEBUG);
     REQUIRE(logger.shouldLog(DEBUG));
 
     // Test global CMDP unsubscription
-    SinkManager::getInstance().setCMDPLevelsCustom(OFF);
+    SinkManager::getInstance().updateCMDPLevels(OFF);
     REQUIRE_FALSE(logger.shouldLog(DEBUG));
 
-    // Test topic CMDP subscription
-    SinkManager::getInstance().setCMDPLevelsCustom(STATUS, {{"LogLevels", DEBUG}});
+    // Test topic CMDP subscription - topics are uppercase
+    SinkManager::getInstance().updateCMDPLevels(STATUS, {{"LOGLEVELS", DEBUG}});
     REQUIRE(logger.shouldLog(DEBUG));
 
-    // Test topic CMDP subscription via matching
-    SinkManager::getInstance().setCMDPLevelsCustom(STATUS, {{"LogLevels", DEBUG}, {"logle", TRACE}});
+    // Test topic CMDP subscription via matching - topics are uppercase
+    SinkManager::getInstance().updateCMDPLevels(STATUS, {{"LOGLEVELS", DEBUG}, {"LOGLE", TRACE}});
     REQUIRE(logger.shouldLog(TRACE));
 }
 

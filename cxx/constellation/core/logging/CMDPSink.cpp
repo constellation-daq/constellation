@@ -21,6 +21,7 @@
 #include <zmq.hpp>
 
 #include "constellation/core/logging/Level.hpp"
+#include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/ports.hpp"
 #include "constellation/core/utils/string.hpp"
@@ -51,7 +52,95 @@ std::string get_rel_file_path(std::string file_path_char) {
 }
 
 // Bind socket to ephemeral port on construction
-CMDPSink::CMDPSink() : publisher_(context_, zmq::socket_type::pub), port_(bind_ephemeral_port(publisher_)) {}
+CMDPSink::CMDPSink() : publisher_(context_, zmq::socket_type::xpub), port_(bind_ephemeral_port(publisher_)) {
+    // Set reception timeout for subscription messages on XPUB socket to zero because we need to mutex-lock the socket
+    // while reading and cannot log at the same time.
+    publisher_.set(zmq::sockopt::rcvtimeo, 0);
+
+    // Start thread monitoring the socket for subscription messages
+    subscription_thread_ = std::jthread(std::bind_front(&CMDPSink::subscription_loop, this));
+}
+
+CMDPSink::~CMDPSink() {
+    subscription_thread_.request_stop();
+    if(subscription_thread_.joinable()) {
+        subscription_thread_.join();
+    }
+}
+
+void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
+    while(!stop_token.stop_requested()) {
+
+        // Lock for the mutex provided by the sink base class
+        std::unique_lock socket_lock {mutex_};
+
+        // Receive subscription message
+        zmq::multipart_t recv_msg {};
+        auto received = recv_msg.recv(publisher_);
+
+        socket_lock.unlock();
+
+        // Return if timed out or wrong number of frames received:
+        if(!received || recv_msg.size() != 1) {
+            // Only check every 300ms for new subscription messages:
+            std::this_thread::sleep_for(300ms);
+            continue;
+        }
+
+        const auto& frame = recv_msg.front();
+
+        // First byte \x01 is subscription, \0x00 is unsubscription
+        const auto subscribe = static_cast<bool>(*frame.data<uint8_t>());
+
+        // Log topic is message body stripped by first byte
+        auto body = frame.to_string_view();
+        body.remove_prefix(1);
+
+        // TODO(simonspa) At some point we also have to treat STAT here
+        if(!body.starts_with("LOG/")) {
+            continue;
+        }
+
+        const auto level_endpos = body.find_first_of('/', 4);
+        const auto level_str = body.substr(4, level_endpos - 4);
+
+        // Empty level means subscription to everything
+        const auto level = (level_str.empty() ? std::optional<Level>(TRACE)
+                                              : magic_enum::enum_cast<Level>(level_str, magic_enum::case_insensitive));
+
+        // Only accept valid levels
+        if(!level.has_value()) {
+            continue;
+        }
+
+        const auto topic = (level_endpos != std::string::npos ? body.substr(level_endpos + 1) : std::string_view());
+        const auto topic_uc = transform(topic, ::toupper);
+        if(subscribe) {
+            log_subscriptions_[topic_uc][level.value()] += 1;
+        } else {
+            if(log_subscriptions_[topic_uc][level.value()] > 0) {
+                log_subscriptions_[topic_uc][level.value()] -= 1;
+            }
+        }
+
+        // Figure out lowest level for each topic
+        auto cmdp_global_level = Level::OFF;
+        std::map<std::string_view, Level> cmdp_sub_topic_levels;
+        for(const auto& [logger, levels] : log_subscriptions_) {
+            auto it = std::find_if(std::begin(levels), std::end(levels), [](const auto& i) { return i.second > 0; });
+            if(it != std::end(levels)) {
+                if(!logger.empty()) {
+                    cmdp_sub_topic_levels[logger] = it->first;
+                } else {
+                    cmdp_global_level = it->first;
+                }
+            }
+        }
+
+        // Update subscriptions
+        SinkManager::getInstance().updateCMDPLevels(cmdp_global_level, std::move(cmdp_sub_topic_levels));
+    }
+}
 
 void CMDPSink::setSender(std::string sender_name) {
     sender_name_ = std::move(sender_name);

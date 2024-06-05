@@ -39,7 +39,7 @@ TEST_CASE("Send and receive broadcast containing a string", "[chirp][broadcast]"
     // Receive message
     auto msg = msg_future.get();
 
-    REQUIRE_THAT(msg.content_to_string(), Equals(msg_content));
+    REQUIRE_THAT(msg.to_string(), Equals(msg_content));
 }
 
 TEST_CASE("Send and receive broadcast containing binary content", "[chirp][broadcast]") {
@@ -90,7 +90,7 @@ TEST_CASE("Send and receive broadcast asynchronously", "[chirp][broadcast]") {
     // Get message
     const auto& msg = msg_opt.value(); // NOLINT(bugprone-unchecked-optional-access)
 
-    REQUIRE_THAT(msg.content_to_string(), Equals(msg_content));
+    REQUIRE_THAT(msg.to_string(), Equals(msg_content));
 }
 
 TEST_CASE("Get timeout on asynchronous broadcast receive", "[chirp][broadcast]") {

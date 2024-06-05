@@ -123,11 +123,11 @@ namespace constellation::satellite {
             std::function<R(Args...)> func;
 
             config::Value operator()(const config::List& args) {
-                return call_command(args, std::index_sequence_for<Args...> {});
+                return callCommand(args, std::index_sequence_for<Args...> {});
             }
 
             template <std::size_t... I>
-            config::Value call_command(const config::List& args, std::index_sequence<I...> /*unused*/) {
+            config::Value callCommand(const config::List& args, std::index_sequence<I...> /*unused*/) {
                 if constexpr(std::same_as<R, void>) {
                     func(to_argument<typename std::decay_t<Args>>(args.at(I))...);
                     return {};

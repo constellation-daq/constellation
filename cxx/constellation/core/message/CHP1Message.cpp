@@ -19,7 +19,7 @@
 #include <zmq_addon.hpp>
 
 #include "constellation/core/message/exceptions.hpp"
-#include "constellation/core/message/payload_buffer.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/message/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std_future.hpp"
@@ -96,7 +96,7 @@ zmq::multipart_t CHP1Message::assemble() {
     // then interval
     msgpack::pack(sbuf, static_cast<uint16_t>(interval_.count()));
 
-    frames.add(payload_buffer(std::move(sbuf)).to_zmq_msg_release());
+    frames.add(PayloadBuffer(std::move(sbuf)).to_zmq_msg_release());
 
     return frames;
 }

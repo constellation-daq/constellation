@@ -19,7 +19,7 @@
 #include <zmq_addon.hpp>
 
 #include "constellation/core/message/exceptions.hpp"
-#include "constellation/core/message/payload_buffer.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std_future.hpp"
 
@@ -35,13 +35,13 @@ zmq::multipart_t CSCP1Message::assemble(bool keep_payload) {
     // First frame: header
     msgpack::sbuffer sbuf_header {};
     msgpack::pack(sbuf_header, header_);
-    frames.add(payload_buffer(std::move(sbuf_header)).to_zmq_msg_release());
+    frames.add(PayloadBuffer(std::move(sbuf_header)).to_zmq_msg_release());
 
     // Second frame: body
     msgpack::sbuffer sbuf_body {};
     msgpack::pack(sbuf_body, std::to_underlying(verb_.first));
     msgpack::pack(sbuf_body, verb_.second);
-    frames.add(payload_buffer(std::move(sbuf_body)).to_zmq_msg_release());
+    frames.add(PayloadBuffer(std::move(sbuf_body)).to_zmq_msg_release());
 
     // Third frame: payload
     if(hasPayload()) {

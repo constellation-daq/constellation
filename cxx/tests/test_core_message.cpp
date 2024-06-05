@@ -285,7 +285,7 @@ TEST_CASE("Message Payload (CSCP1, too many frames)", "[core][core::message]") {
     // Attach additional frames:
     msgpack::sbuffer sbuf_header {};
     msgpack::pack(sbuf_header, "this is fine");
-    auto payload = payload_buffer(std::move(sbuf_header));
+    auto payload = PayloadBuffer(std::move(sbuf_header));
     frames.add(payload.to_zmq_msg_copy());
     frames.add(payload.to_zmq_msg_release());
 

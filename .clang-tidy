@@ -16,7 +16,16 @@ Checks:  '-*,
           readability-*,-readability-identifier-length,-readability-function-cognitive-complexity,-readability-magic-numbers,-readability-redundant-access-specifiers,
          '
 WarningsAsErrors: '*'
-HeaderFilterRegex: '*.h *.hpp'
+HeaderFilterRegex: '*.h *.hpp *.tpp'
 CheckOptions:
   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: 'true'
   cppcoreguidelines-avoid-do-while.IgnoreMacros: 'true'
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.ClassIgnoredRegexp: '^is_.+$'
+  readability-identifier-naming.PublicMethodCase: camelBack
+  readability-identifier-naming.PublicMethodIgnoredRegexp: '^msgpack_.+$|^to_.+$|^on_failure$'
+  readability-identifier-naming.ProtectedMethodCase: lower_case
+  readability-identifier-naming.PrivateMethodCase: lower_case
+  readability-identifier-naming.PrivateMemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: '_'

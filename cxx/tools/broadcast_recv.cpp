@@ -39,8 +39,7 @@ int main(int argc, char* argv[]) {
 
     while(true) {
         auto message = receiver.recvBroadcast();
-        std::cout << "Received message from " << message.address.to_string() << ": " << message.content_to_string()
-                  << std::endl;
+        std::cout << "Received message from " << message.address.to_string() << ": " << message.to_string() << std::endl;
     }
 
     return 0;
