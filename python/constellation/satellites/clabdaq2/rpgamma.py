@@ -89,7 +89,7 @@ class RPGamma(RedPitayaSatellite):
         axi_array_contents0 = axi_numpy_array0[0]
 
         axi_array_contents0.Externaltrigger = self.config["data_type"] + 32
-        return super().do_starting(payload)
+        return "Started"
 
     def do_stopping(self, payload: any):
         memory_file_handle = os.open("/dev/mem", os.O_RDWR)
