@@ -44,7 +44,8 @@ axi_gpio_regset_pins = np.dtype(
     ]
 )
 
-BUFFER_SIZE = 16384
+
+
 RP_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2, rp.RP_CH_3, rp.RP_CH_4]
 
 METRICS_PERIOD = 60.0
@@ -176,6 +177,70 @@ class RedPitayaSatellite(DataSender):
             for name, value in zip(names, self.config_axi_array_contents):
                 setattr(self.config_axi_array_contents, name, self.config[name])
 
+            #Define the axi array for axi writer channel 1 2
+            axi_writer_register_names = np.dtype([
+                                            ("not_used1", "uint32"),
+                                            ("not_used2", "uint32"),
+                                            ("not_used3", "uint32"),
+                                            ("not_used4", "uint32"),
+                                            ("not_used5", "uint32"),
+                                            ("not_used6", "uint32"),
+                                            ("not_used7", "uint32"),
+                                            ("not_used8", "uint32"),
+                                            ("not_used9", "uint32"),
+                                            ("not_used10", "uint32"),
+                                            ("not_used11", "uint32"),
+                                            ("not_used12", "uint32"),
+                                            ("not_used13", "uint32"),
+                                            ("not_used14", "uint32"),
+                                            ("not_used15", "uint32"),
+                                            ("not_used16", "uint32"),
+                                            ("not_used17", "uint32"),
+                                            ("not_used18", "uint32"),
+                                            ("not_used19", "uint32"),
+                                            ("not_used20", "uint32"),
+                                            ("lower_address_0", "uint32"),
+                                            ("upper_address_0", "uint32"),
+                                            ("not_used21", "uint32"),
+                                            ("enable_master_0", "uint32"),
+                                            ("not_used22", "uint32"),
+                                            ("not_used23", "uint32"),
+                                            ("not_used24", "uint32"),
+                                            ("not_used25", "uint32"),
+                                            ("lower_address_1", "uint32"),
+                                            ("upper_address_1", "uint32"),
+                                            ("not_used26", "uint32"),
+                                            ("enable_master_1", "uint32"),
+                                            ])
+            memory_file_handle_axi_writer_registers = os.open("/dev/mem", os.O_RDWR)
+            axi_writer_mmap0 = mmap.mmap(
+            fileno = memory_file_handle_axi_writer_registers, length=mmap.PAGESIZE, offset=0x40100000
+            )
+            axi_writer_numpy_array0 = np.recarray(1, axi_writer_register_names, buf=axi_writer_mmap0)
+            axi_writer_contents0 = axi_writer_numpy_array0[0]
+            axi_writer_contents0.lower_address_0 = 0x1000000
+            axi_writer_contents0.upper_address_0 = 0x107FFFC
+            axi_writer_contents0.enable_master_0 = 1
+            axi_writer_contents0.lower_address_1 = 0x1080000
+            axi_writer_contents0.upper_address_1 = 0x10FFFFC
+            axi_writer_contents0.enable_master_1 = 1
+
+
+            #Define the axi array for axi writer channel 3 4
+
+            axi_writer_mmap2 = mmap.mmap(
+            fileno=memory_file_handle_axi_writer_registers, length=mmap.PAGESIZE, offset=0x40200000
+            )
+            axi_writer_numpy_array2 = np.recarray(1, axi_writer_register_names, buf=axi_writer_mmap2)
+            axi_writer_contents2 = axi_writer_numpy_array2[0]
+            axi_writer_contents2.lower_address_0 = 0x1100000
+            axi_writer_contents2.upper_address_0 = 0x117FFFC
+            axi_writer_contents2.enable_master_0 = 1
+            axi_writer_contents2.lower_address_1 = 0x1180000
+            axi_writer_contents2.upper_address_1 = 0x11FFFFC
+            axi_writer_contents2.enable_master_1 = 1
+           
+
             # Setup metrics
             if self.config["read_gpio"]:
                 self.schedule_metric(
@@ -229,7 +294,7 @@ class RedPitayaSatellite(DataSender):
 
         while not self._state_thread_evt.is_set():
             # Main DAQ-loop
-            payload = self.get_data()
+            payload = self.get_axi_data()
 
             if payload is None:
                 continue
@@ -256,7 +321,7 @@ class RedPitayaSatellite(DataSender):
         time.sleep(1)  # add sleep to make sure that everything has stopped
 
         # Read last buffer
-        payload = self.get_data()
+        payload = self.get_axi_data()
 
         if payload is not None:
 
@@ -269,12 +334,14 @@ class RedPitayaSatellite(DataSender):
             self.data_queue.put((payload.tobytes(), meta))
 
         # TODO:read out registers and store in EOF
+
         self.reset()
         return "Stopped RedPitaya Satellite."
 
     def get_data(
         self,
     ):
+        BUFFER_SIZE = 16384
         """Sample every buffer channel and return raw data in numpy array."""
 
         # Obtain to which point the buffer has written
@@ -331,6 +398,66 @@ class RedPitayaSatellite(DataSender):
         self._readpos = self._writepos
         return data
 
+    def get_axi_data(
+        self,
+    ):
+        BUFFER_SIZE = 16384
+        """Sample every buffer channel and return raw data in numpy array."""
+
+        # Obtain to which point the buffer has written
+        self._writepos = self._get_axi_write_pointer()
+
+        # Skip sampling if we haven't moved
+        if self._readpos == self._writepos:
+            return None
+
+        # Check if buffer has cycled
+        if self._writepos < self._readpos:
+            cycled = True
+        else:
+            cycled = False
+
+        # Check if the amount of data is greater than 1000,
+        # otherwise wait 0.1 s to not send excessive amount of packages.
+        if cycled:
+            if (self._writepos + BUFFER_SIZE) < (self._readpos + 1000):
+                time.sleep(0.1)
+        else:
+            if self._writepos < (self._readpos + 1000):
+                time.sleep(0.1)
+
+        for i, channel in enumerate(self.active_channels):
+            # Read out data buffers and adding them together before returning
+
+            if cycled:
+                buffer = np.concatenate(
+                    (
+                        self._sample_axi_raw32(
+                            start=self._readpos,
+                            stop=BUFFER_SIZE,
+                            channel=channel,
+                        ),
+                        self._sample_axi_raw32(
+                            start=0, stop=self._writepos, channel=channel
+                        ),
+                    )
+                )
+            else:
+                buffer = self._sample_axi_raw32(
+                    start=self._readpos, stop=self._writepos, channel=channel
+                )
+
+            if i == 0:
+                data = np.empty(
+                    (len(self.active_channels), len(buffer)), dtype=np.uint32
+                )
+
+            data[i] = buffer
+
+        # Update readpointer
+        self._readpos = self._writepos
+        return data
+    
     @cscp_requestable
     def get_device(self, _request: CSCPMessage):
         """Get name of device."""
@@ -408,6 +535,10 @@ class RedPitayaSatellite(DataSender):
         """Obtain write pointer"""
         return rp.rp_AcqGetWritePointer()[1]
 
+    def _get_axi_write_pointer(self):
+        """Obtain _axi_write pointer"""
+        return int(rp.rp_AcqAxiGetWritePointer(rp.RP_CH_1)[1]/2)
+
     def read_registers(self):
         """
         Reads the stored values of the axi_regset and returns a
@@ -466,11 +597,49 @@ class RedPitayaSatellite(DataSender):
             offset = 0x40220000
 
         # Call the C function
-        result = lib.readData(0, 16384, offset)
+        result = lib.readData(0, stop, offset)
 
         # Convert the result to a NumPy array
 
-        data_array = np.ctypeslib.as_array(result.data, shape=(16384,))[start:stop]
+        data_array = np.ctypeslib.as_array(result.data, shape=(stop,))[start:stop]
+        stored_data = data_array.copy()
+        lib.freeData(result.data)
+        return stored_data
+    
+    def _sample_axi_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
+        """Read out data in 32 bit form."""
+
+        class Array(ctypes.Structure):
+            """Define the struct in Python"""
+
+            _fields_ = [("data", ctypes.POINTER(ctypes.c_uint32))]
+
+        # Load the shared library.
+        # NOTE: I don't think this path will work well when packaging
+        # NOTE: This might have some answers when the time comes:
+        # https://stackoverflow.com/questions/51468432/refer-to-a-file-within-python-package
+        lib = ctypes.CDLL("python/constellation/satellites/read_data32bit.so")
+
+        # Define the argument and return types of the function
+        lib.readData.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
+        lib.readData.restype = Array
+
+        # Define register offset depending onc channel
+        if channel == rp.RP_CH_1:
+            offset = 0x1000000
+        elif channel == rp.RP_CH_2:
+            offset = 0x1080000
+        elif channel == rp.RP_CH_3:
+            offset = 0x1100000
+        elif channel == rp.RP_CH_4:
+            offset = 0x1180000
+
+        # Call the C function
+        result = lib.readData(0, stop, offset)
+
+        # Convert the result to a NumPy array
+
+        data_array = np.ctypeslib.as_array(result.data, shape=(stop,))[start:stop]
         stored_data = data_array.copy()
         lib.freeData(result.data)
         return stored_data

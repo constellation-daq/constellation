@@ -23,10 +23,10 @@ RPG_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2]
 axi_regset_config = np.dtype(
     [
         ("data_type", "uint32"),
-        ("active_channles", "uint32"),
+        ("active_channels", "uint32"),
         ("use_test_pulser", "uint32"),
-        ("running_sum_Integration_time", "uint32"),
-        ("averaging_Integration_time", "uint32"),
+        ("running_sum_integration_time", "uint32"),
+        ("averaging_integration_time", "uint32"),
         ("trigger_level", "uint32"),
     ]
 )
@@ -34,10 +34,10 @@ axi_regset_config = np.dtype(
 axi_regset_readout = np.dtype(
     [
         ("data_type", "uint32"),
-        ("active_channles", "uint32"),
+        ("active_channels", "uint32"),
         ("use_test_pulser", "uint32"),
         ("shiftSamplesExp", "uint32"),
-        ("averaging_Integration_time", "uint32"),
+        ("averaging_integration_time", "uint32"),
         ("trigger_level", "uint32"),
         ("trigger_per_s_ch0", "uint32"),
         ("trigger_per_s_ch1", "uint32"),
