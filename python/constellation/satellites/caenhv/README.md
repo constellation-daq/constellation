@@ -9,7 +9,7 @@ description: "Satellite controlling a CAEN high-voltage crate such as the SY5527
 
 This Satellite allows to control CAEN high-voltage crates such as the SY5527 and the inserted modules.
 
-For communication, the CAEN communication library, `CAENHVWrapper` as well as the Python bindings provided by [pycaenhv](https://github.com/vasoto/pycaenhv.git) need to be installed.
+For communication, the CAEN communication library, `CAENHVWrapper` as well as the Python bindings provided by [pycaenhv](https://gitlab.com/hperrey/pycaenhv) need to be installed.
 
 ## Parameters
 
