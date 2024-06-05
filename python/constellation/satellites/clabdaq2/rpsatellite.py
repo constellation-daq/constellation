@@ -293,7 +293,7 @@ class RedPitayaSatellite(DataSender):
 
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
-        return super().do_initializing(payload)
+        return "Initialized."
 
     def do_run(self, payload):
         """Run the satellite. Collect data from buffers and send it."""
@@ -343,6 +343,7 @@ class RedPitayaSatellite(DataSender):
         # TODO:read out registers and store in EOF
 
         self.reset()
+        return "Stopped RedPitaya Satellite."
 
     def get_data(
         self,

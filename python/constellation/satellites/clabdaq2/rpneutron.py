@@ -131,7 +131,7 @@ class RPNeutron(RedPitayaSatellite):
         """Start acquisition by writing to address."""
         if self.master:
             self.write_start_stop_bit_to_FPGA(3)
-        return super().do_starting(payload)
+        return "Started."
 
 
 # -------------------------------------------------------------------------
