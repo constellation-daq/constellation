@@ -144,6 +144,27 @@ class CaenHvSatellite(Satellite):
         return val, None, None
 
     @cscp_requestable
+    def get_hw_config(self, request):
+        """Read and return the current hardware configuration.
+
+        Payload: None
+
+        Returns: dictionary with all R/W parameters and their current values.
+
+        """
+        res = {}
+        with self.caen as crate:
+            for brdno, brd in crate.boards.items():
+                for chno, ch in enumerate(brd.channels):
+                    for par in ch.parameter_names:
+                        if not ch.parameters[par].attributes["mode"] == "R/W":
+                            continue
+                        # construct configuration key
+                        key = f"board{brdno}_ch{chno}_{par.lower()}"
+                        res[key] = ch.parameters[par].value
+        return f"Read {len(res)} parameters", res, None
+
+    @cscp_requestable
     def about(self, _request):
         """Get info about the Satellite"""
         # TODO extend with info on connected crate (FW release, etc)
