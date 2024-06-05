@@ -62,7 +62,7 @@ class CaenHvSatellite(Satellite):
                         # loop over parameters
                         # construct configuration key
                         key = f"board{brdno}_ch{chno}_{par.lower()}"
-                        self.log.debug("Checking configuration for key '%s'", key)
+                        self.log.trace("Checking configuration for key '%s'", key)
                         try:
                             # retrieve and set value
                             val = configuration[key]
@@ -72,21 +72,21 @@ class CaenHvSatellite(Satellite):
                             # the board essentially only knows 'float'-type
                             # arguments except for 'Pw':
                             val = float(val)
-                            self.log.debug(
-                                "Configuring %s on board %s, ch %s with value '%s'",
-                                par,
-                                brdno,
-                                chno,
-                                val,
-                            )
                         except KeyError:
                             # nothing in the cfg, leave as it is
-                            pass
+                            continue
                         except ValueError as e:
                             raise RuntimeError(
                                 f"Error in configuration for key {key}: {repr(e)}"
                             )
                         ch.parameters[par].value = val
+                        self.log.debug(
+                            "Configuring %s on board %s, ch %s with value '%s'",
+                            par,
+                            brdno,
+                            chno,
+                            val,
+                        )
 
         # configure metrics sending
         self._configure_monitoring()
@@ -186,9 +186,9 @@ class CaenHvSatellite(Satellite):
                 self.log.info("Powering board %s", brd)
                 for chno, ch in enumerate(brd.channels):
                     key = f"board{brdno}_ch{chno}_pw"
-                    self.log.debug("Powering board %s channel %s", brdno, chno)
                     val = self.config.setdefault(key, "off")
                     if val.lower() in ["true", "on", "1", "enabled", "enable"]:
+                        self.log.debug("Powering board %s channel %s", brdno, chno)
                         ch.switch_on()
                         npowered += 1
         return npowered
