@@ -41,3 +41,17 @@ password="mypassword!"
 board1_ch1_V0Set = 1
 board1_ch1_pw = "on"
 ```
+
+To start the Satellite, run
+
+``` shell
+SatelliteCaenHvCrate
+```
+
+or
+
+``` shell
+SatelliteCaenHvCrate --help
+```
+
+to get a list of the available command-line arguments.
