@@ -7,10 +7,10 @@ This module provides the class for a Constellation Satellite.
 """
 from functools import partial
 
-from ..core.satellite import Satellite, SatelliteArgumentParser
-from ..core.fsm import SatelliteState
-from ..core.commandmanager import cscp_requestable
-from ..core.base import setup_cli_logging
+from constellation.core.satellite import Satellite, SatelliteArgumentParser
+from constellation.core.fsm import SatelliteState
+from constellation.core.commandmanager import cscp_requestable
+from constellation.core.base import setup_cli_logging
 import pycaenhv
 
 
