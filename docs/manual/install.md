@@ -20,7 +20,7 @@ The C++ version of Constellation requires:
 - [Meson](https://mesonbuild.com/) 0.61 or newer
 - C++20 capable compiler like GCC 12 or newer and LLVM 16 or newer
 
-They can be installed as follows:
+The prerequisites can be installed as follows:
 
 ::::{tab-set}
 :::{tab-item} Debian/Ubuntu
@@ -107,11 +107,10 @@ The Python version of Constellation requires
 
 - Python 3.11 or newer
 - The Python [`venv`](https://docs.python.org/3/library/venv.html) module
-- HDF5 development libraries
 
-TODO remove HDF5 from main dependency
+It is also recommended to install the HDF5 development libraries to store data with the H5DataRecieverWriter satellite.
 
-They can be installed as follows:
+The prerequisites can be installed as follows:
 
 ::::{tab-set}
 :::{tab-item} Debian/Ubuntu
@@ -150,6 +149,13 @@ pip install meson-python meson ninja
 
 ```sh
 pip install --no-build-isolation --editable .
+```
+
+To install optional components of the framework, you can install those by replacing `.` with `.[component]`.
+A recommended installation includes the `cli` and `hdf5` components:
+
+```sh
+pip install --no-build-isolation --editable .[cli,hdf5]
 ```
 
 :::::

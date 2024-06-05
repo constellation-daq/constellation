@@ -128,7 +128,7 @@ bool Manager::registerService(ServiceIdentifier service_id, utils::Port port) {
     // Lock not needed anymore
     registered_services_lock.unlock();
     if(actually_inserted) {
-        sendMessage(OFFER, service);
+        send_message(OFFER, service);
     }
     return actually_inserted;
 }
@@ -143,7 +143,7 @@ bool Manager::unregisterService(ServiceIdentifier service_id, utils::Port port) 
     // Lock not needed anymore
     registered_services_lock.unlock();
     if(actually_erased) {
-        sendMessage(DEPART, service);
+        send_message(DEPART, service);
     }
     return actually_erased;
 }
@@ -151,7 +151,7 @@ bool Manager::unregisterService(ServiceIdentifier service_id, utils::Port port) 
 void Manager::unregisterServices() {
     const std::lock_guard registered_services_lock {registered_services_mutex_};
     for(auto service : registered_services_) {
-        sendMessage(DEPART, service);
+        send_message(DEPART, service);
     }
     registered_services_.clear();
 }
@@ -206,10 +206,10 @@ std::vector<DiscoveredService> Manager::getDiscoveredServices(ServiceIdentifier 
 }
 
 void Manager::sendRequest(ServiceIdentifier service) {
-    sendMessage(REQUEST, {service, 0});
+    send_message(REQUEST, {service, 0});
 }
 
-void Manager::sendMessage(MessageType type, RegisteredService service) {
+void Manager::send_message(MessageType type, RegisteredService service) {
     LOG(logger_, DEBUG) << "Sending " << to_string(type) << " for " << to_string(service.identifier) << " service on port "
                         << service.port;
     const auto asm_msg = CHIRPMessage(type, group_id_, host_id_, service.identifier, service.port).assemble();
@@ -256,7 +256,7 @@ void Manager::main_loop(const std::stop_token& stop_token) {
                 // Replay OFFERs for registered services with same service identifier
                 for(const auto& service : registered_services_) {
                     if(service.identifier == service_id) {
-                        sendMessage(OFFER, service);
+                        send_message(OFFER, service);
                     }
                 }
                 break;

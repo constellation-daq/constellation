@@ -31,7 +31,7 @@ namespace constellation::chirp {
         asio::ip::address address;
 
         /** Convert the content of the broadcast message to a string */
-        CNSTLN_API std::string content_to_string() const;
+        CNSTLN_API std::string to_string() const;
     };
 
     /** Broadcast receiver for incoming CHIRP broadcasts on `CHIRP_PORT` */

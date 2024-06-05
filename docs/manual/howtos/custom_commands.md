@@ -19,9 +19,8 @@ their names.
 ## Registering The Command
 
 ::::{tab-set}
-
 :::{tab-item} C++
-:sync: keyC
+:sync: cxx
 
 In C++, commands are registered in the satellite constructor.
 In this example, the following command is added to the satellite `MySatellite`:
@@ -51,9 +50,8 @@ called in, the pointer to the command function and the pointer to this satellite
 registration process are discussed below in detail.
 
 :::
-
 :::{tab-item} Python
-:sync: keyP
+:sync: python
 
 In Python, commands are registered by placing the `@cscp_requestable` decorator above the method defining the command.
 The method needs to have a specific signature:
@@ -87,7 +85,6 @@ the description of the command, available from the command registry. The command
 `constellation.MySatellite.get_channel_reading([1])` in the Controller, to read channel 1.
 
 :::
-
 ::::
 
 ## Name and description
@@ -97,10 +94,8 @@ only contain alphanumeric characters and underscores. The description should com
 required arguments and the return value.
 
 ::::{tab-set}
-
 :::{tab-item} C++
-:sync: keyC
-
+:sync: cxx
 
 In addition to this information, the number of required arguments as well as the allowed states are automatically appended
 to the description reported by the satellite e.g. through its `get_commands` response. For the example command registered
@@ -114,7 +109,6 @@ get_channel_reading:  This command reads the current device value from the chann
 ```
 
 :::
-
 ::::
 
 ## Command arguments and return values
@@ -129,23 +123,20 @@ documentation.
 ```
 
 ::::{tab-set}
-
 :::{tab-item} C++
-:sync: keyC
+:sync: cxx
 
 Arguments do not have to be specifically denominated when registering the command. The
 command registry instead takes this information directly from the function declaration of the command to be called.
 
 :::
-
 :::{tab-item} Python
-:sync: keyP
+:sync: python
 
 It should be noted that the parameters are given to the command as a list which is the `payload` of the `CSCPMessage` in the
 custom command. Individual arguments need to be accessed via their list index.
 
 :::
-
 ::::
 
 ```{warning}
@@ -166,16 +157,14 @@ The command registry allows limiting the states in which each of the commands ca
 command otherwise.
 
 ::::{tab-set}
-
 :::{tab-item} C++
-:sync: keyC
+:sync: cxx
 
 In C++, the allowed states are provided as part of the command registration as described [above](#registering-the-command).
 
 :::
-
 :::{tab-item} Python
-:sync: keyP
+:sync: python
 
 In Python, this is handled by adding a method with the signature
 
@@ -192,5 +181,4 @@ def _get_channel_reading_is_allowed(self, request: CSCPMessage):
 ```
 
 :::
-
 ::::

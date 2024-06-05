@@ -28,7 +28,7 @@ shared_library(satellite_name,
   install_rpath: constellation_rpath,
 )
 
-executable('Satellite' + satellite_name,
+executable('satellite' + satellite_name,
   sources: [satellite_main],
   dependencies: [exec_dep],
   install: true,

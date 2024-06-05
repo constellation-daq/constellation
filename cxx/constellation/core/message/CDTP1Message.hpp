@@ -21,7 +21,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/BaseHeader.hpp"
-#include "constellation/core/message/payload_buffer.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/message/Protocol.hpp"
 
 namespace constellation::message {
@@ -75,13 +75,13 @@ namespace constellation::message {
 
         constexpr const Header& getHeader() const { return header_; }
 
-        const std::vector<message::payload_buffer>& getPayload() const { return payload_buffers_; }
+        const std::vector<message::PayloadBuffer>& getPayload() const { return payload_buffers_; }
 
         /**
          * @param payload Payload buffer containing a payload to be added as ZeroMQ message
          */
-        void addPayload(message::payload_buffer&& payload) {
-            payload_buffers_.emplace_back(std::forward<message::payload_buffer>(payload));
+        void addPayload(message::PayloadBuffer&& payload) {
+            payload_buffers_.emplace_back(std::forward<message::PayloadBuffer>(payload));
         }
 
         /**
@@ -100,7 +100,7 @@ namespace constellation::message {
 
     private:
         Header header_;
-        std::vector<message::payload_buffer> payload_buffers_;
+        std::vector<message::PayloadBuffer> payload_buffers_;
     };
 
 } // namespace constellation::message

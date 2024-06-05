@@ -265,7 +265,7 @@ build:python-3.12:
 .test-py:
   stage: test
   script:
-    - pip install --no-build-isolation -e .[test]
+    - pip install --no-build-isolation -e .[test,hdf5]
     - pytest --force-sugar --junitxml=junit.xml
   artifacts:
     reports:
@@ -358,7 +358,7 @@ lint:coverage-py:
       artifacts: false
       optional: true
   script:
-    - pip install --no-build-isolation -e .[test]
+    - pip install --no-build-isolation -e .[test,hdf5]
     - pytest --force-sugar --cov --cov-report term --cov-report xml:coverage.xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:

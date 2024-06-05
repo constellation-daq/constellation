@@ -90,7 +90,7 @@ Generator* DSOLoader::loadSatelliteGenerator() {
     return getFunctionFromDSO<satellite::Generator>("generator");
 }
 
-void* DSOLoader::getRawFunctionFromDSO(const std::string& function_name) {
+void* DSOLoader::get_raw_function_from_dso(const std::string& function_name) {
 #ifdef _WIN32
     void* function = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle_), function_name.c_str()));
     if(function == nullptr) {

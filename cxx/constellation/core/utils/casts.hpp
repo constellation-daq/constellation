@@ -12,8 +12,12 @@
 #pragma once
 
 #include <cstddef>
+#include <ranges>
+#include <span>
 
 #include <magic_enum.hpp>
+
+#include "constellation/core/utils/std_future.hpp"
 
 namespace constellation::utils {
 
@@ -45,6 +49,19 @@ namespace constellation::utils {
     template <typename T> inline std::byte* to_byte_ptr(T* data) {
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         return reinterpret_cast<std::byte*>(data);
+    }
+
+    template <typename R>
+        requires std::ranges::contiguous_range<R>
+    inline std::span<const std::byte> to_byte_span(const R& range) {
+        return std::as_bytes(std::span<std::ranges::range_value_t<R>>(std::ranges::cdata(range), std::ranges::size(range)));
+    }
+
+    template <typename R>
+        requires std::ranges::contiguous_range<R> && (!std::ranges::constant_range<R>)
+    inline std::span<std::byte> to_byte_span(R& range) {
+        return std::as_writable_bytes(
+            std::span<std::ranges::range_value_t<R>>(std::ranges::data(range), std::ranges::size(range)));
     }
 
 } // namespace constellation::utils

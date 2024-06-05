@@ -20,7 +20,7 @@
 
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/message/exceptions.hpp"
-#include "constellation/core/message/payload_buffer.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
@@ -30,8 +30,8 @@ using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::string_literals;
 
-CMDP1Message::CMDP1Message(std::string topic, CMDP1Message::Header header, message::payload_buffer&& payload)
-    : topic_(std::move(topic)), header_(std::move(header)), payload_(std::forward<message::payload_buffer>(payload)) {}
+CMDP1Message::CMDP1Message(std::string topic, CMDP1Message::Header header, message::PayloadBuffer&& payload)
+    : topic_(std::move(topic)), header_(std::move(header)), payload_(std::forward<message::PayloadBuffer>(payload)) {}
 
 bool CMDP1Message::isLogMessage() const {
     return topic_.starts_with("LOG/");
@@ -46,7 +46,7 @@ zmq::multipart_t CMDP1Message::assemble() {
     // Second frame: header
     msgpack::sbuffer sbuf_header {};
     msgpack::pack(sbuf_header, header_);
-    frames.add(payload_buffer(std::move(sbuf_header)).to_zmq_msg_release());
+    frames.add(PayloadBuffer(std::move(sbuf_header)).to_zmq_msg_release());
 
     // Third frame: move payload
     frames.add(payload_.to_zmq_msg_release());
@@ -67,7 +67,7 @@ CMDP1Message CMDP1Message::disassemble(zmq::multipart_t& frames) {
 
     // Check if valid log level by trying to decode it
     if(topic.starts_with("LOG/")) {
-        getLogLevelFromTopic(topic);
+        get_log_level_from_topic(topic);
     }
 
     // Decode header
@@ -75,13 +75,13 @@ CMDP1Message CMDP1Message::disassemble(zmq::multipart_t& frames) {
     const auto header = Header::disassemble({to_byte_ptr(header_frame.data()), header_frame.size()});
 
     // Decode payload
-    message::payload_buffer payload = {frames.pop()};
+    message::PayloadBuffer payload = {frames.pop()};
 
     // Create message
     return {topic, header, std::move(payload)};
 }
 
-Level CMDP1Message::getLogLevelFromTopic(std::string_view topic) {
+Level CMDP1Message::get_log_level_from_topic(std::string_view topic) {
     if(!topic.starts_with("LOG/")) {
         throw MessageDecodingError("Not a log message");
     }
@@ -109,7 +109,7 @@ CMDP1LogMessage::CMDP1LogMessage(CMDP1Message&& message) : CMDP1Message(std::for
     }
 
     const auto topic = getTopic();
-    level_ = getLogLevelFromTopic(topic);
+    level_ = get_log_level_from_topic(topic);
 
     // Search for a '/' after "LOG/"
     const auto level_endpos = topic.find_first_of('/', 4);
@@ -120,7 +120,7 @@ CMDP1LogMessage::CMDP1LogMessage(CMDP1Message&& message) : CMDP1Message(std::for
 }
 
 std::string_view CMDP1LogMessage::getLogMessage() const {
-    return getPayload().to_string_view();
+    return get_payload().to_string_view();
 }
 
 CMDP1LogMessage CMDP1LogMessage::disassemble(zmq::multipart_t& frames) {

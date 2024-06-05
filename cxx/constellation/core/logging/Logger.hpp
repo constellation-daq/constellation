@@ -32,17 +32,17 @@ namespace constellation::log {
         /**
          * Log stream that executes logging upon its destruction
          */
-        class log_stream final : public std::ostringstream {
+        class LogStream final : public std::ostringstream {
         public:
-            inline log_stream(const Logger& logger, Level level, std::source_location src_loc)
+            inline LogStream(const Logger& logger, Level level, std::source_location src_loc)
                 : logger_(logger), level_(level), src_loc_(src_loc) {}
-            inline ~log_stream() final { logger_.log(level_, this->view(), src_loc_); }
+            inline ~LogStream() final { logger_.log(level_, this->view(), src_loc_); }
 
             // No copy/move constructor/assignment
-            log_stream(const log_stream& other) = delete;
-            log_stream& operator=(const log_stream& other) = delete;
-            log_stream(log_stream&& other) = delete;
-            log_stream& operator=(log_stream&& other) = delete;
+            LogStream(const LogStream& other) = delete;
+            LogStream& operator=(const LogStream& other) = delete;
+            LogStream(LogStream&& other) = delete;
+            LogStream& operator=(LogStream&& other) = delete;
 
         private:
             const Logger& logger_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -85,9 +85,9 @@ namespace constellation::log {
          *
          * @param level Log level of the log message
          * @param src_loc Source code location from which the log message emitted
-         * @return a log_stream object
+         * @return a LogStream object
          */
-        inline log_stream log(Level level, std::source_location src_loc = std::source_location::current()) const {
+        inline LogStream log(Level level, std::source_location src_loc = std::source_location::current()) const {
             return {*this, level, src_loc};
         }
 

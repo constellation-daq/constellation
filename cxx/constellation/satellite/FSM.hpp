@@ -22,7 +22,7 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
-#include "constellation/core/message/payload_buffer.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
 namespace constellation::satellite {
@@ -101,7 +101,7 @@ namespace constellation::satellite {
          * @return Tuple containing the CSCP message type and a description
          */
         CNSTLN_API std::pair<message::CSCP1Message::Type, std::string> reactCommand(TransitionCommand transition_command,
-                                                                                    const message::payload_buffer& payload);
+                                                                                    const message::PayloadBuffer& payload);
 
         /**
          * @brief Try to perform an interrupt as soon as possible
@@ -125,13 +125,29 @@ namespace constellation::satellite {
 
     private:
         /**
+         * Call a satellite function
+         *
+         * @param satellite Satellite the function should be called for
+         * @param func Function to be called
+         * @param success_transition Transition to be performed once the function successfully returned
+         * @param args Function arguments
+         * @return Transition after function call, either success transition or failure
+         */
+        template <typename Func, typename... Args>
+        static Transition
+        call_satellite_function(Satellite* satellite, Func func, Transition success_transition, Args... args);
+
+        /**
          * Find the transition function for a given transition in the current state
          *
          * @param transition Transition to search for a transition function
          * @return Transition function corresponding to the transition
          * @throw FSMError if the transition is not a valid transition in the current state
          */
-        TransitionFunction findTransitionFunction(Transition transition);
+        TransitionFunction find_transition_function(Transition transition);
+
+        /** Stop and join the run_thread */
+        void stop_run_thread();
 
         CNSTLN_API auto initialize(TransitionPayload payload) -> State;
         CNSTLN_API auto initialized(TransitionPayload payload) -> State;

@@ -23,7 +23,7 @@
 #include "constellation/core/heartbeat/HeartbeatManager.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
-#include "constellation/core/message/payload_buffer.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/ports.hpp"
 #include "constellation/satellite/FSM.hpp"
 #include "constellation/satellite/Satellite.hpp"
@@ -60,18 +60,18 @@ namespace constellation::satellite {
 
     private:
         // get next command
-        std::optional<message::CSCP1Message> getNextCommand();
+        std::optional<message::CSCP1Message> get_next_command();
 
         // reply to command
-        void sendReply(std::pair<message::CSCP1Message::Type, std::string> reply_verb, message::payload_buffer payload = {});
+        void send_reply(std::pair<message::CSCP1Message::Type, std::string> reply_verb, message::PayloadBuffer payload = {});
 
         // handle get commands
-        std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::payload_buffer>>
-        handleStandardCommand(std::string_view command);
+        std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::PayloadBuffer>>
+        handle_standard_command(std::string_view command);
 
         // handle user commands
-        std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::payload_buffer>>
-        handleUserCommand(std::string_view command, const message::payload_buffer& payload);
+        std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::PayloadBuffer>>
+        handle_user_command(std::string_view command, const message::PayloadBuffer& payload);
 
         // main loop
         void main_loop(const std::stop_token& stop_token);

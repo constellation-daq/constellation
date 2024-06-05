@@ -20,7 +20,7 @@ from .cscp import CSCPMessage
 from .chirp import CHIRPServiceIdentifier
 from .broadcastmanager import CHIRPBroadcaster
 from .commandmanager import CommandReceiver, cscp_requestable
-from .configuration import Configuration
+from .configuration import Configuration, make_lowercase
 from .monitoring import MonitoringSender
 from .error import debug_log, handle_error
 from .base import EPILOG, ConstellationArgumentParser, setup_cli_logging
@@ -163,8 +163,10 @@ class Satellite(
             pass
         self._state_thread_evt = None
         self._state_thread_fut = None
-
+        # prepare configuration
+        config = make_lowercase(config)
         self.config = Configuration(config)
+        # call device-specific user-routine
         init_msg = self.do_initializing(self.config)
 
         if self.config.has_unused_values():

@@ -34,6 +34,7 @@ using namespace constellation::message;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
+using namespace std::literals::string_literals;
 
 class DummySatellite : public Satellite {
     // NOLINTBEGIN(readability-convert-member-functions-to-static,readability-make-member-function-const)
@@ -64,7 +65,7 @@ public:
         req_.send(zmq_msg, send_flags);
     }
     void send(CSCP1Message& message) { message.assemble().send(req_); }
-    void send_command(std::string command) {
+    void sendCommand(std::string command) {
         auto msg = CSCP1Message({"cscp_sender"}, {CSCP1Message::Type::REQUEST, std::move(command)});
         send(msg);
     }
@@ -91,14 +92,14 @@ TEST_CASE("Get commands", "[satellite]") {
     CSCPSender sender {satellite_implementation.getPort()};
 
     // get_name
-    sender.send_command("get_name");
+    sender.sendCommand("get_name");
     auto recv_msg_get_name = sender.recv();
     REQUIRE(recv_msg_get_name.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_get_name.getVerb().second), Equals(satellite->getCanonicalName()));
     REQUIRE(!recv_msg_get_name.hasPayload());
 
     // get_commands
-    sender.send_command("get_commands");
+    sender.sendCommand("get_commands");
     auto recv_msg_get_commands = sender.recv();
     REQUIRE(recv_msg_get_commands.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_get_commands.getVerb().second), Equals("Commands attached in payload"));
@@ -116,21 +117,21 @@ TEST_CASE("Get commands", "[satellite]") {
                "following states: RUN"));
 
     // get_state
-    sender.send_command("get_state");
+    sender.sendCommand("get_state");
     auto recv_msg_get_state = sender.recv();
     REQUIRE(recv_msg_get_state.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_get_state.getVerb().second), Equals("NEW"));
     REQUIRE(!recv_msg_get_state.hasPayload());
 
     // get_status
-    sender.send_command("get_status");
+    sender.sendCommand("get_status");
     auto recv_msg_get_status = sender.recv();
     REQUIRE(recv_msg_get_status.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_get_status.getVerb().second), Equals("just started!"));
     REQUIRE(!recv_msg_get_status.hasPayload());
 
     // get_config
-    sender.send_command("get_config");
+    sender.sendCommand("get_config");
     auto recv_msg_get_config = sender.recv();
     REQUIRE(recv_msg_get_config.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_get_config.getVerb().second), Equals("Configuration attached in payload"));
@@ -158,7 +159,7 @@ TEST_CASE("User commands", "[satellite]") {
     CSCPSender sender {satellite_implementation.getPort()};
 
     // my_cmd user command
-    sender.send_command("my_cmd");
+    sender.sendCommand("my_cmd");
     auto recv_msg_usr_cmd = sender.recv();
     REQUIRE(recv_msg_usr_cmd.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_usr_cmd.getVerb().second), Equals(""));
@@ -185,7 +186,7 @@ TEST_CASE("User commands", "[satellite]") {
     REQUIRE(usrargpayload->as<int>() == 8);
 
     // my_cmd_void user command without arguments and return value
-    sender.send_command("my_cmd_void");
+    sender.sendCommand("my_cmd_void");
     auto recv_msg_usr_cmd_void = sender.recv();
     REQUIRE(recv_msg_usr_cmd_void.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_usr_cmd_void.getVerb().second), Equals(""));
@@ -202,14 +203,14 @@ TEST_CASE("Case insensitive", "[satellite]") {
     CSCPSender sender {satellite_implementation.getPort()};
 
     // get_name with non-lower-case case
-    sender.send_command("GeT_nAmE");
+    sender.sendCommand("GeT_nAmE");
     auto recv_msg_get_name = sender.recv();
     REQUIRE(recv_msg_get_name.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_get_name.getVerb().second), Equals(satellite->getCanonicalName()));
     REQUIRE(!recv_msg_get_name.hasPayload());
 
     // my_cmd user command
-    sender.send_command("mY_cMd");
+    sender.sendCommand("mY_cMd");
     auto recv_msg_usr_cmdn = sender.recv();
     REQUIRE(recv_msg_usr_cmdn.getVerb().first == CSCP1Message::Type::SUCCESS);
 }
@@ -235,7 +236,7 @@ TEST_CASE("Transitions", "[satellite]") {
 
     // Check state
     std::this_thread::sleep_for(150ms);
-    sender.send_command("get_state");
+    sender.sendCommand("get_state");
     auto recv_msg_get_status = sender.recv();
     REQUIRE(recv_msg_get_status.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_get_status.getVerb().second), Equals("INIT"));
@@ -386,7 +387,7 @@ TEST_CASE("Catch incorrect payload", "[satellite]") {
 
     // Send initialize
     auto initialize_msg = CSCP1Message({"cscp_sender"}, {CSCP1Message::Type::REQUEST, "initialize"});
-    initialize_msg.addPayload({"dummy_payload"});
+    initialize_msg.addPayload({"dummy_payload"s});
     sender.send(initialize_msg);
 
     // Check reply
@@ -397,7 +398,7 @@ TEST_CASE("Catch incorrect payload", "[satellite]") {
 
     // Check state
     std::this_thread::sleep_for(150ms);
-    sender.send_command("get_state");
+    sender.sendCommand("get_state");
     auto recv_msg_get_status = sender.recv();
     REQUIRE(recv_msg_get_status.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_get_status.getVerb().second), Equals("NEW"));
@@ -467,7 +468,7 @@ TEST_CASE("Catch incorrect user command arguments", "[satellite]") {
 
     // my_usr_cmd_arg with wrong payload encoding
     auto nolist_msg = CSCP1Message({"cscp_sender"}, {CSCP1Message::Type::REQUEST, "my_cmd_arg"});
-    auto nolist_payload = payload_buffer("dummy payload");
+    auto nolist_payload = PayloadBuffer("dummy payload"s);
     nolist_msg.addPayload(std::move(nolist_payload));
     sender.send(nolist_msg);
 
@@ -501,7 +502,7 @@ TEST_CASE("Catch incorrect user command arguments", "[satellite]") {
                  Equals("Command \"my_cmd_arg\" expects 1 arguments but 2 given"));
 
     // my_usr_state from wrong state
-    sender.send_command("my_cmd_state");
+    sender.sendCommand("my_cmd_state");
     auto recv_msg_usr_cmd_state = sender.recv();
     REQUIRE(recv_msg_usr_cmd_state.getVerb().first == CSCP1Message::Type::INVALID);
     REQUIRE_THAT(to_string(recv_msg_usr_cmd_state.getVerb().second),

@@ -7,9 +7,8 @@ satellite and how to discover it and change its state with a controller.
 ## Starting a Satellite
 
 ::::{tab-set}
-
 :::{tab-item} C++
-:sync: keyC
+:sync: cxx
 
 The `satellite` executable starts a new Constellation satellite and requires three command line arguments:
 
@@ -24,9 +23,8 @@ A call with all three parameters provided could e.g. look like follows:
 ```
 
 :::
-
 :::{tab-item} Python
-:sync: keyP
+:sync: python
 
 Before starting a Python satellite, the virtual environment created during the installation of the framework might need to be
 reactivated using `source venv/bin/activate`.
@@ -43,7 +41,6 @@ python -m constellation.satellites.example_satellite --name TheFirstSatellite --
 ```
 
 :::
-
 ::::
 
 ## Controlling the Satellite
@@ -54,20 +51,16 @@ of this tutorial. This section shows different options to perform this task.
 ### Starting a Controller
 
 ::::{tab-set}
-
 :::{tab-item} C++
-:sync: keyC
+:sync: cxx
 
 TODO
 
 :::
-
 :::{tab-item} Python
-:sync: keyP
+:sync: python
 
-The Python implementation of Constellation provides a powerful command line interface controller using IPython. This package
-needs to be installed (`pip install ipython`) in the virtual environment that was created during the installation of the
-framework and can be reactivated using `source venv/bin/activate`.
+The Python implementation of Constellation provides a powerful command line interface controller using IPython. This can be installed with the `cli` component (see [Installing from Source](../install.md#installing-the-constellation-package)).
 
 The controller is started via its Python module, and it is possible to pass it some (optional) arguments, for example:
 
@@ -111,22 +104,19 @@ In [3]: for sat in constellation.satellites:
 ```
 
 :::
-
 ::::
 
 ### Sending Commands to the Satellite
 
 ::::{tab-set}
-
 :::{tab-item} C++
-:sync: keyC
+:sync: cxx
 
 TODO
 
 :::
-
 :::{tab-item} Python
-:sync: keyP
+:sync: python
 
 Commands can either be sent to individual satellites, all satellites of a given type, or the entire constellation.
 All available commands for the `constellation` object are available via tab completion.
@@ -152,7 +142,6 @@ Similarly, all satellite states can be called. A full list of available commands
 state machine can be found in the [concepts chapter on satellites](../concepts/satellite).
 
 :::
-
 ::::
 
 ### Closing the Controller
@@ -161,19 +150,16 @@ Controllers in Constellation do not posses state and can be closed and restarted
 affecting the state of the satellites.
 
 ::::{tab-set}
-
 :::{tab-item} C++
-:sync: keyC
+:sync: cxx
 
 TODO.
 
 :::
-
 :::{tab-item} Python
-:sync: keyP
+:sync: python
 
 The IPython CLI controller can be disconnected from the constellation using the command `exit()`.
 
 :::
-
 ::::

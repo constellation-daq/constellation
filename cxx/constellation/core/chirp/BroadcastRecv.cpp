@@ -13,7 +13,7 @@ using namespace constellation::chirp;
 
 constexpr std::size_t MESSAGE_BUFFER = 1024;
 
-std::string BroadcastMessage::content_to_string() const {
+std::string BroadcastMessage::to_string() const {
     std::string ret;
     ret.resize(content.size());
     for(std::size_t n = 0; n < content.size(); ++n) {

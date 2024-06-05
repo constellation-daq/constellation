@@ -33,16 +33,48 @@ using namespace std::literals::string_view_literals; // NOLINT(google-global-nam
 #define LOG_VAR LOG_CONCAT_NESTED(LOG_VAR_L, __LINE__)
 
 /**
- * Logs a message for a given level
+ * Logs a message for a given level to a defined logger
  *
  * The stream expression is only evaluated if logging should take place.
  *
  * @param logger Logger on which to log
  * @param level Log level on which to log
  */
-#define LOG(logger, level)                                                                                                  \
+#define LOG_WITH_TOPIC(logger, level)                                                                                       \
     if((logger).shouldLog(level))                                                                                           \
     (logger).log(level)
+
+/**
+ * Logs a message for a given level to the default logger
+ *
+ * The stream expression is only evaluated if logging should take place.
+ *
+ * @param level Log level on which to log
+ */
+#define LOG_TO_DEFAULT(level) LOG_WITH_TOPIC(constellation::log::Logger::getDefault(), level)
+
+/**
+ * Helper macros which allow to chose the correct target macro (LOG_TO_DEFAULT or LOG_WITH_TOPIC) depending on the number
+ * of arguments provided.
+ *
+ * * LOG_MACRO_CHOOSER will pass all its arguments along with the two possible target macros to LOG_FUNC_RECOMPOSER
+ * * LOG_FUNC_RECOMPOSER passes all arguments including parentheses to the LOG_FUNC_CHOOSER
+ * * LOG_FUNC_CHOOSER selects the third of its arguments as the function to be called:
+ *                    * With one argument in __VA_ARGS__, this will be LOG_TO_DEFAULT
+ *                    * With two arguments in __VA_ARGS__, this will be LOG_WITH_TOPIC
+ * * Finally, the respective macro is called with its argument(s)
+ */
+#define LOG_FUNC_CHOOSER(_f1, _f2, _f3, ...) _f3
+#define LOG_FUNC_RECOMPOSER(argsWithParentheses) LOG_FUNC_CHOOSER argsWithParentheses
+#define LOG_MACRO_CHOOSER(...) LOG_FUNC_RECOMPOSER((__VA_ARGS__, LOG_WITH_TOPIC, LOG_TO_DEFAULT, ))
+
+/**
+ * Logging macro which takes either one or two arguments:
+ *
+ * LOG(level) will log to the default logger of the framework
+ * LOG(logger, level) will log to the chosen logger instance
+ */
+#define LOG(...) LOG_MACRO_CHOOSER(__VA_ARGS__)(__VA_ARGS__)
 
 /**
  * Logs a message if a given condition is true

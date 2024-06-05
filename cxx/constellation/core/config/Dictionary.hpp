@@ -19,7 +19,7 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Value.hpp"
-#include "constellation/core/message/payload_buffer.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
 
 namespace constellation::config {
 
@@ -35,10 +35,10 @@ namespace constellation::config {
         CNSTLN_API void msgpack_unpack(const msgpack::object& msgpack_object);
 
         /** Assemble list via msgpack to message payload */
-        CNSTLN_API message::payload_buffer assemble() const;
+        CNSTLN_API message::PayloadBuffer assemble() const;
 
         /** Disassemble list from message payload */
-        CNSTLN_API static List disassemble(const message::payload_buffer& message);
+        CNSTLN_API static List disassemble(const message::PayloadBuffer& message);
     };
 
     /**
@@ -53,10 +53,10 @@ namespace constellation::config {
         CNSTLN_API void msgpack_unpack(const msgpack::object& msgpack_object);
 
         /** Assemble dictionary via msgpack to message payload */
-        CNSTLN_API message::payload_buffer assemble() const;
+        CNSTLN_API message::PayloadBuffer assemble() const;
 
         /** Disassemble dictionary from message payload */
-        CNSTLN_API static Dictionary disassemble(const message::payload_buffer& message);
+        CNSTLN_API static Dictionary disassemble(const message::PayloadBuffer& message);
 
         /**
          * @brief Convert dictionary to human readable string

@@ -42,15 +42,6 @@ pip install -e .[dev,test]
 ```
 
 :::
-:::{tab-item} Documentation
-
-```sh
-pip install -e .[docs]
-```
-
-For generating the code documentation and user manual, also Make, [doxygen](https://doxygen.nl/) and plantuml are required.
-
-:::
 ::::
 
 ## Running the Test Suite
@@ -115,6 +106,14 @@ TODO
 ::::
 
 ## Building the Documentation
+
+To install the documentation dependencies, run:
+
+```sh
+pip install -e .[docs]
+```
+
+For generating the code documentation and user manual, also Make, [doxygen](https://doxygen.nl/) and plantuml are required.
 
 Run once or whenever you change C++ source code documentation:
 

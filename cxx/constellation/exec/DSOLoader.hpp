@@ -42,7 +42,7 @@ namespace constellation::exec {
          */
         template <typename FunctionType> FunctionType* getFunctionFromDSO(const std::string& function_name) {
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-            return reinterpret_cast<FunctionType*>(getRawFunctionFromDSO(function_name));
+            return reinterpret_cast<FunctionType*>(get_raw_function_from_dso(function_name));
         }
 
         /**
@@ -52,7 +52,7 @@ namespace constellation::exec {
 
     private:
         // OS-specific function to get function from DSO
-        CNSTLN_API void* getRawFunctionFromDSO(const std::string& function_name);
+        CNSTLN_API void* get_raw_function_from_dso(const std::string& function_name);
 
         std::string dso_name_;
         void* handle_;

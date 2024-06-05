@@ -139,7 +139,7 @@ class CommandReceiver(BaseSatelliteFrame):
             try:
                 self.log.debug("Calling command %s with argument %s", req.msg, req)
                 res, payload, meta = getattr(self, req.msg)(req)
-            except (AttributeError, ValueError, TypeError, NotImplementedError) as e:
+            except (AttributeError, NotImplementedError) as e:
                 self.log.error("Command failed with %s: %s", e, req)
                 self._cmd_tm.send_reply(
                     "WrongImplementation", CSCPMessageVerb.NOTIMPLEMENTED, repr(e)
@@ -151,8 +151,14 @@ class CommandReceiver(BaseSatelliteFrame):
                     f"Transition not allowed: {e}", CSCPMessageVerb.INVALID, None
                 )
                 continue
+            except (TypeError, ValueError) as e:
+                self.log.error("Command '%s' received wrong argument: %s", req, repr(e))
+                self._cmd_tm.send_reply(
+                    f"Wrong argument: {e}", CSCPMessageVerb.INCOMPLETE
+                )
+                continue
             except Exception as e:
-                self.log.error("Command not allowed: %s", req)
+                self.log.error("Command failed: %s", req)
                 self._cmd_tm.send_reply("Exception", CSCPMessageVerb.INVALID, repr(e))
                 continue
             # check the response; empty string means 'missing data/incomplete'

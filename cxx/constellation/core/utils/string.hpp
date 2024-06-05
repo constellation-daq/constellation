@@ -97,25 +97,27 @@ namespace constellation::utils {
     template <typename D>
     concept is_chrono_duration = requires(D d) { std::chrono::duration(d); };
 
-    /** Convert a duration to a string with given time unit */
-    template <typename D, typename U = std::chrono::milliseconds>
-        requires is_chrono_duration<D> && is_chrono_duration<U>
+    /** Convert a duration to a string */
+    template <typename D>
+        requires is_chrono_duration<D>
     std::string to_string(D d) {
-        const auto cast_d = std::chrono::duration_cast<U>(d);
 #ifdef __cpp_lib_format
-        return std::format("{}", cast_d);
+        return std::format("{}", d);
 #else
-        std::string unit = "s";
-        auto count = static_cast<double>(cast_d.count());
-        if constexpr(std::same_as<U, std::chrono::nanoseconds>) {
+        std::string unit {};
+        auto count = static_cast<double>(d.count());
+        if constexpr(std::same_as<D, std::chrono::nanoseconds>) {
             unit = "ns";
-        } else if constexpr(std::same_as<U, std::chrono::microseconds>) {
+        } else if constexpr(std::same_as<D, std::chrono::microseconds>) {
             unit = "us";
-        } else if constexpr(std::same_as<U, std::chrono::milliseconds>) {
+        } else if constexpr(std::same_as<D, std::chrono::milliseconds>) {
             unit = "ms";
+        } else if constexpr(std::same_as<D, std::chrono::seconds>) {
+            unit = "s";
         } else {
             // Ratio not predefined, convert to seconds
-            count *= U::period::num / U::period::den;
+            unit = "s";
+            count *= D::period::num / D::period::den;
         }
         return to_string(count) + unit;
 #endif

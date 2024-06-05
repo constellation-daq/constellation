@@ -10,17 +10,21 @@
 #pragma once
 
 #include <any>
+#include <concepts>
 #include <cstddef>
 #include <memory>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include <msgpack/sbuffer.hpp>
 #include <zmq.hpp>
 
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/std_future.hpp"
 
 namespace constellation::message {
 
@@ -37,7 +41,7 @@ namespace constellation::message {
      * such that it does not get deleted in the destructor of the buffer.
      *
      */
-    class payload_buffer {
+    class PayloadBuffer {
     public:
         /**
          * @brief Construct buffer given by moving an arbitrary object
@@ -48,41 +52,43 @@ namespace constellation::message {
          * @param f Function F that takes a reference of T and returns an std::span<std::byte>
          */
         template <typename T, typename F>
-        payload_buffer(T&& t, F f) : any_ptr_(new std::any(std::forward<T>(t))), span_(f(std::any_cast<T&>(*any_ptr_))) {}
+            requires std::move_constructible<T> && std::is_invocable_r_v<std::span<std::byte>, F, T&>
+        PayloadBuffer(T&& t, F f) : any_ptr_(new std::any(std::forward<T>(t))), span_(f(std::any_cast<T&>(*any_ptr_))) {}
 
         /** Specialized constructor for zmq::message_t */
-        payload_buffer(zmq::message_t&& msg)
-            : payload_buffer(std::make_shared<zmq::message_t>(std::forward<zmq::message_t>(msg)),
-                             [](std::shared_ptr<zmq::message_t>& msg_ref) -> std::span<std::byte> {
-                                 return {utils::to_byte_ptr(msg_ref->data()), msg_ref->size()};
-                             }) {}
+        PayloadBuffer(zmq::message_t&& msg)
+            : PayloadBuffer(std::make_shared<zmq::message_t>(std::forward<zmq::message_t>(msg)),
+                            [](std::shared_ptr<zmq::message_t>& msg_ref) -> std::span<std::byte> {
+                                return {utils::to_byte_ptr(msg_ref->data()), msg_ref->size()};
+                            }) {}
 
         /** Specialized constructor for msgpack::sbuffer */
-        payload_buffer(msgpack::sbuffer&& buf)
-            : payload_buffer(std::make_shared<msgpack::sbuffer>(std::forward<msgpack::sbuffer>(buf)),
-                             [](std::shared_ptr<msgpack::sbuffer>& buf_ref) -> std::span<std::byte> {
-                                 return {utils::to_byte_ptr(buf_ref->data()), buf_ref->size()};
-                             }) {}
+        PayloadBuffer(msgpack::sbuffer&& buf)
+            : PayloadBuffer(std::make_shared<msgpack::sbuffer>(std::forward<msgpack::sbuffer>(buf)),
+                            [](std::shared_ptr<msgpack::sbuffer>& buf_ref) -> std::span<std::byte> {
+                                return {utils::to_byte_ptr(buf_ref->data()), buf_ref->size()};
+                            }) {}
 
-        /** Specialized constructor for std::string */
-        payload_buffer(std::string&& str)
-            : payload_buffer(str, [](std::string& str_ref) -> std::span<std::byte> {
-                  return {utils::to_byte_ptr(str_ref.data()), str_ref.size()};
-              }) {}
+        /** Specialized constructor for non-const ranges */
+        template <typename R>
+            requires std::ranges::contiguous_range<R> && (!std::ranges::constant_range<R>)
+        PayloadBuffer(R&& range) // NOLINT(bugprone-forwarding-reference-overload) FIXME: remove on clang-tidy>=17
+            : PayloadBuffer(std::forward<R>(range),
+                            [](R& range_ref) -> std::span<std::byte> { return utils::to_byte_span(range_ref); }) {}
 
-        payload_buffer() = default;
+        PayloadBuffer() = default;
 
-        ~payload_buffer() { delete any_ptr_; }
+        ~PayloadBuffer() { delete any_ptr_; }
 
         // No copy constructor/assignment
-        payload_buffer(const payload_buffer& other) = delete;
-        payload_buffer& operator=(const payload_buffer& other) = delete;
+        PayloadBuffer(const PayloadBuffer& other) = delete;
+        PayloadBuffer& operator=(const PayloadBuffer& other) = delete;
 
         // Move constructor: take over other pointer and release other buffer
-        payload_buffer(payload_buffer&& other) noexcept : any_ptr_(other.any_ptr_), span_(other.span_) { other.release(); }
+        PayloadBuffer(PayloadBuffer&& other) noexcept : any_ptr_(other.any_ptr_), span_(other.span_) { other.release(); }
 
         // Move assignment: free buffer, take over other pointer and release other buffer
-        payload_buffer& operator=(payload_buffer&& other) noexcept {
+        PayloadBuffer& operator=(PayloadBuffer&& other) noexcept {
             // Free any memory still owned
             delete any_ptr_;
             // Copy pointer from other buffer

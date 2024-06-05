@@ -147,3 +147,7 @@ under the following conditions:
 
 * The CHP instance reports that a previously tracked remote satellite became unavailable
 * The CHP instance reports that the state of a tracked remote satellite changed to `ERROR` or `SAFE`
+
+## Data Sending and Receiving
+
+If a data sending satellite provide the relevant information, it should add `timestamp_begin` and `timestamp_end` tags to DATA messages in [CDTP](./protocols.md#data-transmission), containing integer values with the timestamps in picoseconds counted since the start of the measurement marking the begin and end of this data block, respectively.
