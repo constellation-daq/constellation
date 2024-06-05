@@ -215,7 +215,7 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
             # add service to internal list and queue callback (if registered)
             self.log.info(
                 "Received new OFFER for service: %s on host %s:%s",
-                msg.serviceid,
+                msg.serviceid.name,
                 msg.from_address,
                 msg.port,
             )
