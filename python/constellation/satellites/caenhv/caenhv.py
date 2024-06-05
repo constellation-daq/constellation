@@ -60,6 +60,8 @@ class CaenHvSatellite(Satellite):
                     # loop over channels
                     for par in ch.parameter_names:
                         # loop over parameters
+                        if not ch.parameters[par].attributes["mode"] == "R/W":
+                            continue
                         # construct configuration key
                         key = f"board{brdno}_ch{chno}_{par.lower()}"
                         self.log.trace("Checking configuration for key '%s'", key)
