@@ -45,7 +45,6 @@ axi_gpio_regset_pins = np.dtype(
 )
 
 
-
 RP_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2, rp.RP_CH_3, rp.RP_CH_4]
 
 METRICS_PERIOD = 60.0
@@ -177,46 +176,52 @@ class RedPitayaSatellite(DataSender):
             for name, value in zip(names, self.config_axi_array_contents):
                 setattr(self.config_axi_array_contents, name, self.config[name])
 
-            #Define the axi array for axi writer channel 1 2
-            axi_writer_register_names = np.dtype([
-                                            ("not_used1", "uint32"),
-                                            ("not_used2", "uint32"),
-                                            ("not_used3", "uint32"),
-                                            ("not_used4", "uint32"),
-                                            ("not_used5", "uint32"),
-                                            ("not_used6", "uint32"),
-                                            ("not_used7", "uint32"),
-                                            ("not_used8", "uint32"),
-                                            ("not_used9", "uint32"),
-                                            ("not_used10", "uint32"),
-                                            ("not_used11", "uint32"),
-                                            ("not_used12", "uint32"),
-                                            ("not_used13", "uint32"),
-                                            ("not_used14", "uint32"),
-                                            ("not_used15", "uint32"),
-                                            ("not_used16", "uint32"),
-                                            ("not_used17", "uint32"),
-                                            ("not_used18", "uint32"),
-                                            ("not_used19", "uint32"),
-                                            ("not_used20", "uint32"),
-                                            ("lower_address_0", "uint32"),
-                                            ("upper_address_0", "uint32"),
-                                            ("not_used21", "uint32"),
-                                            ("enable_master_0", "uint32"),
-                                            ("not_used22", "uint32"),
-                                            ("not_used23", "uint32"),
-                                            ("not_used24", "uint32"),
-                                            ("not_used25", "uint32"),
-                                            ("lower_address_1", "uint32"),
-                                            ("upper_address_1", "uint32"),
-                                            ("not_used26", "uint32"),
-                                            ("enable_master_1", "uint32"),
-                                            ])
+            # Define the axi array for axi writer channel 1 2
+            axi_writer_register_names = np.dtype(
+                [
+                    ("not_used1", "uint32"),
+                    ("not_used2", "uint32"),
+                    ("not_used3", "uint32"),
+                    ("not_used4", "uint32"),
+                    ("not_used5", "uint32"),
+                    ("not_used6", "uint32"),
+                    ("not_used7", "uint32"),
+                    ("not_used8", "uint32"),
+                    ("not_used9", "uint32"),
+                    ("not_used10", "uint32"),
+                    ("not_used11", "uint32"),
+                    ("not_used12", "uint32"),
+                    ("not_used13", "uint32"),
+                    ("not_used14", "uint32"),
+                    ("not_used15", "uint32"),
+                    ("not_used16", "uint32"),
+                    ("not_used17", "uint32"),
+                    ("not_used18", "uint32"),
+                    ("not_used19", "uint32"),
+                    ("not_used20", "uint32"),
+                    ("lower_address_0", "uint32"),
+                    ("upper_address_0", "uint32"),
+                    ("not_used21", "uint32"),
+                    ("enable_master_0", "uint32"),
+                    ("not_used22", "uint32"),
+                    ("not_used23", "uint32"),
+                    ("not_used24", "uint32"),
+                    ("not_used25", "uint32"),
+                    ("lower_address_1", "uint32"),
+                    ("upper_address_1", "uint32"),
+                    ("not_used26", "uint32"),
+                    ("enable_master_1", "uint32"),
+                ]
+            )
             memory_file_handle_axi_writer_registers = os.open("/dev/mem", os.O_RDWR)
             axi_writer_mmap0 = mmap.mmap(
-            fileno = memory_file_handle_axi_writer_registers, length=mmap.PAGESIZE, offset=0x40100000
+                fileno=memory_file_handle_axi_writer_registers,
+                length=mmap.PAGESIZE,
+                offset=0x40100000,
             )
-            axi_writer_numpy_array0 = np.recarray(1, axi_writer_register_names, buf=axi_writer_mmap0)
+            axi_writer_numpy_array0 = np.recarray(
+                1, axi_writer_register_names, buf=axi_writer_mmap0
+            )
             axi_writer_contents0 = axi_writer_numpy_array0[0]
             axi_writer_contents0.lower_address_0 = 0x1000000
             axi_writer_contents0.upper_address_0 = 0x107FFFC
@@ -225,21 +230,23 @@ class RedPitayaSatellite(DataSender):
             axi_writer_contents0.upper_address_1 = 0x10FFFFC
             axi_writer_contents0.enable_master_1 = 1
 
-
-            #Define the axi array for axi writer channel 3 4
-
-            axi_writer_mmap2 = mmap.mmap(
-            fileno=memory_file_handle_axi_writer_registers, length=mmap.PAGESIZE, offset=0x40200000
-            )
-            axi_writer_numpy_array2 = np.recarray(1, axi_writer_register_names, buf=axi_writer_mmap2)
-            axi_writer_contents2 = axi_writer_numpy_array2[0]
-            axi_writer_contents2.lower_address_0 = 0x1100000
-            axi_writer_contents2.upper_address_0 = 0x117FFFC
-            axi_writer_contents2.enable_master_0 = 1
-            axi_writer_contents2.lower_address_1 = 0x1180000
-            axi_writer_contents2.upper_address_1 = 0x11FFFFC
-            axi_writer_contents2.enable_master_1 = 1
-           
+            if len(self.active_channels) == 4:
+                # Define the axi array for axi writer channel 3 4
+                axi_writer_mmap2 = mmap.mmap(
+                    fileno=memory_file_handle_axi_writer_registers,
+                    length=mmap.PAGESIZE,
+                    offset=0x40200000,
+                )
+                axi_writer_numpy_array2 = np.recarray(
+                    1, axi_writer_register_names, buf=axi_writer_mmap2
+                )
+                axi_writer_contents2 = axi_writer_numpy_array2[0]
+                axi_writer_contents2.lower_address_0 = 0x1100000
+                axi_writer_contents2.upper_address_0 = 0x117FFFC
+                axi_writer_contents2.enable_master_0 = 1
+                axi_writer_contents2.lower_address_1 = 0x1180000
+                axi_writer_contents2.upper_address_1 = 0x11FFFFC
+                axi_writer_contents2.enable_master_1 = 1
 
             # Setup metrics
             if self.config["read_gpio"]:
@@ -400,7 +407,7 @@ class RedPitayaSatellite(DataSender):
     def get_axi_data(
         self,
     ):
-        BUFFER_SIZE = 16384
+        BUFFER_SIZE = 131072
         """Sample every buffer channel and return raw data in numpy array."""
 
         # Obtain to which point the buffer has written
@@ -456,7 +463,7 @@ class RedPitayaSatellite(DataSender):
         # Update readpointer
         self._readpos = self._writepos
         return data
-    
+
     @cscp_requestable
     def get_device(self, _request: CSCPMessage):
         """Get name of device."""
@@ -536,7 +543,7 @@ class RedPitayaSatellite(DataSender):
 
     def _get_axi_write_pointer(self):
         """Obtain _axi_write pointer"""
-        return int(rp.rp_AcqAxiGetWritePointer(rp.RP_CH_1)[1]/2)
+        return int(rp.rp_AcqAxiGetWritePointer(rp.RP_CH_1)[1] / 2)
 
     def read_registers(self):
         """
@@ -604,7 +611,7 @@ class RedPitayaSatellite(DataSender):
         stored_data = data_array.copy()
         lib.freeData(result.data)
         return stored_data
-    
+
     def _sample_axi_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
         """Read out data in 32 bit form."""
 

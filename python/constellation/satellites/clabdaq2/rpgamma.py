@@ -56,11 +56,12 @@ class RPGamma(RedPitayaSatellite):
     detection."""
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+
         self.device = "RedPitaya_250_12"
         self.axi_regset_config = axi_regset_config
         self.regset_readout = axi_regset_readout
         self.active_channels = RPG_CHANNELS
+        super().__init__(*args, **kwargs)
 
     def do_initializing(self, payload: any) -> str:
         """Initialize satellite. Change the FPGA image and set register
