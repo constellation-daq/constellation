@@ -152,14 +152,18 @@ class CommandReceiver(BaseSatelliteFrame):
                 )
                 continue
             except (TypeError, ValueError) as e:
-                self.log.error("Command '%s' received wrong argument: %s", req, repr(e))
+                self.log.error(
+                    "Command '%s' received wrong argument: %s", req.msg, repr(e)
+                )
                 self._cmd_tm.send_reply(
-                    f"Wrong argument: {e}", CSCPMessageVerb.INCOMPLETE
+                    f"Wrong argument: {repr(e)}", CSCPMessageVerb.INCOMPLETE
                 )
                 continue
             except Exception as e:
-                self.log.error("Command failed: %s", req)
-                self._cmd_tm.send_reply("Exception", CSCPMessageVerb.INVALID, repr(e))
+                self.log.error("Command '%s' failed: %s", req.msg, repr(e))
+                self._cmd_tm.send_reply(
+                    f"Exception: {repr(e)}", CSCPMessageVerb.INVALID, repr(e)
+                )
                 continue
             # check the response; empty string means 'missing data/incomplete'
             if not res:

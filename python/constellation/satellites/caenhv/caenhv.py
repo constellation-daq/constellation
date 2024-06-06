@@ -60,6 +60,8 @@ class CaenHvSatellite(Satellite):
                     # loop over channels
                     for par in ch.parameter_names:
                         # loop over parameters
+                        if not ch.parameters[par].attributes["mode"] == "R/W":
+                            continue
                         # construct configuration key
                         key = f"board{brdno}_ch{chno}_{par.lower()}"
                         self.log.trace("Checking configuration for key '%s'", key)
@@ -111,7 +113,7 @@ class CaenHvSatellite(Satellite):
 
     def get_channel_value(self, board: int, channel: int, par: str):
         """Return the value of a given channel parameter."""
-        if self.fsm.current_state in [
+        if SatelliteState[self.fsm.current_state.id] in [
             SatelliteState.NEW,
             SatelliteState.ERROR,
             SatelliteState.DEAD,
@@ -140,6 +142,38 @@ class CaenHvSatellite(Satellite):
         par = request.payload["parameter"]
         val = self.get_channel_value(board, chno, par)
         return val, None, None
+
+    @cscp_requestable
+    def get_hw_config(self, request):
+        """Read and return the current hardware configuration.
+
+        Payload: None
+
+        Returns: dictionary with all R/W parameters and their current values.
+
+        """
+        print(self.fsm.current_state)
+        if SatelliteState[self.fsm.current_state.id] in [
+            SatelliteState.NEW,
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            raise RuntimeError(
+                f"Command not allowed in state '{self.fsm.current_state.id}'"
+            )
+        res = {}
+        with self.caen as crate:
+            for brdno, brd in crate.boards.items():
+                for chno, ch in enumerate(brd.channels):
+                    for par in ch.parameter_names:
+                        if not ch.parameters[par].attributes["mode"] == "R/W":
+                            continue
+                        # construct configuration key
+                        key = f"board{brdno}_ch{chno}_{par.lower()}"
+                        res[key] = ch.parameters[par].value
+        return f"Read {len(res)} parameters", res, None
 
     @cscp_requestable
     def about(self, _request):
