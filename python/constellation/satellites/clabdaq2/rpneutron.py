@@ -109,17 +109,17 @@ class RPNeutron(RedPitayaSatellite):
 
     def do_initializing(self, payload: any) -> str:
         self.master = self.config["master"]
-        return super().do_initializing(payload)
-
-    def write_start_stop_bit_to_FPGA(self, start_stop):
+        # Define axi array for custom start stop register
         memory_file_handle = os.open("/dev/mem", os.O_RDWR)
         axi_mmap0 = mmap.mmap(
             fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
         )
-
         axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
-        axi_array_contents0 = axi_numpy_array0[0]
-        axi_array_contents0.Externaltrigger = start_stop
+        self.axi_array_contents0 = axi_numpy_array0[0]
+        return super().do_initializing(payload)
+
+    def write_start_stop_bit_to_FPGA(self, start_stop):
+        self.axi_array_contents0.Externaltrigger = start_stop
 
     def do_stopping(self, payload: any):
         """Stop acquisition by writing to address."""

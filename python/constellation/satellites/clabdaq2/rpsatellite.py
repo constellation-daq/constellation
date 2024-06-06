@@ -64,6 +64,7 @@ class RedPitayaSatellite(DataSender):
 
         # Define file readers for monitoring from file
         try:
+
             self.cpu_temperature_offset_file_reader = open(
                 "/sys/devices/soc0/axi/83c00000.xadc_wiz/"
                 "iio:device1/in_temp0_offset",
@@ -177,7 +178,7 @@ class RedPitayaSatellite(DataSender):
                 setattr(self.config_axi_array_contents, name, self.config[name])
 
             # Define the axi array for axi writer channel 1 2
-            axi_writer_register_names = np.dtype(
+            self.axi_writer_register_names = np.dtype(
                 [
                     ("not_used1", "uint32"),
                     ("not_used2", "uint32"),
@@ -204,7 +205,7 @@ class RedPitayaSatellite(DataSender):
                     ("not_used21", "uint32"),
                     ("enable_master_0", "uint32"),
                     ("not_used22", "uint32"),
-                    ("not_used23", "uint32"),
+                    ("current_write_pointer", "uint32"),
                     ("not_used24", "uint32"),
                     ("not_used25", "uint32"),
                     ("lower_address_1", "uint32"),
@@ -220,15 +221,15 @@ class RedPitayaSatellite(DataSender):
                 offset=0x40100000,
             )
             axi_writer_numpy_array0 = np.recarray(
-                1, axi_writer_register_names, buf=axi_writer_mmap0
+                1, self.axi_writer_register_names, buf=axi_writer_mmap0
             )
-            axi_writer_contents0 = axi_writer_numpy_array0[0]
-            axi_writer_contents0.lower_address_0 = 0x1000000
-            axi_writer_contents0.upper_address_0 = 0x107FFFC
-            axi_writer_contents0.enable_master_0 = 1
-            axi_writer_contents0.lower_address_1 = 0x1080000
-            axi_writer_contents0.upper_address_1 = 0x10FFFFC
-            axi_writer_contents0.enable_master_1 = 1
+            self.axi_writer_contents0 = axi_writer_numpy_array0[0]
+            self.axi_writer_contents0.lower_address_0 = 0x1000000
+            self.axi_writer_contents0.upper_address_0 = 0x107FFF8
+            self.axi_writer_contents0.enable_master_0 = 1
+            self.axi_writer_contents0.lower_address_1 = 0x1080000
+            self.axi_writer_contents0.upper_address_1 = 0x10FFFF8
+            self.axi_writer_contents0.enable_master_1 = 1
 
             if len(self.active_channels) == 4:
                 # Define the axi array for axi writer channel 3 4
@@ -238,14 +239,14 @@ class RedPitayaSatellite(DataSender):
                     offset=0x40200000,
                 )
                 axi_writer_numpy_array2 = np.recarray(
-                    1, axi_writer_register_names, buf=axi_writer_mmap2
+                    1, self.axi_writer_register_names, buf=axi_writer_mmap2
                 )
                 axi_writer_contents2 = axi_writer_numpy_array2[0]
                 axi_writer_contents2.lower_address_0 = 0x1100000
-                axi_writer_contents2.upper_address_0 = 0x117FFFC
+                axi_writer_contents2.upper_address_0 = 0x117FFF8
                 axi_writer_contents2.enable_master_0 = 1
                 axi_writer_contents2.lower_address_1 = 0x1180000
-                axi_writer_contents2.upper_address_1 = 0x11FFFFC
+                axi_writer_contents2.upper_address_1 = 0x11FFFF8
                 axi_writer_contents2.enable_master_1 = 1
 
             # Setup metrics
@@ -544,7 +545,7 @@ class RedPitayaSatellite(DataSender):
 
     def _get_axi_write_pointer(self):
         """Obtain _axi_write pointer"""
-        return int(rp.rp_AcqAxiGetWritePointer(rp.RP_CH_1)[1] / 2)
+        return int((self.axi_writer_contents0[25] - 0x1000000) / 4)
 
     def read_registers(self):
         """
