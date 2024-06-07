@@ -59,6 +59,7 @@ html_theme_options = {
         "text": project,
     },
     "gitlab_url": "https://gitlab.desy.de/constellation/constellation",
+    "github_url": "https://github.com/constellation-daq/constellation",
     "icon_links": [
         {
             "name": "News RSS feed",
