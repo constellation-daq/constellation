@@ -35,7 +35,7 @@ CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
     : Satellite(type, name), manager_(std::make_shared<DeviceManager>()) {}
 
 void CaribouSatellite::initializing(constellation::config::Configuration& config) {
-    LOG(logger_, INFO) << "Initializing " << getCanonicalName();
+    LOG(INFO) << "Initializing " << getCanonicalName();
 
     // Set default values:
     config.setDefault("adc_frequency", 1000);
@@ -45,15 +45,15 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
 
     // Read the device type from the configuration:
     device_class_ = config.get<std::string>("type");
-    LOG(logger_, INFO) << "Instantiated " << getCanonicalName() << " for device \"" << device_class_ << "\"";
+    LOG(INFO) << "Instantiated " << getCanonicalName() << " for device \"" << device_class_ << "\"";
 
     // Open configuration file and read caribou configuration
     caribou::Configuration caribou_config {};
     const auto config_file_path = config.getPath("config_file");
-    LOG(logger_, INFO) << "Attempting to use initial device configuration \"" << config_file_path << "\"";
+    LOG(INFO) << "Attempting to use initial device configuration \"" << config_file_path << "\"";
     std::ifstream config_file {config_file_path};
     if(!config_file.is_open()) {
-        LOG(logger_, CRITICAL) << "Could not open configuration file \"" << config_file_path << "\"";
+        LOG(CRITICAL) << "Could not open configuration file \"" << config_file_path << "\"";
     } else {
         caribou_config = caribou::Configuration(config_file);
     }
@@ -67,10 +67,10 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
     std::lock_guard<std::mutex> lock {device_mutex_};
     try {
         const auto device_id = manager_->addDevice(device_class_, caribou_config);
-        LOG(logger_, INFO) << "Manager returned device ID " << device_id << ", fetching device...";
+        LOG(INFO) << "Manager returned device ID " << device_id << ", fetching device...";
         device_ = manager_->getDevice(device_id);
     } catch(const caribou::DeviceException& error) {
-        LOG(logger_, CRITICAL) << "Failed to get device \"" << device_class_ << "\": " << error.what();
+        LOG(CRITICAL) << "Failed to get device \"" << device_class_ << "\": " << error.what();
         throw std::exception();
     }
 
@@ -82,19 +82,19 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
         }
         try {
             const auto device_id2 = manager_->addDevice(secondary, caribou_config);
-            LOG(logger_, INFO) << "Manager returned device ID " << device_id2 << ", fetching secondary device...";
+            LOG(INFO) << "Manager returned device ID " << device_id2 << ", fetching secondary device...";
             secondary_device_ = manager_->getDevice(device_id2);
         } catch(const caribou::DeviceException& error) {
-            LOG(logger_, CRITICAL) << "Failed to get secondary device \"" << secondary << "\": " << error.what();
+            LOG(CRITICAL) << "Failed to get secondary device \"" << secondary << "\": " << error.what();
             throw std::exception();
         }
     }
 
-    LOG(logger_, STATUS) << getCanonicalName() << " initialized";
+    LOG(STATUS) << getCanonicalName() << " initialized";
 }
 
 void CaribouSatellite::launching() {
-    LOG(logger_, INFO) << "Configuring device " << device_->getName();
+    LOG(INFO) << "Configuring device " << device_->getName();
 
     std::lock_guard<std::mutex> lock {device_mutex_};
 
@@ -121,7 +121,7 @@ void CaribouSatellite::launching() {
         auto key = config.get<std::string>("register_key");
         auto value = config.get<uintptr_t>("register_value");
         device_->setRegister(key, value);
-        LOG(logger_, INFO) << "Setting " << key << " = " << std::to_string(value);
+        LOG(INFO) << "Setting " << key << " = " << std::to_string(value);
     }
 
     if(config.has("adc_signal")) {
@@ -131,27 +131,27 @@ void CaribouSatellite::launching() {
 
         // Try it out directly to catch mis-configuration
         auto adc_value = device_->getADC(adc_signal_);
-        LOG(logger_, INFO) << "Will probe ADC signal \"" << adc_signal_ << "\" every " << adc_freq_ << " frames";
-        LOG(logger_, TRACE) << "ADC value: " << adc_value; // FIXME: unused variable, send as stats instead
+        LOG(INFO) << "Will probe ADC signal \"" << adc_signal_ << "\" every " << adc_freq_ << " frames";
+        LOG(TRACE) << "ADC value: " << adc_value; // FIXME: unused variable, send as stats instead
     }
 
-    LOG(logger_, STATUS) << getCanonicalName() << " launched";
+    LOG(STATUS) << getCanonicalName() << " launched";
 }
 
 void CaribouSatellite::landing() {
-    LOG(logger_, INFO) << "Switching off power for device " << device_->getName();
+    LOG(INFO) << "Switching off power for device " << device_->getName();
 
     // Switch off the device power
     std::lock_guard<std::mutex> lock {device_mutex_};
     device_->powerOff();
 
-    LOG(logger_, STATUS) << getCanonicalName() << " landed";
+    LOG(STATUS) << getCanonicalName() << " landed";
 }
 
 void CaribouSatellite::reconfiguring(const constellation::config::Configuration& /*partial_config*/) {}
 
-void CaribouSatellite::starting(std::uint32_t run_number) {
-    LOG(logger_, INFO) << "Starting run " << run_number << "...";
+void CaribouSatellite::starting(std::string_view run_identifier) {
+    LOG(INFO) << "Starting run " << run_identifier << "...";
 
     // Reset frame number
     frame_nr_ = 0;
@@ -172,31 +172,31 @@ void CaribouSatellite::starting(std::uint32_t run_number) {
     // Start DAQ:
     device_->daqStart();
 
-    LOG(logger_, STATUS) << getCanonicalName() << " started (run " << run_number << ")";
+    LOG(STATUS) << getCanonicalName() << " started (run " << run_identifier << ")";
 }
 
 void CaribouSatellite::stopping() {
-    LOG(logger_, INFO) << "Stopping run...";
+    LOG(INFO) << "Stopping run...";
 
     // Stop the DAQ
     std::lock_guard<std::mutex> lock {device_mutex_};
     device_->daqStop();
 
-    LOG(logger_, STATUS) << getCanonicalName() << " stopped";
+    LOG(STATUS) << getCanonicalName() << " stopped";
 }
 
 void CaribouSatellite::running(const std::stop_token& stop_token) {
-    LOG(logger_, INFO) << "Starting run loop...";
+    LOG(INFO) << "Starting run loop...";
 
     std::lock_guard<std::mutex> lock {device_mutex_};
 
     while(!stop_token.stop_requested()) {
         try {
             // Retrieve data from the device
-            LOG(logger_, TRACE) << "Trying to receive data from device";
+            LOG(TRACE) << "Trying to receive data from device";
             const auto data = device_->getRawData();
 
-            LOG(logger_, DEBUG) << "Frame " << frame_nr_;
+            LOG(DEBUG) << "Frame " << frame_nr_;
 
             if(!data.empty()) {
                 // Create new data message for data sender
@@ -212,7 +212,7 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
                 if(frame_nr_ % adc_freq_ == 0) {
                     if(!adc_signal_.empty()) {
                         auto adc_value = device_->getADC(adc_signal_);
-                        LOG(logger_, DEBUG) << "ADC reading: " << adc_signal_ << " =  " << std::to_string(adc_value);
+                        LOG(DEBUG) << "ADC reading: " << adc_signal_ << " =  " << std::to_string(adc_value);
                         msg.addTag(adc_signal_, adc_value);
                     }
                 }
@@ -227,14 +227,14 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
             continue;
         } catch(caribou::DataException& e) {
             // Retrieval failed, retry once more before aborting:
-            LOG(logger_, WARNING) << e.what() << ", skipping data packet";
+            LOG(WARNING) << e.what() << ", skipping data packet";
             continue;
         } catch(caribou::caribouException& e) {
             // FIXME sat exceptions missing.
-            LOG(logger_, CRITICAL) << e.what();
+            LOG(CRITICAL) << e.what();
             throw std::exception();
         }
     }
 
-    LOG(logger_, INFO) << "Exiting run loop";
+    LOG(INFO) << "Exiting run loop";
 }
