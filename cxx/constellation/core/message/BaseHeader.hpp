@@ -14,6 +14,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <msgpack/pack_decl.hpp>
 #include <msgpack/sbuffer_decl.hpp>
@@ -40,6 +41,9 @@ namespace constellation::message {
 
         /** Return message sender */
         std::string_view getSender() const { return sender_; }
+
+        /** Set message sender */
+        void setSender(std::string sender) { sender_ = std::move(sender); }
 
         /** Return message time */
         constexpr std::chrono::system_clock::time_point getTime() const { return time_; }

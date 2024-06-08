@@ -9,16 +9,24 @@
 
 #include "CMDPSink.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
+#include <map>
+#include <memory>
 #include <mutex>
+#include <optional>
+#include <stop_token>
 #include <string>
 #include <thread>
 #include <utility>
 
+#include <magic_enum.hpp>
 #include <spdlog/details/log_msg.h>
 #include <zmq.hpp>
+#include <zmq_addon.hpp>
 
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
@@ -56,12 +64,13 @@ CMDPSink::CMDPSink() : publisher_(context_, zmq::socket_type::xpub), port_(bind_
     // Set reception timeout for subscription messages on XPUB socket to zero because we need to mutex-lock the socket
     // while reading and cannot log at the same time.
     publisher_.set(zmq::sockopt::rcvtimeo, 0);
-
-    // Start thread monitoring the socket for subscription messages
-    subscription_thread_ = std::jthread(std::bind_front(&CMDPSink::subscription_loop, this));
 }
 
 CMDPSink::~CMDPSink() {
+    send_thread_.request_stop();
+    if(send_thread_.joinable()) {
+        send_thread_.join();
+    }
     subscription_thread_.request_stop();
     if(subscription_thread_.joinable()) {
         subscription_thread_.join();
@@ -142,16 +151,44 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
     }
 }
 
-void CMDPSink::setSender(std::string sender_name) {
+void CMDPSink::enableSending(std::string sender_name) {
     sender_name_ = std::move(sender_name);
+
+    // Start thread monitoring the socket for subscription messages
+    subscription_thread_ = std::jthread(std::bind_front(&CMDPSink::subscription_loop, this));
+
+    // Replace sender name for already queued messages
+    std::unique_lock msg_queue_lock {msg_queue_mutex_};
+    for(auto& msg : msg_queue_) {
+        msg->setSender(sender_name_);
+    }
+    msg_queue_lock.unlock();
+
+    // We wait a bit before starting to send message, this way the socket can fetch already pending subscriptions
+    std::this_thread::sleep_for(300ms);
+
+    // Start send thread and notify for already queued messages
+    send_thread_ = std::jthread(std::bind_front(&CMDPSink::send_loop, this));
+    msg_queue_cv_.notify_one();
+}
+
+void CMDPSink::send_loop(const std::stop_token& stop_token) {
+    while(!stop_token.stop_requested()) {
+        // Wait for notification
+        std::unique_lock msg_queue_lock {msg_queue_mutex_};
+        if(!msg_queue_cv_.wait(msg_queue_lock, stop_token, [&]() { return !msg_queue_.empty(); })) {
+            // Stop was requested and no messages queued
+            break;
+        }
+        // Send all messages in queue
+        while(!msg_queue_.empty()) {
+            msg_queue_.front()->assemble().send(publisher_);
+            msg_queue_.pop_front();
+        }
+    }
 }
 
 void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
-
-    // At the very beginning we wait 500ms before starting the async logging.
-    // This way the socket can fetch already pending subscriptions
-    std::call_once(setup_flag_, []() { std::this_thread::sleep_for(500ms); });
-
     // Create message header
     auto msghead = CMDP1Message::Header(sender_name_, msg.time);
     // Add source and thread information only at TRACE level:
@@ -165,8 +202,11 @@ void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
         }
     }
 
-    // Create and send CMDP message
-    CMDP1LogMessage(from_spdlog_level(msg.level), to_string(msg.logger_name), std::move(msghead), to_string(msg.payload))
-        .assemble()
-        .send(publisher_);
+    // Create and queue CMDP message
+    auto cmdp_msg = std::make_unique<CMDP1LogMessage>(
+        from_spdlog_level(msg.level), to_string(msg.logger_name), std::move(msghead), to_string(msg.payload));
+    std::unique_lock msg_queue_lock {msg_queue_mutex_};
+    msg_queue_.emplace_back(std::move(cmdp_msg));
+    msg_queue_lock.unlock();
+    msg_queue_cv_.notify_one();
 }

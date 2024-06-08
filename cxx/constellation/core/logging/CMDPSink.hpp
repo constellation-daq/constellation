@@ -9,8 +9,12 @@
 
 #pragma once
 
+#include <condition_variable>
+#include <deque>
 #include <map>
+#include <memory>
 #include <mutex>
+#include <stop_token>
 #include <string>
 #include <thread>
 
@@ -18,6 +22,7 @@
 #include <zmq.hpp>
 
 #include "constellation/core/logging/Level.hpp"
+#include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/ports.hpp"
 
 namespace constellation::log {
@@ -52,27 +57,33 @@ namespace constellation::log {
         constexpr utils::Port getPort() const { return port_; }
 
         /**
-         * Set sender name
+         * Set sender name and enable sending
          *
          * @param sender_name Canonical name of the sender
          */
-        void setSender(std::string sender_name);
+        void enableSending(std::string sender_name);
 
     protected:
         void sink_it_(const spdlog::details::log_msg& msg) final;
         void flush_() final {}
 
     private:
+        void send_loop(const std::stop_token& stop_token);
+        void subscription_loop(const std::stop_token& stop_token);
+
+    private:
         zmq::context_t context_;
         zmq::socket_t publisher_;
 
-        std::jthread subscription_thread_;
-        void subscription_loop(const std::stop_token& stop_token);
-        std::map<std::string, std::map<Level, std::size_t>> log_subscriptions_;
-
         utils::Port port_;
         std::string sender_name_;
-        std::once_flag setup_flag_;
+        std::deque<std::unique_ptr<message::CMDP1Message>> msg_queue_;
+        std::mutex msg_queue_mutex_;
+        std::condition_variable_any msg_queue_cv_;
+        std::jthread send_thread_;
+
+        std::jthread subscription_thread_;
+        std::map<std::string, std::map<Level, std::size_t>> log_subscriptions_;
     };
 
 } // namespace constellation::log

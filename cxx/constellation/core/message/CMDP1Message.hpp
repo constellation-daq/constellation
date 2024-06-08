@@ -47,6 +47,11 @@ namespace constellation::message {
         constexpr const Header& getHeader() const { return header_; }
 
         /**
+         * Set name of the message sender
+         */
+        void setSender(std::string sender) { header_.setSender(std::move(sender)); }
+
+        /**
          * @return CMDP message topic
          */
         std::string_view getTopic() const { return topic_; };
