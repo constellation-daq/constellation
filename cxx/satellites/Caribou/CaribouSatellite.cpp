@@ -26,16 +26,17 @@
 #include <peary/utils/exceptions.hpp>
 
 #include "constellation/core/logging/log.hpp"
+#include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 using namespace caribou;
+using namespace constellation::satellite;
 using namespace std::literals::chrono_literals;
 
 CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
     : Satellite(type, name), manager_(std::make_shared<DeviceManager>()) {}
 
 void CaribouSatellite::initializing(constellation::config::Configuration& config) {
-    LOG(INFO) << "Initializing " << getCanonicalName();
 
     // Set default values:
     config.setDefault("adc_frequency", 1000);
@@ -48,21 +49,21 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
     LOG(INFO) << "Instantiated " << getCanonicalName() << " for device \"" << device_class_ << "\"";
 
     // Open configuration file and read caribou configuration
-    caribou::Configuration caribou_config {};
     const auto config_file_path = config.getPath("config_file");
-    LOG(INFO) << "Attempting to use initial device configuration \"" << config_file_path << "\"";
+    LOG(INFO) << "Attempting to use initial device configuration " << config_file_path;
     std::ifstream config_file {config_file_path};
     if(!config_file.is_open()) {
-        LOG(CRITICAL) << "Could not open configuration file \"" << config_file_path << "\"";
-    } else {
-        caribou_config = caribou::Configuration(config_file);
+        throw SatelliteError("Could not open configuration file \"" + config_file_path.string() + "\"");
     }
+    auto caribou_config = caribou::Configuration(config_file);
 
     // Select section from the configuration file relevant for this device
     const auto sections = caribou_config.GetSections();
-    if(std::find(sections.cbegin(), sections.cend(), device_class_) != sections.cend()) {
-        caribou_config.SetSection(device_class_);
+    if(std::find(sections.cbegin(), sections.cend(), device_class_) == sections.cend()) {
+        throw SatelliteError("Could not find section for device \"" + device_class_ + "\" in config file \"" +
+                             config_file_path.string() + "\"");
     }
+    caribou_config.SetSection(device_class_);
 
     std::lock_guard<std::mutex> lock {device_mutex_};
     try {
@@ -70,8 +71,7 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
         LOG(INFO) << "Manager returned device ID " << device_id << ", fetching device...";
         device_ = manager_->getDevice(device_id);
     } catch(const caribou::DeviceException& error) {
-        LOG(CRITICAL) << "Failed to get device \"" << device_class_ << "\": " << error.what();
-        throw std::exception();
+        throw SatelliteError("Failed to get device \"" + device_class_ + "\": " + error.what());
     }
 
     // Add secondary device if it is configured
@@ -85,8 +85,7 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
             LOG(INFO) << "Manager returned device ID " << device_id2 << ", fetching secondary device...";
             secondary_device_ = manager_->getDevice(device_id2);
         } catch(const caribou::DeviceException& error) {
-            LOG(CRITICAL) << "Failed to get secondary device \"" << secondary << "\": " << error.what();
-            throw std::exception();
+            throw SatelliteError("Failed to get secondary device \"" + secondary + "\": " + error.what());
         }
     }
 
