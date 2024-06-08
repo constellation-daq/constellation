@@ -24,10 +24,13 @@
 #include <utility>
 
 #include <magic_enum.hpp>
+#include <spdlog/async_logger.h>
 #include <spdlog/details/log_msg.h>
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
+#include "constellation/core/chirp/CHIRP_definitions.hpp"
+#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
@@ -35,6 +38,7 @@
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/windows.hpp"
 
+using namespace constellation;
 using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::utils;
@@ -60,7 +64,9 @@ std::string get_rel_file_path(std::string file_path_char) {
 }
 
 // Bind socket to ephemeral port on construction
-CMDPSink::CMDPSink() : publisher_(context_, zmq::socket_type::xpub), port_(bind_ephemeral_port(publisher_)) {
+CMDPSink::CMDPSink(std::shared_ptr<spdlog::async_logger> cmdp_console_logger)
+    : publisher_(context_, zmq::socket_type::xpub), port_(bind_ephemeral_port(publisher_)),
+      cmdp_console_logger_(std::move(cmdp_console_logger)) {
     // Set reception timeout for subscription messages on XPUB socket to zero because we need to mutex-lock the socket
     // while reading and cannot log at the same time.
     publisher_.set(zmq::sockopt::rcvtimeo, 0);
@@ -157,11 +163,22 @@ void CMDPSink::enableSending(std::string sender_name) {
     // Start thread monitoring the socket for subscription messages
     subscription_thread_ = std::jthread(std::bind_front(&CMDPSink::subscription_loop, this));
 
+    // Register service in CHIRP
+    auto* chirp_manager = chirp::Manager::getDefaultInstance();
+    if(chirp_manager != nullptr) {
+        chirp_manager->registerService(chirp::MONITORING, port_);
+    } else {
+        cmdp_console_logger_->log(to_spdlog_level(WARNING),
+                                  "Failed to advertise logging on the network, satellite might not be discovered");
+    }
+    cmdp_console_logger_->log(to_spdlog_level(INFO), "Starting to log on port " + to_string(port_));
+
     // Replace sender name for already queued messages
     std::unique_lock msg_queue_lock {msg_queue_mutex_};
     for(auto& msg : msg_queue_) {
         msg->setSender(sender_name_);
     }
+    const auto backtraced_msgs = msg_queue_.size();
     msg_queue_lock.unlock();
 
     // We wait a bit before starting to send message, this way the socket can fetch already pending subscriptions
@@ -169,6 +186,9 @@ void CMDPSink::enableSending(std::string sender_name) {
 
     // Start send thread and notify for already queued messages
     send_thread_ = std::jthread(std::bind_front(&CMDPSink::send_loop, this));
+    cmdp_console_logger_->log(to_spdlog_level(TRACE),
+                              "Start sending messages via CMDP (including " + to_string(backtraced_msgs) +
+                                  " backtraced messages)");
     msg_queue_cv_.notify_one();
 }
 

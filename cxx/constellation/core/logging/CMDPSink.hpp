@@ -18,6 +18,7 @@
 #include <string>
 #include <thread>
 
+#include <spdlog/async_logger.h>
 #include <spdlog/sinks/base_sink.h>
 #include <zmq.hpp>
 
@@ -35,8 +36,10 @@ namespace constellation::log {
     public:
         /**
          * Construct a new CMDPSink
+         *
+         * @param cmdp_console_logger Console logger for CMDP
          */
-        CMDPSink();
+        CMDPSink(std::shared_ptr<spdlog::async_logger> cmdp_console_logger);
 
         /**
          * Deconstruct the CMDPSink
@@ -77,6 +80,9 @@ namespace constellation::log {
 
         utils::Port port_;
         std::string sender_name_;
+
+        std::shared_ptr<spdlog::async_logger> cmdp_console_logger_;
+
         std::deque<std::unique_ptr<message::CMDP1Message>> msg_queue_;
         std::mutex msg_queue_mutex_;
         std::condition_variable_any msg_queue_cv_;
