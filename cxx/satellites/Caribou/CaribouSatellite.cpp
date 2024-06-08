@@ -31,11 +31,6 @@
 using namespace caribou;
 using namespace std::literals::chrono_literals;
 
-// generator function for loading satellite from shared library
-extern "C" std::shared_ptr<Satellite> generator(std::string_view type_name, std::string_view satellite_name) {
-    return std::make_shared<CaribouSatellite>(type_name, satellite_name);
-}
-
 CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
     : Satellite(type, name), manager_(std::make_shared<DeviceManager>()) {}
 
