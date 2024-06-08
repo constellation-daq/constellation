@@ -138,6 +138,10 @@ SinkManager::SinkManager() : cmdp_global_level_(OFF) {
     default_logger_ = createLogger("DEFAULT");
 }
 
+void SinkManager::enableCMDPBacktrace() {
+    cmdp_global_level_ = TRACE;
+}
+
 void SinkManager::enableCMDPSending(std::string sender_name) {
     // Register service in CHIRP
     // Note: cannot be done in constructor since CHIRP also does logging

@@ -114,7 +114,7 @@ int constellation::exec::satellite_main(int argc,
                                         std::optional<SatelliteType> satellite_type) noexcept {
     // Ensure that ZeroMQ doesn't fail creating the CMDP sink
     try {
-        SinkManager::getInstance();
+        SinkManager::getInstance().enableCMDPBacktrace();
     } catch(const ZMQInitError& error) {
         std::cerr << "Failed to initialize logging: " << error.what() << std::endl;
         return 1;
@@ -181,8 +181,8 @@ int constellation::exec::satellite_main(int argc,
         // TODO(stephan.lachnit): should we continue anyway or abort?
     }
 
-    // Register CMDP in CHIRP and set sender name for CMDP
-    SinkManager::getInstance().registerService(canonical_name);
+    // Start sending CMDP messages
+    SinkManager::getInstance().enableCMDPSending(canonical_name);
 
     // Load satellite DSO
     std::unique_ptr<DSOLoader> loader {};

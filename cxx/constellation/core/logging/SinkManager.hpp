@@ -80,6 +80,13 @@ namespace constellation::log {
         utils::Port getCMDPPort() const { return cmdp_sink_->getPort(); }
 
         /**
+         * Enable backtrace for CMDP messages before `enableCMDPSending` was called
+         *
+         * @note This has to be called before any log messages are created for it to work.
+         */
+        CNSTLN_API void enableCMDPBacktrace();
+
+        /**
          * Enable sending via CMDP
          *
          * @note In most cases if this is used, the first a program should do is call `enableCMDPBacktrace`.
