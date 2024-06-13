@@ -78,7 +78,7 @@ class RPGamma(RedPitayaSatellite):
         return super().do_initializing(payload)
 
     def do_starting(self, payload: any) -> str:
-
+        """Start acquisition by writing to address."""
         self.reset()
 
         memory_file_handle = os.open("/dev/mem", os.O_RDWR)

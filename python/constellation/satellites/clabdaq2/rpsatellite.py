@@ -320,6 +320,13 @@ class RedPitayaSatellite(DataSender):
             self.log.error("Error configuring device. %s", e)
         return "Initialized."
 
+    def do_starting(self, payload):
+        """Starting the acquisition and Wrote BOR"""
+        tmp_BOR = self.config._config
+        tmp_BOR["start time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
+        self.BOR = tmp_BOR
+        return "Started"
+
     def do_run(self, payload):
         """Run the satellite. Collect data from buffers and send it."""
         self.log.info("Red Pitaya satellite running, publishing events.")
@@ -366,6 +373,9 @@ class RedPitayaSatellite(DataSender):
             self.data_queue.put((payload.tobytes(), meta))
 
         # TODO:read out registers and store in EOF
+        tmp_EOR = self.read_registers()[0]
+        tmp_EOR["stop time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
+        self.EOR = tmp_EOR
 
         self.reset()
         return "Stopped RedPitaya Satellite."
