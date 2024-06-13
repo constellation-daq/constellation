@@ -9,7 +9,6 @@ RedPitaya device.
 """
 
 import ctypes
-import importlib.resources
 import mmap
 import os
 import time
@@ -214,9 +213,9 @@ class RedPitayaSatellite(DataSender):
                     ("enable_master_1", "uint32"),
                 ]
             )
-            memory_file_handle_axi_writer_registers = os.open("/dev/mem", os.O_RDWR)
+
             axi_writer_mmap0 = mmap.mmap(
-                fileno=memory_file_handle_axi_writer_registers,
+                fileno=memory_file_handle_custom_registers,
                 length=mmap.PAGESIZE,
                 offset=0x40100000,
             )
@@ -234,7 +233,7 @@ class RedPitayaSatellite(DataSender):
             if len(self.active_channels) == 4:
                 # Define the axi array for axi writer channel 3 4
                 axi_writer_mmap2 = mmap.mmap(
-                    fileno=memory_file_handle_axi_writer_registers,
+                    fileno=memory_file_handle_custom_registers,
                     length=mmap.PAGESIZE,
                     offset=0x40200000,
                 )
@@ -248,6 +247,31 @@ class RedPitayaSatellite(DataSender):
                 axi_writer_contents2.lower_address_1 = 0x1180000
                 axi_writer_contents2.upper_address_1 = 0x11FFFF8
                 axi_writer_contents2.enable_master_1 = 1
+
+            # Define c lib for reading data
+
+            # Load the shared library
+            self.lib = ctypes.CDLL(
+                "python/constellation/satellites/clabdaq2/read_data32bit.so"
+            )
+
+            class MemoryConfig(ctypes.Structure):
+                _fields_ = [
+                    ("memory_fd", ctypes.c_int),
+                    ("axi_mmap", ctypes.POINTER(ctypes.c_uint32)),
+                    ("chunk_length", ctypes.c_int),
+                ]
+
+            class Array(ctypes.Structure):
+                _fields_ = [("data", ctypes.POINTER(ctypes.c_uint32))]
+
+            # Configure the memory
+            self.lib.configureMemory.restype = MemoryConfig
+            self.data_config = self.lib.configureMemory(0x1000000, 0x200000)
+            self.lib.readData.restype = Array
+
+            # Resetting ADC
+            self.reset()
 
             # Setup metrics
             if self.config["read_gpio"]:
@@ -346,66 +370,6 @@ class RedPitayaSatellite(DataSender):
         self.reset()
         return "Stopped RedPitaya Satellite."
 
-    def get_data(
-        self,
-    ):
-        BUFFER_SIZE = 16384
-        """Sample every buffer channel and return raw data in numpy array."""
-
-        # Obtain to which point the buffer has written
-        self._writepos = self._get_write_pointer()
-
-        # Skip sampling if we haven't moved
-        if self._readpos == self._writepos:
-            return None
-
-        # Check if buffer has cycled
-        if self._writepos < self._readpos:
-            cycled = True
-        else:
-            cycled = False
-
-        # Check if the amount of data is greater than 1000,
-        # otherwise wait 0.1 s to not send excessive amount of packages.
-        if cycled:
-            if (self._writepos + BUFFER_SIZE) < (self._readpos + 1000):
-                time.sleep(0.1)
-        else:
-            if self._writepos < (self._readpos + 1000):
-                time.sleep(0.1)
-
-        for i, channel in enumerate(self.active_channels):
-            # Read out data buffers and adding them together before returning
-
-            if cycled:
-                buffer = np.concatenate(
-                    (
-                        self._sample_raw32(
-                            start=self._readpos,
-                            stop=BUFFER_SIZE,
-                            channel=channel,
-                        ),
-                        self._sample_raw32(
-                            start=0, stop=self._writepos, channel=channel
-                        ),
-                    )
-                )
-            else:
-                buffer = self._sample_raw32(
-                    start=self._readpos, stop=self._writepos, channel=channel
-                )
-
-            if i == 0:
-                data = np.empty(
-                    (len(self.active_channels), len(buffer)), dtype=np.uint32
-                )
-
-            data[i] = buffer
-
-        # Update readpointer
-        self._readpos = self._writepos
-        return data
-
     def get_axi_data(
         self,
     ):
@@ -462,7 +426,7 @@ class RedPitayaSatellite(DataSender):
 
             data[i] = buffer
 
-        # Update readpointer
+        # Update read pointer
         self._readpos = self._writepos
         return data
 
@@ -539,13 +503,16 @@ class RedPitayaSatellite(DataSender):
             pins.append(rp.rp_AIpinGetValue(pin)[1])
         return pins, "bits"
 
-    def _get_write_pointer(self):
-        """Obtain write pointer"""
-        return rp.rp_AcqGetWritePointer()[1]
-
     def _get_axi_write_pointer(self):
         """Obtain _axi_write pointer"""
-        return int((self.axi_writer_contents0[25] - 0x1000000) / 4)
+
+        write_pointer = int(
+            (self.axi_writer_contents0.current_write_pointer - 0x1000000) / 4
+        )
+        if write_pointer < 0 or 131072 < write_pointer:
+            # To take care of negative number in initialization
+            write_pointer = 0
+        return write_pointer
 
     def read_registers(self):
         """
@@ -564,92 +531,38 @@ class RedPitayaSatellite(DataSender):
             ret[name] = value.item()
         return ret, "uint32"
 
-    def _sample_raw(self, channel, buffer, chunk):
-        """Sample data from given channel."""
-
-        rp.rp_AcqGetDataRaw(channel, self._readpos, chunk, buffer.cast())
-
-        data_raw = np.zeros(chunk, dtype=int)
-
-        for idx in range(0, chunk, 1):
-            data_raw[idx] = buffer[idx]
-
-        return data_raw
-
-    def _sample_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
-        """Read out data in 32 bit form."""
-
-        class Array(ctypes.Structure):
-            """Define the struct in Python"""
-
-            _fields_ = [("data", ctypes.POINTER(ctypes.c_uint32))]
-
-        # Load the shared library
-        dso_path = importlib.resources.files(
-            "constellation.satellites.clabdaq2"
-        ).joinpath("libread_data32bit.so")
-        lib = ctypes.CDLL(str(dso_path))
-
-        # Define the argument and return types of the function
-        lib.readData.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
-        lib.readData.restype = Array
-
-        # Define register offset depending onc channel
-        if channel == rp.RP_CH_1:
-            offset = 0x40110000
-        elif channel == rp.RP_CH_2:
-            offset = 0x40120000
-        elif channel == rp.RP_CH_3:
-            offset = 0x40210000
-        elif channel == rp.RP_CH_4:
-            offset = 0x40220000
-
-        # Call the C function
-        result = lib.readData(0, stop, offset)
-
-        # Convert the result to a NumPy array
-
-        data_array = np.ctypeslib.as_array(result.data, shape=(stop,))[start:stop]
-        stored_data = data_array.copy()
-        lib.freeData(result.data)
-        return stored_data
-
     def _sample_axi_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
         """Read out data in 32 bit form."""
 
-        class Array(ctypes.Structure):
-            """Define the struct in Python"""
-
-            _fields_ = [("data", ctypes.POINTER(ctypes.c_uint32))]
-
-        # Load the shared library.
-        # NOTE: I don't think this path will work well when packaging
-        # NOTE: This might have some answers when the time comes:
-        # https://stackoverflow.com/questions/51468432/refer-to-a-file-within-python-package
-        lib = ctypes.CDLL("python/constellation/satellites/read_data32bit.so")
-
-        # Define the argument and return types of the function
-        lib.readData.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int]
-        lib.readData.restype = Array
-
-        # Define register offset depending onc channel
+        # Define register offset depending on channel
         if channel == rp.RP_CH_1:
-            offset = 0x1000000
+            result = self.lib.readData(
+                ctypes.byref(self.data_config), 4 * start, 4 * stop
+            )
         elif channel == rp.RP_CH_2:
-            offset = 0x1080000
+            result = self.lib.readData(
+                ctypes.byref(self.data_config),
+                4 * start + 0x080000,
+                4 * stop + 0x080000,
+            )
         elif channel == rp.RP_CH_3:
-            offset = 0x1100000
+            result = self.lib.readData(
+                ctypes.byref(self.data_config),
+                4 * start + 0x100000,
+                4 * stop + 0x100000,
+            )
         elif channel == rp.RP_CH_4:
-            offset = 0x1180000
-
-        # Call the C function
-        result = lib.readData(0, stop, offset)
+            result = self.lib.readData(
+                ctypes.byref(self.data_config),
+                4 * start + 0x180000,
+                4 * stop + 0x180000,
+            )
 
         # Convert the result to a NumPy array
 
-        data_array = np.ctypeslib.as_array(result.data, shape=(stop,))[start:stop]
+        data_array = np.ctypeslib.as_array(result.data, shape=(stop - start,))
         stored_data = data_array.copy()
-        lib.freeData(result.data)
+        self.lib.freeData(result.data)
         return stored_data
 
     def _get_cpu_times(self):

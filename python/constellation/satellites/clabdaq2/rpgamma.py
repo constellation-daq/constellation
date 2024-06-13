@@ -56,8 +56,8 @@ class RPGamma(RedPitayaSatellite):
     detection."""
 
     def __init__(self, *args, **kwargs):
-        self.active_channels = RPG_CHANNELS
         super().__init__(*args, **kwargs)
+        self.active_channels = RPG_CHANNELS
         self.device = "RedPitaya_250_12"
         self.axi_regset_config = axi_regset_config
         self.regset_readout = axi_regset_readout
