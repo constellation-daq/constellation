@@ -24,6 +24,10 @@ if not peary_dep.found()
   peary_dep = peary_sp.dependency('peary')
 endif
 
+if get_option('satellite_caribou').disabled()
+  subdir_done()
+endif
+
 satellite_type = 'Caribou'
 
 satellite_sources = files(
