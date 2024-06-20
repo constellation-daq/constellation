@@ -110,9 +110,12 @@ class RPNeutron(RedPitayaSatellite):
     def do_initializing(self, payload: any) -> str:
         self.master = self.config["master"]
         # Define axi array for custom start stop register
-        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
         axi_mmap0 = mmap.mmap(
-            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40001000
+            self.memory_file_handle,
+            mmap.PAGESIZE,
+            mmap.MAP_SHARED,
+            mmap.PROT_READ | mmap.PROT_WRITE,
+            offset=0x40001000,
         )
         axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
         self.axi_array_contents0 = axi_numpy_array0[0]

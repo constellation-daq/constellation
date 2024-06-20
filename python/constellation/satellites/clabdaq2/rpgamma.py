@@ -75,31 +75,26 @@ class RPGamma(RedPitayaSatellite):
 
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
+        # Define memory map for start stop
+        axi_mmap0 = mmap.mmap(
+            self.memory_file_handle,
+            mmap.PAGESIZE,
+            mmap.MAP_SHARED,
+            mmap.PROT_READ | mmap.PROT_WRITE,
+            offset=0x40600000,
+        )
+        axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
+        self.axi_array_contents0 = axi_numpy_array0[0]
         return super().do_initializing(payload)
 
     def do_starting(self, payload: any) -> str:
         """Start acquisition by writing to address."""
         self.reset()
-
-        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-        axi_mmap0 = mmap.mmap(
-            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
-        )
-        axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
-        axi_array_contents0 = axi_numpy_array0[0]
-
-        axi_array_contents0.Externaltrigger = self.config["data_type"] + 32
+        self.axi_array_contents0.Externaltrigger = self.config["data_type"] + 32
         return super().do_starting(payload)
 
     def do_stopping(self, payload: any):
-        memory_file_handle = os.open("/dev/mem", os.O_RDWR)
-        axi_mmap0 = mmap.mmap(
-            fileno=memory_file_handle, length=mmap.PAGESIZE, offset=0x40600000
-        )
-        axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
-        axi_array_contents0 = axi_numpy_array0[0]
-
-        axi_array_contents0.Externaltrigger = 0
+        self.axi_array_contents0.Externaltrigger = 0
         return super().do_stopping(payload)
 
 

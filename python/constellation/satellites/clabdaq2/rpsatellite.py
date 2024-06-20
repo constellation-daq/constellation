@@ -8,7 +8,6 @@ This module provides an implementation for a Constellation Satellite on a
 RedPitaya device.
 """
 
-import ctypes
 import mmap
 import os
 import time
@@ -122,10 +121,14 @@ class RedPitayaSatellite(DataSender):
         )
 
         # Define the axi array for GPIO pins
-        memory_file_handle_gpio = os.open("/dev/mem", os.O_RDWR)
+        self.memory_file_handle = os.open("/dev/mem", os.O_RDWR | os.O_SYNC)
 
         axi_mmap_gpio = mmap.mmap(
-            fileno=memory_file_handle_gpio, length=mmap.PAGESIZE, offset=0x40000000
+            self.memory_file_handle,
+            mmap.PAGESIZE,
+            mmap.MAP_SHARED,
+            mmap.PROT_READ | mmap.PROT_WRITE,
+            offset=0x40000000,
         )
         axi_numpy_array_gpio = np.recarray(1, axi_gpio_regset_pins, buf=axi_mmap_gpio)
         self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
@@ -148,11 +151,12 @@ class RedPitayaSatellite(DataSender):
             time.sleep(2)
 
             # Define axi array for custom registers
-            memory_file_handle_custom_registers = os.open("/dev/mem", os.O_RDWR)
             axi_mmap_custom_registers = mmap.mmap(
-                fileno=memory_file_handle_custom_registers,
-                length=mmap.PAGESIZE,
-                offset=self.config["offset"],
+                self.memory_file_handle,
+                mmap.PAGESIZE,
+                mmap.MAP_SHARED,
+                mmap.PROT_READ | mmap.PROT_WRITE,
+                offset=0x40600000,
             )
             axi_numpy_array_reset = np.recarray(
                 1, axi_regset_reset, buf=axi_mmap_custom_registers
@@ -203,7 +207,7 @@ class RedPitayaSatellite(DataSender):
                     ("upper_address_0", "uint32"),
                     ("not_used21", "uint32"),
                     ("enable_master_0", "uint32"),
-                    ("not_used22", "uint32"),
+                    ("current_trigger_pointer", "uint32"),
                     ("current_write_pointer", "uint32"),
                     ("not_used24", "uint32"),
                     ("not_used25", "uint32"),
@@ -215,13 +219,16 @@ class RedPitayaSatellite(DataSender):
             )
 
             axi_writer_mmap0 = mmap.mmap(
-                fileno=memory_file_handle_custom_registers,
-                length=mmap.PAGESIZE,
+                self.memory_file_handle,
+                mmap.PAGESIZE,
+                mmap.MAP_SHARED,
+                mmap.PROT_READ | mmap.PROT_WRITE,
                 offset=0x40100000,
             )
             axi_writer_numpy_array0 = np.recarray(
                 1, self.axi_writer_register_names, buf=axi_writer_mmap0
             )
+
             self.axi_writer_contents0 = axi_writer_numpy_array0[0]
             self.axi_writer_contents0.lower_address_0 = 0x1000000
             self.axi_writer_contents0.upper_address_0 = 0x107FFF8
@@ -233,8 +240,10 @@ class RedPitayaSatellite(DataSender):
             if len(self.active_channels) == 4:
                 # Define the axi array for axi writer channel 3 4
                 axi_writer_mmap2 = mmap.mmap(
-                    fileno=memory_file_handle_custom_registers,
-                    length=mmap.PAGESIZE,
+                    self.memory_file_handle,
+                    mmap.PAGESIZE,
+                    mmap.MAP_SHARED,
+                    mmap.PROT_READ | mmap.PROT_WRITE,
                     offset=0x40200000,
                 )
                 axi_writer_numpy_array2 = np.recarray(
@@ -248,27 +257,14 @@ class RedPitayaSatellite(DataSender):
                 axi_writer_contents2.upper_address_1 = 0x11FFFF8
                 axi_writer_contents2.enable_master_1 = 1
 
-            # Define c lib for reading data
-
-            # Load the shared library
-            self.lib = ctypes.CDLL(
-                "python/constellation/satellites/clabdaq2/read_data32bit.so"
+            # # Define memory map for reading data
+            self.read_data_axi_mmap = mmap.mmap(
+                self.memory_file_handle,
+                0x200000,
+                mmap.MAP_SHARED,
+                mmap.PROT_READ | mmap.PROT_WRITE,
+                offset=0x1000000,
             )
-
-            class MemoryConfig(ctypes.Structure):
-                _fields_ = [
-                    ("memory_fd", ctypes.c_int),
-                    ("axi_mmap", ctypes.POINTER(ctypes.c_uint32)),
-                    ("chunk_length", ctypes.c_int),
-                ]
-
-            class Array(ctypes.Structure):
-                _fields_ = [("data", ctypes.POINTER(ctypes.c_uint32))]
-
-            # Configure the memory
-            self.lib.configureMemory.restype = MemoryConfig
-            self.data_config = self.lib.configureMemory(0x1000000, 0x200000)
-            self.lib.readData.restype = Array
 
             # Resetting ADC
             self.reset()
@@ -357,6 +353,10 @@ class RedPitayaSatellite(DataSender):
 
     def do_stopping(self, payload: any):
         """Stop acquisition and read out last buffer"""
+        tmp_EOR = self.read_registers()[0]
+        tmp_EOR["stop time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
+        self.EOR = tmp_EOR
+
         time.sleep(1)  # add sleep to make sure that everything has stopped
 
         # Read last buffer
@@ -371,12 +371,6 @@ class RedPitayaSatellite(DataSender):
 
             # Format payload to serializable
             self.data_queue.put((payload.tobytes(), meta))
-
-        # TODO:read out registers and store in EOF
-        tmp_EOR = self.read_registers()[0]
-        tmp_EOR["stop time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
-        self.EOR = tmp_EOR
-
         self.reset()
         return "Stopped RedPitaya Satellite."
 
@@ -386,7 +380,6 @@ class RedPitayaSatellite(DataSender):
         BUFFER_SIZE = 131072
         """Sample every buffer channel and return raw data in numpy array."""
 
-        # Obtain to which point the buffer has written
         self._writepos = self._get_axi_write_pointer()
 
         # Skip sampling if we haven't moved
@@ -542,38 +535,34 @@ class RedPitayaSatellite(DataSender):
         return ret, "uint32"
 
     def _sample_axi_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
-        """Read out data in 32 bit form."""
+        """Read out data in 32-bit form."""
+
+        def read_data(start_offset, stop_offset):
+            start = start_offset // 4
+            stop = stop_offset // 4
+            chunk_length = stop - start
+
+            # Directly map the memory region as a NumPy array
+            data_out = np.frombuffer(
+                self.read_data_axi_mmap,
+                dtype=np.uint32,
+                count=chunk_length,
+                offset=start * 4,
+            )
+
+            return data_out
 
         # Define register offset depending on channel
         if channel == rp.RP_CH_1:
-            result = self.lib.readData(
-                ctypes.byref(self.data_config), 4 * start, 4 * stop
-            )
+            result = read_data(4 * start, 4 * stop)
         elif channel == rp.RP_CH_2:
-            result = self.lib.readData(
-                ctypes.byref(self.data_config),
-                4 * start + 0x080000,
-                4 * stop + 0x080000,
-            )
+            result = read_data(4 * start + 0x080000, 4 * stop + 0x080000)
         elif channel == rp.RP_CH_3:
-            result = self.lib.readData(
-                ctypes.byref(self.data_config),
-                4 * start + 0x100000,
-                4 * stop + 0x100000,
-            )
+            result = read_data(4 * start + 0x100000, 4 * stop + 0x100000)
         elif channel == rp.RP_CH_4:
-            result = self.lib.readData(
-                ctypes.byref(self.data_config),
-                4 * start + 0x180000,
-                4 * stop + 0x180000,
-            )
+            result = read_data(4 * start + 0x180000, 4 * stop + 0x180000)
 
-        # Convert the result to a NumPy array
-
-        data_array = np.ctypeslib.as_array(result.data, shape=(stop - start,))
-        stored_data = data_array.copy()
-        self.lib.freeData(result.data)
-        return stored_data
+        return result
 
     def _get_cpu_times(self):
         """Obtain idle time and active time of CPU."""
