@@ -116,21 +116,22 @@ void DataSender::addDataToMessage(PayloadBuffer data) {
     msg_.addPayload(std::move(data));
 }
 
-void DataSender::sendDataMessage() {
+bool DataSender::sendDataMessage() {
     // Check that in RUN and in message
     if(state_ != State::IN_MESSAGE) [[unlikely]] {
         throw InvalidDataState("sendDataMessage", to_string(state_));
     }
 
     // Send stored message
-    send_message();
-    // TODO blocking/non-blocking option & return
+    const auto success = send_message();
 
     // Set state to allow for newDataMessage
     state_ = State::IN_RUN;
+
+    return success;
 }
 
-void DataSender::sendData(PayloadBuffer data) {
+bool DataSender::sendData(PayloadBuffer data) {
     // Check that in RUN and not in message
     if(state_ != State::IN_RUN) [[unlikely]] {
         throw InvalidDataState("sendData", to_string(state_));
@@ -142,19 +143,19 @@ void DataSender::sendData(PayloadBuffer data) {
     msg_.addPayload(std::move(data));
 
     // Send message
-    send_message();
-    // TODO: blocking/non-blocking option & return
+    const auto success = send_message();
+
+    return success;
 }
 
 bool DataSender::send_message() {
     LOG(logger_, TRACE) << "Sending data message " << seq_;
     // Send data but do not wait for receiver
-    const auto sent = msg_.assemble().send(socket_, static_cast<int>(zmq::send_flags::dontwait));
-    if(!sent) {
-        // TODO: blocking/non-blocking option
-        LOG(logger_, WARNING) << "Could not send message " << seq_;
+    const auto success = msg_.assemble().send(socket_, static_cast<int>(zmq::send_flags::dontwait));
+    if(!success) {
+        LOG(logger_, DEBUG) << "Could not send message " << seq_;
     }
-    return sent;
+    return success;
 }
 
 void DataSender::setRunMetadata(Dictionary run_metadata) {

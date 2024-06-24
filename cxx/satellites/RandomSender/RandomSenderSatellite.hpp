@@ -38,4 +38,5 @@ private:
     std::uint8_t seed_ {};
     std::uint64_t frame_size_ {};
     std::uint32_t number_of_frames_ {};
+    std::size_t hwm_reached_ {};
 };

@@ -47,6 +47,7 @@ void RandomSenderSatellite::initializing(Configuration& config) {
 
 void RandomSenderSatellite::starting(std::string_view run_identifier) {
     byte_rng_.seed(seed_);
+    hwm_reached_ = 0;
     data_sender_.starting(getConfig());
     LOG(INFO) << "Starting run " << run_identifier << " with seed " << to_string(seed_);
 }
@@ -62,10 +63,15 @@ void RandomSenderSatellite::running(const std::stop_token& stop_token) {
             // Send data
             data_sender_.addDataToMessage(std::move(data));
         }
-        data_sender_.sendDataMessage();
+        const auto success = data_sender_.sendDataMessage();
+        if(!success) {
+            ++hwm_reached_;
+            LOG_N(WARNING, 5) << "Could not send message, skipping...";
+        }
     }
 }
 
 void RandomSenderSatellite::stopping() {
     data_sender_.stopping();
+    LOG_IF(WARNING, hwm_reached_ > 0) << "Could not send " << hwm_reached_ << " messages";
 }
