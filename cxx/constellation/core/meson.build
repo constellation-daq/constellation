@@ -97,6 +97,7 @@ install_headers(
   'utils/ports.hpp',
   'utils/std_future.hpp',
   'utils/string.hpp',
+  'utils/timers.hpp',
   'utils/type.hpp',
   subdir: 'constellation/core/utils',
 )

@@ -42,6 +42,17 @@ namespace constellation::data {
 
     /**
      * @ingroup Exceptions
+     * @brief Error finding a satellite via CHIRP
+     */
+    class ChirpTimeoutError : public satellite::SatelliteError {
+    public:
+        explicit ChirpTimeoutError(const std::string& satellite, std::chrono::seconds timeout) {
+            error_message_ = "Failed finding " + satellite + " after " + utils::to_string<std::chrono::seconds>(timeout);
+        }
+    };
+
+    /**
+     * @ingroup Exceptions
      * @brief Invalid state in DataSender/DataReceiver
      *
      * This appears when the interface of the DataSender/DataReceiver is used incorrectly

@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -21,6 +20,7 @@
 
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
+#include "constellation/core/utils/timers.hpp"
 #include "constellation/satellite/data/DataReceiver.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
@@ -42,5 +42,5 @@ private:
     std::filesystem::path output_directory_;
     std::ofstream file_;
     std::uint64_t bytes_written_ {0};
-    std::chrono::system_clock::time_point run_start_;
+    constellation::utils::StopwatchTimer timer_;
 };

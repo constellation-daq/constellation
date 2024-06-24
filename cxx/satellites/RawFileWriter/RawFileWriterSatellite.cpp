@@ -51,9 +51,8 @@ void RawFileWriterSatellite::initializing(Configuration& config) {
 }
 
 void RawFileWriterSatellite::starting(std::string_view run_identifier) {
-    // Store start of run time, reset bytes written
+    // Reset bytes written
     bytes_written_ = 0;
-    run_start_ = std::chrono::system_clock::now();
 
     // Open binary file
     const auto file = output_directory_ / ("run_" + to_string(run_identifier) + ".bin");
@@ -61,6 +60,9 @@ void RawFileWriterSatellite::starting(std::string_view run_identifier) {
         LOG(WARNING) << "Overwriting " << file.string();
     }
     file_.open(file, std::ios::out | std::ios::binary);
+
+    // Start time for data rate
+    timer_.start();
 
     // Write config
     const auto config = data_receiver_.starting();
@@ -89,9 +91,12 @@ void RawFileWriterSatellite::stopping() {
     // Close file
     file_.close();
 
+    // Stop timer
+    timer_.stop();
+
     using namespace std::chrono;
     const auto gb_written = 1e-9 * static_cast<double>(bytes_written_);
-    const auto run_duration_ns = duration_cast<nanoseconds>(system_clock::now() - run_start_);
+    const auto run_duration_ns = duration_cast<nanoseconds>(timer_.duration());
     const auto run_duration_s = duration_cast<seconds>(run_duration_ns);
     LOG(STATUS) << "Stopping run, written " << gb_written << "GB in " << run_duration_s << " ("
                 << static_cast<double>(bytes_written_) / static_cast<double>(run_duration_ns.count()) << " GB/s)";

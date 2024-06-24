@@ -27,6 +27,7 @@
 #include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/core/utils/timers.hpp"
 #include "constellation/satellite/data/exceptions.hpp"
 
 using namespace constellation;
@@ -67,7 +68,8 @@ Dictionary DataReceiver::starting() {
     // Find via CHIRP
     uri_ = {};
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
-    while(uri_.empty()) { // TODO add timeout
+    auto timer = TimeoutTimer(std::chrono::duration_cast<std::chrono::system_clock::duration>(data_bor_timeout_));
+    while(!timer.timeoutReached() && uri_.empty()) {
         for(const auto& service : chirp_manager->getDiscoveredServices(chirp::DATA)) {
             if(service.host_id == message::MD5Hash(sender_name_)) {
                 uri_ = service.to_uri();
@@ -76,6 +78,9 @@ Dictionary DataReceiver::starting() {
         }
         // Wait a bit to give satellite time to announce itself
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    if(uri_.empty()) {
+        throw ChirpTimeoutError(sender_name_, data_bor_timeout_);
     }
     LOG(logger_, DEBUG) << "Connecting to " << uri_.c_str();
 
