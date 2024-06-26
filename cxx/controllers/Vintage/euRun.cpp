@@ -99,7 +99,7 @@ void RunControlGUI::on_btnInit_clicked() {
     if(!checkFile(QString::fromStdString(settings), QString::fromStdString("config file")))
         return;
 
-    auto responses = runcontrol_.sendCommand("initialize", constellation::config::Dictionary());
+    auto responses = runcontrol_.sendCommands("initialize", constellation::config::Dictionary());
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Initialize: " << response.first << ": "
                              << utils::to_string(response.second.getVerb().first);
@@ -112,7 +112,7 @@ void RunControlGUI::on_btnTerminate_clicked() {
        QMessageBox::Cancel) {
         LOG(logger_, DEBUG) << "Aborted satellite shutdown";
     } else {
-        auto responses = runcontrol_.sendCommand("shutdown");
+        auto responses = runcontrol_.sendCommands("shutdown");
         for(auto& response : responses) {
             LOG(logger_, STATUS) << "Shutdown: " << response.first << ": "
                                  << utils::to_string(response.second.getVerb().first);
@@ -121,14 +121,14 @@ void RunControlGUI::on_btnTerminate_clicked() {
 }
 
 void RunControlGUI::on_btnConfig_clicked() {
-    auto responses = runcontrol_.sendCommand("launch");
+    auto responses = runcontrol_.sendCommands("launch");
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Launch: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
 void RunControlGUI::on_btnLand_clicked() {
-    auto responses = runcontrol_.sendCommand("land");
+    auto responses = runcontrol_.sendCommands("land");
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Land: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
@@ -146,14 +146,15 @@ void RunControlGUI::on_btnStart_clicked() {
     }
 
     // FIXME run number
-    auto responses = runcontrol_.sendCommand("start", current_run_nr_);
+    auto responses = runcontrol_.sendCommands("start", std::to_string(current_run_nr_));
+
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Start: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
 void RunControlGUI::on_btnStop_clicked() {
-    auto responses = runcontrol_.sendCommand("stop");
+    auto responses = runcontrol_.sendCommands("stop");
     for(auto& response : responses) {
         LOG(logger_, STATUS) << "Stop: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
@@ -291,7 +292,7 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
 
     QAction* startAction = new QAction("Start", this);
     connect(startAction, &QAction::triggered, this, [this, index]() {
-        runcontrol_.sendQCommand(index, "start", current_run_nr_);
+        runcontrol_.sendQCommand(index, "start", std::to_string(current_run_nr_));
     });
     contextMenu->addAction(startAction);
 
