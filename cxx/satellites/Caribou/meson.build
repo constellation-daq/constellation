@@ -1,6 +1,10 @@
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
+if get_option('satellite_caribou').disabled()
+  subdir_done()
+endif
+
 peary_dep = dependency('peary', required: false, allow_fallback: false)
 if not peary_dep.found()
   cmake = import('cmake')
@@ -22,10 +26,6 @@ if not peary_dep.found()
 
   peary_sp = cmake.subproject('peary', options: peary_opts)
   peary_dep = peary_sp.dependency('peary')
-endif
-
-if get_option('satellite_caribou').disabled()
-  subdir_done()
 endif
 
 satellite_type = 'Caribou'
