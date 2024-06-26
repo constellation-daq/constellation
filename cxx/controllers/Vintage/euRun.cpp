@@ -547,7 +547,7 @@ int main(int argc, char** argv) {
     }
 
     // Register CMDP in CHIRP and set sender name for CMDP
-    SinkManager::getInstance().registerService(controller_name);
+    SinkManager::getInstance().enableCMDPSending(controller_name);
 
     RunControlGUI gui(controller_name);
     gui.Exec();
