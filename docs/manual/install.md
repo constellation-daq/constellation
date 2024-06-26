@@ -1,6 +1,6 @@
 # Installing from Source
 
-This document describes the procedure of how to install (and possibly compile) the COnstellation framework from source.
+This document describes the procedure of how to install (and possibly compile) the Constellation framework from source.
 The source code can be obtained from [the Constellation Git repository](https://gitlab.desy.de/constellation/constellation):
 
 ```sh
@@ -108,7 +108,7 @@ The Python version of Constellation requires
 - Python 3.11 or newer
 - The Python [`venv`](https://docs.python.org/3/library/venv.html) module
 
-It is also recommended to install the HDF5 development libraries to store data with the H5DataRecieverWriter satellite.
+It is also recommended to install the HDF5 development libraries to store data with the H5DataReceiverWriter satellite.
 
 The prerequisites can be installed as follows:
 
