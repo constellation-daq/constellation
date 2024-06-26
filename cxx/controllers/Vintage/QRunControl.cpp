@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "constellation/core/config/Dictionary.hpp"
+#include "constellation/core/utils/string.hpp"
 
 #include <qmetatype.h>
 
@@ -50,11 +51,10 @@ QVariant QRunControl::data(const QModelIndex& index, int role) const {
         return QString::fromStdString(last_endpoint);
     }
     case 4: {
-        return QString::fromStdString(conn.status);
+        return QString::fromStdString(constellation::utils::to_string(conn.last_cmd_type));
     }
     case 5: {
-        // FIXME tags?
-        return QString("");
+        return QString::fromStdString(conn.last_cmd_verb);
     }
     default: {
         return QString("");

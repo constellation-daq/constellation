@@ -24,10 +24,12 @@ public:
 
     constellation::config::Dictionary getQCommands(const QModelIndex& index);
 
+protected:
     void propagate_update(std::size_t connections) override;
 
 private:
-    static constexpr std::array<const char*, 6> headers_ {"type", "name", "state", "connection", "message", "information"};
+    static constexpr std::array<const char*, 6> headers_ {
+        "type", "name", "state", "connection", "last response", " last message"};
 
     std::size_t current_rows_ {0};
 };
