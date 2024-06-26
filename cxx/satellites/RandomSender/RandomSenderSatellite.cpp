@@ -54,16 +54,16 @@ void RandomSenderSatellite::starting(std::string_view run_identifier) {
 
 void RandomSenderSatellite::running(const std::stop_token& stop_token) {
     while(!stop_token.stop_requested()) {
-        data_sender_.newDataMessage(number_of_frames_);
+        auto msg = data_sender_.newDataMessage(number_of_frames_);
         for(std::uint32_t n = 0; n < number_of_frames_; ++n) {
             // Generate random bytes
             std::vector<std::uint8_t> data {};
             data.resize(frame_size_);
             std::generate(data.begin(), data.end(), std::ref(byte_rng_));
-            // Send data
-            data_sender_.addDataToMessage(std::move(data));
+            // Add data to message
+            msg.addDataFrame(std::move(data));
         }
-        const auto success = data_sender_.sendDataMessage();
+        const auto success = data_sender_.sendDataMessage(msg);
         if(!success) {
             ++hwm_reached_;
             LOG_N(WARNING, 5) << "Could not send message, skipping...";

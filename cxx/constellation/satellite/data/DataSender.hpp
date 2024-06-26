@@ -20,6 +20,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
+#include "constellation/core/config/Value.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
@@ -27,11 +28,37 @@
 
 namespace constellation::data {
     class DataSender {
+    public:
+        /** CDTP message wrapper */
+        class DataMessage : private message::CDTP1Message {
+        public:
+            /**
+             * @brief Add data in a new frame to the message
+             *
+             * @param data Data to add
+             */
+            void addDataFrame(message::PayloadBuffer&& data) { addPayload(std::move(data)); }
+
+            /**
+             * Add a tag to the header of the message
+             *
+             * @param key Key of the tag
+             * @param value Value of the tag
+             */
+            void addTag(const std::string& key, config::Value value) { getHeader().setTag(key, std::move(value)); }
+
+        private:
+            // DataSender needs access to constructor
+            friend DataSender;
+
+            DataMessage(std::string sender, std::uint64_t seq, std::size_t frames)
+                : message::CDTP1Message({std::move(sender), seq, message::CDTP1Message::Type::DATA}, frames) {}
+        };
+
     private:
         enum class State : std::uint8_t {
             BEFORE_BOR,
             IN_RUN,
-            IN_MESSAGE,
         };
 
     public:
@@ -56,49 +83,25 @@ namespace constellation::data {
         CNSTLN_API void starting(const config::Configuration& config);
 
         /**
-         * @brief Begin a new message for attaching data frames
+         * @brief Create new message for attaching data frames
          *
+         * @note This function increases the sequence number
          * @note To send the data message, use `sendDataMessage()`.
          *
          * @param frames Number of data frames to reserve
          */
-        CNSTLN_API void newDataMessage(std::size_t frames = 1);
+        CNSTLN_API DataMessage newDataMessage(std::size_t frames = 1);
 
         /**
-         * @brief Add a data frame to the next message
-         *
-         * @note Requires an open data message created by `newDataMessage()`
-         *
-         * @param data Payload for the frame
-         */
-        CNSTLN_API void addDataToMessage(message::PayloadBuffer data);
-
-        /**
-         * @brief Send all data frames in message
+         * @brief Send data message created with `newDataMessage()`
          *
          * @note The return value of this function *has* to be checked. If it is `false`, one should take action such as
          *       discarding the message, trying to send it again or throwing an exception.
          *
+         * @param message Reference to data message
          * @return If the message was successfully sent/queued
          */
-        CNSTLN_API [[nodiscard]] bool sendDataMessage();
-
-        /**
-         * @brief Send a data message with a single data frame directly
-         *
-         * Equivalent to
-         * ```
-         * newDataMessage();
-         * addDataToMessage(data);
-         * sendDataMessage();
-         * ```
-         *
-         * @note See `sendDataMessage()` for details on the return value
-         *
-         * @param data Payload for the (first data frame of the) message
-         * @return If the message was successfully sent/queued
-         */
-        CNSTLN_API [[nodiscard]] bool sendData(message::PayloadBuffer data);
+        CNSTLN_API [[nodiscard]] bool sendDataMessage(DataMessage& message);
 
         /**
          * @brief Set the run metadata send at the end of the run
@@ -118,9 +121,6 @@ namespace constellation::data {
         /** Set send timeout, -1 is infinite (block until sent) */
         void set_send_timeout(std::chrono::milliseconds timeout = std::chrono::milliseconds(-1));
 
-        /** Send the stored message with dontwait flag, return if able to queue */
-        [[nodiscard]] bool send_message();
-
     private:
         zmq::context_t context_;
         zmq::socket_t socket_;
@@ -131,7 +131,6 @@ namespace constellation::data {
         std::chrono::seconds data_bor_timeout_ {};
         std::chrono::seconds data_eor_timeout_ {};
         std::size_t seq_ {};
-        message::CDTP1Message msg_;
         config::Dictionary run_metadata_;
     };
 } // namespace constellation::data

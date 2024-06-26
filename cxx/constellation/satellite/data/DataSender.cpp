@@ -12,7 +12,6 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <span>
 #include <string>
 #include <utility>
 
@@ -23,7 +22,6 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/logging/log.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
-#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/ports.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
@@ -37,7 +35,7 @@ using namespace constellation::utils;
 
 DataSender::DataSender(std::string sender_name)
     : socket_(context_, zmq::socket_type::push), port_(bind_ephemeral_port(socket_)), sender_name_(std::move(sender_name)),
-      logger_("DATA_SENDER"), state_(State::BEFORE_BOR), msg_({sender_name_, 0, CDTP1Message::Type::BOR}, 0) {
+      logger_("DATA_SENDER"), state_(State::BEFORE_BOR) {
     // Only send to completed connections
     socket_.set(zmq::sockopt::immediate, true);
     // Announce service via CHIRP
@@ -73,14 +71,14 @@ void DataSender::starting(const Configuration& config) {
     run_metadata_ = {};
 
     // Create CDTP1 message for BOR
-    msg_ = CDTP1Message({sender_name_, 0, CDTP1Message::Type::BOR}, 1);
-    msg_.addPayload(config.getDictionary(Configuration::Group::ALL, Configuration::Usage::USED).assemble());
+    CDTP1Message msg {{sender_name_, 0, CDTP1Message::Type::BOR}, 1};
+    msg.addPayload(config.getDictionary(Configuration::Group::ALL, Configuration::Usage::USED).assemble());
 
     // Send BOR
     LOG(logger_, DEBUG) << "Sending BOR message (timeout " << data_bor_timeout_ << ")";
     // Note: this is not interruptible, thus we set a send timeout to hang if no data receiver
     set_send_timeout(data_bor_timeout_);
-    const auto sent = msg_.assemble().send(socket_);
+    const auto sent = msg.assemble().send(socket_);
     if(!sent) {
         throw SendTimeoutError("BOR message", data_eor_timeout_);
     }
@@ -92,69 +90,33 @@ void DataSender::starting(const Configuration& config) {
     state_ = State::IN_RUN;
 }
 
-void DataSender::newDataMessage(std::size_t frames) {
-    // Check that in RUN and not in message
+DataSender::DataMessage DataSender::newDataMessage(std::size_t frames) {
+    // Check that in RUN
     if(state_ != State::IN_RUN) [[unlikely]] {
         throw InvalidDataState("newDataMessage", to_string(state_));
     }
 
-    // Create new message
-    // TODO(stephan.lachnit): add dict to header
-    msg_ = CDTP1Message({sender_name_, ++seq_, CDTP1Message::Type::DATA}, frames);
+    // Increase sequence counter for new message
+    ++seq_;
 
-    // Set state to allow for addDataToMessage
-    state_ = State::IN_MESSAGE;
+    // Return new message
+    return {sender_name_, seq_, frames};
 }
 
-void DataSender::addDataToMessage(PayloadBuffer data) {
-    // Check that in RUN and in message
-    if(state_ != State::IN_MESSAGE) [[unlikely]] {
-        throw InvalidDataState("addDataToMessage", to_string(state_));
-    }
-
-    // Add data frame to message
-    msg_.addPayload(std::move(data));
-}
-
-bool DataSender::sendDataMessage() {
-    // Check that in RUN and in message
-    if(state_ != State::IN_MESSAGE) [[unlikely]] {
+bool DataSender::sendDataMessage(DataSender::DataMessage& message) {
+    // Check that in RUN
+    if(state_ != State::IN_RUN) [[unlikely]] {
         throw InvalidDataState("sendDataMessage", to_string(state_));
     }
 
-    // Send stored message
-    const auto success = send_message();
-
-    // Set state to allow for newDataMessage
-    state_ = State::IN_RUN;
-
-    return success;
-}
-
-bool DataSender::sendData(PayloadBuffer data) {
-    // Check that in RUN and not in message
-    if(state_ != State::IN_RUN) [[unlikely]] {
-        throw InvalidDataState("sendData", to_string(state_));
-    }
-
-    // Create CDTP1 message directly
-    // TODO(stephan.lachnit): add dict to header
-    msg_ = CDTP1Message({sender_name_, ++seq_, CDTP1Message::Type::DATA}, 1);
-    msg_.addPayload(std::move(data));
-
-    // Send message
-    const auto success = send_message();
-
-    return success;
-}
-
-bool DataSender::send_message() {
-    LOG(logger_, TRACE) << "Sending data message " << seq_;
     // Send data but do not wait for receiver
-    const auto success = msg_.assemble().send(socket_, static_cast<int>(zmq::send_flags::dontwait));
+    LOG(logger_, TRACE) << "Sending data message " << message.getHeader().getSequenceNumber();
+    const auto success = message.assemble().send(socket_, static_cast<int>(zmq::send_flags::dontwait));
+
     if(!success) {
-        LOG(logger_, DEBUG) << "Could not send message " << seq_;
+        LOG(logger_, DEBUG) << "Could not send message " << message.getHeader().getSequenceNumber();
     }
+
     return success;
 }
 
@@ -169,14 +131,14 @@ void DataSender::stopping() {
     }
 
     // Create CDTP1 message for EOR
-    msg_ = CDTP1Message({sender_name_, ++seq_, CDTP1Message::Type::EOR}, 1);
-    msg_.addPayload(run_metadata_.assemble());
+    CDTP1Message msg {{sender_name_, ++seq_, CDTP1Message::Type::EOR}, 1};
+    msg.addPayload(run_metadata_.assemble());
 
     // Send EOR
     LOG(logger_, DEBUG) << "Sending EOR message (" << data_eor_timeout_ << ")";
     // Note: this is not interruptible, thus we set a send timeout to prevent hang if no data receiver
     set_send_timeout(data_eor_timeout_);
-    const auto sent = msg_.assemble().send(socket_);
+    const auto sent = msg.assemble().send(socket_);
     if(!sent) {
         throw SendTimeoutError("EOR message", data_eor_timeout_);
     }
