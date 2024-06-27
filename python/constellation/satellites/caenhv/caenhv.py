@@ -9,7 +9,7 @@ from functools import partial
 from typing import Tuple, Any
 
 from pycaenhv import CaenHVModule  # type: ignore[import-untyped]
-from caen_ndt1470 import CaenNDT1470Manager
+from .caen_ndt1470 import CaenNDT1470Manager
 
 from constellation.core.satellite import Satellite, SatelliteArgumentParser
 from constellation.core.fsm import SatelliteState
@@ -40,7 +40,7 @@ class CaenHvSatellite(Satellite):
         link_arg = configuration["link_argument"]
         user = configuration.setdefault("username", "")
         pw = configuration.setdefault("password", "")
-        if "ntd1470" in system.lower():
+        if "ndt1" in system.lower():
             self.caen: CaenNDT1470Manager | CaenHVModule = CaenNDT1470Manager()
         else:
             self.caen = CaenHVModule()
@@ -100,6 +100,10 @@ class CaenHvSatellite(Satellite):
         # configure metrics sending
         self._configure_monitoring()
         return f"Connected to crate and configured {len(crate.boards)} boards"
+
+    def do_reconfigure(self, configuration: Configuration) -> str:
+        """Reconfigure the HV module by re-running initialization."""
+        return self.do_initializing(configuration)
 
     def do_launching(self, payload: Any) -> str:
         """Power up the HV."""

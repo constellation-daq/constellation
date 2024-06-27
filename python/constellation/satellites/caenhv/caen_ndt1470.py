@@ -19,49 +19,50 @@ import serial  # type: ignore[import-untyped]
 # available parameters (to monitor) in the NDT1470
 # FIXME : this could probably be determined at runtime via request sent to device
 PARAMETERS_GET = [
-    "VSET",
-    "VMIN",
-    "VMAX",
-    "VDEC",
-    "VMON",
-    "ISET",
-    "IMIN",
-    "IMAX",
-    "ISDEC",
-    "IMON",
-    "IMRANGE",
-    "IMDEC",
-    "MAXV",
-    "MVMIN",
-    "MVMAX",
-    "MVDEC",
-    "RUP",
-    "RUPMIN",
-    "RUPMAX",
-    "RUPDEC",
-    "RDW",
-    "RDWMIN",
-    "RDWMAX",
-    "RDWDEC",
-    "TRIP",
-    "TRIPMIN",
-    "TRIPMAX",
-    "TRIPDEC",
-    "PDWN",
-    "POL",
-    "STAT",
+    "VSet",
+    "VMin",
+    "VMax",
+    "VDec",
+    "VMon",
+    "ISet",
+    "IMin",
+    "IMax",
+    "ISDec",
+    "IMon",
+    "IMRange",
+    "IMDec",
+    "MaxV",
+    "MVMin",
+    "MVMax",
+    "MVDec",
+    "RUp",
+    "RUpMin",
+    "RUpMax",
+    "RUpDec",
+    "RDw",
+    "RDwMin",
+    "RDwMax",
+    "RDwDec",
+    "Trip",
+    "TripMin",
+    "TripMax",
+    "TripDec",
+    "PDwn",
+    "Pol",
+    "Stat",
 ]
 PARAMETERS_SET = [
-    "VSET",
-    "ISET",
-    "MAXV",
-    "RUP",
-    "RDW",
-    "TRIP",
-    "PDWN",
-    "IMRANGE",
-    "ON",
-    "OFF",
+    "VSet",
+    "ISet",
+    "MaxV",
+    "RUp",
+    "RDw",
+    "Trip",
+    "PDwn",
+    "IMRange",
+    "Pw",  # missing in HW but software added; True/False to enable/disable power
+    "ON",  # does not take any parameter
+    "OFF",  # does not take any parameter
     "BDCLR",
 ]
 NCHANNELS = 4
@@ -115,6 +116,7 @@ class CaenDecode:
         else:
             self.ok = False
 
+    @property
     def errmsg(self) -> str:
         """decodes error message"""
         if self.ok:
@@ -133,6 +135,7 @@ class CaenDecode:
                 return msg
         return f"UNKNOWN ERROR: received '{self.s}'"
 
+    @property
     def val(self):
         """decodes values returned from the device"""
         if "VAL:" not in self.s:
@@ -240,8 +243,8 @@ class CaenNDT1470Manager:
         # device; noticed no response behavior on set cmds which still resulted
         # in the desired change.
         if not res.ok and res.s:
-            raise RuntimeError(f"Error for '{par}' of ch {ch}: {res.errmsg()}")
-        return res.val()
+            raise RuntimeError(f"Error for '{par}' of ch {ch}: {res.errmsg}")
+        return res.val
 
     def _send_cmd(self, ch: int, par: str, bd: int = 0, val: Any = None) -> CaenDecode:
         """constructs and sends cmd to device. Wraps result into a CaenDecode object."""
@@ -249,6 +252,14 @@ class CaenNDT1470Manager:
         par = par.upper()
         # if we don't have a channel then this is a module cmd
         chstr = f"CH:{ch:02}," if ch is not None else ""
+        if par == "PW":
+            # software-added command to the interface; takes True/False as arg
+            if val:
+                par = "ON"
+                val = None
+            else:
+                par = "OFF"
+                val = None
         if val is None:
             if not par == "ON" and not par == "OFF":
                 # monitoring
@@ -355,8 +366,8 @@ class CaenHVBoard:
 class Channel:
     """Channel in a CAEN HV/LV board"""
 
-    def __init__(self, module, index: int):
-        self.module = module
+    def __init__(self, board, index: int):
+        self.board = board
         self.index = index
         self.parameters = self._channel_info()
 
@@ -374,7 +385,7 @@ class Channel:
     @property
     def status(self) -> List[str]:
         """Decodes channel status"""
-        status_raw: int = self.module.command(self.module.slot, self.index, "STAT")
+        status_raw: int = self.board.module.command(self.board.slot, self.index, "STAT")
         return status_unpack(status_raw)
 
     @property
@@ -390,9 +401,9 @@ class Channel:
     def toggle(self, flag: bool) -> None:
         """Toggle on or off"""
         if flag:
-            self.module.command(self.module.slot, self.index, "ON")
+            self.board.module.command(self.board.slot, self.index, "ON")
         else:
-            self.module.command(self.module.slot, self.index, "OFF")
+            self.board.module.command(self.board.slot, self.index, "OFF")
 
     def switch_on(self) -> None:
         """switch the channel ON"""
@@ -449,8 +460,8 @@ class ChannelParameter:
     def value(self) -> Any:
         """Reads (if possible) the value of a parameter from the board's channel"""
         if "R" in self.attributes["mode"]:
-            return self.channel.module.command(
-                self.channel.module.slot, self.channel.index, self.name
+            return self.channel.board.module.command(
+                self.channel.board.slot, self.channel.index, self.name
             )
         raise ValueError(f"Trying to read write-only parameter {self.name}")
 
@@ -458,8 +469,8 @@ class ChannelParameter:
     def value(self, value: Any) -> None:
         """Writes (if possible) parameter value to the board"""
         if "W" in self.attributes["mode"]:
-            self.channel.module.command(
-                self.channel.module.slot, self.channel.index, self.name, value
+            self.channel.board.module.command(
+                self.channel.board.slot, self.channel.index, self.name, value
             )
         else:
             raise ValueError(f"Trying to write read-only parameter {self.name}")
