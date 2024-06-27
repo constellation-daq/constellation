@@ -26,8 +26,7 @@ namespace constellation::metrics {
     /** Manager for Metrics handling & transmission */
     class CNSTLN_API MetricsManager {
     public:
-        MetricsManager(std::string_view name)
-            : name_(name), logger_("STAT"), thread_(std::bind_front(&MetricsManager::run, this)) {};
+        MetricsManager() : logger_("STAT"), thread_(std::bind_front(&MetricsManager::run, this)) {};
 
         // No copy/move constructor/assignment
         MetricsManager(MetricsManager& other) = delete;
@@ -114,7 +113,6 @@ namespace constellation::metrics {
          */
         void run(const std::stop_token& stop_token);
 
-        std::string name_;
         log::Logger logger_;
         message::State current_state_ {message::State::NEW};
 
