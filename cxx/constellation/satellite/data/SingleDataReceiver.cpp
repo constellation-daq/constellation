@@ -1,13 +1,13 @@
 /**
  * @file
- * @brief Implementation of data receiver for satellites
+ * @brief Implementation of data receiver for a single satellite
  *
  * @copyright Copyright (c) 2024 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include "DataReceiver.hpp"
+#include "SingleDataReceiver.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -36,18 +36,17 @@ using namespace constellation::data;
 using namespace constellation::message;
 using namespace constellation::utils;
 
-DataReceiver::DataReceiver()
+SingleDataReceiver::SingleDataReceiver()
     : socket_(context_, zmq::socket_type::pull), logger_("DATA_RECEIVER"), state_(State::BEFORE_BOR) {}
 
-void DataReceiver::set_recv_timeout(std::chrono::milliseconds timeout) {
+void SingleDataReceiver::set_recv_timeout(std::chrono::milliseconds timeout) {
     socket_.set(zmq::sockopt::rcvtimeo, static_cast<int>(timeout.count()));
 }
 
-void DataReceiver::initializing(Configuration& config) {
+void SingleDataReceiver::initializing(Configuration& config) {
     // Get canonical name of sender to receive data from
     sender_name_ = config.get<std::string>("_data_sender_name");
     LOG(logger_, DEBUG) << "Initialized data receiver for satellite " << sender_name_;
-    // TODO: set logger topic to DATA_RECEIVER_<sender_name>, maybe create late?
 
     data_bor_timeout_ = std::chrono::seconds(config.get<std::uint64_t>("_data_bor_timeout", 10));
     data_data_timeout_ = std::chrono::seconds(config.get<std::uint64_t>("_data_data_timeout", 1));
@@ -61,7 +60,7 @@ void DataReceiver::initializing(Configuration& config) {
     state_ = State::BEFORE_BOR;
 }
 
-Dictionary DataReceiver::starting() {
+Dictionary SingleDataReceiver::starting() {
     // Send request for DATA services
     chirp::Manager::getDefaultInstance()->sendRequest(chirp::DATA);
 
@@ -122,7 +121,7 @@ Dictionary DataReceiver::starting() {
     return config;
 }
 
-std::optional<CDTP1Message> DataReceiver::recvData() {
+std::optional<CDTP1Message> SingleDataReceiver::recvData() {
     // If EOR already received, return immediately
     if(state_ == State::GOT_EOR) [[unlikely]] {
         return std::nullopt;
@@ -168,7 +167,7 @@ std::optional<CDTP1Message> DataReceiver::recvData() {
     return msg;
 }
 
-void DataReceiver::stopping() {
+void SingleDataReceiver::stopping() {
     // Check that in RUN or already EOR received
     if(state_ != State::IN_RUN && state_ != State::GOT_EOR) [[unlikely]] {
         throw InvalidDataState("stopping", to_string(state_));
@@ -183,11 +182,11 @@ void DataReceiver::stopping() {
     }
 }
 
-bool DataReceiver::gotEOR() {
+bool SingleDataReceiver::gotEOR() {
     return state_ == State::GOT_EOR;
 }
 
-const Dictionary& DataReceiver::getEOR() {
+const Dictionary& SingleDataReceiver::getEOR() {
     // Check that EOR already received
     if(state_ != State::GOT_EOR) [[unlikely]] {
         throw InvalidDataState("getEOR", to_string(state_));

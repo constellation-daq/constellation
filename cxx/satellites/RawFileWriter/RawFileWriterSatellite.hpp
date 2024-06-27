@@ -21,7 +21,7 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/utils/timers.hpp"
-#include "constellation/satellite/data/DataReceiver.hpp"
+#include "constellation/satellite/data/SingleDataReceiver.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 class RawFileWriterSatellite final : public constellation::satellite::Satellite {
@@ -38,7 +38,7 @@ private:
     void write_bytes(std::span<const std::byte> bytes);
 
 private:
-    constellation::data::DataReceiver data_receiver_;
+    constellation::data::SingleDataReceiver data_receiver_;
     std::filesystem::path output_directory_;
     std::ofstream file_;
     std::uint64_t bytes_written_ {0};

@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Data receiver for satellites
+ * @brief Data receiver for a single satellite
  *
  * @copyright Copyright (c) 2024 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
@@ -24,7 +24,7 @@
 #include "constellation/core/message/CDTP1Message.hpp"
 
 namespace constellation::data {
-    class DataReceiver {
+    class SingleDataReceiver {
     private:
         enum class State : std::uint8_t {
             BEFORE_BOR,
@@ -34,7 +34,7 @@ namespace constellation::data {
         };
 
     public:
-        CNSTLN_API DataReceiver();
+        CNSTLN_API SingleDataReceiver();
 
         /** Initialize data receiver */
         CNSTLN_API void initializing(config::Configuration& config);
