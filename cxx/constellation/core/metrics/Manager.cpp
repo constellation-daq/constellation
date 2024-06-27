@@ -103,7 +103,7 @@ void MetricsManager::run(const std::stop_token& stop_token) {
             }
 
             // Update time point until we can wait:
-            next = std::min(next, metric->next_trigger());
+            next = std::min(next, metric->nextTrigger());
         }
 
         cv_.wait_until(lock, next, [&]() { return stop_token.stop_requested(); });
