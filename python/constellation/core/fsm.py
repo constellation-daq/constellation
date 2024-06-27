@@ -231,9 +231,9 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         the FSM.
 
         """
-        if not hasattr(self, "do_reconfiguring"):
+        if not hasattr(self, "do_reconfigure"):
             raise NotImplementedError(
-                "Reconfigure not supported: missing function 'do_reconfiguring'"
+                "Reconfigure not supported: missing function 'do_reconfigure'"
             )
         if not isinstance(request.payload, dict):
             # missing payload

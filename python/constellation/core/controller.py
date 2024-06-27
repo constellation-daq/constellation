@@ -399,7 +399,7 @@ class BaseController(CHIRPBroadcaster):
 
     def _preprocess_payload(self, payload: Any, uuid: str, cmd: str) -> Any:
         """Pre-processes payload for specific commands."""
-        if cmd == "initialize":
+        if cmd == "initialize" or cmd == "reconfigure":
             # payload needs to be a flat dictionary, but we want to allow to
             # supply a full config -- flatten it here
             if any(isinstance(i, dict) for i in payload.values()):
