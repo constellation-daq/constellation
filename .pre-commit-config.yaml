@@ -42,6 +42,13 @@ repos:
       - id: black
         language_version: python3
 
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        args: [ --no-warn-unused-ignores, --ignore-missing-imports]
+        files: "python/constellation/core"
+
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.40.0
     hooks:

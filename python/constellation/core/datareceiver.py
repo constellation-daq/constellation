@@ -10,11 +10,15 @@ import datetime
 import os
 import pathlib
 import sys
+import threading
 
-import h5py
+import h5py  # type: ignore[import-untyped]
 import numpy as np
 import zmq
+from uuid import UUID
 from functools import partial
+from typing import Any, Tuple
+from concurrent.futures import Future
 
 from . import __version__
 from .broadcastmanager import chirp_callback, DiscoveredService
@@ -31,21 +35,21 @@ from .error import debug_log, handle_error
 class DataReceiver(Satellite):
     """Constellation Satellite which receives data via ZMQ."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         # define our attributes
-        self._pull_interfaces = {}
-        self._pull_sockets = {}
-        self.poller = None
+        self._pull_interfaces: dict[UUID, Tuple[str, int]] = {}
+        self._pull_sockets: dict[UUID, zmq.Socket] = {}  # type: ignore[type-arg]
+        self.poller: zmq.Poller | None = None
         self.run_identifier = ""
         # Tracker for which satellites have joined the current data run.
-        self.active_satellites = []
+        self.active_satellites: list[str] = []
         # metrics
-        self.receiver_stats = None
+        self.receiver_stats: dict[str, int] = {}
         # initialize Satellite attributes
         super().__init__(*args, **kwargs)
         self.request(CHIRPServiceIdentifier.DATA)
 
-    def do_initializing(self, config: dict[str]) -> str:
+    def do_initializing(self, config: dict[str, Any]) -> str:
         """Initialize and configure the satellite."""
         # what pattern to use for the file names?
         self.file_name_pattern = self.config.setdefault(
@@ -56,7 +60,7 @@ class DataReceiver(Satellite):
         self._configure_monitoring(2.0)
         return "Configured DataReceiver"
 
-    def do_launching(self, payload: any) -> str:
+    def do_launching(self, payload: Any) -> str:
         """Set up pull sockets to listen to incoming data."""
         # Set up the data poller which will monitor all ZMQ sockets
         self.poller = zmq.Poller()
@@ -66,7 +70,7 @@ class DataReceiver(Satellite):
             self._add_socket(uuid, address, port)
         return "Established connections to data senders."
 
-    def do_landing(self, payload: any) -> str:
+    def do_landing(self, payload: Any) -> str:
         """Close all open sockets."""
         for uuid in self._pull_interfaces.keys():
             self._remove_socket(uuid)
@@ -99,13 +103,17 @@ class DataReceiver(Satellite):
         last_msg = datetime.datetime.now()
         # keep the data collection alive for a few seconds after stopping
         keep_alive = datetime.datetime.now()
-        transmitter = DataTransmitter(None, None)
+        transmitter = DataTransmitter("", None)
         self._reset_receiver_stats()
         try:
             # processing loop
+            # assert for mypy static type analysis
+            assert isinstance(
+                self._state_thread_evt, threading.Event
+            ), "State thread Event not set up correctly"
+
             while not self._state_thread_evt.is_set() or (
-                keep_alive
-                and (datetime.datetime.now() - keep_alive).total_seconds() < 60
+                (datetime.datetime.now() - keep_alive).total_seconds() < 60
             ):
                 # refresh keep_alive timestamp
                 if not self._state_thread_evt.is_set():
@@ -113,10 +121,11 @@ class DataReceiver(Satellite):
                 else:
                     if not self.active_satellites:
                         # no Satellites connected
-                        keep_alive = None
                         self.log.info("All EORE received, stopping.")
+                        break
                 # request available data from zmq poller; timeout prevents
                 # deadlock when stopping.
+                assert isinstance(self.poller, zmq.Poller)
                 sockets_ready = dict(self.poller.poll(timeout=250))
 
                 for socket in sockets_ready.keys():
@@ -173,36 +182,36 @@ class DataReceiver(Satellite):
             self.active_satellites = []
         return f"Finished acquisition to {filename}"
 
-    def _write_data(self, outfile: any, item: CDTPMessage):
+    def _write_data(self, outfile: Any, item: CDTPMessage) -> None:
         """Write data to file"""
         raise NotImplementedError()
 
-    def _write_EOR(self, outfile: any, item: CDTPMessage):
+    def _write_EOR(self, outfile: Any, item: CDTPMessage) -> None:
         """Write EOR to file"""
         raise NotImplementedError()
 
-    def _write_BOR(self, outfile: any, item: CDTPMessage):
+    def _write_BOR(self, outfile: Any, item: CDTPMessage) -> None:
         """Write BOR to file"""
         raise NotImplementedError()
 
-    def _open_file(self, filename: str) -> any:
+    def _open_file(self, filename: pathlib.Path) -> Any:
         """Return the filehandler"""
         raise NotImplementedError()
 
-    def _close_file(self, outfile: any) -> None:
+    def _close_file(self, outfile: Any) -> None:
         """Close the filehandler"""
         raise NotImplementedError()
 
-    def do_stopping(self, payload: any):
+    def do_stopping(self, payload: Any) -> str:
         """Unused.
 
         In this Satellite class, this method is not used. All stopping actions
         need to be performed from within `do_run`.
 
         """
-        pass
+        raise NotImplementedError
 
-    def fail_gracefully(self):
+    def fail_gracefully(self) -> str:
         """Method called when reaching 'ERROR' state."""
         for uuid in self._pull_interfaces.keys():
             try:
@@ -210,9 +219,12 @@ class DataReceiver(Satellite):
             except KeyError:
                 pass
         self.poller = None
+        return "Finished cleanup."
 
     @cscp_requestable
-    def get_data_sources(self, _request: CSCPMessage = None) -> (str, list[str], None):
+    def get_data_sources(
+        self, _request: CSCPMessage | None = None
+    ) -> Tuple[str, list[str], None]:
         """Get list of connected data sources.
 
         No payload argument.
@@ -227,7 +239,7 @@ class DataReceiver(Satellite):
 
     @handle_error
     @debug_log
-    def _wrap_stop(self, payload: any) -> str:
+    def _wrap_stop(self, payload: Any) -> str:
         """Wrapper for the 'stopping' transitional state of the FSM.
 
         As the DataReceiver will have to keep files open, we design the `do_run`
@@ -239,20 +251,22 @@ class DataReceiver(Satellite):
             self._state_thread_evt.set()
         # wait for result, waiting until done
         self.log.info("Waiting for RUN thread to finish.")
+        # assert for mypy static type analysis
+        assert isinstance(self._state_thread_fut, Future)
         self._state_thread_fut.result(timeout=None)
         self.log.info("RUN thread finished.")
         # NOTE: no call to `do_stopping`
         return "Acquisition stopped"
 
     @chirp_callback(CHIRPServiceIdentifier.DATA)
-    def _add_sender_callback(self, service: DiscoveredService):
+    def _add_sender_callback(self, service: DiscoveredService) -> None:
         """Callback method for connecting to data service."""
         if not service.alive:
             self._remove_sender(service)
         else:
             self._add_sender(service)
 
-    def _add_sender(self, service: DiscoveredService):
+    def _add_sender(self, service: DiscoveredService) -> None:
         """
         Adds an interface (host, port) to receive data from.
         """
@@ -262,27 +276,26 @@ class DataReceiver(Satellite):
         )
         # handle late-coming satellite offers
         if self.fsm.current_state.id in [SatelliteState.ORBIT, SatelliteState.RUN]:
-            uuid = str(service.host_uuid)
-            self._add_socket(uuid, service.address, service.port)
+            self._add_socket(service.host_uuid, service.address, service.port)
 
-    def _remove_sender(self, service: DiscoveredService):
+    def _remove_sender(self, service: DiscoveredService) -> None:
         """Removes sender from pool"""
-        uuid = str(service.host_uuid)
         try:
-            self._pull_interfaces.pop(uuid)
-            self._remove_socket(uuid)
+            self._pull_interfaces.pop(service.host_uuid)
+            self._remove_socket(service.host_uuid)
         except KeyError:
             pass
 
-    def _add_socket(self, uuid, address, port):
+    def _add_socket(self, uuid: UUID, address: str, port: int) -> None:
         interface = f"tcp://{address}:{port}"
         self.log.info("Connecting to %s", interface)
         socket = self.context.socket(zmq.PULL)
         socket.connect(interface)
         self._pull_sockets[uuid] = socket
+        assert isinstance(self.poller, zmq.Poller)  # for typing
         self.poller.register(socket, zmq.POLLIN)
 
-    def _remove_socket(self, uuid):
+    def _remove_socket(self, uuid: UUID) -> None:
         socket = self._pull_sockets.pop(uuid)
         if self.poller:
             self.poller.unregister(socket)
@@ -295,11 +308,11 @@ class DataReceiver(Satellite):
             "nbytes": 0,
         }
 
-    def _get_stat(self, stat: str) -> any:
+    def _get_stat(self, stat: str) -> Any:
         """Get a specific metric"""
         return self.receiver_stats[stat]
 
-    def _configure_monitoring(self, interval: float):
+    def _configure_monitoring(self, interval: float) -> None:
         """Schedule monitoring for internal parameters."""
         self.reset_scheduled_metrics()
         self._reset_receiver_stats()
@@ -316,7 +329,7 @@ class DataReceiver(Satellite):
 class H5DataReceiverWriter(DataReceiver):
     """Satellite which receives data via ZMQ and writes to HDF5."""
 
-    def do_initializing(self, config: dict[str]) -> str:
+    def do_initializing(self, config: dict[str, Any]) -> str:
         """Initialize and configure the satellite."""
         super().do_initializing(config)
         # how often will the file be flushed? Negative values for 'at the end of
@@ -329,7 +342,7 @@ class H5DataReceiverWriter(DataReceiver):
         self.last_flush = datetime.datetime.now()
         return super().do_run(run_identifier)
 
-    def _write_EOR(self, outfile: h5py.File, item: CDTPMessage):
+    def _write_EOR(self, outfile: h5py.File, item: CDTPMessage) -> None:
         """Write data to file"""
         grp = outfile[item.name].create_group("EOR")
         # add meta information as attributes
@@ -340,7 +353,7 @@ class H5DataReceiverWriter(DataReceiver):
             self.run_identifier,
         )
 
-    def _write_BOR(self, outfile: h5py.File, item: CDTPMessage):
+    def _write_BOR(self, outfile: h5py.File, item: CDTPMessage) -> None:
         """Write BOR to file"""
         if item.name not in outfile.keys():
             grp = outfile.create_group(item.name).create_group("BOR")
@@ -352,7 +365,7 @@ class H5DataReceiverWriter(DataReceiver):
                 self.run_identifier,
             )
 
-    def _write_data(self, outfile: h5py.File, item: CDTPMessage):
+    def _write_data(self, outfile: h5py.File, item: CDTPMessage) -> None:
         """Write data into HDF5 format
 
         Format: h5file -> Group (name) ->   BOR Dataset
@@ -427,7 +440,7 @@ class H5DataReceiverWriter(DataReceiver):
         """Close the filehandler"""
         outfile.close()
 
-    def _add_version(self, outfile: h5py.File):
+    def _add_version(self, outfile: h5py.File) -> None:
         """Add version information to file."""
         grp = outfile.create_group(self.name)
         grp["constellation_version"] = __version__
@@ -436,7 +449,7 @@ class H5DataReceiverWriter(DataReceiver):
 # -------------------------------------------------------------------------
 
 
-def main(args=None):
+def main(args: Any = None) -> None:
     """Start the Constellation data receiver satellite.
 
     Data will be written in HDF5 format.
@@ -444,9 +457,7 @@ def main(args=None):
     """
     parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
     # this sets the defaults for our "demo" Satellite
-    parser.set_defaults(
-        name="h5_data_receiver", cmd_port=23989, mon_port=55566, hb_port=61244
-    )
+    parser.set_defaults(name="h5_data_receiver")
     # get a dict of the parsed arguments
     args = vars(parser.parse_args(args))
 

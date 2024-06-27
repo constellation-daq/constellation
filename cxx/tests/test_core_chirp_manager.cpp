@@ -121,7 +121,7 @@ TEST_CASE("Get async timeout in CHIRP manager", "[chirp][chirp::manager]") {
     Manager manager {"0.0.0.0", "0.0.0.0", "group1", "sat1"};
     manager.start();
     // This is purely a coverage test to ensure that the async receive works
-    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for(100ms);
 }
 
 TEST_CASE("Ignore CHIRP message from other group in CHIRP manager", "[chirp][chirp::manager]") {
@@ -154,7 +154,7 @@ TEST_CASE("Discover services in CHIRP manager", "[chirp][chirp::manager]") {
     // Register service, should send OFFER
     manager1.registerService(DATA, 24000);
     // Wait a bit ensure we received the message
-    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for(100ms);
     // Test that we discovered the service
     const auto services_1 = manager2.getDiscoveredServices();
     REQUIRE(services_1.size() == 1);
@@ -168,13 +168,13 @@ TEST_CASE("Discover services in CHIRP manager", "[chirp][chirp::manager]") {
     // Register other services
     manager1.registerService(MONITORING, 65000);
     manager1.registerService(HEARTBEAT, 65001);
-    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for(100ms);
 
     // Test that we discovered the services
     REQUIRE(manager2.getDiscoveredServices().size() == 3);
     // Unregister a service
     manager1.unregisterService(MONITORING, 65000);
-    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for(100ms);
     // Test that we discovered DEPART message
     REQUIRE(manager2.getDiscoveredServices().size() == 2);
     // Now test that we can filter a service category
@@ -187,12 +187,12 @@ TEST_CASE("Discover services in CHIRP manager", "[chirp][chirp::manager]") {
     manager1.unregisterServices();
     manager1.registerService(CONTROL, 40001);
     manager1.registerService(DATA, 40002);
-    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for(100ms);
     // Test that we discovered services
     REQUIRE(manager2.getDiscoveredServices().size() == 2);
     // Unregister all services
     manager1.unregisterServices();
-    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for(100ms);
     // Test that we discovered DEPART messages
     REQUIRE(manager2.getDiscoveredServices().empty());
 }
@@ -248,7 +248,7 @@ TEST_CASE("Execute callbacks in CHIRP manager", "[chirp][chirp::manager]") {
     // Register CONTROL service
     manager1.registerService(CONTROL, 50100);
     // Wait a bit to check for execution of callback
-    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for(100ms);
     // Test that callback was not executed
     REQUIRE_FALSE(cb_test_data.executed);
 
@@ -279,7 +279,7 @@ TEST_CASE("Execute callbacks in CHIRP manager", "[chirp][chirp::manager]") {
     // Unregister all services
     manager1.unregisterServices();
     // Wait a bit to check for execution of callback
-    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for(100ms);
     // Test that callback was not executed
     REQUIRE_FALSE(cb_test_data.executed);
 }
@@ -317,7 +317,7 @@ TEST_CASE("Receive CHIRP requests in CHIRP manager", "[chirp][chirp::manager]") 
     sender.sendBroadcast(asm_msg_a);
     sender.sendBroadcast(asm_msg_b);
     // Wait a bit ensure we received the message
-    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for(100ms);
 
     // If everything worked, the corresponding lines should be marked as executed in coverage
 }
@@ -333,7 +333,7 @@ TEST_CASE("Detect incorrect CHIRP message in CHIRP manager", "[chirp][chirp::man
     // Send message
     sender.sendBroadcast(asm_msg);
     // Wait a bit ensure we received the message
-    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for(100ms);
 
     // If everything worked, the corresponding lines should be marked as executed in coverage
 }

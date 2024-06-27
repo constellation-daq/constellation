@@ -24,22 +24,23 @@ using namespace constellation::satellite;
 using namespace constellation::utils;
 
 config::Value CommandRegistry::call(State state, const std::string& name, const config::List& args) {
-    const auto cmd = commands_.find(name);
+    const auto name_lc = transform(name, ::tolower);
+    const auto cmd = commands_.find(name_lc);
 
     // Check if this is a known command at all
     if(cmd == commands_.end()) {
-        throw UnknownUserCommand(name);
+        throw UnknownUserCommand(name_lc);
     }
 
     // Check if we are allowed to call this command from the current state:
     // Note: empty state list means that everything is allowed.
     if(!cmd->second.valid_states.empty() && !cmd->second.valid_states.contains(state)) {
-        throw InvalidUserCommand(name, state);
+        throw InvalidUserCommand(name_lc, state);
     }
 
     // Check if all required arguments are present:
     if(args.size() != cmd->second.nargs) {
-        throw MissingUserCommandArguments(name, cmd->second.nargs, args.size());
+        throw MissingUserCommandArguments(name_lc, cmd->second.nargs, args.size());
     }
 
     // Call the command:
@@ -49,7 +50,7 @@ config::Value CommandRegistry::call(State state, const std::string& name, const 
 std::map<std::string, std::string> CommandRegistry::describeCommands() const {
     std::map<std::string, std::string> cmds {};
 
-    // Add all commands tot he map
+    // Add all commands to the map
     for(const auto& cmd : commands_) {
         auto description = cmd.second.description;
 

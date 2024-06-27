@@ -71,9 +71,14 @@ namespace constellation::message {
         CNSTLN_API CSCP1Message(Header header, std::pair<Type, std::string> verb);
 
         /**
-         * @return CSCP1 header of the message
+         * @return Read-only reference to the CSCP1 header of the message
          */
         constexpr const Header& getHeader() const { return header_; }
+
+        /**
+         * @return Reference to the CSCP1 header of the message
+         */
+        constexpr Header& getHeader() { return header_; }
 
         /**
          * @return Message verb containing the type and the command/reply string
@@ -93,7 +98,7 @@ namespace constellation::message {
         /**
          * @param payload Payload buffer containing the payload to be added as ZeroMQ message
          */
-        void addPayload(message::PayloadBuffer&& payload) { payload_ = std::forward<message::PayloadBuffer>(payload); }
+        void addPayload(message::PayloadBuffer&& payload) { payload_ = std::move(payload); }
 
         /**
          * Assemble full message to frames for ZeroMQ

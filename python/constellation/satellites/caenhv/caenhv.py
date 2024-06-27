@@ -6,12 +6,16 @@ SPDX-License-Identifier: CC-BY-4.0
 This module provides the class for a Constellation Satellite.
 """
 from functools import partial
+from typing import Tuple, Any
+
+from pycaenhv import CaenHVModule  # type: ignore[import-untyped]
+from caen_ndt1470 import CaenNDT1470Manager
 
 from constellation.core.satellite import Satellite, SatelliteArgumentParser
 from constellation.core.fsm import SatelliteState
-from constellation.core.commandmanager import cscp_requestable
+from constellation.core.configuration import Configuration
+from constellation.core.commandmanager import cscp_requestable, CSCPMessage
 from constellation.core.base import setup_cli_logging
-import pycaenhv
 
 
 class CaenHvSatellite(Satellite):
@@ -21,7 +25,7 @@ class CaenHvSatellite(Satellite):
 
     """
 
-    def do_initializing(self, configuration):
+    def do_initializing(self, configuration: Configuration) -> str:
         """Set up connection to HV module and configure settings."""
         self.log.info(
             "Received configuration with parameters: %s",
@@ -31,12 +35,15 @@ class CaenHvSatellite(Satellite):
             # old connection
             self.caen.disconnect()
         # SY5527 and similar: pycaenhv
-        self.caen = pycaenhv.CaenHVModule()
         system = configuration["system"]
-        user = configuration["username"]
-        pw = configuration["password"]
         link = configuration["link"]
         link_arg = configuration["link_argument"]
+        user = configuration.setdefault("username", "")
+        pw = configuration.setdefault("password", "")
+        if "ntd1470" in system.lower():
+            self.caen: CaenNDT1470Manager | CaenHVModule = CaenNDT1470Manager()
+        else:
+            self.caen = CaenHVModule()
         self.log.info(
             "Connecting to %s via %s and %s using username '%s' and password '%s'",
             system,
@@ -80,7 +87,7 @@ class CaenHvSatellite(Satellite):
                         except ValueError as e:
                             raise RuntimeError(
                                 f"Error in configuration for key {key}: {repr(e)}"
-                            )
+                            ) from e
                         ch.parameters[par].value = val
                         self.log.debug(
                             "Configuring %s on board %s, ch %s with value '%s'",
@@ -94,12 +101,12 @@ class CaenHvSatellite(Satellite):
         self._configure_monitoring()
         return f"Connected to crate and configured {len(crate.boards)} boards"
 
-    def do_launching(self, payload):
+    def do_launching(self, payload: Any) -> str:
         """Power up the HV."""
         nch = self._power_up()
         return f"Launched and powered {nch} channels."
 
-    def do_interrupting(self, payload):
+    def do_interrupting(self, payload: Any) -> str:
         """Power down but do not disconnect (e.g. keep monitoring)."""
         self._power_down()
         return "Interrupted and stopped HV."
@@ -111,7 +118,7 @@ class CaenHvSatellite(Satellite):
             self.caen.disconnect()
         return "Powered down and disconnected from crate."
 
-    def get_channel_value(self, board: int, channel: int, par: str):
+    def get_channel_value(self, board: int, channel: int, par: str) -> Any:
         """Return the value of a given channel parameter."""
         if SatelliteState[self.fsm.current_state.id] in [
             SatelliteState.NEW,
@@ -130,7 +137,7 @@ class CaenHvSatellite(Satellite):
         return val
 
     @cscp_requestable
-    def get_parameter(self, request):
+    def get_parameter(self, request: CSCPMessage) -> Tuple[str, None, None]:
         """Return the value of a parameter.
 
         Payload: dictionary with 'board', 'channel' and 'parameter' keys
@@ -144,7 +151,7 @@ class CaenHvSatellite(Satellite):
         return val, None, None
 
     @cscp_requestable
-    def get_hw_config(self, request):
+    def get_hw_config(self, request: CSCPMessage) -> Tuple[str, dict[str, str], None]:
         """Read and return the current hardware configuration.
 
         Payload: None
@@ -176,13 +183,13 @@ class CaenHvSatellite(Satellite):
         return f"Read {len(res)} parameters", res, None
 
     @cscp_requestable
-    def about(self, _request):
+    def about(self, _request: CSCPMessage) -> Tuple[str, None, None]:
         """Get info about the Satellite"""
         # TODO extend with info on connected crate (FW release, etc)
         res = f"{__name__} "
         return res, None, None
 
-    def _power_down(self):
+    def _power_down(self) -> None:
         self.log.warning("Powering down all channels")
         with self.caen as crate:
             for brdno, brd in crate.boards.items():
@@ -190,7 +197,7 @@ class CaenHvSatellite(Satellite):
                     ch.switch_off()
         self.log.info("All channels powered down.")
 
-    def _configure_monitoring(self):
+    def _configure_monitoring(self) -> None:
         """Schedule monitoring for certain parameters."""
         self.reset_scheduled_metrics()
         with self.caen as crate:
@@ -212,7 +219,7 @@ class CaenHvSatellite(Satellite):
                             10.0,
                         )
 
-    def _power_up(self):
+    def _power_up(self) -> int:
         """Loop over channels and power them if they were configured such."""
         npowered = 0  # number of powered channels
         with self.caen as crate:
@@ -238,12 +245,7 @@ def main(args=None):
         epilog="This is a 3rd-party component of Constellation.",
     )
     # this sets the defaults for our Satellite
-    parser.set_defaults(
-        name="CaenHVCrate",
-        cmd_port=23901,
-        mon_port=55501,
-        hb_port=61201,
-    )
+    parser.set_defaults(name="CaenHVCrate")
     args = vars(parser.parse_args(args))
 
     # set up logging
@@ -252,7 +254,3 @@ def main(args=None):
     # start server with remaining args
     s = CaenHvSatellite(**args)
     s.run_satellite()
-
-
-if __name__ == "__main__":
-    main()

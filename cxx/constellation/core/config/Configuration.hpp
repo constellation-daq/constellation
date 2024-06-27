@@ -18,6 +18,7 @@
 
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
+#include "constellation/core/utils/string.hpp"
 
 namespace constellation::config {
 
@@ -100,8 +101,10 @@ namespace constellation::config {
          * @brief Check if key is defined
          * @param key Key to check for existence
          * @return True if key exists, false otherwise
+         *
+         * @note Keys are handled case-insensitively
          */
-        bool has(const std::string& key) const { return config_.contains(key); }
+        bool has(const std::string& key) const { return config_.contains(utils::transform(key, ::tolower)); }
 
         /**
          * @brief Check how many of the given keys are defined
@@ -110,6 +113,8 @@ namespace constellation::config {
          *
          * @param keys Keys to check for existence
          * @return number of existing keys from the given list
+         *
+         * @note Keys are handled case-insensitively
          */
         CNSTLN_API std::size_t count(std::initializer_list<std::string> keys) const;
 
@@ -117,6 +122,8 @@ namespace constellation::config {
          * @brief Get value of a key in requested type
          * @param key Key to get value of
          * @return Value of the key in the type of the requested template parameter
+         *
+         * @note Keys are handled case-insensitively
          *
          * @throws MissingKeyError If the requested key is not defined
          * @throws InvalidTypeError If the conversion to the requested type did not succeed
@@ -131,6 +138,8 @@ namespace constellation::config {
          * @return Value of the key in the type of the requested template parameter
          *         or the default value if the key does not exists
          *
+         * @note Keys are handled case-insensitively
+         *
          * @throws InvalidKeyError If the conversion to the requested type did not succeed
          * @throws InvalidKeyError If an overflow happened while converting the key
          */
@@ -140,6 +149,8 @@ namespace constellation::config {
          * @brief Get values for a key containing an array
          * @param key Key to get values of
          * @return List of values in the array in the requested template parameter
+         *
+         * @note Keys are handled case-insensitively
          *
          * @throws MissingKeyError If the requested key is not defined
          * @throws InvalidKeyError If the conversion to the requested type did not succeed
@@ -154,6 +165,8 @@ namespace constellation::config {
          * @return List of values in the array in the requested template parameter
          *         or the default array if the key does not exist
          *
+         * @note Keys are handled case-insensitively
+         *
          * @throws InvalidKeyError If the conversion to the requested type did not succeed
          * @throws InvalidKeyError If an overflow happened while converting the key
          */
@@ -163,7 +176,7 @@ namespace constellation::config {
          * @brief Get literal value of a key as string
          * @param key Key to get values of
          * @return Literal value of the key
-         * @note This function does also not remove quotation marks in strings
+         * @note This function does also not remove quotation marks in strings, Keys are handled case-insensitively
          */
         CNSTLN_API std::string getText(const std::string& key) const;
 
@@ -172,6 +185,8 @@ namespace constellation::config {
          * @param key Key to get path of
          * @param check_exists If the file should be checked for existence (if yes always returns a canonical path)
          * @return Absolute path to a file
+         *
+         * @note Keys are handled case-insensitively
          *
          * @throws InvalidValueError If the path did not exists while the check_exists parameter is given
          */
@@ -183,6 +198,8 @@ namespace constellation::config {
          * @param extension File extension to be added to path if not present
          * @param check_exists If the file should be checked for existence (if yes always returns a canonical path)
          * @return Absolute path to a file
+         *
+         * @note Keys are handled case-insensitively
          *
          * @throws InvalidValueError If the path did not exists while the check_exists parameter is given
          */
@@ -196,6 +213,8 @@ namespace constellation::config {
          * @param check_exists If the files should be checked for existence (if yes always returns a canonical path)
          * @return List of absolute path to all the requested files
          *
+         * @note Keys are handled case-insensitively
+         *
          * @throws InvalidValueError If the path did not exists while the check_exists parameter is given
          */
         CNSTLN_API std::vector<std::filesystem::path> getPathArray(const std::string& key, bool check_exists = false) const;
@@ -205,6 +224,8 @@ namespace constellation::config {
          * @param key Key to set value of
          * @param val Value to assign to the key
          * @param mark_used Flag whether key should be marked as "used" directly
+         *
+         * @note Keys are handled case-insensitively and stored in lower case.
          */
         template <typename T> void set(const std::string& key, const T& val, bool mark_used = false);
 
@@ -213,6 +234,8 @@ namespace constellation::config {
          * @param key Key to set values of
          * @param val List of values to assign to the key
          * @param mark_used Flag whether key should be marked as "used" directly
+         *
+         * @note Keys are handled case-insensitively and stored in lower case.
          */
         template <typename T> void setArray(const std::string& key, const std::vector<T>& val, bool mark_used = false) {
             set<std::vector<T>>(key, val, mark_used);
@@ -223,6 +246,8 @@ namespace constellation::config {
          * @param key Key to possible set value of
          * @param val Value to assign if the key is not defined yet
          * @note This marks the default key as "used" automatically
+         *
+         * @note Keys are handled case-insensitively and stored in lower case.
          */
         template <typename T> void setDefault(const std::string& key, const T& val);
 
@@ -231,6 +256,8 @@ namespace constellation::config {
          * @param key Key to possible set values of
          * @param val List of values to assign to the key if the key is not defined yet
          * @note This marks the default key as "used" automatically
+         *
+         * @note Keys are handled case-insensitively and stored in lower case.
          */
         template <typename T> void setDefaultArray(const std::string& key, const std::vector<T>& val);
 
@@ -239,7 +266,8 @@ namespace constellation::config {
          * @param new_key New alias to be created
          * @param old_key Key the alias is created for
          * @param warn Optionally print a warning message to notify of deprecation
-         * @note This marks the old key as "used" automatically
+         * @note This marks the old key as "used" automatically. Keys are handled case-insensitively and stored in lower
+         * case.
          */
         CNSTLN_API void setAlias(const std::string& new_key, const std::string& old_key, bool warn = false);
 

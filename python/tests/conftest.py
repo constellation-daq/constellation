@@ -3,6 +3,7 @@ SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 """
 
+import random
 import pytest
 from unittest.mock import patch, MagicMock
 import operator
@@ -17,6 +18,7 @@ from constellation.core.satellite import Satellite
 from constellation.core.chirp import (
     CHIRP_PORT,
     CHIRPBeaconTransmitter,
+    get_uuid,
 )
 
 from constellation.core.monitoring import (
@@ -69,9 +71,22 @@ def mock_chirp_socket():
 
 
 @pytest.fixture
-def mock_chirp_transmitter(mock_chirp_socket):
-    t = CHIRPBeaconTransmitter("mock_sender", "mockstellation", "127.0.0.1")
-    yield t
+def mock_chirp_transmitter():
+    def mock_init(self, *args, **kwargs):
+        self._host_uuid = get_uuid(args[0])
+        self._group_uuid = get_uuid("mockstellation")
+        self._broadcasts = ["localhost"]
+        self._filter_group = True
+        mock = MagicMock()
+        mock = mock.return_value
+        mock.connected = MagicMock(return_value=True)
+        mock.sendto = MagicMock(side_effect=mock_chirp_sock_sendto)
+        mock.recvfrom = MagicMock(side_effect=mock_chirp_sock_recvfrom)
+        self._sock = mock
+
+    with patch.object(CHIRPBeaconTransmitter, "__init__", mock_init):
+        t = CHIRPBeaconTransmitter("mock_transmitter")
+        yield t
 
 
 class mocket(MagicMock):
@@ -169,6 +184,11 @@ class mocket(MagicMock):
         self.port = int(host.split(":")[2])
         print(f"Bound Mocket on {self.port}")
 
+    def bind_to_random_port(self, host):
+        self.port = random.randrange(10000, 55555)
+        print(f"Bound Mocket on random port: {self.port}")
+        return self.port
+
     def connect(self, host):
         self.port = int(host.split(":")[2])
         print(f"Bound Mocket on {self.port}")
@@ -211,7 +231,7 @@ def mock_data_receiver(mock_socket_receiver):
 
 
 @pytest.fixture
-def mock_satellite(mock_chirp_socket):
+def mock_satellite(mock_chirp_transmitter):
     """Create a mock Satellite base instance."""
 
     def mocket_factory(*args, **kwargs):
@@ -233,7 +253,7 @@ def mock_satellite(mock_chirp_socket):
 
 
 @pytest.fixture
-def mock_controller(mock_chirp_socket):
+def mock_controller(mock_chirp_transmitter):
     """Create a mock Controller base instance."""
 
     def mocket_factory(*args, **kwargs):
@@ -271,7 +291,7 @@ def config(rawconfig):
 
 
 @pytest.fixture
-def mock_example_satellite(mock_chirp_socket):
+def mock_example_satellite(mock_chirp_transmitter):
     """Mock a Satellite for a specific device, ie. a class inheriting from Satellite."""
 
     def mocket_factory(*args, **kwargs):

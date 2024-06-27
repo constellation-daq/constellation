@@ -22,6 +22,7 @@ core_files = files(
   'core/monitoring.py',
   'core/network.py',
   'core/protocol.py',
+  'core/py.typed',
   'core/satellite.py',
 )
 

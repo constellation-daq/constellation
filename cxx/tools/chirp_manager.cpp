@@ -13,6 +13,7 @@
 #include <iostream>
 #include <optional>
 #include <ranges>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -64,31 +65,34 @@ void discover_callback(DiscoveredService service, bool depart, std::any /* user_
               << std::endl;
 }
 
-int main(int argc, char* argv[]) {
-    // Specify satellite name, brd address, group name and any address via cmdline
-    auto name = "control"s;
+void cli_loop(std::span<char*> args) {
+    // Get constellation group, name, brd address, and any address via cmdline
+    std::cout << "Usage: chirp_manager CONSTELLATION_GROUP NAME BRD_ADDR ANY_ADDR" << std::endl;
+
+    auto group = "constellation"s;
+    auto name = "chirp_manager"s;
     asio::ip::address brd_address = asio::ip::address_v4::broadcast();
-    auto group = "cnstln1"s;
     asio::ip::address any_address = asio::ip::address_v4::any();
-    if(argc >= 2) {
-        name = argv[1];
+    if(args.size() >= 2) {
+        group = args[1];
     }
-    if(argc >= 3) {
+    std::cout << "Using constellation group " << std::quoted(group) << std::endl;
+    if(args.size() >= 3) {
+        name = args[2];
+    }
+    if(args.size() >= 4) {
         try {
-            brd_address = asio::ip::make_address(argv[2]);
+            brd_address = asio::ip::make_address(args[3]);
         } catch(const asio::system_error& error) {
-            std::cerr << "Unable to use specified broadcast address " << std::quoted(argv[2]) << ", using default instead"
+            std::cerr << "Unable to use specified broadcast address " << std::quoted(args[3]) << ", using default instead"
                       << std::endl;
         }
     }
-    if(argc >= 4) {
-        group = argv[3];
-    }
-    if(argc >= 5) {
+    if(args.size() >= 5) {
         try {
-            any_address = asio::ip::make_address(argv[4]);
+            any_address = asio::ip::make_address(args[4]);
         } catch(const asio::system_error& error) {
-            std::cerr << "Unable to use specified any address " << std::quoted(argv[4]) << ", using default instead"
+            std::cerr << "Unable to use specified any address " << std::quoted(args[4]) << ", using default instead"
                       << std::endl;
         }
     }
@@ -108,127 +112,133 @@ int main(int argc, char* argv[]) {
               << "\n request <ServiceIdentifier:CONTROL>"
               << "\n reset" << std::endl;
 
-    try {
-        manager.start();
+    manager.start();
 
-        while(true) {
-            std::string cmd_input {};
-            std::getline(std::cin, cmd_input);
+    while(true) {
+        std::string cmd_input {};
+        std::getline(std::cin, cmd_input);
 
-            // Split command by spaces to vector of string views
-            std::vector<std::string_view> cmd_split {};
-            for(const auto word_range : std::ranges::split_view(cmd_input, ' ')) {
-                cmd_split.emplace_back(std::ranges::cdata(word_range), std::ranges::size(word_range));
-            }
-
-            // If not a command, continue
-            if(cmd_split.empty()) {
-                continue;
-            }
-            auto cmd_opt = magic_enum::enum_cast<Command>(cmd_split[0]);
-            if(!cmd_opt.has_value()) {
-                std::cout << std::quoted(cmd_split[0]) << " is not a valid command" << std::endl;
-                continue;
-            }
-            auto cmd = cmd_opt.value();
-
-            // List registered services
-            if(cmd == list_registered_services) {
-                auto registered_services = manager.getRegisteredServices();
-                std::cout << " Registered Services:\n";
-                for(const auto& service : registered_services) {
-                    std::cout << " Service " << pad_str_right(magic_enum::enum_name(service.identifier), 10) //
-                              << " Port " << std::setw(5) << service.port                                    //
-                              << "\n";
-                }
-                std::cout << std::flush;
-                continue;
-            }
-            // List discovered services
-            if(cmd == list_discovered_services) {
-                std::optional<ServiceIdentifier> service_opt {std::nullopt};
-                if(cmd_split.size() >= 2) {
-                    service_opt = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]);
-                }
-                auto discovered_services = service_opt.has_value() ? manager.getDiscoveredServices(service_opt.value())
-                                                                   : manager.getDiscoveredServices();
-                std::cout << " Discovered Services:\n";
-                for(const auto& service : discovered_services) {
-                    std::cout << " Service " << pad_str_right(magic_enum::enum_name(service.identifier), 15) //
-                              << " Port " << std::setw(5) << service.port                                    //
-                              << " Host " << service.host_id.to_string()                                     //
-                              << " IP " << pad_str_right(service.address.to_string(), 15)                    //
-                              << "\n";
-                }
-                std::cout << std::flush;
-                continue;
-            }
-            // Register or unregister a service
-            if(cmd == register_service || cmd == unregister_service) {
-                ServiceIdentifier service {CONTROL};
-                if(cmd_split.size() >= 2) {
-                    service = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
-                }
-                Port port {23999};
-                if(cmd_split.size() >= 3) {
-                    std::from_chars(cmd_split[2].data(), cmd_split[2].data() + cmd_split[2].size(), port);
-                }
-                if(cmd == register_service) {
-                    auto ret = manager.registerService(service, port);
-                    if(ret) {
-                        std::cout << " Registered Service " << pad_str_right(magic_enum::enum_name(service), 10) //
-                                  << " Port " << std::setw(5) << port << std::endl;
-                    }
-                } else {
-                    auto ret = manager.unregisterService(service, port);
-                    if(ret) {
-                        std::cout << " Unregistered Service " << pad_str_right(magic_enum::enum_name(service), 10) //
-                                  << " Port " << std::setw(5) << port << std::endl;
-                    }
-                }
-                continue;
-            }
-            // Register of unregister callback
-            if(cmd == register_callback || cmd == unregister_callback) {
-                ServiceIdentifier service {CONTROL};
-                if(cmd_split.size() >= 2) {
-                    service = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
-                }
-                if(cmd == register_callback) {
-                    auto ret = manager.registerDiscoverCallback(&discover_callback, service, nullptr);
-                    if(ret) {
-                        std::cout << " Registered Callback for " << magic_enum::enum_name(service) << std::endl;
-                    }
-                } else {
-                    auto ret = manager.unregisterDiscoverCallback(&discover_callback, service);
-                    if(ret) {
-                        std::cout << " Unregistered Callback for " << magic_enum::enum_name(service) << std::endl;
-                    }
-                }
-                continue;
-            }
-            // Send CHIRP request
-            if(cmd == request) {
-                ServiceIdentifier service {CONTROL};
-                if(cmd_split.size() >= 2) {
-                    service = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
-                }
-                manager.sendRequest(service);
-                std::cout << " Sent Request for " << magic_enum::enum_name(service) << std::endl;
-                continue;
-            }
-            // Reset
-            if(cmd == reset) {
-                manager.unregisterDiscoverCallbacks();
-                manager.unregisterServices();
-                manager.forgetDiscoveredServices();
-                continue;
-            }
-            // Quit
-            if(cmd == quit) {
-                break;
-            }
+        // Split command by spaces to vector of string views
+        std::vector<std::string_view> cmd_split {};
+        for(const auto word_range : std::ranges::split_view(cmd_input, ' ')) {
+            cmd_split.emplace_back(std::ranges::cdata(word_range), std::ranges::size(word_range));
         }
-    } catch(...) {
+
+        // If not a command, continue
+        if(cmd_split.empty()) {
+            continue;
+        }
+        auto cmd_opt = magic_enum::enum_cast<Command>(cmd_split[0]);
+        if(!cmd_opt.has_value()) {
+            std::cout << std::quoted(cmd_split[0]) << " is not a valid command" << std::endl;
+            continue;
+        }
+        auto cmd = cmd_opt.value();
+
+        // List registered services
+        if(cmd == list_registered_services) {
+            auto registered_services = manager.getRegisteredServices();
+            std::cout << " Registered Services:\n";
+            for(const auto& service : registered_services) {
+                std::cout << " Service " << pad_str_right(magic_enum::enum_name(service.identifier), 10) //
+                          << " Port " << std::setw(5) << service.port                                    //
+                          << "\n";
+            }
+            std::cout << std::flush;
+            continue;
+        }
+        // List discovered services
+        if(cmd == list_discovered_services) {
+            std::optional<ServiceIdentifier> service_opt {std::nullopt};
+            if(cmd_split.size() >= 2) {
+                service_opt = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]);
+            }
+            auto discovered_services = service_opt.has_value() ? manager.getDiscoveredServices(service_opt.value())
+                                                               : manager.getDiscoveredServices();
+            std::cout << " Discovered Services:\n";
+            for(const auto& service : discovered_services) {
+                std::cout << " Service " << pad_str_right(magic_enum::enum_name(service.identifier), 15) //
+                          << " Port " << std::setw(5) << service.port                                    //
+                          << " Host " << service.host_id.to_string()                                     //
+                          << " IP " << pad_str_right(service.address.to_string(), 15)                    //
+                          << "\n";
+            }
+            std::cout << std::flush;
+            continue;
+        }
+        // Register or unregister a service
+        if(cmd == register_service || cmd == unregister_service) {
+            ServiceIdentifier service {CONTROL};
+            if(cmd_split.size() >= 2) {
+                service = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
+            }
+            Port port {23999};
+            if(cmd_split.size() >= 3) {
+                std::from_chars(cmd_split[2].data(), cmd_split[2].data() + cmd_split[2].size(), port);
+            }
+            if(cmd == register_service) {
+                auto ret = manager.registerService(service, port);
+                if(ret) {
+                    std::cout << " Registered Service " << pad_str_right(magic_enum::enum_name(service), 10) //
+                              << " Port " << std::setw(5) << port << std::endl;
+                }
+            } else {
+                auto ret = manager.unregisterService(service, port);
+                if(ret) {
+                    std::cout << " Unregistered Service " << pad_str_right(magic_enum::enum_name(service), 10) //
+                              << " Port " << std::setw(5) << port << std::endl;
+                }
+            }
+            continue;
+        }
+        // Register of unregister callback
+        if(cmd == register_callback || cmd == unregister_callback) {
+            ServiceIdentifier service {CONTROL};
+            if(cmd_split.size() >= 2) {
+                service = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
+            }
+            if(cmd == register_callback) {
+                auto ret = manager.registerDiscoverCallback(&discover_callback, service, nullptr);
+                if(ret) {
+                    std::cout << " Registered Callback for " << magic_enum::enum_name(service) << std::endl;
+                }
+            } else {
+                auto ret = manager.unregisterDiscoverCallback(&discover_callback, service);
+                if(ret) {
+                    std::cout << " Unregistered Callback for " << magic_enum::enum_name(service) << std::endl;
+                }
+            }
+            continue;
+        }
+        // Send CHIRP request
+        if(cmd == request) {
+            ServiceIdentifier service {CONTROL};
+            if(cmd_split.size() >= 2) {
+                service = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
+            }
+            manager.sendRequest(service);
+            std::cout << " Sent Request for " << magic_enum::enum_name(service) << std::endl;
+            continue;
+        }
+        // Reset
+        if(cmd == reset) {
+            manager.unregisterDiscoverCallbacks();
+            manager.unregisterServices();
+            manager.forgetDiscoveredServices();
+            continue;
+        }
+        // Quit
+        if(cmd == quit) {
+            break;
+        }
     }
+}
+
+int main(int argc, char* argv[]) {
+    try {
+        cli_loop(std::span(argv, argc));
+    } catch(...) {
+        return 1;
+    }
+    return 0;
 }

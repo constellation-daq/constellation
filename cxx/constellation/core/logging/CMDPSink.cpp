@@ -9,17 +9,27 @@
 
 #include "CMDPSink.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
+#include <map>
 #include <mutex>
+#include <optional>
+#include <stop_token>
 #include <string>
 #include <thread>
 #include <utility>
 
+#include <magic_enum.hpp>
+#include <spdlog/async_logger.h>
 #include <spdlog/details/log_msg.h>
 #include <zmq.hpp>
+#include <zmq_addon.hpp>
 
+#include "constellation/core/chirp/CHIRP_definitions.hpp"
+#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
@@ -27,6 +37,7 @@
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/windows.hpp"
 
+using namespace constellation;
 using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::utils;
@@ -51,14 +62,12 @@ std::string get_rel_file_path(std::string file_path_char) {
     return to_std_string(std::move(file_path));
 }
 
-// Bind socket to ephemeral port on construction
-CMDPSink::CMDPSink() : publisher_(context_, zmq::socket_type::xpub), port_(bind_ephemeral_port(publisher_)) {
+CMDPSink::CMDPSink(std::shared_ptr<spdlog::async_logger> cmdp_console_logger)
+    : cmdp_console_logger_(std::move(cmdp_console_logger)), publisher_(context_, zmq::socket_type::xpub),
+      port_(bind_ephemeral_port(publisher_)) {
     // Set reception timeout for subscription messages on XPUB socket to zero because we need to mutex-lock the socket
     // while reading and cannot log at the same time.
     publisher_.set(zmq::sockopt::rcvtimeo, 0);
-
-    // Start thread monitoring the socket for subscription messages
-    subscription_thread_ = std::jthread(std::bind_front(&CMDPSink::subscription_loop, this));
 }
 
 CMDPSink::~CMDPSink() {
@@ -142,16 +151,24 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
     }
 }
 
-void CMDPSink::setSender(std::string sender_name) {
+void CMDPSink::enableSending(std::string sender_name) {
     sender_name_ = std::move(sender_name);
+
+    // Start thread monitoring the socket for subscription messages
+    subscription_thread_ = std::jthread(std::bind_front(&CMDPSink::subscription_loop, this));
+
+    // Register service in CHIRP
+    auto* chirp_manager = chirp::Manager::getDefaultInstance();
+    if(chirp_manager != nullptr) {
+        chirp_manager->registerService(chirp::MONITORING, port_);
+    } else {
+        cmdp_console_logger_->log(to_spdlog_level(WARNING),
+                                  "Failed to advertise logging on the network, satellite might not be discovered");
+    }
+    cmdp_console_logger_->log(to_spdlog_level(INFO), "Starting to log on port " + to_string(port_));
 }
 
 void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
-
-    // At the very beginning we wait 500ms before starting the async logging.
-    // This way the socket can fetch already pending subscriptions
-    std::call_once(setup_flag_, []() { std::this_thread::sleep_for(500ms); });
-
     // Create message header
     auto msghead = CMDP1Message::Header(sender_name_, msg.time);
     // Add source and thread information only at TRACE level:

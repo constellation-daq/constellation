@@ -7,8 +7,9 @@ Module implementing the Constellation Data Transmission Protocol.
 """
 
 from enum import Enum
+from typing import Any
 
-import msgpack
+import msgpack  # type: ignore[import-untyped]
 import zmq
 
 from .protocol import MessageHeader, Protocol
@@ -30,12 +31,12 @@ class CDTPMessageIdentifier(Enum):
 class CDTPMessage:
     """Class holding details of a received CDTP command."""
 
-    name: str = None
-    timestamp: msgpack.Timestamp = None
-    msgtype: CDTPMessageIdentifier = None
-    sequence_number: int = None
-    meta: dict[str, any] = {}
-    payload: any = None
+    name: str = ""
+    timestamp: msgpack.Timestamp = msgpack.Timestamp(0)
+    msgtype: CDTPMessageIdentifier | None = None
+    sequence_number: int = -1
+    meta: dict[str, Any] = {}
+    payload: Any = None
 
     def set_header(
         self,
@@ -43,8 +44,8 @@ class CDTPMessage:
         timestamp: msgpack.Timestamp,
         msgtype: int,
         seqno: int,
-        meta: dict,
-    ):
+        meta: dict[str, Any],
+    ) -> None:
         """Sets information retrieved from a message header."""
         self.name = name
         self.timestamp = timestamp
@@ -57,7 +58,7 @@ class CDTPMessage:
         self.sequence_number = seqno
         self.meta = meta
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Pretty-print request."""
         s = "Data message from {} received at {} of type {}, "
         s += "sequence number {} {} payload and meta {}."
@@ -74,7 +75,7 @@ class CDTPMessage:
 class DataTransmitter:
     """Base class for sending Constellation data packets via ZMQ."""
 
-    def __init__(self, name: str, socket: zmq.Socket):
+    def __init__(self, name: str, socket: zmq.Socket | None):  # type: ignore[type-arg]
         """Initialize transmitter.
 
         socket: the ZMQ socket to use if no other is specified on send()/recv()
@@ -82,12 +83,16 @@ class DataTransmitter:
 
         name: the name to use in the message header.
         """
-        self.name = name
-        self.msgheader = MessageHeader(name, Protocol.CDTP)
-        self._socket = socket
-        self.sequence_number = 0
+        self.name: str = name
+        self.msgheader: MessageHeader = MessageHeader(name, Protocol.CDTP)
+        # if no socket: might just use the transmitter for decoding
+        # TODO : refactorize into own class
+        self._socket: zmq.Socket | None = socket  # type: ignore[type-arg]
+        self.sequence_number: int = 0
 
-    def send_start(self, payload: any, meta: dict = None, flags: int = 0):
+    def send_start(
+        self, payload: Any, meta: dict[str, Any] | None = None, flags: int = 0
+    ) -> None:
         """
         Send starting message of data run over a ZMQ socket.
 
@@ -100,14 +105,16 @@ class DataTransmitter:
         """
         self.sequence_number = 0
         packer = msgpack.Packer()
-        return self._dispatch(
+        self._dispatch(
             msgtype=CDTPMessageIdentifier.BOR,
             payload=packer.pack(payload),
             meta=meta,
             flags=flags,
         )
 
-    def send_data(self, payload, meta: dict = None, flags: int = 0):
+    def send_data(
+        self, payload: Any, meta: dict[str, Any] | None = None, flags: int = 0
+    ) -> None:
         """
         Send data message of data run over a ZMQ socket.
 
@@ -122,14 +129,16 @@ class DataTransmitter:
 
         """
         self.sequence_number += 1
-        return self._dispatch(
+        self._dispatch(
             msgtype=CDTPMessageIdentifier.DAT,
             payload=payload,
             meta=meta,
             flags=flags,
         )
 
-    def send_end(self, payload: any, meta: dict = None, flags: int = 0):
+    def send_end(
+        self, payload: Any, meta: dict[str, Any] | None = None, flags: int = 0
+    ) -> None:
         """
         Send ending message of data run over a ZMQ socket.
 
@@ -141,14 +150,14 @@ class DataTransmitter:
 
         """
         packer = msgpack.Packer()
-        return self._dispatch(
+        self._dispatch(
             msgtype=CDTPMessageIdentifier.EOR,
             payload=packer.pack(payload),
             meta=meta,
             flags=flags,
         )
 
-    def recv(self, flags: int = 0) -> CDTPMessage:
+    def recv(self, flags: int = 0) -> CDTPMessage | None:
         """Receive a multi-part data transmission.
 
         Follows the Constellation Data Transmission Protocol.
@@ -158,13 +167,16 @@ class DataTransmitter:
         Returns: CTDPMessage
 
         """
+        # check that we have a valid socket
+        if not self._socket:
+            return None
         try:
             binmsg = self._socket.recv_multipart(flags=flags)
         except zmq.ZMQError:
             return None
         return self.decode(binmsg)
 
-    def decode(self, binmsg) -> CDTPMessage:
+    def decode(self, binmsg: list[bytes]) -> CDTPMessage:
         """Decode a binary message into a CTDPMessage."""
         msg = CDTPMessage()
         msg.set_header(*self.msgheader.decode(binmsg[0]))
@@ -187,10 +199,10 @@ class DataTransmitter:
     def _dispatch(
         self,
         msgtype: CDTPMessageIdentifier,
-        payload: any = None,
-        meta: dict = None,
+        payload: Any = None,
+        meta: dict[str, Any] | None = None,
         flags: int = 0,
-    ):
+    ) -> None:
         """Dispatch CDTP message.
 
         msgtype: flag identifying whether transmitting beginning-of-run, data or end-of-run
@@ -204,6 +216,9 @@ class DataTransmitter:
         Returns: None
 
         """
+        # check that we have a valid socket
+        if not self._socket:
+            return
 
         if payload:
             flags = zmq.SNDMORE | flags

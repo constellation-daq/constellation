@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC-BY-4.0 OR EUPL-1.2
 title: "Example"
-description: "Example satellite demonstrating an implementation"
+subtitle: "Example satellite demonstrating an implementation"
 ---
 
 ## Description
@@ -11,9 +11,11 @@ This section will describe the functionality of the satellite and any relevant i
 
 ## Parameters
 
-* `voltage`: Voltage value for the example device. Required.
-* `current`: Current value for the example device. Required.
-* `sample_period`: Time between executions of the voltage sampling/print-out in the example satellite. Required.
+| Parameter | Description | Type | Default Value |
+|-----------|-------------|------|---------------|
+| `volate` | Voltage value for the example device | Floating Point Number | - |
+| `current` | Current value for the example device | Floating Point Number | - |
+| `sample_period` | Time between executions of the voltage sampling/print-out | Floating Point Number | - |
 
 ## Usage
 

@@ -55,12 +55,12 @@ Homepage = "https://constellation.pages.desy.de/"
 Repository = "https://gitlab.desy.de/constellation/constellation"
 
 [project.optional-dependencies]
-dev = ["build", "black", "flake8", "flake8-pyproject"]
+dev = ["build", "black", "flake8", "flake8-pyproject", "mypy", "types-psutil"]
 test = ["pytest", "pytest-forked", "pytest-cov", "pytest-sugar"]
 docs = ["sphinx", "pydata_sphinx_theme", "myst-parser", "breathe", "ablog", "sphinxcontrib.plantuml", "sphinx_design", "sphinx_favicon"]
 cli = ["ipython"]
 hdf5 = ["h5py"]
-caenhv = ["pycaenhv>=0.03"]
+caenhv = ["pycaenhv>=0.03", "pyserial"]
 
 [tool.meson-python.args]
 setup = ["--wrap-mode=forcefallback", "-Dimpl_py=enabled", "-Dimpl_cxx=disabled"]  # disable C++ for now
@@ -72,3 +72,21 @@ ignore = ["E203", "W503"]
 
 [tool.coverage.run]
 source = ["constellation"]
+
+[tool.mypy]
+python_version = "3.11"
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unused_configs = true
+# force specific ignores:
+enable_error_code = ['ignore-without-code']
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+files = "./python/constellation/core"
+exclude = [
+        "^test_",
+]

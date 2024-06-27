@@ -22,10 +22,17 @@ def test_controller_instantiation(mock_controller):
 
 @pytest.mark.forked
 def test_satellite_access_via_array(mock_controller, mock_satellite):
-    """Test cmd reception."""
+    """Test state cmd reception via satellite array."""
     time.sleep(0.1)
     res = mock_controller.constellation.Satellite.mock_satellite.get_state()
     assert res["msg"] == "new"
+
+
+@pytest.mark.forked
+def test_satellite_hb_state(mock_controller, mock_satellite):
+    """Test heartbeat state check."""
+    time.sleep(0.1)
+    assert mock_controller.states["Satellite.mock_satellite"].name.lower() == "new"
 
 
 @pytest.mark.forked

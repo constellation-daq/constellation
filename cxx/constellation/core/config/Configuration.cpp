@@ -18,12 +18,13 @@
 
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
 
 Configuration::Configuration(const Dictionary& dict, bool mark_used) {
     for(const auto& [key, val] : dict) {
-        config_.emplace(key, ConfigValue(val, mark_used));
+        config_.emplace(utils::transform(key, ::tolower), ConfigValue(val, mark_used));
     }
 };
 
@@ -43,7 +44,7 @@ std::size_t Configuration::count(std::initializer_list<std::string> keys) const 
 
 std::string Configuration::getText(const std::string& key) const {
     try {
-        const auto& dictval = config_.at(key);
+        const auto& dictval = config_.at(utils::transform(key, ::tolower));
         dictval.markUsed();
         return dictval.str();
     } catch(std::out_of_range& e) {
@@ -58,7 +59,7 @@ std::filesystem::path Configuration::getPath(const std::string& key, bool check_
     try {
         return path_to_absolute(get<std::string>(key), check_exists);
     } catch(std::invalid_argument& e) {
-        throw InvalidValueError(config_.at(key).str(), key, e.what());
+        throw InvalidValueError(getText(key), key, e.what());
     }
 }
 /**
@@ -70,7 +71,7 @@ std::filesystem::path Configuration::getPathWithExtension(const std::string& key
     try {
         return path_to_absolute(std::filesystem::path(get<std::string>(key)).replace_extension(extension), check_exists);
     } catch(std::invalid_argument& e) {
-        throw InvalidValueError(config_.at(key).str(), key, e.what());
+        throw InvalidValueError(getText(key), key, e.what());
     }
 }
 /**
@@ -87,7 +88,7 @@ std::vector<std::filesystem::path> Configuration::getPathArray(const std::string
             path_array.emplace_back(path_to_absolute(path, check_exists));
         }
     } catch(std::invalid_argument& e) {
-        throw InvalidValueError(config_.at(key).str(), key, e.what());
+        throw InvalidValueError(getText(key), key, e.what());
     }
     return path_array;
 }
@@ -100,7 +101,9 @@ void Configuration::setAlias(const std::string& new_key, const std::string& old_
         return;
     }
 
-    config_[new_key] = config_.at(old_key);
+    const auto new_key_lc = utils::transform(new_key, ::tolower);
+    const auto old_key_lc = utils::transform(old_key, ::tolower);
+    config_[new_key_lc] = config_.at(old_key_lc);
 
     if(warn) {
         // FIXME logging

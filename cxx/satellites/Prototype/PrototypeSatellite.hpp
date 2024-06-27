@@ -13,7 +13,7 @@
 
 #include "constellation/satellite/Satellite.hpp"
 
-class Prototype final : public constellation::satellite::Satellite {
+class PrototypeSatellite final : public constellation::satellite::Satellite {
 public:
-    Prototype(std::string_view type, std::string_view name);
+    PrototypeSatellite(std::string_view type, std::string_view name);
 };

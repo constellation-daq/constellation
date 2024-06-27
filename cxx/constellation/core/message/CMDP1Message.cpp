@@ -31,7 +31,7 @@ using namespace constellation::utils;
 using namespace std::literals::string_literals;
 
 CMDP1Message::CMDP1Message(std::string topic, CMDP1Message::Header header, message::PayloadBuffer&& payload)
-    : topic_(std::move(topic)), header_(std::move(header)), payload_(std::forward<message::PayloadBuffer>(payload)) {}
+    : topic_(std::move(topic)), header_(std::move(header)), payload_(std::move(payload)) {}
 
 bool CMDP1Message::isLogMessage() const {
     return topic_.starts_with("LOG/");
@@ -103,7 +103,7 @@ CMDP1LogMessage::CMDP1LogMessage(Level level, std::string log_topic, CMDP1Messag
                    std::move(message)),
       level_(level), log_topic_(std::move(log_topic)) {}
 
-CMDP1LogMessage::CMDP1LogMessage(CMDP1Message&& message) : CMDP1Message(std::forward<CMDP1Message>(message)) {
+CMDP1LogMessage::CMDP1LogMessage(CMDP1Message&& message) : CMDP1Message(std::move(message)) {
     if(!isLogMessage()) {
         throw IncorrectMessageType("Not a log message");
     }

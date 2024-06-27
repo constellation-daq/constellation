@@ -38,8 +38,12 @@ class CHIRPServiceIdentifier(Enum):
     The DATA service identifier indicates a CDTP (Constellation Data
     Transmission Protocol) service.
 
+    The NONE identifier is used for initialization only, and is not a valid
+    service type.
+
     """
 
+    NONE = 0x0
     CONTROL = 0x1
     HEARTBEAT = 0x2
     MONITORING = 0x3
@@ -59,8 +63,11 @@ class CHIRPMessageType(Enum):
     DEPART: A message with DEPART type indicates that a service is no longer
     available
 
+    NONE: Value used for initialization only, not a valid message type.
+
     """
 
+    NONE = 0x0
     REQUEST = 0x1
     OFFER = 0x2
     DEPART = 0x3
@@ -71,10 +78,10 @@ class CHIRPMessage:
 
     def __init__(
         self,
-        msgtype: CHIRPMessageType = None,
-        group_uuid: UUID = None,
-        host_uuid: UUID = None,
-        serviceid: CHIRPServiceIdentifier = None,
+        msgtype: CHIRPMessageType = CHIRPMessageType.NONE,
+        group_uuid: UUID = UUID(int=0),
+        host_uuid: UUID = UUID(int=0),
+        serviceid: CHIRPServiceIdentifier = CHIRPServiceIdentifier.NONE,
         port: int = 0,
     ):
         """Initialize attributes."""
@@ -83,7 +90,7 @@ class CHIRPMessage:
         self.host_uuid = host_uuid
         self.serviceid = serviceid
         self.port = port
-        self.from_address = None
+        self.from_address: str = ""
 
     def pack(self) -> bytes:
         """Serialize message to raw bytes."""
@@ -96,7 +103,7 @@ class CHIRPMessage:
         bytes.write(self.port.to_bytes(length=2, byteorder="big"))
         return bytes.getvalue()
 
-    def unpack(self, msg: bytes):
+    def unpack(self, msg: bytes) -> None:
         """Decode from bytes."""
         # Check message length
         if len(msg) != 42:
@@ -105,7 +112,9 @@ class CHIRPMessage:
             )
         # Check header
         if msg[0:6] != CHIRP_HEADER.encode():
-            raise RuntimeError(f"Invalid CHIRP message: header {msg[0:6]} is malformed")
+            raise RuntimeError(
+                f"Invalid CHIRP message: header {msg[0:6]!r} is malformed"
+            )
         # Decode message
         self.msgtype = CHIRPMessageType(int.from_bytes(msg[6:7]))
         self.group_uuid = UUID(bytes=msg[7:23])
@@ -149,7 +158,7 @@ class CHIRPBeaconTransmitter:
         # enable broadcasting
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         # non-blocking (i.e. a timeout of 0.0 seconds for recv calls)
-        self._sock.setblocking(0)
+        self._sock.setblocking(False)
         # determine to what address(es) to send broadcasts to
         self._broadcasts = get_broadcast(interface)
         # bind to specified interface(s) to listen to incoming broadcast.
@@ -178,7 +187,7 @@ class CHIRPBeaconTransmitter:
         return self._filter_group
 
     @filter.setter
-    def filter(self, val: bool):
+    def filter(self, val: bool) -> None:
         """Whether or not incoming broadcasts are filtered on group."""
         self._filter_group = val
 
@@ -193,7 +202,7 @@ class CHIRPBeaconTransmitter:
         for bcast in self._broadcasts:
             self._sock.sendto(msg.pack(), (bcast, CHIRP_PORT))
 
-    def listen(self) -> CHIRPMessage:
+    def listen(self) -> CHIRPMessage | None:
         """Listen in on CHIRP port and return message if data was received."""
         try:
             buf, from_address = self._sock.recvfrom(1024)
@@ -221,6 +230,6 @@ class CHIRPBeaconTransmitter:
         msg.from_address = from_address[0]
         return msg
 
-    def close(self):
+    def close(self) -> None:
         """Close the socket."""
         self._sock.close()

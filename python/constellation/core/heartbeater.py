@@ -6,6 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 import time
 import threading
 from datetime import datetime
+from typing import Any
 
 import zmq
 
@@ -21,7 +22,7 @@ class HeartbeatSender(SatelliteStateHandler):
         name: str,
         hb_port: int,
         interface: str,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
 
         super().__init__(name=name, interface=interface, **kwargs)
@@ -29,12 +30,16 @@ class HeartbeatSender(SatelliteStateHandler):
 
         # register and start heartbeater
         socket = self.context.socket(zmq.PUB)
-        host = f"tcp://{interface}:{hb_port}"
-        socket.bind(host)
-        self.log.info("Setting up heartbeater socket on %s", host)
+        if not hb_port:
+            self.hb_port = socket.bind_to_random_port(f"tcp://{interface}")
+        else:
+            socket.bind(f"tcp://{interface}:{hb_port}")
+            self.hb_port = hb_port
+
+        self.log.info(f"Setting up heartbeater on port {self.hb_port}")
         self._hb_tm = CHPTransmitter(self.name, socket)
 
-    def _add_com_thread(self):
+    def _add_com_thread(self) -> None:
         """Add the CHIRP broadcaster thread to the communication thread pool."""
         super()._add_com_thread()
         self._com_thread_pool["heartbeat"] = threading.Thread(
@@ -44,6 +49,10 @@ class HeartbeatSender(SatelliteStateHandler):
 
     def _run_heartbeat(self) -> None:
         last = datetime.now()
+        # assert for mypy static type analysis
+        assert isinstance(
+            self._com_thread_evt, threading.Event
+        ), "Thread Event not set up correctly"
         while not self._com_thread_evt.is_set():
             if (
                 (datetime.now() - last).total_seconds() > self.heartbeat_period / 1000
@@ -57,47 +66,3 @@ class HeartbeatSender(SatelliteStateHandler):
         self.log.info("HeartbeatSender thread shutting down.")
         # clean up
         self._hb_tm.close()
-
-
-def main():
-    """Send heartbeats."""
-    import argparse
-    import logging
-    import coloredlogs
-
-    parser = argparse.ArgumentParser(description=main.__doc__)
-    parser.add_argument("--log-level", default="info")
-    parser.add_argument("--port", type=int, default=61234)
-    parser.add_argument("--period", type=int, default=1000)
-    parser.add_argument("--interface", type=str, default="127.0.0.1")
-    parser.add_argument(
-        "--num", type=int, default=10, help="Number of heartbeats to send."
-    )
-    args = parser.parse_args()
-
-    name = "demo_heartbeater"
-
-    # set up logging
-    logger = logging.getLogger(name)
-    coloredlogs.install(level=args.log_level.upper(), logger=logger)
-    logger.info("Starting up heartbeater!")
-
-    heartbeater = HeartbeatSender(
-        name=name, hb_port=args.port, interface=args.interface
-    )
-    heartbeater.heartbeat_period = args.period
-    heartbeater._add_com_thread()
-    heartbeater._start_com_threads()
-    ctx = zmq.Context()
-    socket = zmq.Socket(ctx, zmq.SUB)
-    socket.setsockopt_string(zmq.SUBSCRIBE, "")
-    socket.connect(f"tcp://{args.interface}:{args.port}")
-    hbs = 0
-    while args.num < 0 or hbs < args.num:
-        print(f"Waiting for heartbeat #{hbs}")
-        print(socket.recv())
-        hbs += 1
-
-
-if __name__ == "__main__":
-    main()

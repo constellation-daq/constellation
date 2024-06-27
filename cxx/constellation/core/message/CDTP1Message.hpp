@@ -71,18 +71,27 @@ namespace constellation::message {
          * @param header CDTP1 header of the message
          * @param frames Number of payload frames to reserve
          */
-        CNSTLN_API CDTP1Message(Header header, size_t frames = 1);
+        CNSTLN_API CDTP1Message(Header header, std::size_t frames = 1);
 
+        /**
+         * @return Read-only reference to the CSCP1 header of the message
+         */
         constexpr const Header& getHeader() const { return header_; }
 
+        /**
+         * @return Reference to the CSCP1 header of the message
+         */
+        constexpr Header& getHeader() { return header_; }
+
+        /**
+         * @return Read-only reference to the payload of the message
+         */
         const std::vector<message::PayloadBuffer>& getPayload() const { return payload_buffers_; }
 
         /**
          * @param payload Payload buffer containing a payload to be added as ZeroMQ message
          */
-        void addPayload(message::PayloadBuffer&& payload) {
-            payload_buffers_.emplace_back(std::forward<message::PayloadBuffer>(payload));
-        }
+        void addPayload(message::PayloadBuffer&& payload) { payload_buffers_.emplace_back(std::move(payload)); }
 
         /**
          * Assemble full message to frames for ZeroMQ

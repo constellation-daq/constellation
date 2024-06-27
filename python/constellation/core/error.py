@@ -7,14 +7,15 @@ This module provides error handling decorators and exceptions.
 
 from functools import wraps
 import traceback
-from statemachine.exceptions import TransitionNotAllowed
+from statemachine.exceptions import TransitionNotAllowed  # type: ignore[import-untyped]
+from typing import Callable, Any
 
 
-def handle_error(func):
+def handle_error(func: Callable[..., Any]) -> Callable[..., Any]:
     """Catch and handle exceptions in method calls inside a Satellite."""
 
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         try:
             return func(self, *args, **kwargs)
         except TransitionNotAllowed as exc:
@@ -34,11 +35,11 @@ def handle_error(func):
     return wrapper
 
 
-def debug_log(func):
+def debug_log(func: Callable[..., Any]) -> Callable[..., Any]:
     """Add debug messages to methods calls inside a Satellite."""
 
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
         self.log.trace(
             "-> Entering %s.%s with args: %s", type(self).__name__, func.__name__, args
         )

@@ -6,13 +6,12 @@ BroadcastManger module provides classes for managing CHIRP broadcasts within
 Constellation Satellites.
 """
 
-import logging
 import threading
 from functools import wraps
+from typing import Callable, TypeVar, ParamSpec, Any
 
 import time
 from uuid import UUID
-from queue import Queue
 
 from .base import BaseSatelliteFrame
 
@@ -24,31 +23,26 @@ from .chirp import (
 )
 
 
-def chirp_callback(request_service: CHIRPServiceIdentifier):
+T = TypeVar("T")
+B = TypeVar("B", bound=BaseSatelliteFrame)
+P = ParamSpec("P")
+
+
+def chirp_callback(
+    request_service: CHIRPServiceIdentifier,
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Mark a function as a callback for CHIRP service requests."""
 
-    def decorator(func):
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             return func(*args, **kwargs)
 
         # mark function as chirp callback
-        wrapper.chirp_callback = request_service
+        wrapper.chirp_callback = request_service  # type: ignore[attr-defined]
         return wrapper
 
     return decorator
-
-
-def get_chirp_callbacks(cls):
-    """Loop over all class methods and return those marked as CHIRP callback."""
-    res = {}
-    for func in dir(cls):
-        call = getattr(cls, func)
-        if callable(call) and not func.startswith("__"):
-            # regular method
-            if hasattr(call, "chirp_callback"):
-                res[getattr(call, "chirp_callback")] = call
-    return res
 
 
 class DiscoveredService:
@@ -58,7 +52,7 @@ class DiscoveredService:
         self,
         host_uuid: UUID,
         serviceid: CHIRPServiceIdentifier,
-        address,
+        address: str,
         port: int,
         alive: bool = True,
     ):
@@ -69,20 +63,39 @@ class DiscoveredService:
         self.serviceid = serviceid
         self.alive = alive
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         """Comparison operator for network-related properties."""
-        return (
-            self.host_uuid == other.host_uuid
-            and self.serviceid == other.serviceid
-            and self.port == other.port
-        )
+        if isinstance(other, DiscoveredService):
+            return bool(
+                self.host_uuid == other.host_uuid
+                and self.serviceid == other.serviceid
+                and self.port == other.port
+            )
+        return NotImplemented
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Pretty-print a string for this service."""
         s = "Host {} offering service {} on {}:{} is alive: {}"
         return s.format(
             self.host_uuid, self.serviceid, self.address, self.port, self.alive
         )
+
+
+def get_chirp_callbacks(
+    cls: object,
+) -> dict[CHIRPServiceIdentifier, Callable[[B, DiscoveredService], None]]:
+    """Loop over all class methods and return those marked as CHIRP callback."""
+    res = {}
+    for func in dir(cls):
+        if isinstance(getattr(type(cls), func, None), property):
+            # skip properties
+            continue
+        call = getattr(cls, func)
+        if callable(call) and not func.startswith("__"):
+            # regular method
+            if hasattr(call, "chirp_callback"):
+                res[getattr(call, "chirp_callback")] = call
+    return res
 
 
 class CHIRPBroadcaster(BaseSatelliteFrame):
@@ -107,7 +120,7 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
         name: str,
         group: str,
         interface: str,
-        **kwds,
+        **kwds: Any,
     ):
         """Initialize parameters.
 
@@ -121,12 +134,14 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
         self._beacon = CHIRPBeaconTransmitter(self.name, group, interface)
 
         # Offered and discovered services
-        self._registered_services = {}
-        self.discovered_services = []
+        self._registered_services: dict[int, CHIRPServiceIdentifier] = {}
+        self.discovered_services: list[DiscoveredService] = []
         self._chirp_thread = None
-        self._chirp_callbacks = get_chirp_callbacks(self)
+        self._chirp_callbacks: dict[
+            CHIRPServiceIdentifier, Callable[[B, DiscoveredService], None]
+        ] = get_chirp_callbacks(self)
 
-    def _add_com_thread(self):
+    def _add_com_thread(self) -> None:
         """Add the CHIRP broadcaster thread to the communication thread pool."""
         super()._add_com_thread()
         self._com_thread_pool["chirp_broadcaster"] = threading.Thread(
@@ -145,12 +160,15 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
         return res
 
     def register_request(
-        self, serviceid: CHIRPServiceIdentifier, callback: callable
+        self,
+        serviceid: CHIRPServiceIdentifier,
+        callback: Callable[[B, DiscoveredService], None],
     ) -> None:
         """Register new callback for ServiceIdentifier."""
         if serviceid in self._chirp_callbacks:
             self.log.warning("Overwriting CHIRP callback")
-        self._chirp_callbacks[serviceid] = callback
+        # FIXME the following assignment triggers an error with mypy
+        self._chirp_callbacks[serviceid] = callback  # type: ignore[assignment]
         # make a callback if a service has already been discovered
         for known in self.get_discovered(serviceid):
             self.task_queue.put((callback, [known]))
@@ -174,7 +192,7 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
             )
         self._beacon.broadcast(serviceid, CHIRPMessageType.REQUEST)
 
-    def broadcast_offers(self, serviceid: CHIRPServiceIdentifier = None) -> None:
+    def broadcast_offers(self, serviceid: CHIRPServiceIdentifier | None = None) -> None:
         """Broadcast all registered services matching serviceid.
 
         Specify None for all registered services.
@@ -254,6 +272,10 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
 
     def _run(self) -> None:
         """Start listening in on broadcast"""
+        # assert for mypy static type analysis
+        assert isinstance(
+            self._com_thread_evt, threading.Event
+        ), "BroadcastManager thread Event no set up"
 
         while not self._com_thread_evt.is_set():
             msg = self._beacon.listen()
@@ -279,38 +301,3 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
         # it can take a moment for the network buffers to be flushed
         time.sleep(0.5)
         self._beacon.close()
-
-
-def main(args=None):
-    """Start a broadcast manager service."""
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--log-level", default="info")
-
-    args = parser.parse_args(args)
-    logging.basicConfig(
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        level=args.log_level.upper(),
-    )
-
-    q = Queue()
-    # start server with remaining args
-    bcst = CHIRPBroadcaster(
-        name="broadcast_test",
-        group="Constellation",
-        callback_queue=q,
-    )
-    bcst.register_offer(CHIRPServiceIdentifier.HEARTBEAT, 50000)
-    bcst.register_offer(CHIRPServiceIdentifier.CONTROL, 50001)
-    print("Services registered")
-    bcst.broadcast_offers()
-    print("Broadcast for offers sent")
-    bcst.start()
-    print("Listener started, sleeping...")
-    time.sleep(10)
-    bcst.stop()
-
-
-if __name__ == "__main__":
-    main()

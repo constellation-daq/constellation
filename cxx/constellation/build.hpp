@@ -14,9 +14,9 @@
 #define CNSTLN_DLL_IMPORT __declspec(dllimport)
 #define CNSTLN_DLL_LOCAL
 #else
-#define CNSTLN_DLL_EXPORT __attribute__((__visibility__("default")))
-#define CNSTLN_DLL_IMPORT __attribute__((__visibility__("default")))
-#define CNSTLN_DLL_LOCAL __attribute__((__visibility__("hidden")))
+#define CNSTLN_DLL_EXPORT [[gnu::visibility("default")]]
+#define CNSTLN_DLL_IMPORT [[gnu::visibility("default")]]
+#define CNSTLN_DLL_LOCAL [[gnu::visibility("hidden")]]
 #endif
 
 #ifndef CNSTLN_STATIC
@@ -41,5 +41,7 @@
 #define CNSTLN_BUILDDIR "@builddir@"
 
 #define CNSTLN_DSO_SUFFIX "@dso_suffix@"
+
+#define CNSTLN_DSO_PREFIX "@dso_prefix@"
 
 // NOLINTEND(cppcoreguidelines-macro-usage)

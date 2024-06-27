@@ -93,6 +93,25 @@ TEST_CASE("Logging macros", "[logging]") {
     REQUIRE(count_if == 2);
 }
 
+TEST_CASE("Logging macros with default logger", "[logging]") {
+
+    SinkManager::getInstance().setGlobalConsoleLevel(TRACE);
+
+    int count_once {0};
+    int count_n {0};
+    int count_if {0};
+
+    for(int i = 0; i < 5; ++i) {
+        LOG_ONCE(STATUS) << "log once, i="sv << i << ", count "sv << ++count_once;
+        LOG_N(STATUS, 3) << "log n, i="sv << i << ", count "sv << ++count_n;
+        LOG_IF(STATUS, i % 2 == 1) << "log if, i=" << i << ", count "sv << ++count_if;
+    }
+
+    REQUIRE(count_once == 1);
+    REQUIRE(count_n == 3);
+    REQUIRE(count_if == 2);
+}
+
 TEST_CASE("Log levels", "[logging]") {
     auto logger = Logger("LogLevels", INFO);
 
@@ -129,7 +148,7 @@ TEST_CASE("Register Service via CHIRP", "[logging]") {
     using namespace constellation::chirp;
     auto manager = Manager("255.255.255.255", "0.0.0.0", "cnstln1", "sat1");
     manager.setAsDefaultInstance();
-    SinkManager::getInstance().registerService("satname");
+    SinkManager::getInstance().enableCMDPSending("satname");
     REQUIRE(manager.getRegisteredServices().size() == 1);
     REQUIRE(manager.getRegisteredServices().contains({MONITORING, SinkManager::getInstance().getCMDPPort()}));
 }

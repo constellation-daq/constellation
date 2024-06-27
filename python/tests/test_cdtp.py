@@ -63,7 +63,7 @@ def mock_data_receiver(mock_socket_receiver: mocket):
 
 
 @pytest.fixture
-def mock_sender_satellite(mock_chirp_socket):
+def mock_sender_satellite(mock_chirp_transmitter):
     """Mock a Satellite for a specific device, ie. a class inheriting from Satellite."""
 
     def mocket_factory(*args, **kwargs):

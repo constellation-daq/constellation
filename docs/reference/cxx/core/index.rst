@@ -7,6 +7,8 @@ Core Library
    :caption: Components:
 
    log
+   config
    message
+   heartbeat
    utils
    chirp

@@ -30,15 +30,12 @@
 #include <wincon.h>
 #endif
 
-#include "constellation/core/chirp/CHIRP_definitions.hpp"
-#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/logging/CMDPSink.hpp"
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/ProxySink.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/string.hpp"
 
-using namespace constellation;
 using namespace constellation::log;
 using namespace constellation::utils;
 
@@ -128,7 +125,7 @@ SinkManager::SinkManager() : cmdp_global_level_(OFF) {
 
     // CMDP sink, log level always TRACE since only accessed via ProxySink
     try {
-        cmdp_sink_ = std::make_shared<CMDPSink>();
+        cmdp_sink_ = std::make_shared<CMDPSink>(cmdp_console_logger_);
         cmdp_sink_->set_level(to_spdlog_level(TRACE));
     } catch(const zmq::error_t& error) {
         throw ZMQInitError(error.what());
@@ -138,19 +135,8 @@ SinkManager::SinkManager() : cmdp_global_level_(OFF) {
     default_logger_ = createLogger("DEFAULT");
 }
 
-void SinkManager::registerService(std::string sender_name) {
-    // Register service in CHIRP
-    // Note: cannot be done in constructor since CHIRP also does logging
-    auto* chirp_manager = chirp::Manager::getDefaultInstance();
-    if(chirp_manager != nullptr) {
-        chirp_manager->registerService(chirp::MONITORING, cmdp_sink_->getPort());
-    } else {
-        cmdp_console_logger_->log(to_spdlog_level(WARNING),
-                                  "Failed to advertise logging on the network, satellite might not be discovered");
-    }
-    cmdp_console_logger_->log(to_spdlog_level(INFO), "Starting to log on port " + to_string(cmdp_sink_->getPort()));
-    // Set name in CMDP sink
-    cmdp_sink_->setSender(std::move(sender_name));
+void SinkManager::enableCMDPSending(std::string sender_name) {
+    cmdp_sink_->enableSending(std::move(sender_name));
 }
 
 std::shared_ptr<spdlog::async_logger> SinkManager::createLogger(std::string topic, std::optional<Level> console_level) {
