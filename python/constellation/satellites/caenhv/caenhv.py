@@ -9,7 +9,7 @@ from functools import partial
 from typing import Tuple, Any
 
 from pycaenhv import CaenHVModule  # type: ignore[import-untyped]
-from .caen_ndt1470 import CaenNDT1470Manager
+from .lib_caen_ndt1470 import CaenNDT1470Manager
 
 from constellation.core.satellite import Satellite, SatelliteArgumentParser
 from constellation.core.fsm import SatelliteState
