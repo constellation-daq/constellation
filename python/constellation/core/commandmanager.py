@@ -158,13 +158,15 @@ class CommandReceiver(BaseSatelliteFrame):
             except (AttributeError, NotImplementedError) as e:
                 self.log.error("Command failed with %s: %s", e, req)
                 self._cmd_tm.send_reply(
-                    "WrongImplementation", CSCPMessageVerb.NOTIMPLEMENTED, repr(e)
+                    f"WrongImplementation: {repr(e)}",
+                    CSCPMessageVerb.NOTIMPLEMENTED,
+                    repr(e),
                 )
                 continue
             except TransitionNotAllowed as e:
                 self.log.error("Transition '%s' not allowed: %s", req.msg, e)
                 self._cmd_tm.send_reply(
-                    f"Transition not allowed: {e}", CSCPMessageVerb.INVALID, None
+                    f"Transition not allowed: {e}", CSCPMessageVerb.INVALID, repr(e)
                 )
                 continue
             except (TypeError, ValueError) as e:
@@ -172,7 +174,7 @@ class CommandReceiver(BaseSatelliteFrame):
                     "Command '%s' received wrong argument: %s", req.msg, repr(e)
                 )
                 self._cmd_tm.send_reply(
-                    f"Wrong argument: {repr(e)}", CSCPMessageVerb.INCOMPLETE
+                    f"Wrong argument: {repr(e)}", CSCPMessageVerb.INCOMPLETE, repr(e)
                 )
                 continue
             except Exception as e:
