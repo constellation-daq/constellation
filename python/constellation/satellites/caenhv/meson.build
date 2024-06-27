@@ -4,7 +4,7 @@
 caenhv_sat_files = files(
   '__main__.py',
   'caenhv.py',
-  'caen_ndt1470.py',
+  'lib_caen_ndt1470.py',
 )
 
 py.install_sources(caenhv_sat_files,
