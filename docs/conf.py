@@ -31,6 +31,8 @@ extensions = [
     "ablog",
     "myst_parser",
     "breathe",
+    "sphinx.ext.autodoc",
+    "sphinxcontrib.apidoc",
     "sphinxcontrib.plantuml",
     "sphinxcontrib.spelling",
     "sphinx_design",
@@ -202,3 +204,11 @@ blog_path = "news"
 blog_post_pattern = ["news/*.md", "news/*.rst"]
 post_date_format = "%Y-%m-%d"
 blog_feed_fulltext = True
+
+# apidoc settings
+apidoc_module_dir = (repodir / "python" / "constellation").as_posix()
+apidoc_output_dir = (docsdir / "reference" / "python").as_posix()
+apidoc_module_first = True
+apidoc_separate_modules = True
+apidoc_toc_file = False
+apidoc_extra_args = ["--implicit-namespaces"]
