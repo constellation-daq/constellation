@@ -190,7 +190,7 @@ namespace constellation::satellite {
          * \param topic Unique topic of the metric
          * \param value New value of the metric
          */
-        static inline void set_metric(const std::string& topic, const config::Value& value);
+        void set_metric(const std::string& topic, const config::Value& value);
 
         /**
          * @brief Register a new user command

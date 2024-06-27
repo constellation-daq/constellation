@@ -209,10 +209,6 @@ void CMDPSink::sinkStats(const std::string& key, const std::shared_ptr<metrics::
     // Lock the mutex - automatically done for regular logging:
     const std::lock_guard<std::mutex> lock(mutex_);
 
-    // At the very beginning we wait 500ms before starting the async logging.
-    // This way the socket can fetch already pending subscriptions
-    std::call_once(setup_flag_, []() { std::this_thread::sleep_for(500ms); });
-
     // Create message header
     auto msghead = CMDP1Message::Header(sender_name_, std::chrono::system_clock::now());
 
