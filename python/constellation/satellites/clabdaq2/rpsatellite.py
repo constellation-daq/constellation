@@ -59,6 +59,7 @@ class RedPitayaSatellite(DataSender):
         super().__init__(*args, **kwargs)
         self._readpos = 0
         self._writepos = 0
+        self.sample_time = 0
 
         # Define file readers for monitoring from file
         try:
@@ -392,14 +393,21 @@ class RedPitayaSatellite(DataSender):
         else:
             cycled = False
 
-        # Check if the amount of data is greater than 1000,
-        # otherwise wait 0.1 s to not send excessive amount of packages.
+        # Check if the amount of data is greater than 10000 if 2 second has passed since last read,
+        # otherwise wait 0.01 s and retry. This to not send excessive amount of packages.
         if cycled:
-            if (self._writepos + BUFFER_SIZE) < (self._readpos + 1000):
-                time.sleep(0.1)
+            if (self._writepos + BUFFER_SIZE) < (
+                self._readpos + 10000
+            ) and time.time() - self.sample_time < 2:
+                time.sleep(0.01)
+                return None
         else:
-            if self._writepos < (self._readpos + 1000):
-                time.sleep(0.1)
+            if (
+                self._writepos < (self._readpos + 10000)
+                and -time.time() - self.sample_time < 2
+            ):
+                time.sleep(0.01)
+                return None
 
         for i, channel in enumerate(self.active_channels):
             # Read out data buffers and adding them together before returning
@@ -429,8 +437,9 @@ class RedPitayaSatellite(DataSender):
 
             data[i] = buffer
 
-        # Update read pointer
+        # Update read pointer and sample time
         self._readpos = self._writepos
+        self.sample_time = time.time()
         return data
 
     @cscp_requestable
