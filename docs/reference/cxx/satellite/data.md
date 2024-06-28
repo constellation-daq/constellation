@@ -28,6 +28,11 @@ which returns if the message was sent (or added to the send queue) successfully.
 a return value of `false` indicates that the message could not be sent due to a slow receiver. In this case, one can either
 discard the message, try to send it again or throw an exception to abort the run.
 
+```{warning}
+Sending data is not thread safe. If multiple threads need to access the sender, it needs to be protected with a mutex.
+```
+
+
 ### Sending the End of Run
 
 Arbitrary metadata can be attached to the run, which will be send in the EOR message. This might include things like a
@@ -64,6 +69,10 @@ the message via {cpp:func}`CDTP1Message::getHeader() <constellation::message::CD
 The binary payload of the message get be retrieved via {cpp:func}`CDTP1Message::getPayload() <constellation::message::CDTP1Message::getPayload()>`,
 which returns a `std::vector` of {cpp:class}`PayloadBuffer <constellation::message::PayloadBuffer>`. A `std::span` to the
 binary data can be retrieved using {cpp:func}`PayloadBuffer::span() <constellation::message::PayloadBuffer::span()>`.
+
+```{warning}
+Receiving data is not thread safe. If multiple threads need to access the sender, it needs to be protected with a mutex.
+```
 
 ### Receiving the End of Run
 

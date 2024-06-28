@@ -136,10 +136,12 @@ std::optional<CDTP1Message> SingleDataReceiver::recvData() {
     LOG(logger_, TRACE) << "Trying to receive data message " << seq_ + 1;
     const auto received = msgs.recv(socket_);
     if(!received) {
-        // If we are stopping, no message means timeout is reached
+        // If we are in stopping, we are waiting for the EOR and use the longer EOR timeout.
+        // This means that if we get no message we have reached the EOR timeout and thus throw.
         if(state_ == State::STOPPING) [[unlikely]] {
             throw RecvTimeoutError("EOR", data_eor_timeout_);
         }
+        // If we are not in stopping, just return an empty optional
         return std::nullopt;
     }
     // Increment received message counter:

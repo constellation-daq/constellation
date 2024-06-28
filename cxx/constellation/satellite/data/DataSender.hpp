@@ -40,7 +40,7 @@ namespace constellation::data {
             void addDataFrame(message::PayloadBuffer&& data) { addPayload(std::move(data)); }
 
             /**
-             * Add a tag to the header of the message
+             * @brief Add a tag to the header of the message
              *
              * @param key Key of the tag
              * @param value Value of the tag
@@ -62,12 +62,19 @@ namespace constellation::data {
         };
 
     public:
+        /**
+         * @brief Construct new data sender
+         *
+         * @param sender_name Canonical name of the sender
+         */
         CNSTLN_API DataSender(std::string sender_name);
 
         /**
          * @brief Initialize data sender
          *
-         * Reads the `_data_bor_timeout` and `_data_eor_timeout` config settings.
+         * Reads the following config parameters:
+         * * `_data_bor_timeout`
+         * * `_data_eor_timeout`
          *
          * @param config Configuration from initializing transition
          */
@@ -76,7 +83,7 @@ namespace constellation::data {
         /**
          * @brief Start data sender by sending begin of run
          *
-         * @note This function throws if the `_data_bor_timeout` is reached
+         * @throw SendTimeoutError If the `_data_bor_timeout` is reached
          *
          * @param config Configuration to send in BOR message
          */
@@ -86,7 +93,7 @@ namespace constellation::data {
          * @brief Create new message for attaching data frames
          *
          * @note This function increases the sequence number
-         * @note To send the data message, use `sendDataMessage()`.
+         * @note To send the data message, use `sendDataMessage()`
          *
          * @param frames Number of data frames to reserve
          */
@@ -112,20 +119,22 @@ namespace constellation::data {
 
         /**
          * @brief Stop data sender by sending end of run
-         *s
-         * @note This function throws if the `_data_eor_timeout` is reached
+         *
+         * @throw SendTimeoutError If the `_data_eor_timeout` is reached
          */
         CNSTLN_API void stopping();
 
         /**
-         * @brief Get ephemeral port to which the data sender socket is bound
-         *
-         * @return Port number
+         * @return Ephemeral port to which the data sender socket is bound
          */
         constexpr utils::Port getPort() const { return port_; }
 
     private:
-        /** Set send timeout, -1 is infinite (block until sent) */
+        /**
+         * @brief Set send timeout
+         *
+         * @param timeout Timeout, -1 is infinite (block until sent)
+         */
         void set_send_timeout(std::chrono::milliseconds timeout = std::chrono::milliseconds(-1));
 
     private:

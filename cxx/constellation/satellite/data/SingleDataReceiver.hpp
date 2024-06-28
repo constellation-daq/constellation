@@ -34,33 +34,62 @@ namespace constellation::data {
         };
 
     public:
+        /**
+         * @brief Construct new data receiver for single sending satellite
+         */
         CNSTLN_API SingleDataReceiver();
 
-        /** Initialize data receiver */
+        /**
+         * @brief Initialize data receiver
+         *
+         * Reads the following config parameters:
+         * * `_data_sender_name`
+         * * `_data_bor_timeout`
+         * * `_data_data_timeout`
+         * * `_data_eor_timeout`
+         */
         CNSTLN_API void initializing(config::Configuration& config);
 
-        /** Starting: receive BOR with sending satellite's config */
+        /**
+         * @brief Start data receiver by receiving BOR with sending satellite's config
+         *
+         * @throw RecvTimeoutError If the `_data_bor_timeout` is reached
+         */
         CNSTLN_API config::Dictionary starting();
 
         /**
          * @brief Receive the next data message
          *
-         * If either the timeout is reached or the EOR is received, no message is returned. The function can be called again
-         * if no message is returned.
+         * If either the timeout is reached or the EOR is received, no message (empty optional) is returned.
+         * The function can be called again if no message is returned.
          */
         CNSTLN_API std::optional<message::CDTP1Message> recvData();
 
-        /** Stopping: set receive timeout to EOR timeout */
+        /**
+         * @brief Stop data receiver to set receive timeout to EOR timeout
+         *
+         * @throw RecvTimeoutError If in `State::STOPPING` and `_data_eor_timeout` reached
+         */
         CNSTLN_API void stopping();
 
-        /** Return if the EOR has been received */
+        /**
+         * @return If the EOR has been received
+         */
         CNSTLN_API bool gotEOR();
 
-        /** Return end of run: sending satellite's run metadata */
+        /**
+         * @brief Get EOR message
+         *
+         * @return Dictionary with sending satellite's run metadata
+         */
         CNSTLN_API const config::Dictionary& getEOR();
 
     private:
-        /** Set receive timeout, -1 is infinite (block until received) */
+        /**
+         * @brief Set receive timeout
+         *
+         * @param timeout Timeout, -1 is infinite (block until received)
+         */
         void set_recv_timeout(std::chrono::milliseconds timeout = std::chrono::milliseconds(-1));
 
     private:
