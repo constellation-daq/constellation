@@ -44,11 +44,19 @@ namespace constellation::data {
          *
          * Reads the following config parameters:
          * * `_data_sender_name`
+         * * `_data_chirp_timeout`
          * * `_data_bor_timeout`
          * * `_data_data_timeout`
          * * `_data_eor_timeout`
          */
         CNSTLN_API void initializing(config::Configuration& config);
+
+        /**
+         * @brief Launch data receiver by finding the sending satellite via CHIRP
+         *
+         * @throw ChirpTimeoutError If the `_data_chirp_timeout` is reached
+         */
+        CNSTLN_API void launching();
 
         /**
          * @brief Start data receiver by receiving BOR with sending satellite's config
@@ -98,6 +106,7 @@ namespace constellation::data {
         log::Logger logger_;
         State state_;
         std::string sender_name_;
+        std::chrono::seconds data_chirp_timeout_ {};
         std::chrono::seconds data_bor_timeout_ {};
         std::chrono::seconds data_data_timeout_ {};
         std::chrono::seconds data_eor_timeout_ {};

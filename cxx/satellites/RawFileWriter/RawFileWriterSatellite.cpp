@@ -50,6 +50,10 @@ void RawFileWriterSatellite::initializing(Configuration& config) {
     LOG(INFO) << "Writing files to " << output_directory_.string();
 }
 
+void RawFileWriterSatellite::launching() {
+    data_receiver_.launching();
+}
+
 void RawFileWriterSatellite::starting(std::string_view run_identifier) {
     // Reset bytes written
     bytes_written_ = 0;

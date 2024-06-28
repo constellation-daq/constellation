@@ -54,6 +54,8 @@ satellite during a run over the network. To use this class in a satellite, an in
 variable to the satellite.
 In the satellite's `initialize` function, {cpp:func}`SingleDataReceiver::initializing() <constellation::data::SingleDataReceiver::initializing()>`
 needs to be called at the end to read the framework internal configuration parameters.
+In the satellite's `launching` function, {cpp:func}`SingleDataReceiver::launching() <constellation::data::SingleDataReceiver::launching()>`
+needs to be called at the end to find the sending satellite via CHIRP.
 In the satellite's `starting` function, {cpp:func}`SingleDataReceiver::starting() <constellation::data::SingleDataReceiver::starting()>`
 needs to be called to receive the Begin-of-Run (BOR) message, which includes the sending satellite's configuration.
 In the satellite's `stopping` function, {cpp:func}`SingleDataReceiver::stopping() <constellation::data::SingleDataReceiver::stopping()>`
@@ -104,6 +106,7 @@ write_run_meta_to_file(run_meta);
 | Parameter | Type | Description | Default Value |
 |-----------|------|-------------|---------------|
 | `_data_sender_name` | String | Canonical name of the sending satellite | - |
+| `_data_chirp_timeout` | Unsigned integer | Timeout for sending satellite to be found in seconds | `10` |
 | `_data_bor_timeout` | Unsigned integer | Timeout for BOR to be received in seconds | `10` |
 | `_data_data_timeout` | Unsigned integer | Timeout for DATA to be received in seconds | `1` |
 | `_data_eor_timeout` | Unsigned integer | Timeout for EOR to be received in seconds | `10` |

@@ -46,13 +46,14 @@ void SingleDataReceiver::set_recv_timeout(std::chrono::milliseconds timeout) {
 void SingleDataReceiver::initializing(Configuration& config) {
     // Get canonical name of sender to receive data from
     sender_name_ = config.get<std::string>("_data_sender_name");
-    LOG(logger_, DEBUG) << "Initialized data receiver for satellite " << sender_name_;
+    LOG(logger_, DEBUG) << "Initialized data receiver for satellite \"" << sender_name_ << "\"";
 
+    data_chirp_timeout_ = std::chrono::seconds(config.get<std::uint64_t>("_data_chirp_timeout", 10));
     data_bor_timeout_ = std::chrono::seconds(config.get<std::uint64_t>("_data_bor_timeout", 10));
     data_data_timeout_ = std::chrono::seconds(config.get<std::uint64_t>("_data_data_timeout", 1));
     data_eor_timeout_ = std::chrono::seconds(config.get<std::uint64_t>("_data_eor_timeout", 10));
-    LOG(logger_, DEBUG) << "Timeout for BOR message " << data_bor_timeout_ << ", for DATA messages " << data_data_timeout_
-                        << ", for EOR message " << data_eor_timeout_;
+    LOG(logger_, DEBUG) << "Timeout for CHIRP " << data_chirp_timeout_ << ", for BOR message " << data_bor_timeout_
+                        << ", for DATA messages " << data_data_timeout_ << ", for EOR message " << data_eor_timeout_;
 
     // Send request for DATA services early
     chirp::Manager::getDefaultInstance()->sendRequest(chirp::DATA);
@@ -60,14 +61,15 @@ void SingleDataReceiver::initializing(Configuration& config) {
     state_ = State::BEFORE_BOR;
 }
 
-Dictionary SingleDataReceiver::starting() {
+void SingleDataReceiver::launching() {
     // Send request for DATA services
     chirp::Manager::getDefaultInstance()->sendRequest(chirp::DATA);
 
     // Find via CHIRP
+    LOG(logger_, DEBUG) << "Looking for \"" << sender_name_ << "\" via CHIRP (timeout " << data_chirp_timeout_ << ")";
     uri_ = {};
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
-    auto timer = TimeoutTimer(std::chrono::duration_cast<std::chrono::system_clock::duration>(data_bor_timeout_));
+    auto timer = TimeoutTimer(std::chrono::duration_cast<std::chrono::system_clock::duration>(data_chirp_timeout_));
     while(!timer.timeoutReached() && uri_.empty()) {
         for(const auto& service : chirp_manager->getDiscoveredServices(chirp::DATA)) {
             if(service.host_id == message::MD5Hash(sender_name_)) {
@@ -81,9 +83,12 @@ Dictionary SingleDataReceiver::starting() {
     if(uri_.empty()) {
         throw ChirpTimeoutError(sender_name_, data_bor_timeout_);
     }
-    LOG(logger_, DEBUG) << "Connecting to " << uri_.c_str();
+    LOG(logger_, DEBUG) << "Found \"" << sender_name_ << "\" at " << uri_.c_str();
+}
 
+Dictionary SingleDataReceiver::starting() {
     // Recreate socket (since it might be closed) and connect
+    LOG(logger_, DEBUG) << "Connecting to " << uri_.c_str();
     socket_ = zmq::socket_t(context_, zmq::socket_type::pull);
     socket_.connect(uri_.c_str());
 
@@ -198,6 +203,7 @@ const Dictionary& SingleDataReceiver::getEOR() {
     state_ = State::BEFORE_BOR;
 
     // Close socket to drop any remaining messages
+    LOG(logger_, DEBUG) << "Disconnecting from " << uri_.c_str();
     socket_.disconnect(uri_.c_str());
     socket_.close();
 
