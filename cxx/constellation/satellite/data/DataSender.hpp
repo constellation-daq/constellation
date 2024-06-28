@@ -117,6 +117,13 @@ namespace constellation::data {
          */
         CNSTLN_API void stopping();
 
+        /**
+         * @brief Get ephemeral port to which the data sender socket is bound
+         *
+         * @return Port number
+         */
+        constexpr utils::Port getPort() const { return port_; }
+
     private:
         /** Set send timeout, -1 is infinite (block until sent) */
         void set_send_timeout(std::chrono::milliseconds timeout = std::chrono::milliseconds(-1));
