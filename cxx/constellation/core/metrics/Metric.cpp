@@ -115,6 +115,16 @@ TriggeredMetric::TriggeredMetric(std::string_view unit,
     }
 }
 
+bool TimedAutoMetric::condition() {
+    auto expired = TimedMetric::condition();
+
+    if(expired) {
+        // Update the metrics value from the function
+        update(func_());
+    }
+    return expired;
+}
+
 void TriggeredMetric::update(const config::Value& value) {
     MetricTimer::update(value);
     current_triggers_++;

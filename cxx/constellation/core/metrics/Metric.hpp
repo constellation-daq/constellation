@@ -186,6 +186,26 @@ namespace constellation::metrics {
     };
 
     /**
+     * @class TimedAutoMetric
+     * @brief Metric timer to send metric values in regular intervals which evaluates the metric value independently
+     * @details This timer is configured with a time interval, and metrics will be sent every time this interval has passed.
+     */
+    class TimedAutoMetric : public TimedMetric {
+    public:
+        TimedAutoMetric(std::string_view unit,
+                        Type type,
+                        Clock::duration interval,
+                        std::initializer_list<message::State> states,
+                        std::function<config::Value()> func)
+            : TimedMetric(unit, type, interval, states), func_(func) {}
+
+        bool condition() override;
+
+    private:
+        std::function<config::Value()> func_;
+    };
+
+    /**
      * @class TriggeredMetric
      * @brief Metric timer so send metric values after N updates or update attempts
      * @details This timer is configured with a trigger number, and the metric is distributed every time the update method of
