@@ -11,6 +11,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <iomanip>
 #include <map>
 #include <thread>
 
@@ -60,11 +61,11 @@ void MetricsManager::registerTriggeredMetric(std::string_view topic,
                                              std::initializer_list<constellation::message::State> states,
                                              const config::Value& value) {
     const std::lock_guard lock {mt_};
-    const auto [it, success] =
-        metrics_.emplace(topic, std::make_shared<TriggeredMetric>(unit, type, triggers, states, value));
+    const auto [it, inserted] = metrics_.insert_or_assign(
+        std::string(topic), std::make_shared<TriggeredMetric>(unit, type, triggers, states, value));
 
-    if(!success) {
-        throw utils::LogicError("Metric \"" + std::string(topic) + "\" is already registered");
+    if(!inserted) {
+        LOG(logger_, INFO) << "Replaced already registered metric " << std::quoted(topic);
     }
 
     cv_.notify_all();
@@ -77,10 +78,11 @@ void MetricsManager::registerTimedMetric(std::string_view topic,
                                          std::initializer_list<constellation::message::State> states,
                                          const config::Value& value) {
     const std::lock_guard lock {mt_};
-    const auto [it, success] = metrics_.emplace(topic, std::make_shared<TimedMetric>(unit, type, interval, states, value));
+    const auto [it, inserted] =
+        metrics_.insert_or_assign(std::string(topic), std::make_shared<TimedMetric>(unit, type, interval, states, value));
 
-    if(!success) {
-        throw utils::LogicError("Metric \"" + std::string(topic) + "\" is already registered");
+    if(!inserted) {
+        LOG(logger_, INFO) << "Replaced already registered metric " << std::quoted(topic);
     }
 
     cv_.notify_all();

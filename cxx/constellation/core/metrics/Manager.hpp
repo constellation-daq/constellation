@@ -68,7 +68,8 @@ namespace constellation::metrics {
         void unregisterMetrics();
 
         /**
-         * Register a metric which will be emitted after having been triggered a given number of times
+         * Register a metric which will be emitted after having been triggered a given number of times. If the metric exists
+         * already, it will be replaced by the new definition.
          *
          * @param topic Unique topic of the metric
          * @param unit Unit of the provided metric value
@@ -85,7 +86,8 @@ namespace constellation::metrics {
                                      const config::Value& value = {});
 
         /**
-         * Register a metric which will be emitted in regular intervals
+         * Register a metric which will be emitted in regular intervals. If the metric exists already, it will be replaced
+         * by the new definition.
          *
          * @param topic Unique topic of the metric
          * @param unit Unit of the provided value
