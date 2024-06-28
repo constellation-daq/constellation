@@ -46,37 +46,61 @@ CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
     register_command("list_registers",
                      "List all available register names for the attached Caribou device.",
                      {State::INIT, State::ORBIT, State::RUN},
-                     std::function<std::vector<std::string>()>([&]() { return device_->listRegisters(); }));
+                     std::function<std::vector<std::string>()>([&]() {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->listRegisters();
+                     }));
     register_command("list_memories",
                      "List all memory registers for the attached Caribou device.",
                      {State::INIT, State::ORBIT, State::RUN},
-                     std::function<std::vector<std::string>()>([&]() { return device_->listMemories(); }));
+                     std::function<std::vector<std::string>()>([&]() {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->listMemories();
+                     }));
     register_command("get_voltage",
                      "Get selected output voltage (in V) of the attached Caribou device. Provide voltage name as parameter.",
                      {State::INIT, State::ORBIT, State::RUN},
-                     std::function<double(const std::string&)>([&](auto name) { return device_->getVoltage(name); }));
+                     std::function<double(const std::string&)>([&](auto name) {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->getVoltage(name);
+                     }));
     register_command("get_current",
                      "Get selected output current (in A) of the attached Caribou device. Provide current name as parameter.",
                      {State::INIT, State::ORBIT, State::RUN},
-                     std::function<double(const std::string&)>([&](auto name) { return device_->getCurrent(name); })),
-        register_command("get_power",
-                         "Get selected output power (in W) of the attached Caribou device. Provide power name as parameter.",
-                         {State::INIT, State::ORBIT, State::RUN},
-                         std::function<double(const std::string&)>([&](auto name) { return device_->getPower(name); }));
+                     std::function<double(const std::string&)>([&](auto name) {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->getCurrent(name);
+                     }));
+    register_command("get_power",
+                     "Get selected output power (in W) of the attached Caribou device. Provide power name as parameter.",
+                     {State::INIT, State::ORBIT, State::RUN},
+                     std::function<double(const std::string&)>([&](auto name) {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->getPower(name);
+                     }));
     register_command("get_register",
                      "Read the value of register on the attached Caribou device. Provide register name as parameter.",
                      {State::INIT, State::ORBIT, State::RUN},
-                     std::function<uintptr_t(const std::string&)>([&](auto name) { return device_->getRegister(name); }));
+                     std::function<uintptr_t(const std::string&)>([&](auto name) {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->getRegister(name);
+                     }));
     register_command("get_memory",
                      "Read the value of FPGA memory register on the attached Caribou device. Provide memory register "
                      "name as parameter.",
                      {State::INIT, State::ORBIT, State::RUN},
-                     std::function<uintptr_t(const std::string&)>([&](auto name) { return device_->getMemory(name); }));
+                     std::function<uintptr_t(const std::string&)>([&](auto name) {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->getMemory(name);
+                     }));
     register_command("get_adc",
                      "Read the voltage from the ADC voltage NAME (in V) via the attached Caribou device. Provide the "
                      "voltage name as string.",
                      {State::INIT, State::ORBIT, State::RUN},
-                     std::function<double(const std::string&)>([&](auto name) { return device_->getADC(name); }));
+                     std::function<double(const std::string&)>([&](auto name) {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->getADC(name);
+                     }));
 }
 
 void CaribouSatellite::initializing(constellation::config::Configuration& config) {
