@@ -102,8 +102,9 @@ class CaenHvSatellite(Satellite):
         return f"Connected to crate and configured {len(crate.boards)} boards"
 
     def do_reconfigure(self, configuration: Configuration) -> str:
-        """Reconfigure the HV module by re-running initialization."""
-        return self.do_initializing(configuration)
+        """Reconfigure the HV module by re-running initialization and launch."""
+        self.do_initializing(configuration)
+        return self.do_launching(None)
 
     def do_launching(self, payload: Any) -> str:
         """Power up the HV."""
