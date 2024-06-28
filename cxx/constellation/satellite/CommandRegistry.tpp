@@ -20,6 +20,7 @@
 
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/message/satellite_definitions.hpp"
+#include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
@@ -46,23 +47,24 @@ namespace constellation::satellite {
                                      std::string description,
                                      std::initializer_list<State> states,
                                      std::function<R(Args...)> func) {
-        if(!message::is_valid_command_name(name)) {
+        const auto name_lc = utils::transform(name, ::tolower);
+        if(!message::is_valid_command_name(name_lc)) {
             throw utils::LogicError("Command name is invalid");
         }
 
-        if(magic_enum::enum_cast<message::StandardCommand>(name).has_value()) {
+        if(magic_enum::enum_cast<message::StandardCommand>(name_lc).has_value()) {
             throw utils::LogicError("Standard satellite command with this name exists");
         }
 
-        if(magic_enum::enum_cast<message::TransitionCommand>(name).has_value()) {
+        if(magic_enum::enum_cast<message::TransitionCommand>(name_lc).has_value()) {
             throw utils::LogicError("Satellite transition command with this name exists");
         }
 
         const auto [it, success] = commands_.emplace(
-            name, Command {generate_call(std::move(func)), sizeof...(Args), std::move(description), states});
+            name_lc, Command {generate_call(std::move(func)), sizeof...(Args), std::move(description), states});
 
         if(!success) {
-            throw utils::LogicError("Command \"" + name + "\" is already registered");
+            throw utils::LogicError("Command \"" + name_lc + "\" is already registered");
         }
     }
 

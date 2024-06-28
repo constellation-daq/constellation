@@ -63,7 +63,7 @@ def mock_data_receiver(mock_socket_receiver: mocket):
 
 
 @pytest.fixture
-def mock_sender_satellite(mock_chirp_socket):
+def mock_sender_satellite(mock_chirp_transmitter):
     """Mock a Satellite for a specific device, ie. a class inheriting from Satellite."""
 
     def mocket_factory(*args, **kwargs):
@@ -229,6 +229,7 @@ def test_receive_writing_package(
     data_transmitter,
     commander,
 ):
+    """Test receiving and writing data, verify state machine of DataSender."""
     service = DiscoveredService(
         get_uuid("simple_sender"),
         CHIRPServiceIdentifier.DATA,
@@ -313,6 +314,7 @@ def test_receiver_stats(
     monitoringlistener,
     commander,
 ):
+    """Test the stats sent by DataReceiver are received via CMDP."""
     dp = 23242
     ctx = zmq.Context()
     socket = ctx.socket(zmq.PUSH)

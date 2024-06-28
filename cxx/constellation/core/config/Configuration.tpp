@@ -25,8 +25,9 @@
 namespace constellation::config {
 
     template <typename T> T Configuration::get(const std::string& key) const {
+        const auto key_lc = utils::transform(key, ::tolower);
         try {
-            const auto& dictval = config_.at(key);
+            const auto& dictval = config_.at(key_lc);
             const auto val = dictval.get<T>();
             dictval.markUsed();
             return val;
@@ -35,10 +36,10 @@ namespace constellation::config {
             throw MissingKeyError(key);
         } catch(const std::bad_variant_access&) {
             // Value held by the dictionary entry could not be cast to desired type
-            throw InvalidTypeError(key, config_.at(key).type(), typeid(T));
+            throw InvalidTypeError(key, config_.at(key_lc).type(), typeid(T));
         } catch(const std::invalid_argument& error) {
             // Value held by the dictionary entry could not be converted to desired type
-            throw InvalidValueError(config_.at(key).str(), key, error.what());
+            throw InvalidValueError(config_.at(key_lc).str(), key, error.what());
         }
     }
 
@@ -52,8 +53,9 @@ namespace constellation::config {
     }
 
     template <typename T> void Configuration::set(const std::string& key, const T& val, bool mark_used) {
+        const auto key_lc = utils::transform(key, ::tolower);
         try {
-            config_[key] = {Value::set(val), mark_used};
+            config_[key_lc] = {Value::set(val), mark_used};
         } catch(const std::bad_cast&) {
             // Value held by the dictionary entry could not be cast to desired type
             throw InvalidTypeError(key, typeid(T), typeid(value_t));

@@ -169,6 +169,22 @@ namespace constellation::satellite {
             user_commands_.add(name, std::move(description), states, func, t);
         }
 
+        /**
+         * @brief Register a new user command from a function or lambda
+         *
+         * @param name Name of the command
+         * @param description Comprehensive description of the command
+         * @param states States of the finite state machine in which this command can be called
+         * @param func Function to be called
+         */
+        template <typename R, typename... Args>
+        void register_command(const std::string& name,
+                              std::string description,
+                              std::initializer_list<State> states,
+                              std::function<R(Args...)> func) {
+            user_commands_.add(name, std::move(description), states, func);
+        }
+
     private:
         // FSM needs access to configuration
         friend FSM;

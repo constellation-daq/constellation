@@ -42,9 +42,14 @@ namespace constellation::message {
 
     public:
         /**
-         * @return CMDP1 header of the message
+         * @return Read-only reference to the CMDP1 header of the message
          */
         constexpr const Header& getHeader() const { return header_; }
+
+        /**
+         * @return Reference to the CMDP1 header of the message
+         */
+        constexpr Header& getHeader() { return header_; }
 
         /**
          * @return CMDP message topic

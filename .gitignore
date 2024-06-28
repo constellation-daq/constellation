@@ -11,3 +11,6 @@
 
 # Merge conflict original copies
 *.orig
+
+# Python cache
+__pycache__/

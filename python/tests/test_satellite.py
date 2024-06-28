@@ -27,7 +27,7 @@ from conftest import mock_chirp_packet_queue, mocket, wait_for_state
 
 
 @pytest.fixture
-def mock_device_satellite(mock_chirp_socket):
+def mock_device_satellite(mock_chirp_transmitter):
     """Mock a Satellite for a specific device, ie. a class inheriting from Satellite."""
 
     def mocket_factory(*args, **kwargs):
@@ -66,7 +66,7 @@ def mock_device_satellite(mock_chirp_socket):
 
 
 @pytest.fixture
-def mock_fail_satellite(mock_chirp_socket):
+def mock_fail_satellite(mock_chirp_transmitter):
     """Mock a Satellite that fails on run."""
 
     def mocket_factory(*args, **kwargs):

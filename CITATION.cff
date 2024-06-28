@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+# SPDX-License-Identifier: CC0-1.0
+
+cff-version: 1.2.0
+title: Constellation
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Joel
+    family-names: Ekström
+    affiliation: DVel
+  - given-names: Stephan
+    family-names: Lachnit
+    affiliation: DESY
+    orcid: 'https://orcid.org/0000-0001-9834-7819'
+  - given-names: Hanno
+    family-names: Perrey
+    affiliation: DVel
+    orcid: 'https://orcid.org/0000-0001-6661-5778'
+  - given-names: Linus
+    family-names: Ros
+    affiliation: DVel
+  - given-names: Simon
+    family-names: Spannagel
+    orcid: 'https://orcid.org/0000-0003-4708-3774'
+    affiliation: DESY
+repository-code: 'https://gitlab.desy.de/constellation/constellation'
+url: 'https://constellation.pages.desy.de/'
+license: EUPL-1.2

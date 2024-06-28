@@ -9,6 +9,7 @@ This module provides the class for a Constellation Satellite.
 from constellation.core.satellite import Satellite, SatelliteArgumentParser
 import time
 import logging
+from typing import Any
 from constellation.core.configuration import ConfigError, Configuration
 from constellation.core.base import EPILOG
 
@@ -40,7 +41,7 @@ class Example_Satellite(Satellite):
 
         return "Initialized"
 
-    def do_run(self, payload: any) -> str:
+    def do_run(self, payload: Any) -> str:
         while not self._state_thread_evt.is_set():
             """
             Example work to be done while satellite is running
@@ -62,9 +63,7 @@ def main(args=None):
 
     parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
     # this sets the defaults for our "demo" Satellite
-    parser.set_defaults(
-        name="satellite_demo", cmd_port=23999, mon_port=55556, hb_port=61234
-    )
+    parser.set_defaults(name="satellite_demo")
     # get a dict of the parsed arguments
     args = vars(parser.parse_args(args))
 
@@ -77,7 +76,3 @@ def main(args=None):
     # start server with remaining args
     s = Example_Satellite(**args)
     s.run_satellite()
-
-
-if __name__ == "__main__":
-    main()

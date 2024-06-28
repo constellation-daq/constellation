@@ -37,7 +37,8 @@ class H5DataReader:
         self.file.close()
 
     def read_chunks(self, group: str, datasets: list, chunk_length: int):
-        """ Read the file in chunks of length chunk_length"""
+        """Read the file in chunks of length chunk_length"""
+
         def chunk_iterator():
             start = 0
             while start < len(datasets):
@@ -47,6 +48,7 @@ class H5DataReader:
                         data.append(self.file[group][datasets[start]][:])
                         start += 1
                 yield data
+
         return chunk_iterator()
 
     def groups(self):
@@ -63,11 +65,11 @@ class H5DataReader:
 
     def get_EOR_payload(self, group):
         """Fetch the payload of the EOR for the group"""
-        return self.file[group]['EOR']['payload'][()]
+        return self.file[group]["EOR"]["payload"][()]
 
     def get_BOR_payload(self, group):
         """Fetch the payload of the BOR for the group"""
-        return self.file[group]['BOR']['payload'][()]
+        return self.file[group]["BOR"]["payload"][()]
 
     def datasets(self, group):
         """Fetch a list of all dataset names of H5-file."""
@@ -83,21 +85,22 @@ class H5DataReader:
         return datasets
 
     def sort_dataset_list(self, group):
-        """ Returns a sorted list of all datasets """
+        """Returns a sorted list of all datasets"""
+
         def sequence_number_sort(data_str):
             """Sort help function. Splits the datasetname and sort according
-            to sequence_number """
-            if data_str != 'BOR' and data_str != 'EOR':
-                parts = data_str.split('_')
+            to sequence_number"""
+            if data_str != "BOR" and data_str != "EOR":
+                parts = data_str.split("_")
                 numeric_part = int(parts[-1])
             else:
                 numeric_part = 0
             return numeric_part
 
         dataset_list = self._datasets(self.file, group)
-        sorted_dataset_list = sorted(dataset_list,
-                                     key=sequence_number_sort)
+        sorted_dataset_list = sorted(dataset_list, key=sequence_number_sort)
         return sorted_dataset_list
+
 
 # -------------------------------------------------------------------------
 
@@ -113,9 +116,7 @@ def main(args=None):
     data = H5DataReader(file_name=args.file_name)
 
     print("\nWelcome to the Constellation CLI IPython Reader for H5 files!\n")
-    print(
-        "You can interact with your H5-file via the 'data' keyword"
-    )
+    print("You can interact with your H5-file via the 'data' keyword")
 
     embed()
 

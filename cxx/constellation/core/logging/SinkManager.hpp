@@ -80,11 +80,11 @@ namespace constellation::log {
         utils::Port getCMDPPort() const { return cmdp_sink_->getPort(); }
 
         /**
-         * Register monitoring service in CHIRP and set sender name for CMDP
+         * Enable sending via CMDP
          *
          * @param sender_name Canonical name of the satellite
          */
-        CNSTLN_API void registerService(std::string sender_name);
+        CNSTLN_API void enableCMDPSending(std::string sender_name);
 
         /**
          * Create a new asynchronous spdlog logger

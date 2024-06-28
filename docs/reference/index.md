@@ -15,6 +15,7 @@ contributing
 :caption: Technical Documentation
 
 satellite
+naming
 protocols
 ```
 

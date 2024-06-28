@@ -1,8 +1,8 @@
 ---
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC-BY-4.0 OR EUPL-1.2
-title: "CAEN high-voltage crate Satellite"
-description: "Satellite controlling a CAEN high-voltage crate such as the SY5527 and its modules ."
+title: "CAEN High-Voltage Crate"
+subtitle: "Satellite controlling a CAEN high-voltage crate such as the SY5527 and its modules"
 ---
 
 ## Description
@@ -13,19 +13,20 @@ For communication, the CAEN communication library, `CAENHVWrapper` as well as th
 
 ## Parameters
 
-The following parameters need to be specified in the configuration file:
+The following parameters need to be specified in the configuration file. System and connection parameters are required.
 
-* `system`: the type of crate connected, e.g. `"SY5527"`.
-* `link`: the type of connection, e.g. `"TCPIP"`.
-* `link_argument` : additional information for the connection, e.g. the ip address `"192.168.8.2"`.
-* `user` : the user name to connect with.
-* `password` : the password to connect with.
+| Parameter     | Description | Type | Default Value |
+|---------------|-------------|------|---------------|
+| `system`    | The type of crate connected, e.g. `"SY5527"` | String | - |
+| `link` | The type of connection, e.g. `"TCPIP"` or `"USB"` | String | - |
+| `link_argument` | Additional information for the connection, e.g. the ip address `"192.168.8.2"` | String | - |
+| `user` | The user name to connect with | String | - |
+| `password` | The password to connect with | String | - |
+| `board[BNUM]_ch[CHNUM]_[PARNAME]` | Parameters for individual channels where `[BNUM]`is the board number, `[CHNUM]` the channel number and `[PARNAME]`the parameter to be configured. | - | - |
 
-Other channel parameters are structured like this:
+The available parameter names for `board[BNUM]_ch[CHNUM]_[PARNAME]` depend on the model of the board in use. For the A7435SN, this would be `V0Set`, `I0Set`, `V1Set`, `I1Set`, `RUp`, `RDWn`, `Trip`, `SVMax`, `VMon`, `IMon`, `Status`, `Pw`, `POn`, `PDwn`, `ImRange`, `TripInt`, `TripExt`, `ZCDetect`, and `ZCAdjust`
 
-* `board[BNUM]_ch[CHNUM]_[PARNAME]`: where `[BNUM]`is the board number, `[CHNUM]` the channel number and `[PARNAME]`the parameter to be configured. The exact parameter name depends on the model of the board in use. For the A7435SN, this would be `V0Set`, `I0Set`, `V1Set`, `I1Set`, `RUp`, `RDWn`, `Trip`, `SVMax`, `VMon`, `IMon`, `Status`, `Pw`, `POn`, `PDwn`, `ImRange`, `TripInt`, `TripExt`, `ZCDetect`, and `ZCAdjust`.
-
-## Usage
+### Usage
 
 A minimal configuration would be:
 
@@ -45,13 +46,13 @@ board1_ch1_pw = "on"
 To start the Satellite, run
 
 ``` shell
-SatelliteCaenHvCrate
+SatelliteCaenHv
 ```
 
 or
 
 ``` shell
-SatelliteCaenHvCrate --help
+SatelliteCaenHv --help
 ```
 
 to get a list of the available command-line arguments.

@@ -161,14 +161,28 @@ int constellation::exec::satellite_main(int argc,
         return 1;
     }
 
-    // Check satellite name
-    const auto type_name = needs_type ? get_arg(parser, "type") : std::move(satellite_type.value().type_name);
+    // Get satellite type and name
+    auto type_name = needs_type ? get_arg(parser, "type") : std::move(satellite_type.value().type_name);
     const auto satellite_name = get_arg(parser, "name");
-    const auto canonical_name = type_name + "." + satellite_name;
-    // TODO(stephan.lachnit): check if names are valid
 
     // Log the version after all the basic checks are done
     LOG(logger, STATUS) << "Constellation v" << CNSTLN_VERSION;
+
+    // Load satellite DSO
+    std::unique_ptr<DSOLoader> loader {};
+    Generator* satellite_generator {};
+    try {
+        loader = needs_type ? std::make_unique<DSOLoader>(type_name, logger)
+                            : std::make_unique<DSOLoader>(type_name, logger, satellite_type.value().dso_path);
+        satellite_generator = loader->loadSatelliteGenerator();
+    } catch(const DSOLoaderError& error) {
+        LOG(logger, CRITICAL) << "Error loading satellite type \"" << type_name << "\": " << error.what();
+        return 1;
+    }
+
+    // Use properly capitalized satellite type for the canonical name:
+    type_name = loader->getDSOName();
+    const auto canonical_name = type_name + "." + satellite_name;
 
     // Create CHIRP manager and set as default
     std::unique_ptr<chirp::Manager> chirp_manager {};
@@ -182,19 +196,7 @@ int constellation::exec::satellite_main(int argc,
     }
 
     // Register CMDP in CHIRP and set sender name for CMDP
-    SinkManager::getInstance().registerService(canonical_name);
-
-    // Load satellite DSO
-    std::unique_ptr<DSOLoader> loader {};
-    Generator* satellite_generator {};
-    try {
-        loader = needs_type ? std::make_unique<DSOLoader>(type_name, logger)
-                            : std::make_unique<DSOLoader>(type_name, logger, satellite_type.value().dso_path);
-        satellite_generator = loader->loadSatelliteGenerator();
-    } catch(const DSOLoaderError& error) {
-        LOG(logger, CRITICAL) << "Error loading satellite type \"" << type_name << "\": " << error.what();
-        return 1;
-    }
+    SinkManager::getInstance().enableCMDPSending(canonical_name);
 
     // Create satellite
     LOG(logger, STATUS) << "Starting satellite " << canonical_name;

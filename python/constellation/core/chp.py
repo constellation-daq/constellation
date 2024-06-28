@@ -5,20 +5,21 @@ SPDX-License-Identifier: CC-BY-4.0
 
 import time
 import io
-import msgpack
+import msgpack  # type: ignore[import-untyped]
 import zmq
+from typing import Tuple
 from .protocol import Protocol
 
 
 class CHPTransmitter:
     """Send and receive via the Constellation Heartbeat Protocol (CHP)."""
 
-    def __init__(self, name: str, socket: zmq.Socket):
+    def __init__(self, name: str, socket: zmq.Socket):  # type: ignore[type-arg]
         """Initialize transmitter."""
         self.name = name
         self._socket = socket
 
-    def send(self, state: int, interval: int, flags: int = 0):
+    def send(self, state: int, interval: int, flags: int = 0) -> None:
         """Send state and interval via CHP."""
         stream = io.BytesIO()
         packer = msgpack.Packer()
@@ -29,7 +30,9 @@ class CHPTransmitter:
         stream.write(packer.pack(interval))
         self._socket.send(stream.getbuffer(), flags=flags)
 
-    def recv(self, flags: int = zmq.NOBLOCK):
+    def recv(
+        self, flags: int = zmq.NOBLOCK
+    ) -> Tuple[str, msgpack.Timestamp, int, int] | Tuple[None, None, None, None]:
         """Receive a heartbeat via CHP."""
         unpacker = msgpack.Unpacker()
         try:
@@ -52,6 +55,6 @@ class CHPTransmitter:
             )
         return host, timestamp, state, interval
 
-    def close(self):
+    def close(self) -> None:
         """Close the socket of the transmitter."""
         self._socket.close()

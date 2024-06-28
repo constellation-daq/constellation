@@ -70,6 +70,16 @@ test('Core configuration test', test_core_config,
   args: ['--durations', 'yes', '--verbosity', 'high'],
 )
 
+# Exec / DSO Loader
+
+test_exec_dsoloader = executable('test_exec_dsoloader',
+  sources: 'test_exec_dsoloader.cpp',
+  dependencies: [core_dep, exec_dep, catch2_dep],
+)
+test('Exec DSO Loader test', test_exec_dsoloader,
+  args: ['--durations', 'yes', '--verbosity', 'high'],
+)
+
 # Satellite
 
 test_satellite_fsm = executable('test_satellite_fsm',

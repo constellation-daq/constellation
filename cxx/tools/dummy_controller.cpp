@@ -9,6 +9,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <span>
 #include <string>
 #include <utility>
 
@@ -29,16 +30,20 @@ using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
+using namespace std::literals::string_literals;
 
-// NOLINTNEXTLINE(bugprone-exception-escape)
-int main(int argc, char* argv[]) {
-    // Get address via cmdline
-    if(argc != 2) {
-        std::cout << "Invalid usage: dummy_controller CONSTELLATION_GROUP" << std::endl;
+void cli_loop(std::span<char*> args) {
+    // Get group via cmdline
+    std::cout << "Usage: chp_receiver CONSTELLATION_GROUP" << std::endl;
+
+    auto group = "constellation"s;
+    if(args.size() >= 2) {
+        group = args[1];
     }
+    std::cout << "Using constellation group " << std::quoted(group) << std::endl;
 
     SinkManager::getInstance().setGlobalConsoleLevel(OFF);
-    auto chirp_manager = chirp::Manager("255.255.255.255", "0.0.0.0", argv[1], "dummy_controller");
+    auto chirp_manager = chirp::Manager("255.255.255.255", "0.0.0.0", group, "dummy_controller");
     chirp_manager.start();
     chirp_manager.sendRequest(chirp::ServiceIdentifier::CONTROL);
 
@@ -97,4 +102,13 @@ int main(int argc, char* argv[]) {
             }
         }
     }
+}
+
+int main(int argc, char* argv[]) {
+    try {
+        cli_loop(std::span(argv, argc));
+    } catch(...) {
+        return 1;
+    }
+    return 0;
 }

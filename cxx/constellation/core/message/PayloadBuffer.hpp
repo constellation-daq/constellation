@@ -57,14 +57,14 @@ namespace constellation::message {
 
         /** Specialized constructor for zmq::message_t */
         PayloadBuffer(zmq::message_t&& msg)
-            : PayloadBuffer(std::make_shared<zmq::message_t>(std::forward<zmq::message_t>(msg)),
+            : PayloadBuffer(std::make_shared<zmq::message_t>(std::move(msg)),
                             [](std::shared_ptr<zmq::message_t>& msg_ref) -> std::span<std::byte> {
                                 return {utils::to_byte_ptr(msg_ref->data()), msg_ref->size()};
                             }) {}
 
         /** Specialized constructor for msgpack::sbuffer */
         PayloadBuffer(msgpack::sbuffer&& buf)
-            : PayloadBuffer(std::make_shared<msgpack::sbuffer>(std::forward<msgpack::sbuffer>(buf)),
+            : PayloadBuffer(std::make_shared<msgpack::sbuffer>(std::move(buf)),
                             [](std::shared_ptr<msgpack::sbuffer>& buf_ref) -> std::span<std::byte> {
                                 return {utils::to_byte_ptr(buf_ref->data()), buf_ref->size()};
                             }) {}

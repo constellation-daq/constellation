@@ -80,6 +80,19 @@ TEST_CASE("Set & Get Values", "[core][core::config]") {
     REQUIRE(config.size(Configuration::Group::ALL, Configuration::Usage::UNUSED) == 0);
 }
 
+TEST_CASE("Keys Are Case-Insensitive", "[core][core::config]") {
+    Configuration config;
+
+    config.set("bool", true);
+    config.set("INT64", std::int64_t(63));
+
+    REQUIRE(config.get<bool>("BOOL") == true);
+    REQUIRE(config.get<bool>("bool") == true);
+
+    REQUIRE(config.get<std::int64_t>("int64") == 63);
+    REQUIRE(config.get<std::int64_t>("INT64") == 63);
+}
+
 TEST_CASE("Enum Values Are Case-Insensitive", "[core][core::config]") {
     Configuration config;
 

@@ -347,6 +347,7 @@ test:python-3.12:
 
 .lint:
   stage: lint
+  needs: []
 
 lint:coverage-py:
   extends:
@@ -384,6 +385,15 @@ lint:coverage-cpp:
         coverage_format: cobertura
         path: build/meson-logs/coverage.xml
   <<: *cpp-python-rules # Run on both C++ and Python changes for correct coverage reporting
+
+lint:mypy:
+  extends:
+    - .lint
+    - .python-venv
+    - .python-3.11
+  script:
+    - pip install --no-build-isolation -e .[dev,hdf5,cli]
+    - mypy
 
 lint:clang-tidy:
   extends:

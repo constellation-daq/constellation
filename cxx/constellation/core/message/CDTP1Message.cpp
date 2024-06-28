@@ -114,7 +114,7 @@ std::string CDTP1Message::Header::to_string() const {
     return out;
 }
 
-CDTP1Message::CDTP1Message(Header header, size_t frames) : header_(std::move(header)) {
+CDTP1Message::CDTP1Message(Header header, std::size_t frames) : header_(std::move(header)) {
     payload_buffers_.reserve(frames);
 }
 

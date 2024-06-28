@@ -6,11 +6,11 @@ SPDX-License-Identifier: CC-BY-4.0
 Module implementing the Constellation Satellite Control Protocol.
 """
 
+from typing import Any
 import io
 from enum import Enum
 import zmq
-import msgpack
-
+import msgpack  # type: ignore[import-untyped]
 from .protocol import MessageHeader, Protocol
 
 
@@ -34,20 +34,22 @@ class CSCPMessageVerb(Enum):
 class CSCPMessage:
     """Class holding details of a received CSCP command."""
 
-    msg: str = None
-    msg_verb: CSCPMessageVerb = None
-    from_host: str = None
-    timestamp: msgpack.Timestamp = None
-    header_meta: dict = None
-    payload: any = None
+    msg: str = ""
+    msg_verb: CSCPMessageVerb | None = None
+    from_host: str = ""
+    timestamp: msgpack.Timestamp | None = None
+    header_meta: dict[str, Any] | None = None
+    payload: Any = None
 
-    def set_header(self, from_host, timestamp, meta):
+    def set_header(
+        self, from_host: str, timestamp: msgpack.Timestamp, meta: dict[str, Any] | None
+    ) -> None:
         """Sets information retrieved from a message header."""
         self.from_host = from_host
         self.timestamp = timestamp
         self.header_meta = meta
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Pretty-print request."""
         s = "Message '{}' from {} received {} at {} {} payload and meta {}."
         return s.format(
@@ -63,11 +65,13 @@ class CSCPMessage:
 class CommandTransmitter:
     """Class implementing Constellation Satellite Control Protocol."""
 
-    def __init__(self, name: str, socket: zmq.Socket):
+    def __init__(self, name: str, socket: zmq.Socket):  # type: ignore[type-arg]
         self.msgheader = MessageHeader(name, Protocol.CSCP)
         self.socket = socket
 
-    def send_request(self, command, payload: any = None, meta: dict = None):
+    def send_request(
+        self, command: str, payload: Any = None, meta: dict[str, Any] | None = None
+    ) -> None:
         """Send a command request to a Satellite with an optional payload.
 
         meta is an optional dictionary that is sent as a map of string/value
@@ -82,7 +86,9 @@ class CommandTransmitter:
             flags=zmq.NOBLOCK,
         )
 
-    def request_get_response(self, command, payload: any = None, meta: dict = None):
+    def request_get_response(
+        self, command: str, payload: Any = None, meta: dict[str, Any] | None = None
+    ) -> CSCPMessage:
         """Send a command request to a Satellite and return response.
 
         meta is an optional dictionary that is sent as a map of string/value
@@ -103,8 +109,12 @@ class CommandTransmitter:
         return msg
 
     def send_reply(
-        self, response, msgtype: CSCPMessageVerb, payload: any = None, meta: dict = None
-    ):
+        self,
+        response: str,
+        msgtype: CSCPMessageVerb,
+        payload: Any = None,
+        meta: dict[str, Any] | None = None,
+    ) -> None:
         """Send a reply to a previous command with an optional payload.
 
         meta is an optional dictionary that is sent as a map of string/value
@@ -113,7 +123,7 @@ class CommandTransmitter:
         """
         self._dispatch(response, msgtype, payload, meta=meta, flags=zmq.NOBLOCK)
 
-    def get_message(self, flags: int = 0) -> CSCPMessage:
+    def get_message(self, flags: int = 0) -> CSCPMessage | None:
         """Retrieve and return a CSCPMessage.
 
         Returns None if no request is waiting and flags==zmq.NOBLOCK.
@@ -156,10 +166,10 @@ class CommandTransmitter:
         self,
         msg: str,
         msgtype: CSCPMessageVerb,
-        payload: any = None,
-        meta: dict = None,
+        payload: Any = None,
+        meta: dict[str, Any] | None = None,
         flags: int = 0,
-    ):
+    ) -> None:
         """Dispatch a message via ZMQ socket."""
         stream = io.BytesIO()
         packer = msgpack.Packer()

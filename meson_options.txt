@@ -6,5 +6,3 @@ option('impl_py', type: 'feature', value: 'auto', description: 'Build Python imp
 
 option('cxx_tools', type: 'boolean', value: true, description: 'Build C++ tools')
 option('cxx_tests', type: 'feature', value: 'auto', description: 'Build C++ tests')
-
-option('sat_clabdaq2', type: 'feature', value: 'auto', description: 'Build CLABDAQ2 RedPitaya Satellite read-out library')

@@ -48,7 +48,7 @@ if not libzmq_sys_has_draft_api_poller
   meson.override_dependency('cppzmq', cppzmq_sp.get_variable('cppzmq_dep'))
 endif
 # Get libzmq dependency first and then cppzmq dependency to ensure libzmq is setup up correctly with draft API
-libzmq_dep = dependency('libzmq', default_options: libzmq_sp_default_options)
+dependency('libzmq', default_options: libzmq_sp_default_options)
 cppzmq_dep = dependency('cppzmq', default_options: cppzmq_sp_default_options)
 
 # magic_enum

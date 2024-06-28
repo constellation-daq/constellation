@@ -37,7 +37,7 @@ The satellite is then directly started via its Python module. Additional paramet
 Starting the example satellite implementation provided with the framework would therefore look like follows:
 
 ```sh
-python -m constellation.satellites.example_satellite --name TheFirstSatellite --group MyLabPlanet
+python -m constellation.satellites.example --name TheFirstSatellite --group MyLabPlanet
 ```
 
 :::

@@ -23,6 +23,7 @@ namespace constellation::satellite {
      * An unspecified error occurred in the user code implementation of a satellite
      */
     class SatelliteError : public utils::RuntimeError {
+    public:
         explicit SatelliteError(const std::string& reason) { error_message_ = reason; }
 
     protected:
@@ -36,6 +37,7 @@ namespace constellation::satellite {
      * An error occurred in the user code implementation of a satellite when attempting to communicate with hardware
      */
     class CommunicationError : public SatelliteError {
+    public:
         explicit CommunicationError(const std::string& reason) { error_message_ = reason; }
     };
 
@@ -114,7 +116,7 @@ namespace constellation::satellite {
      */
     class MissingUserCommandArguments : public UserCommandError {
     public:
-        explicit MissingUserCommandArguments(const std::string& command, size_t args_expected, size_t args_given) {
+        explicit MissingUserCommandArguments(const std::string& command, std::size_t args_expected, std::size_t args_given) {
             error_message_ = "Command \"";
             error_message_ += command;
             error_message_ += "\" expects ";
