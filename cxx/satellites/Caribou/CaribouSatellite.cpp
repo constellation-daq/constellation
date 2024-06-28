@@ -254,10 +254,10 @@ void CaribouSatellite::stopping() {
 void CaribouSatellite::running(const std::stop_token& stop_token) {
     LOG(INFO) << "Starting run loop...";
 
-    std::lock_guard<std::mutex> lock {device_mutex_};
-
     while(!stop_token.stop_requested()) {
         try {
+            std::lock_guard<std::mutex> lock {device_mutex_};
+
             // Retrieve data from the device
             LOG(TRACE) << "Trying to receive data from device";
             const auto data = device_->getRawData();
