@@ -33,7 +33,9 @@ using namespace constellation::satellite;
 using namespace constellation::utils;
 
 RawFileWriterSatellite::RawFileWriterSatellite(std::string_view type_name, std::string_view satellite_name)
-    : Satellite(type_name, satellite_name) {}
+    : Satellite(type_name, satellite_name) {
+    support_reconfigure();
+}
 
 void RawFileWriterSatellite::initializing(Configuration& config) {
     data_receiver_.initializing(config);
@@ -52,6 +54,17 @@ void RawFileWriterSatellite::initializing(Configuration& config) {
 
 void RawFileWriterSatellite::launching() {
     data_receiver_.launching();
+}
+
+void RawFileWriterSatellite::reconfiguring(const Configuration& partial_config) {
+    if(partial_config.has("output_directory")) {
+        output_directory_ = partial_config.getPath("output_directory", false);
+        if(!std::filesystem::is_directory(output_directory_)) {
+            throw SatelliteError(output_directory_.string() + " is not a directory");
+        }
+        LOG(STATUS) << "Reconfigured output directory: " << output_directory_.string();
+    }
+    data_receiver_.reconfiguring(partial_config);
 }
 
 void RawFileWriterSatellite::starting(std::string_view run_identifier) {

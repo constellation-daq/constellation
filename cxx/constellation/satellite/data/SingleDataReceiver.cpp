@@ -29,11 +29,13 @@
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/timers.hpp"
 #include "constellation/satellite/data/exceptions.hpp"
+#include "constellation/satellite/exceptions.hpp"
 
 using namespace constellation;
 using namespace constellation::config;
 using namespace constellation::data;
 using namespace constellation::message;
+using namespace constellation::satellite;
 using namespace constellation::utils;
 
 SingleDataReceiver::SingleDataReceiver()
@@ -84,6 +86,24 @@ void SingleDataReceiver::launching() {
         throw ChirpTimeoutError(sender_name_, data_bor_timeout_);
     }
     LOG(logger_, DEBUG) << "Found \"" << sender_name_ << "\" at " << uri_.c_str();
+}
+
+void SingleDataReceiver::reconfiguring(const config::Configuration& partial_config) {
+    if(partial_config.has("_data_sender_name")) {
+        throw InvalidReconfiguringError("_data_sender_name", "sender cannot be reconfigured in ORBIT");
+    }
+    if(partial_config.has("_data_bor_timeout")) {
+        data_bor_timeout_ = std::chrono::seconds(partial_config.get<std::uint64_t>("_data_chirp_timeout"));
+        LOG(logger_, DEBUG) << "Reconfigured timeout for BOR message: " << data_bor_timeout_;
+    }
+    if(partial_config.has("_data_data_timeout")) {
+        data_data_timeout_ = std::chrono::seconds(partial_config.get<std::uint64_t>("_data_data_timeout"));
+        LOG(logger_, DEBUG) << "Reconfigured timeout for DATA messages: " << data_data_timeout_;
+    }
+    if(partial_config.has("_data_eor_timeout")) {
+        data_eor_timeout_ = std::chrono::seconds(partial_config.get<std::uint64_t>("_data_eor_timeout"));
+        LOG(logger_, DEBUG) << "Reconfigured timeout for EOR message: " << data_eor_timeout_;
+    }
 }
 
 Dictionary SingleDataReceiver::starting() {

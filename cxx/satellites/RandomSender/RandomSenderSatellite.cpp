@@ -28,7 +28,9 @@ using namespace constellation::satellite;
 using namespace constellation::utils;
 
 RandomSenderSatellite::RandomSenderSatellite(std::string_view type_name, std::string_view satellite_name)
-    : Satellite(type_name, satellite_name), data_sender_(getCanonicalName()), byte_rng_(generate_random_seed()) {}
+    : Satellite(type_name, satellite_name), data_sender_(getCanonicalName()), byte_rng_(generate_random_seed()) {
+    support_reconfigure();
+}
 
 std::uint8_t RandomSenderSatellite::generate_random_seed() {
     std::random_device rng {};
@@ -43,6 +45,22 @@ void RandomSenderSatellite::initializing(Configuration& config) {
                 << " bytes per data frame, sending " << number_of_frames_ << " "
                 << (number_of_frames_ == 1 ? "frame" : "frames") << " per message";
     data_sender_.initializing(config);
+}
+
+void RandomSenderSatellite::reconfiguring(const Configuration& partial_config) {
+    if(partial_config.has("seed")) {
+        seed_ = partial_config.get<std::uint8_t>("seed");
+        LOG(STATUS) << "Reconfigured seed: " << to_string(seed_);
+    }
+    if(partial_config.has("frame_size")) {
+        frame_size_ = partial_config.get<std::uint64_t>("frame_size");
+        LOG(STATUS) << "Reconfigured frame size: " << frame_size_;
+    }
+    if(partial_config.has("number_of_frames")) {
+        number_of_frames_ = partial_config.get<std::uint32_t>("number_of_frames");
+        LOG(STATUS) << "Reconfigured number of frames: " << number_of_frames_;
+    }
+    data_sender_.reconfiguring(partial_config);
 }
 
 void RandomSenderSatellite::starting(std::string_view run_identifier) {

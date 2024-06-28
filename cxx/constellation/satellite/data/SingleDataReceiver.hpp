@@ -59,6 +59,18 @@ namespace constellation::data {
         CNSTLN_API void launching();
 
         /**
+         * @brief Reconfigure data receiver
+         *
+         * Supports reconfiguring of the following config paramets:
+         * * `_data_bor_timeout`
+         * * `_data_data_timeout`
+         * * `_data_eor_timeout`
+         *
+         * @throw InvalidReconfiguringError If `_data_sender_name` is changed
+         */
+        CNSTLN_API void reconfiguring(const config::Configuration& partial_config);
+
+        /**
          * @brief Start data receiver by receiving BOR with sending satellite's config
          *
          * @throw RecvTimeoutError If the `_data_bor_timeout` is reached

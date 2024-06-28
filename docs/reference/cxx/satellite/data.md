@@ -15,6 +15,8 @@ In the satellite's `starting` function, {cpp:func}`DataSender::starting() <const
 needs to be called at the end to send the Begin-of-Run (BOR) message, which includes the satellite's configuration.
 In the satellite's `stopping` function, {cpp:func}`DataSender::stopping() <constellation::data::DataSender::stopping()>`
 needs to be called at the end to send the End-of-Run (EOR) message, which includes run metadata.
+If the satellite supports reconfiguration in ORBIT, {cpp:func}`DataSender::reconfiguring() <constellation::data::DataSender::reconfiguring()>`
+needs to be called at the end of the satellite's `reconfiguring` function.
 
 ### Sending Data during the Run
 
@@ -60,6 +62,8 @@ In the satellite's `starting` function, {cpp:func}`SingleDataReceiver::starting(
 needs to be called to receive the Begin-of-Run (BOR) message, which includes the sending satellite's configuration.
 In the satellite's `stopping` function, {cpp:func}`SingleDataReceiver::stopping() <constellation::data::SingleDataReceiver::stopping()>`
 needs to be called at the beginning to prepare for receiving the End-of-Run (EOR) message.
+If the satellite supports reconfiguration in ORBIT, {cpp:func}`SingleDataReceiver::reconfiguring() <constellation::data::SingleDataReceiver::reconfiguring()>`
+needs to be called at the end of the satellite's `reconfiguring` function.
 
 ### Receiving Data during the Run
 

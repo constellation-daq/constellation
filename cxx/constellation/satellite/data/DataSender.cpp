@@ -60,6 +60,17 @@ void DataSender::initializing(Configuration& config) {
     state_ = State::BEFORE_BOR;
 }
 
+void DataSender::reconfiguring(const config::Configuration& partial_config) {
+    if(partial_config.has("_data_bor_timeout")) {
+        data_bor_timeout_ = std::chrono::seconds(partial_config.get<std::uint64_t>("_data_chirp_timeout"));
+        LOG(logger_, DEBUG) << "Reconfigured timeout for BOR message: " << data_bor_timeout_;
+    }
+    if(partial_config.has("_data_eor_timeout")) {
+        data_eor_timeout_ = std::chrono::seconds(partial_config.get<std::uint64_t>("_data_eor_timeout"));
+        LOG(logger_, DEBUG) << "Reconfigured timeout for EOR message: " << data_eor_timeout_;
+    }
+}
+
 void DataSender::starting(const Configuration& config) {
     // Check that before BOR
     if(state_ != State::BEFORE_BOR) [[unlikely]] {

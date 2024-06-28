@@ -81,6 +81,15 @@ namespace constellation::data {
         CNSTLN_API void initializing(config::Configuration& config);
 
         /**
+         * @brief Reconfigure data sender
+         *
+         * Supports reconfiguring of the following config paramets:
+         * * `_data_bor_timeout`
+         * * `_data_eor_timeout`
+         */
+        CNSTLN_API void reconfiguring(const config::Configuration& partial_config);
+
+        /**
          * @brief Start data sender by sending begin of run
          *
          * @throw SendTimeoutError If the `_data_bor_timeout` is reached

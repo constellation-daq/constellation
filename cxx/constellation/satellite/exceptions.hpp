@@ -33,6 +33,22 @@ namespace constellation::satellite {
 
     /**
      * @ingroup Exceptions
+     * @brief Error for invalid reconfiguration of a satellite
+     *
+     * A config parameter was changed during reconfiguring that is not supported to be reconfigured
+     */
+    class InvalidReconfiguringError : public SatelliteError {
+    public:
+        explicit InvalidReconfiguringError(const std::string& key, const std::string& reason) {
+            error_message_ = "Could not reconfigure parameter \"" + key + "\": " + reason;
+        }
+
+    protected:
+        InvalidReconfiguringError() = default;
+    };
+
+    /**
+     * @ingroup Exceptions
      * @brief Satellite Error for device communication
      *
      * An error occurred in the user code implementation of a satellite when attempting to communicate with hardware
