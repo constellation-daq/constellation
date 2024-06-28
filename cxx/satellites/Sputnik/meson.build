@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: CC0-1.0
 
 # Type this satellite identifies as:
-satellite_type = 'Prototype'
+satellite_type = 'Sputnik'
 
 # Source files to be compiled for this satellite:
 satellite_sources = files(
-  'PrototypeSatellite.cpp',
+  'SputnikSatellite.cpp',
 )
 
 # Automatic generation of library interface and satellite executable:

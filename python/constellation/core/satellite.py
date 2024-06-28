@@ -260,12 +260,13 @@ class Satellite(
         # indicate to the current acquisition thread to stop
         if self._state_thread_evt:
             self._state_thread_evt.set()
-        # wait for result, will raise TimeoutError if not successful
+        # wait for result, waiting until done
         # assert for mypy static type analysis
         assert isinstance(self._state_thread_fut, Future)
-        self._state_thread_fut.result(timeout=10)
+        res_run: str = self._state_thread_fut.result(timeout=None)
+        self.log.debug("RUN thread finished, continue with STOPPING.")
         res: str = self.do_stopping(payload)
-        return res
+        return f"{res_run}; {res}"
 
     @debug_log
     def do_stopping(self, payload: Any) -> str:
@@ -338,7 +339,12 @@ class Satellite(
             if self._state_thread_evt:
                 self._state_thread_evt.set()
                 if self._state_thread_fut:
-                    self._state_thread_fut.result(timeout=1)
+                    try:
+                        self._state_thread_fut.result(timeout=1)
+                    except TimeoutError:
+                        self.log.error(
+                            "Timeout while joining state thread, continuing."
+                        )
             res: str = self.fail_gracefully()
             return res
         # NOTE: we cannot have a non-handled exception disallow the state
@@ -362,16 +368,18 @@ class Satellite(
 
         """
         # indicate to the current acquisition thread to stop
+        res_run: str = ""
         if self._state_thread_evt:
             self._state_thread_evt.set()
-            # wait for result, will raise TimeoutError if not successful
+            # wait for result, will block until user code finishes
             # assert for mypy static type analysis
             assert isinstance(self._state_thread_fut, Future)
-            self._state_thread_fut.result(timeout=10)
+            res_run = self._state_thread_fut.result(timeout=None)
             self._state_thread_evt = None
+        self.log.debug("RUN thread finished, continue with INTERRUPTING.")
         self.hb_checker.stop()
         res: str = self.do_interrupting()
-        return res
+        return f"{res_run}; {res}"
 
     @debug_log
     def do_interrupting(self) -> str:

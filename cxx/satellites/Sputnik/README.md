@@ -1,13 +1,15 @@
 ---
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC-BY-4.0 OR EUPL-1.2
-title: "Prototype"
+title: "Sputnik"
 subtitle: "Demonstrator satellite serving as prototype for new satellites"
 ---
 
 ## Description
 
-This section describes the functions of the satellite and all relevant information about the connected hardware and its requirements. This particular satellite does absolutely nothing and only serves to provide a hollow shell for C++ satellites. New satellites can be created by copying and modifying the prototype satellite. The parameters or metrics listed below are not actually implemented, but serve as a template for the satellite documentation.
+This satellite does very little, just as its [namesake](https://en.wikipedia.org/wiki/Sputnik_1). It mostly serves as demonstrator for the different functionalities of satellites. New satellites may be created by copying and modifying the Sputnik satellite.
+
+This section describes the functions of the satellite and all relevant information about the connected hardware as well as its requirements or external software dependencies.
 
 ## Parameters
 
@@ -20,10 +22,10 @@ The following parameters are read and interpreted by this satellite. Parameters 
 
 ### Configuration Example
 
-An example configuration for this satellite which could be dropped into a COnstellation configuration as a starting point
+An example configuration for this satellite which could be dropped into a Constellation configuration as a starting point
 
 ```ini
-[Prototype.my_satellite]
+[Sputnik.1]
 my_param = 7
 other_param = "antenna"
 ```

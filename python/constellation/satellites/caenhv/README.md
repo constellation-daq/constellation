@@ -46,13 +46,13 @@ board1_ch1_pw = "on"
 To start the Satellite, run
 
 ``` shell
-SatelliteCaenHvCrate
+SatelliteCaenHv
 ```
 
 or
 
 ``` shell
-SatelliteCaenHvCrate --help
+SatelliteCaenHv --help
 ```
 
 to get a list of the available command-line arguments.

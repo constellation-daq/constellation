@@ -22,17 +22,17 @@ using namespace constellation::exec;
 TEST_CASE("Load library", "[exec][exec::dsoloader]") {
 
     auto logger = Logger("DSOLoader");
-    auto loader = DSOLoader("Prototype", logger);
+    auto loader = DSOLoader("Sputnik", logger);
     REQUIRE(loader.loadSatelliteGenerator() != nullptr);
-    REQUIRE_THAT(loader.getDSOName(), Equals("Prototype"));
+    REQUIRE_THAT(loader.getDSOName(), Equals("Sputnik"));
 }
 
 TEST_CASE("Case-insensitive library loading", "[exec][exec::dsoloader]") {
 
     auto logger = Logger("DSOLoader");
-    auto loader = DSOLoader("pRoToTyPe", logger);
+    auto loader = DSOLoader("sPuTnIk", logger);
     REQUIRE(loader.loadSatelliteGenerator() != nullptr);
-    REQUIRE_THAT(loader.getDSOName(), Equals("Prototype"));
+    REQUIRE_THAT(loader.getDSOName(), Equals("Sputnik"));
 }
 
 TEST_CASE("Try loading missing library", "[exec][exec::dsoloader]") {

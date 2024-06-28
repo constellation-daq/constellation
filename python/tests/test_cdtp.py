@@ -229,6 +229,7 @@ def test_receive_writing_package(
     data_transmitter,
     commander,
 ):
+    """Test receiving and writing data, verify state machine of DataSender."""
     service = DiscoveredService(
         get_uuid("simple_sender"),
         CHIRPServiceIdentifier.DATA,
@@ -313,6 +314,7 @@ def test_receiver_stats(
     monitoringlistener,
     commander,
 ):
+    """Test the stats sent by DataReceiver are received via CMDP."""
     dp = 23242
     ctx = zmq.Context()
     socket = ctx.socket(zmq.PUSH)

@@ -18,7 +18,6 @@ import zmq
 from uuid import UUID
 from functools import partial
 from typing import Any, Tuple
-from concurrent.futures import Future
 
 from . import __version__
 from .broadcastmanager import chirp_callback, DiscoveredService
@@ -29,7 +28,6 @@ from .cscp import CSCPMessage
 from .fsm import SatelliteState
 from .satellite import Satellite, SatelliteArgumentParser
 from .base import EPILOG, setup_cli_logging
-from .error import debug_log, handle_error
 
 
 class DataReceiver(Satellite):
@@ -202,15 +200,6 @@ class DataReceiver(Satellite):
         """Close the filehandler"""
         raise NotImplementedError()
 
-    def do_stopping(self, payload: Any) -> str:
-        """Unused.
-
-        In this Satellite class, this method is not used. All stopping actions
-        need to be performed from within `do_run`.
-
-        """
-        raise NotImplementedError
-
     def fail_gracefully(self) -> str:
         """Method called when reaching 'ERROR' state."""
         for uuid in self._pull_interfaces.keys():
@@ -236,27 +225,6 @@ class DataReceiver(Satellite):
             address, port = host
             res.append(f"{address}:{port} ({uuid})")
         return f"{num} connected data sources", res, None
-
-    @handle_error
-    @debug_log
-    def _wrap_stop(self, payload: Any) -> str:
-        """Wrapper for the 'stopping' transitional state of the FSM.
-
-        As the DataReceiver will have to keep files open, we design the `do_run`
-        to handle all actions necessary for stopping a run.
-
-        """
-        # indicate to the current acquisition thread to stop
-        if self._state_thread_evt:
-            self._state_thread_evt.set()
-        # wait for result, waiting until done
-        self.log.info("Waiting for RUN thread to finish.")
-        # assert for mypy static type analysis
-        assert isinstance(self._state_thread_fut, Future)
-        self._state_thread_fut.result(timeout=None)
-        self.log.info("RUN thread finished.")
-        # NOTE: no call to `do_stopping`
-        return "Acquisition stopped"
 
     @chirp_callback(CHIRPServiceIdentifier.DATA)
     def _add_sender_callback(self, service: DiscoveredService) -> None:
