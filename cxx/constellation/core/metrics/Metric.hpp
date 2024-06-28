@@ -197,7 +197,7 @@ namespace constellation::metrics {
                         Clock::duration interval,
                         std::initializer_list<message::State> states,
                         std::function<config::Value()> func)
-            : TimedMetric(unit, type, interval, states), func_(func) {}
+            : TimedMetric(unit, type, interval, states), func_(std::move(func)) {}
 
         bool condition() override;
 
