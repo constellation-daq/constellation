@@ -43,13 +43,21 @@ namespace constellation::data {
          * @param callback Callback function pointer for received data messages
          */
         DataRecv();
-        ~DataRecv() = default;
-        virtual void receive(const message::CDTP1Message&) {};
+
+        // No copy/move constructor/assignment
+        DataRecv(const DataRecv& other) = delete;
+        DataRecv& operator=(const DataRecv& other) = delete;
+        DataRecv(DataRecv&& other) = delete;
+        DataRecv& operator=(DataRecv&& other) = delete;
+
+        ~DataRecv() override = default;
+
+        virtual void receive(const message::CDTP1Message& /*unused*/) {};
 
     private:
         bool shouldConnect(const chirp::DiscoveredService& service) final;
 
-        void receive_impl(const message::CDTP1Message&);
+        void receive_impl(const message::CDTP1Message& msg);
 
     private:
         struct Sender {
