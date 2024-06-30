@@ -43,7 +43,7 @@ namespace constellation::metrics {
          *
          * @param state New state
          */
-        CNSTLN_API void updateState(message::State state) { current_state_ = state; }
+        CNSTLN_API void updateState(message::State state);
 
         /**
          * Update the value cached for the given metric

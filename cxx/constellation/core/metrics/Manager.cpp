@@ -33,6 +33,13 @@ MetricsManager::~MetricsManager() noexcept {
     }
 }
 
+void MetricsManager::updateState(State state) {
+    current_state_ = state;
+
+    LOG(logger_, TRACE) << "Received state change, notifying metrics thread";
+    cv_.notify_all();
+}
+
 void MetricsManager::setMetric(std::string_view topic, const config::Value& value) {
 
     auto it = metrics_.find(topic);
@@ -62,6 +69,7 @@ void MetricsManager::registerMetric(std::string_view topic, std::shared_ptr<Metr
         LOG(logger_, INFO) << "Replaced already registered metric " << std::quoted(topic);
     }
 
+    LOG(logger_, DEBUG) << "Successfully registered metric " << std::quoted(topic);
     cv_.notify_all();
 }
 
@@ -85,6 +93,8 @@ void MetricsManager::run(const std::stop_token& stop_token) {
             next = std::min(next, metric->nextTrigger());
         }
 
-        cv_.wait_until(lock, next, [&]() { return stop_token.stop_requested(); });
+        // Wait until notified or timed out:
+        cv_.wait_until(lock, next);
+        LOG(logger_, TRACE) << "Metrics condition timed out or got notified";
     }
 }
