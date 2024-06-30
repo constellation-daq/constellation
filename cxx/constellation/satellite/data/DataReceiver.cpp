@@ -14,6 +14,7 @@
 #include <string>
 
 #include "constellation/core/message/CDTP1Message.hpp"
+#include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/timers.hpp"
 #include "constellation/satellite/data/exceptions.hpp"
@@ -31,8 +32,17 @@ DataRecv::DataRecv()
           chirp::DATA, logger_, std::bind_front(&DataRecv::receive_impl, this), zmq::socket_type::pull),
       logger_("DATA") {}
 
-void DataRecv::socket_connected(zmq::socket_t&) {
-    LOG(logger_, STATUS) << "New datasender connected";
+bool DataRecv::shouldConnect(const chirp::DiscoveredService& service) {
+    LOG(logger_, STATUS) << "New data sender offering connection at " << service.to_uri();
+
+    // FIXME Select which senders to connect to:
+    if(service.host_id == message::MD5Hash("RandomSender.sender1")) {
+        LOG(logger_, WARNING) << "Refusing connection!";
+        return false;
+    }
+
+    LOG(logger_, STATUS) << "Connecting...";
+    return true;
 }
 
 void DataRecv::receive_impl(const message::CDTP1Message& msg) {

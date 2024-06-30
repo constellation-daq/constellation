@@ -47,7 +47,7 @@ namespace constellation::data {
         virtual void receive(const message::CDTP1Message&) {};
 
     private:
-        void socket_connected(zmq::socket_t& socket) final;
+        bool shouldConnect(const chirp::DiscoveredService& service) final;
 
         void receive_impl(const message::CDTP1Message&);
 
