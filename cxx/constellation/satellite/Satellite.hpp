@@ -167,6 +167,23 @@ namespace constellation::satellite {
                                    const config::Value& value = {});
 
         /**
+         * Register a metric which will be emitted in regular intervals, evaluated from the provided function
+         *
+         * @param name Unique topic of the metric
+         * @param unit Unit of the provided value
+         * @param type Type of the metric
+         * @param interval Minimum interval between consecutive emissions
+         * @param states States in which this metric will be emitted, empty list will always broadcast this metric
+         * @param func Function to evaluate for this metric
+         */
+        void register_timed_metric(std::string_view name,
+                                   std::string_view unit,
+                                   metrics::Type type,
+                                   metrics::Clock::duration interval,
+                                   std::initializer_list<State> states,
+                                   std::function<config::Value()> func);
+
+        /**
          * Register a metric which will be emitted after having been triggered a given number of times
          *
          * @param name Unique topic of the metric
