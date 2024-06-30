@@ -26,7 +26,7 @@
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
-#include "constellation/core/metrics/Manager.hpp"
+#include "constellation/core/metrics/MetricsManager.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/networking.hpp"
 #include "constellation/satellite/CommandRegistry.hpp"

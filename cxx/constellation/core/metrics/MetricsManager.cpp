@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include "Manager.hpp"
+#include "MetricsManager.hpp"
 
 #include <chrono>
 #include <condition_variable>
