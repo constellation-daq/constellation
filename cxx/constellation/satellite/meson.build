@@ -28,6 +28,7 @@ satellite_dep = declare_dependency(
 
 install_headers(
   'data/SingleDataReceiver.hpp',
+  'data/DataReceiver.hpp',
   'data/DataSender.hpp',
   'data/exceptions.hpp',
   subdir: 'constellation/satellite/data',
