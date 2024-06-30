@@ -29,6 +29,6 @@ void SputnikSatellite::initializing(config::Configuration& config) {
 
     register_timed_metric(
         "BEEP", "beeps", Type::LAST_VALUE, std::chrono::milliseconds(interval), {State::ORBIT, State::RUN}, []() {
-            return "blip";
+            return 42;
         });
 }
