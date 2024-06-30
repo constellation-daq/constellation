@@ -38,8 +38,8 @@ namespace constellation::metrics {
 
         /**
          * @brief Update the current state of the sender
-         * @details This method will update the state of the FSM such that metrics with designated states are only broadcast
-         * when appropriate.
+         * @details This method will receive the latest state from the FSM such that metrics with designated states are only
+         * broadcast when appropriate.
          *
          * @param state New state
          */
