@@ -13,7 +13,11 @@
 
 #include "constellation/satellite/Satellite.hpp"
 
+using namespace constellation;
+
 class SputnikSatellite final : public constellation::satellite::Satellite {
 public:
     SputnikSatellite(std::string_view type, std::string_view name);
+
+    void initializing(config::Configuration& config) override;
 };
