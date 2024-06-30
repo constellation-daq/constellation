@@ -29,13 +29,11 @@ namespace constellation::data {
      * services in the constellation, receives CDTP messages from remote satellites and forwards
      * them to a callback registered upon creation of the receiver
      */
-    class DataRecv : public utils::BasePool<message::CDTP1Message> {
+    class CNSTLN_API DataRecv : public utils::BasePool<message::CDTP1Message> {
     private:
         enum class State : std::uint8_t {
-            BEFORE_BOR,
-            IN_RUN,
-            STOPPING,
-            GOT_EOR,
+            AWAITING_BOR,
+            AWAITING_DATA,
         };
 
     public:
@@ -44,16 +42,22 @@ namespace constellation::data {
          *
          * @param callback Callback function pointer for received data messages
          */
-        DataRecv()
-            : BasePool<message::CDTP1Message>(
-                  chirp::DATA, logger_, std::bind_front(&DataRecv::receive, this), zmq::socket_type::pull),
-              logger_("DATA") {}
-
-    private:
+        DataRecv();
+        ~DataRecv() = default;
         virtual void receive(const message::CDTP1Message&) {};
 
     private:
-        std::map<std::string, State> states_;
+        void socket_connected(zmq::socket_t& socket) final;
+
+        void receive_impl(const message::CDTP1Message&);
+
+    private:
+        struct Sender {
+            State state;
+            std::size_t seq;
+        };
+
+        std::map<std::string, Sender, std::less<>> states_;
         log::Logger logger_;
     };
 } // namespace constellation::data
