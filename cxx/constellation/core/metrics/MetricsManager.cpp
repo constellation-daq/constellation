@@ -89,6 +89,11 @@ void MetricsManager::run(const std::stop_token& stop_token) {
 
                 // Send this metric into the CMDP sink:
                 SinkManager::getInstance().sendCMDPMetric(key, metric);
+
+                // If we tell the receiving side to accumulate, we need to reset locally:
+                if(metric->type() == Type::ACCUMULATE) {
+                    metric->set({});
+                }
             }
 
             // Update time point until we can wait:
