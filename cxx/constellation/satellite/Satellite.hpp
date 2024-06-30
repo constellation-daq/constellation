@@ -181,7 +181,7 @@ namespace constellation::satellite {
                                    metrics::Type type,
                                    metrics::Clock::duration interval,
                                    std::initializer_list<State> states,
-                                   std::function<config::Value()> func);
+                                   const std::function<config::Value()>& func);
 
         /**
          * Register a metric which will be emitted after having been triggered a given number of times

@@ -71,7 +71,7 @@ void Satellite::register_timed_metric(std::string_view name,
                                       metrics::Type type,
                                       metrics::Clock::duration interval,
                                       std::initializer_list<State> states,
-                                      std::function<config::Value()> func) {
+                                      const std::function<config::Value()>& func) {
     LOG(logger_, DEBUG) << "Registering timed metric \"" << name << "\" to be emitted every "
                         << std::chrono::duration_cast<std::chrono::milliseconds>(interval).count() << "ms";
 
