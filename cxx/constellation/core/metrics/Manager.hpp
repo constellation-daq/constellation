@@ -72,36 +72,9 @@ namespace constellation::metrics {
          * already, it will be replaced by the new definition.
          *
          * @param topic Unique topic of the metric
-         * @param unit Unit of the provided metric value
-         * @param type Type of the metric
-         * @param triggers Minimum number of triggers between consecutive emissions
-         * @param states States in which this metric will be emitted, empty list will always broadcast this metric
-         * @param value Initial value of the metric
+         * @param metric_timer Shared pointer to metric timer object
          */
-        void registerTriggeredMetric(std::string_view topic,
-                                     std::string_view unit,
-                                     Type type,
-                                     std::size_t triggers,
-                                     std::initializer_list<constellation::message::State> states,
-                                     const config::Value& value = {});
-
-        /**
-         * Register a metric which will be emitted in regular intervals. If the metric exists already, it will be replaced
-         * by the new definition.
-         *
-         * @param topic Unique topic of the metric
-         * @param unit Unit of the provided value
-         * @param type Type of the metric
-         * @param interval Minimum interval between consecutive emissions
-         * @param states States in which this metric will be emitted, empty list will always broadcast this metric
-         * @param value Initial value of the metric
-         */
-        void registerTimedMetric(std::string_view topic,
-                                 std::string_view unit,
-                                 Type type,
-                                 Clock::duration interval,
-                                 std::initializer_list<constellation::message::State> states,
-                                 const config::Value& value = {});
+        void registerMetric(std::string_view topic, std::shared_ptr<MetricTimer> metric_timer);
 
     private:
         /**

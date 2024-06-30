@@ -105,7 +105,7 @@ namespace constellation::metrics {
      * condition method is purely virtual and needs to be implemented by derived timers with a specific behavior. This class
      * also allows to limit the distribution of the metric to certain states of the FSM.
      */
-    class MetricTimer : public Metric {
+    class CNSTLN_API MetricTimer : public Metric {
     public:
         /**
          * @brief MetricTimer constructor
@@ -166,7 +166,7 @@ namespace constellation::metrics {
      * @brief Metric timer to send metric values in regular intervals
      * @details This timer is configured with a time interval, and metrics will be sent every time this interval has passed.
      */
-    class TimedMetric : public MetricTimer {
+    class CNSTLN_API TimedMetric : public MetricTimer {
     public:
         TimedMetric(std::string_view unit,
                     Type type,
@@ -190,7 +190,7 @@ namespace constellation::metrics {
      * @brief Metric timer to send metric values in regular intervals which evaluates the metric value independently
      * @details This timer is configured with a time interval, and metrics will be sent every time this interval has passed.
      */
-    class TimedAutoMetric : public TimedMetric {
+    class CNSTLN_API TimedAutoMetric : public TimedMetric {
     public:
         TimedAutoMetric(std::string_view unit,
                         Type type,
@@ -212,7 +212,7 @@ namespace constellation::metrics {
      * this timer has been called N times. This can be useful to e.g. send a metric for data quality monitoring not at
      * regular time intervals but after every 100 data recordings.
      */
-    class TriggeredMetric : public MetricTimer {
+    class CNSTLN_API TriggeredMetric : public MetricTimer {
     public:
         TriggeredMetric(std::string_view unit,
                         Type type,

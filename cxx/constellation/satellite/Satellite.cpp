@@ -63,7 +63,7 @@ void Satellite::register_timed_metric(std::string_view name,
     LOG(logger_, DEBUG) << "Registering timed metric \"" << name << "\" to be emitted every "
                         << std::chrono::duration_cast<std::chrono::milliseconds>(interval).count() << "ms";
 
-    metrics_manager_.registerTimedMetric(name, unit, type, interval, states, value);
+    metrics_manager_.registerMetric(name, std::make_shared<TimedMetric>(unit, type, interval, states, value));
 }
 
 void Satellite::register_triggered_metric(std::string_view name,
@@ -73,7 +73,7 @@ void Satellite::register_triggered_metric(std::string_view name,
                                           std::initializer_list<State> states,
                                           const config::Value& value) {
     LOG(logger_, DEBUG) << "Registering triggered metric \"" << name << "\" to be emitted every " << triggers << " calls";
-    metrics_manager_.registerTriggeredMetric(name, unit, type, triggers, states, value);
+    metrics_manager_.registerMetric(name, std::make_shared<TriggeredMetric>(unit, type, triggers, states, value));
 }
 
 void Satellite::set_metric(const std::string& topic, const config::Value& value) {

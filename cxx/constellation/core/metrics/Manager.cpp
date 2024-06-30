@@ -54,32 +54,9 @@ void MetricsManager::unregisterMetric(std::string_view topic) {
     }
 }
 
-void MetricsManager::registerTriggeredMetric(std::string_view topic,
-                                             std::string_view unit,
-                                             Type type,
-                                             std::size_t triggers,
-                                             std::initializer_list<constellation::message::State> states,
-                                             const config::Value& value) {
+void MetricsManager::registerMetric(std::string_view topic, std::shared_ptr<MetricTimer> metric_timer) {
     const std::lock_guard lock {mt_};
-    const auto [it, inserted] = metrics_.insert_or_assign(
-        std::string(topic), std::make_shared<TriggeredMetric>(unit, type, triggers, states, value));
-
-    if(!inserted) {
-        LOG(logger_, INFO) << "Replaced already registered metric " << std::quoted(topic);
-    }
-
-    cv_.notify_all();
-}
-
-void MetricsManager::registerTimedMetric(std::string_view topic,
-                                         std::string_view unit,
-                                         Type type,
-                                         Clock::duration interval,
-                                         std::initializer_list<constellation::message::State> states,
-                                         const config::Value& value) {
-    const std::lock_guard lock {mt_};
-    const auto [it, inserted] =
-        metrics_.insert_or_assign(std::string(topic), std::make_shared<TimedMetric>(unit, type, interval, states, value));
+    const auto [it, inserted] = metrics_.insert_or_assign(std::string(topic), metric_timer);
 
     if(!inserted) {
         LOG(logger_, INFO) << "Replaced already registered metric " << std::quoted(topic);
