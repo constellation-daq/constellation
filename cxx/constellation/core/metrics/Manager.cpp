@@ -34,6 +34,8 @@ MetricsManager::~MetricsManager() noexcept {
 }
 
 void MetricsManager::updateState(State state) {
+    const std::lock_guard lock {mt_};
+
     current_state_ = state;
 
     LOG(logger_, TRACE) << "Received state change, notifying metrics thread";
@@ -41,7 +43,7 @@ void MetricsManager::updateState(State state) {
 }
 
 void MetricsManager::setMetric(std::string_view topic, const config::Value& value) {
-
+    const std::lock_guard lock {mt_};
     auto it = metrics_.find(topic);
     if(it != metrics_.end()) {
         it->second->update(value);
