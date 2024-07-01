@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -18,14 +19,28 @@
 #include <peary/device/Device.hpp>
 #include <peary/device/DeviceManager.hpp>
 
+#include "constellation/core/logging/Level.hpp"
+#include "constellation/core/logging/Logger.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 using namespace constellation::config;
 using namespace constellation::satellite;
 
+class CaribouLogger final : public std::stringbuf {
+public:
+    CaribouLogger() : logger_("Caribou") {}
+    int sync() final;
+    std::ostream& stream();
+    static constellation::log::Level getLogLevel(char short_log_format_char);
+
+private:
+    constellation::log::Logger logger_;
+};
+
 class CaribouSatellite : public Satellite {
 public:
     CaribouSatellite(std::string_view type, std::string_view name);
+    ~CaribouSatellite();
 
 public:
     void initializing(Configuration& config) override;
@@ -43,6 +58,8 @@ private:
     std::shared_ptr<caribou::DeviceManager> manager_;
     caribou::Device* device_ {nullptr};
     caribou::Device* secondary_device_ {nullptr};
+
+    CaribouLogger caribou_logger_;
 
     std::mutex device_mutex_;
 

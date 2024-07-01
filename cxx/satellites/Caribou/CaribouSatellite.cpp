@@ -15,6 +15,7 @@
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <source_location>
 #include <stop_token>
 #include <string>
 #include <string_view>
@@ -26,19 +27,60 @@
 #include <peary/utils/exceptions.hpp>
 #include <peary/utils/logging.hpp>
 
+#include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/log.hpp"
 #include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 using namespace caribou;
+using namespace constellation::log;
 using namespace constellation::satellite;
 using namespace std::literals::chrono_literals;
+
+Level CaribouLogger::getLogLevel(char short_log_format_char) {
+    Level level {};
+    switch(short_log_format_char) {
+    case 'T': level = TRACE; break;
+    case 'D': level = DEBUG; break;
+    case 'I': level = INFO; break;
+    case 'W': level = WARNING; break;
+    case 'E': level = CRITICAL; break;
+    case 'S': level = STATUS; break;
+    case 'F': level = CRITICAL; break;
+    default: break;
+    }
+    return level;
+}
+
+int CaribouLogger::sync() {
+    const auto message = this->view();
+    // Get log level from message
+    const auto level = getLogLevel(message.at(1));
+    // Strip log level and final newline from substring
+    const auto message_stripped = message.substr(4, message.size() - 5);
+    // Log stripped message
+    logger_.log(level, std::source_location()) << message_stripped;
+    logger_.flush();
+    // Reset stringbuf by swapping a new one
+    std::stringbuf new_stringbuf {};
+    this->swap(new_stringbuf);
+
+    return 0;
+}
+
+std::ostream& CaribouLogger::stream() {
+    static std::ostream stream {this};
+    return stream;
+}
 
 CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
     : Satellite(type, name), manager_(std::make_shared<DeviceManager>()) {
 
-    // Custom Caribou commands for this satellite:
+    // Add logger
+    Log::setFormat(LogFormat::SHORT);
+    Log::addStream(caribou_logger_.stream());
 
+    // Custom Caribou commands for this satellite
     register_command(
         "peary_verbosity", "Set verbosity of the Peary logger.", {}, std::function<void(const std::string&)>([](auto level) {
             caribou::Log::setReportingLevel(caribou::Log::getLevelFromString(level));
@@ -101,6 +143,11 @@ CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
                          std::lock_guard<std::mutex> lock {device_mutex_};
                          return device_->getADC(name);
                      }));
+}
+
+CaribouSatellite::~CaribouSatellite() {
+    // Delete log streams
+    Log::clearStreams();
 }
 
 void CaribouSatellite::initializing(constellation::config::Configuration& config) {
