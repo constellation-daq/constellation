@@ -338,14 +338,13 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
             frame_nr_++;
         } catch(caribou::NoDataAvailable&) {
             continue;
-        } catch(caribou::DataException& e) {
+        } catch(caribou::DataException& error) {
             // Retrieval failed, retry once more before aborting:
-            LOG(WARNING) << e.what() << ", skipping data packet";
+            LOG(WARNING) << error.what() << ", skipping data packet";
             continue;
-        } catch(caribou::caribouException& e) {
-            // FIXME sat exceptions missing.
-            LOG(CRITICAL) << e.what();
-            throw std::exception();
+        } catch(caribou::caribouException& error) {
+            // Abort run by rethrowing exception
+            throw SatelliteError(error.what());
         }
     }
 
