@@ -9,9 +9,12 @@ inc = include_directories('.')
 ui_files = qt5.compile_ui(sources: 'euRun.ui')
 moc_files = qt5.compile_moc(headers: ['QRunControl.hpp', 'euRun.hpp'])
 
+# TOML parser
+tomlplusplus_dep = dependency('tomlplusplus')
+
 executable('euRun', 'euRun.cpp', 'QRunControl.cpp', ui_files, moc_files,
            include_directories: inc,
-           dependencies: [exec_dep, argparse_dep, qt5_dep, controller_dep],
+           dependencies: [exec_dep, argparse_dep, qt5_dep, controller_dep, tomlplusplus_dep],
            install: true,
            install_rpath: constellation_rpath,
            cpp_args: ['-Wno-deprecated-enum-enum-conversion', '-Wno-unused-variable'],
