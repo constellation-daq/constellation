@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <memory>
 #include <sstream>
+#include <stop_token>
 #include <string>
 #include <string_view>
 
@@ -22,9 +23,6 @@
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/satellite/Satellite.hpp"
-
-using namespace constellation::config;
-using namespace constellation::satellite;
 
 class CaribouLogger final : public std::stringbuf {
 public:
@@ -37,23 +35,22 @@ private:
     constellation::log::Logger logger_;
 };
 
-class CaribouSatellite : public Satellite {
+class CaribouSatellite : public constellation::satellite::Satellite {
 public:
     CaribouSatellite(std::string_view type, std::string_view name);
     ~CaribouSatellite();
 
 public:
-    void initializing(Configuration& config) override;
+    void initializing(constellation::config::Configuration& config) override;
     void launching() override;
     void landing() override;
-    void reconfiguring(const Configuration& partial_config) override;
+    void reconfiguring(const constellation::config::Configuration& partial_config) override;
     void starting(std::string_view run_identifier) override;
     void stopping() override;
     void running(const std::stop_token& stop_token) override;
 
 private:
     std::string device_class_;
-    Configuration config_;
 
     std::shared_ptr<caribou::DeviceManager> manager_;
     caribou::Device* device_ {nullptr};
