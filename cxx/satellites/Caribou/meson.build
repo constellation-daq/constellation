@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
-if get_option('satellite_caribou').disabled()
+# Do not build if not explicitly enabled
+if not get_option('satellite_caribou').enabled()
   subdir_done()
 endif
 
