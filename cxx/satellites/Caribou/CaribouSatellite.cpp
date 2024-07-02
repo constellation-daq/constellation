@@ -235,13 +235,6 @@ void CaribouSatellite::launching() {
 
     // Set additional registers from the configuration:
     const auto& config = getConfig();
-    if(config.has("register_key") && config.has("register_value")) {
-        auto key = config.get<std::string>("register_key");
-        auto value = config.get<uintptr_t>("register_value");
-        device_->setRegister(key, value);
-        LOG(INFO) << "Setting " << key << " = " << std::to_string(value);
-    }
-
     if(config.has("adc_signal")) {
         // Select which ADC signal to regularly fetch:
         adc_signal_ = config.get<std::string>("adc_signal");
