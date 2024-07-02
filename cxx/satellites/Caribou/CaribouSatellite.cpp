@@ -85,6 +85,9 @@ int PearyLogger::sync() {
 CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
     : Satellite(type, name), manager_(std::make_shared<caribou::DeviceManager>()) {
 
+    // This satellite supports reconfiguration:
+    support_reconfigure();
+
     // Custom Caribou commands for this satellite
     register_command(
         "peary_verbosity", "Set verbosity of the Peary logger.", {}, std::function<void(const std::string&)>([](auto level) {
