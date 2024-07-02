@@ -202,13 +202,9 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
             throw SatelliteError("Failed to get secondary device \"" + secondary + "\": " + error.what());
         }
     }
-
-    LOG(STATUS) << getCanonicalName() << " initialized";
 }
 
 void CaribouSatellite::launching() {
-    LOG(INFO) << "Configuring device " << device_->getName();
-
     std::lock_guard<std::mutex> lock {device_mutex_};
 
     // Switch on the device power
@@ -247,8 +243,6 @@ void CaribouSatellite::launching() {
         LOG(INFO) << "Will probe ADC signal \"" << adc_signal_ << "\" every " << adc_freq_ << " frames";
         LOG(TRACE) << "ADC value: " << adc_value; // FIXME: unused variable, send as stats instead
     }
-
-    LOG(STATUS) << getCanonicalName() << " launched";
 }
 
 void CaribouSatellite::landing() {
@@ -257,17 +251,11 @@ void CaribouSatellite::landing() {
     // Switch off the device power
     std::lock_guard<std::mutex> lock {device_mutex_};
     device_->powerOff();
-
-    LOG(STATUS) << getCanonicalName() << " landed";
 }
 
 void CaribouSatellite::reconfiguring(const constellation::config::Configuration& /*partial_config*/) {}
 
-void CaribouSatellite::starting(std::string_view run_identifier) {
-    LOG(INFO) << "Starting run " << run_identifier << "...";
-
-    // Reset frame number
-    frame_nr_ = 0;
+void CaribouSatellite::starting(std::string_view) {
 
     // Start the DAQ
     std::lock_guard<std::mutex> lock {device_mutex_};
@@ -284,22 +272,15 @@ void CaribouSatellite::starting(std::string_view run_identifier) {
 
     // Start DAQ:
     device_->daqStart();
-
-    LOG(STATUS) << getCanonicalName() << " started (run " << run_identifier << ")";
 }
 
 void CaribouSatellite::stopping() {
-    LOG(INFO) << "Stopping run...";
-
     // Stop the DAQ
     std::lock_guard<std::mutex> lock {device_mutex_};
     device_->daqStop();
-
-    LOG(STATUS) << getCanonicalName() << " stopped";
 }
 
 void CaribouSatellite::running(const std::stop_token& stop_token) {
-    LOG(INFO) << "Starting run loop...";
 
     while(!stop_token.stop_requested()) {
         try {
@@ -309,14 +290,9 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
             LOG(TRACE) << "Trying to receive data from device";
             const auto data = device_->getRawData();
 
-            LOG(DEBUG) << "Frame " << frame_nr_;
-
             if(!data.empty()) {
                 // Create new data message for data sender
                 /*DataSender::Message msg {};
-
-                // Set frame number
-                msg.addTag("frame", frame_nr_);
 
                 // Add data
                 msg.addDataFrame(std::move(data));
@@ -334,8 +310,6 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
                 data_sender_.sendData(std::move(msg));*/
             }
 
-            // Now increment the frame number
-            frame_nr_++;
         } catch(caribou::NoDataAvailable&) {
             continue;
         } catch(caribou::DataException& error) {
@@ -347,6 +321,4 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
             throw SatelliteError(error.what());
         }
     }
-
-    LOG(INFO) << "Exiting run loop";
 }
