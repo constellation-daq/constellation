@@ -253,7 +253,28 @@ void CaribouSatellite::landing() {
     device_->powerOff();
 }
 
-void CaribouSatellite::reconfiguring(const constellation::config::Configuration& /*partial_config*/) {}
+void CaribouSatellite::reconfiguring(const constellation::config::Configuration& partial_config) {
+
+    std::lock_guard<std::mutex> lock {device_mutex_};
+
+    // Try reconfiguring registers
+    for(const auto& reg : device_->listRegisters()) {
+        if(partial_config.has(reg)) {
+            const auto value = partial_config.get<uintptr_t>(reg);
+            LOG(DEBUG) << "Setting register " << std::quoted(reg) << " to " << value;
+            device_->setRegister(reg, value);
+        }
+    }
+
+    // Try reconfiguring memory registers:
+    for(const auto& mem : device_->listMemories()) {
+        if(partial_config.has(mem)) {
+            const auto value = partial_config.get<uintptr_t>(mem);
+            LOG(DEBUG) << "Setting memory register " << std::quoted(reg) << " to " << value;
+            device_->setMemory(reg, value);
+        }
+    }
+}
 
 void CaribouSatellite::starting(std::string_view) {
 
