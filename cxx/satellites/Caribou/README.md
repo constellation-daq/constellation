@@ -11,14 +11,14 @@ This module allows to integrate devices running with the Caribou readout system 
 
 This satellite supports the reconfiguration transition. Any registers or memory registers known to the configured Caribou device can be updated during reconfiguration.
 
-### FSM Stage Implementations
+### FSM State Implementations
 
 The satellite interfaces the Peary device manager to add devices and to control them. The following actions are performed in the different FSM stages:
 
 * **Initialization**: The device to be instantiated is taken from the configuration parameter `type`. Device names are case sensitive and have to be available in the
   linked Peary installation. In addition, the following configuration keys are available for the initialization:
 
-  * `peary_verbosity`: Set the Peary-internal logging verbosity for output on the terminal of the satellite. Please refer to the Peary documentation for more information
+  * `peary_verbosity`: Set the Peary-internal logging verbosity for output on the terminal of the satellite. Please refer to the Peary documentation for more information. The verbosity can be changed at any point using the `peary_verbosity` command this satellite exposes.
   * `config_file`: Configuration file in Peary-format to be passed to the device. It should be noted, that the file access will happen locally by the satellite, i.e. the value has to point to a file locally available on the Caribou system.
 
 * **Launching**: During launch, the device is powered using Peary's `powerOn()` command. After this, the satellite waits for one second in order to allow the AIDA TLU to fully configure and make the clock available on the DUT outputs. Then, the `configure()` command of the Peary device interface is called.
@@ -26,6 +26,8 @@ The satellite interfaces the Peary device manager to add devices and to control 
   The key `adc_signal` and `adc_frequency` can be used to sample the slow ADC on the Carboard in regular intervals. Here, `adc_signal` is the name of the ADC input channel as assigned via the Peary periphery for the given device, and `adc_frequency` is the number of frames read from the device after which a new sampling is attempted, the default is 1000. If no `adc_signal` is set, no ADC reading is attempted.
 
   The key `number_of_frames` allows buffering of multiple Caribou device frames into a single Constellation data message. If set to a value larger than `1`, frames are first buffered and upon reaching the desired buffer depth, they are collectively sent. A value of, for example, `number_of_frames = 100` would therefore result in one message being sent every 100 frames read from the device. This message would contain 100 frames with the individual data blocks. This can be used to reduce the number of packets sent via the network and to better make use of available bandwidth.
+
+* **Reconfiguration**: Any register returned by the device by `list_registers()` or memory registers from `list_memories()` can be updated during reconfiguration. The satellite attempts to read any of these values from the provided reconfiguration config and, if successful, updates the device.
 
 * **Start / Stop**: During start and stop, the corresponding Peary device functions `daqStart()` and `daqStop()` are called.
 
