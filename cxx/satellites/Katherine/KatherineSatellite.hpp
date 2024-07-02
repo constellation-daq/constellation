@@ -45,7 +45,6 @@ public:
     void initializing(constellation::config::Configuration& config) override;
     void launching() override;
     void landing() override;
-    void reconfiguring(const constellation::config::Configuration& partial_config) override;
     void starting(std::string_view run_identifier) override;
     void stopping() override;
     void running(const std::stop_token& stop_token) override;
@@ -56,7 +55,19 @@ private:
 
     std::string trim(const std::string& str, const std::string& delims = " \t\n\r\v");
 
+    void frame_started(int frame_idx);
+    void frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info);
+
+    template <typename T> void pixels_received(const T*, size_t count) {
+        for(size_t i = 0; i < count; ++i) {
+            if constexpr(std::is_same_v<T, katherine::acq::f_toa_tot::pixel_type>) {
+                // LOG(TRACE) << px[i].coord.x << px[i].coord.y << px[i].ftoa << px[i].toa << px[i].tot;
+            }
+        }
+    }
+
 private:
     std::shared_ptr<katherine::device> device_;
+    std::shared_ptr<katherine::base_acquisition> acquisition_;
     katherine::config katherine_config_ {};
 };
