@@ -24,11 +24,11 @@
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
-class CaribouLogger final : public std::stringbuf {
+class PearyLogger final : public std::stringbuf {
 public:
-    CaribouLogger() : logger_("PEARY") {}
+    PearyLogger();
+    ~PearyLogger();
     int sync() final;
-    std::ostream& stream();
     static constellation::log::Level getLogLevel(char short_log_format_char);
 
 private:
@@ -38,7 +38,6 @@ private:
 class CaribouSatellite : public constellation::satellite::Satellite {
 public:
     CaribouSatellite(std::string_view type, std::string_view name);
-    ~CaribouSatellite();
 
 public:
     void initializing(constellation::config::Configuration& config) override;
@@ -56,7 +55,7 @@ private:
     caribou::Device* device_ {nullptr};
     caribou::Device* secondary_device_ {nullptr};
 
-    CaribouLogger caribou_logger_;
+    PearyLogger caribou_logger_;
 
     std::mutex device_mutex_;
 
