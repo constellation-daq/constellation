@@ -90,6 +90,11 @@ CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
         "peary_verbosity", "Set verbosity of the Peary logger.", {}, std::function<void(const std::string&)>([](auto level) {
             caribou::Log::setReportingLevel(caribou::Log::getLevelFromString(level));
         }));
+    register_command(
+        "get_peary_verbosity",
+        "Get the currently configured verbosity of the Peary logger.",
+        {},
+        std::function<std::string()>([]() { return caribou::Log::getStringFromLevel(caribou::Log::getReportingLevel()); }));
     register_command("list_registers",
                      "List all available register names for the attached Caribou device.",
                      {State::INIT, State::ORBIT, State::RUN},
@@ -154,6 +159,7 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
 
     // Set default values:
     config.setDefault("adc_frequency", 1000);
+    config.setDefault("peary_verbosity", "INFO");
 
     // Clear all existing devices - the initializing method can be called multiple times!
     manager_->clearDevices();
@@ -161,6 +167,9 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
     // Read the device type from the configuration:
     device_class_ = config.get<std::string>("type");
     LOG(INFO) << "Instantiated " << getCanonicalName() << " for device \"" << device_class_ << "\"";
+
+    // Set configured log level
+    caribou::Log::setReportingLevel(caribou::Log::getLevelFromString(config.get<std::string>("peary_verbosity")));
 
     // Open configuration file and read caribou configuration
     const auto config_file_path = config.getPath("config_file");
@@ -270,8 +279,8 @@ void CaribouSatellite::reconfiguring(const constellation::config::Configuration&
     for(const auto& mem : device_->listMemories()) {
         if(partial_config.has(mem)) {
             const auto value = partial_config.get<uintptr_t>(mem);
-            LOG(DEBUG) << "Setting memory register " << std::quoted(reg) << " to " << value;
-            device_->setMemory(reg, value);
+            LOG(DEBUG) << "Setting memory register " << std::quoted(mem) << " to " << value;
+            device_->setMemory(mem, value);
         }
     }
 }
