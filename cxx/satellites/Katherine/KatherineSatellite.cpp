@@ -17,6 +17,7 @@
 
 using namespace constellation::satellite;
 using namespace constellation::utils;
+using namespace std::literals::chrono_literals;
 
 KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view name) : Satellite(type, name) {}
 
@@ -52,13 +53,6 @@ void KatherineSatellite::launching() {
 
     // Set threshold polarity
     katherine_config_.set_polarity_holes(config.get<bool>("positive_polarity"));
-
-    // Set datadriven or framebased mode:
-    auto ro_type =
-        (config.get<bool>("sequential_mode") ? katherine::readout_type::sequential : katherine::readout_type::data_driven);
-
-    // Set operation mode of pixel matrix
-    auto opmode = config.get<OperationMode>("op_mode");
 
     // Trigger configuration
     auto trigger_mode = config.get<ShutterMode>("shutter_mode");
@@ -105,13 +99,92 @@ void KatherineSatellite::launching() {
 
 void KatherineSatellite::landing() {}
 
-void KatherineSatellite::reconfiguring(const constellation::config::Configuration& partial_config) {}
+void KatherineSatellite::frame_started(int frame_idx) {
+    LOG(DEBUG) << "Started frame " << frame_idx << std::endl;
+}
 
-void KatherineSatellite::starting(std::string_view run_identifier) {}
+void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
+    const double recv_perc = 100. * info.received_pixels / info.sent_pixels;
 
-void KatherineSatellite::stopping() {}
+    LOG(DEBUG) << "Ended frame " << frame_idx << "." << std::endl;
+    LOG(DEBUG) << " - tpx3->katherine lost " << info.lost_pixels << " pixels" << std::endl
+               << " - katherine->pc sent " << info.sent_pixels << " pixels" << std::endl
+               << " - katherine->pc received " << info.received_pixels << " pixels (" << recv_perc << " %)" << std::endl
+               << " - state: " << (completed ? "completed" : "not completed") << std::endl
+               << " - start time: " << info.start_time.d << std::endl
+               << " - end time: " << info.end_time.d << std::endl;
+}
 
-void KatherineSatellite::running(const std::stop_token& stop_token) {}
+void KatherineSatellite::starting(std::string_view) {
+    const auto config = getConfig();
+
+    // Set datadriven or framebased mode:
+    auto ro_type =
+        (config.get<bool>("sequential_mode") ? katherine::readout_type::sequential : katherine::readout_type::data_driven);
+
+    // If we are in data-driven mode, disable timeout:
+    auto timeout = (ro_type == katherine::readout_type::data_driven) ? -1s : 10s;
+
+    // Select acquisition mode and create acquisition object
+    auto opmode = config.get<OperationMode>("op_mode");
+    if(opmode == OperationMode::TOA_TOT) {
+        auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_tot>>(
+            *device_, katherine::md_size * 34952533, sizeof(katherine::acq::f_toa_tot::pixel_type) * 65536, 500ms, timeout);
+        acq->set_pixels_received_handler(
+            std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_toa_tot::pixel_type>, this));
+        acquisition_ = acq;
+    } else if(opmode == OperationMode::TOA) {
+        auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_only>>(
+            *device_, katherine::md_size * 34952533, sizeof(katherine::acq::f_toa_only::pixel_type) * 65536, 500ms, timeout);
+        acq->set_pixels_received_handler(
+            std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_toa_only::pixel_type>, this));
+        acquisition_ = acq;
+    } else if(opmode == OperationMode::EVT_ITOT) {
+        auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_event_itot>>(
+            *device_,
+            katherine::md_size * 34952533,
+            sizeof(katherine::acq::f_event_itot::pixel_type) * 65536,
+            500ms,
+            timeout);
+        acq->set_pixels_received_handler(
+            std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_event_itot::pixel_type>, this));
+        acquisition_ = acq;
+    } else {
+        throw SatelliteError("Wrong opmode");
+    }
+
+    acquisition_->set_frame_started_handler(std::bind_front(&KatherineSatellite::frame_started, this));
+    acquisition_->set_frame_ended_handler(std::bind_front(&KatherineSatellite::frame_ended, this));
+}
+
+void KatherineSatellite::stopping() {
+    LOG(STATUS) << "Acquisition completed:" << std::endl
+                << "state: " << katherine::str_acq_state(acquisition_->state()) << std::endl
+                << "received " << acquisition_->completed_frames() << " complete frames" << std::endl
+                << "dropped " << acquisition_->dropped_measurement_data() << " measurement data items";
+}
+
+void KatherineSatellite::running(const std::stop_token&) {
+
+    // Start Katherine run thread:
+    std::thread runthread([this]() {
+        try {
+            acquisition_->read();
+        } catch(katherine::system_error& e) {
+            LOG(CRITICAL) << "Katherine error: " << e.what();
+            if(!acquisition_->aborted()) {
+                LOG(STATUS) << "Aborting Katherine run...";
+                acquisition_->abort();
+            }
+        }
+    });
+
+    // FIXME - wait for stop token request and then:
+    acquisition_->abort();
+
+    // Join thread once it is done
+    runthread.join();
+}
 
 katherine::dacs KatherineSatellite::parse_dacs_file(std::filesystem::path file_path) {
 
