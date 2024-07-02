@@ -160,6 +160,7 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
     // Set default values:
     config.setDefault("adc_frequency", 1000);
     config.setDefault("peary_verbosity", "INFO");
+    config.setDefault("number_of_frames", 1);
 
     // Clear all existing devices - the initializing method can be called multiple times!
     manager_->clearDevices();
@@ -211,6 +212,9 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
             throw SatelliteError("Failed to get secondary device \"" + secondary + "\": " + error.what());
         }
     }
+
+    // Cache the number of frames to attach to a single data message:
+    number_of_frames_ = config.get<std::size_t>("number_of_frames");
 }
 
 void CaribouSatellite::launching() {
@@ -319,6 +323,8 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
 
                 // Add data
                 msg.addDataFrame(std::move(data));
+
+                // FIXME we need to add number_of_frames_ to the message before sending!
 
                 // Query ADC if wanted:
                 if(frame_nr_ % adc_freq_ == 0) {

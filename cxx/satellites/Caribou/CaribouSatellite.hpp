@@ -59,6 +59,8 @@ private:
 
     std::mutex device_mutex_;
 
+    std::size_t number_of_frames_;
+
     std::string adc_signal_;
-    uint64_t adc_freq_;
+    std::uint64_t adc_freq_;
 };
