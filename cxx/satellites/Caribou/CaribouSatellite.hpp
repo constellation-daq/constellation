@@ -26,7 +26,7 @@
 
 class CaribouLogger final : public std::stringbuf {
 public:
-    CaribouLogger() : logger_("Caribou") {}
+    CaribouLogger() : logger_("PEARY") {}
     int sync() final;
     std::ostream& stream();
     static constellation::log::Level getLogLevel(char short_log_format_char);
