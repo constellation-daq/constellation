@@ -33,7 +33,6 @@
 #include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
-using namespace caribou;
 using namespace constellation::log;
 using namespace constellation::satellite;
 using namespace std::literals::chrono_literals;
@@ -57,14 +56,14 @@ PearyLogger::PearyLogger() : logger_("PEARY") {
     // Create static stream for Peary
     static std::ostream stream {this};
     // Set short log format to filter log level
-    Log::setFormat(LogFormat::SHORT);
+    caribou::Log::setFormat(caribou::LogFormat::SHORT);
     // Add stream to peary
-    Log::addStream(stream);
+    caribou::Log::addStream(stream);
 }
 
 PearyLogger::~PearyLogger() {
     // Delete log streams since logger goes out of scope
-    Log::clearStreams();
+    caribou::Log::clearStreams();
 }
 
 int PearyLogger::sync() {
@@ -84,7 +83,7 @@ int PearyLogger::sync() {
 }
 
 CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
-    : Satellite(type, name), manager_(std::make_shared<DeviceManager>()) {
+    : Satellite(type, name), manager_(std::make_shared<caribou::DeviceManager>()) {
 
     // Custom Caribou commands for this satellite
     register_command(
