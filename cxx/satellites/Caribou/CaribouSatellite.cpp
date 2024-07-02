@@ -16,6 +16,7 @@
 #include <memory>
 #include <mutex>
 #include <source_location>
+#include <sstream>
 #include <stop_token>
 #include <string>
 #include <string_view>
@@ -37,7 +38,7 @@ using namespace constellation::log;
 using namespace constellation::satellite;
 using namespace std::literals::chrono_literals;
 
-Level CaribouLogger::getLogLevel(char short_log_format_char) {
+Level PearyLogger::getLogLevel(char short_log_format_char) {
     Level level {};
     switch(short_log_format_char) {
     case 'T': level = TRACE; break;
@@ -52,7 +53,21 @@ Level CaribouLogger::getLogLevel(char short_log_format_char) {
     return level;
 }
 
-int CaribouLogger::sync() {
+PearyLogger::PearyLogger() : logger_("PEARY") {
+    // Create static stream for Peary
+    static std::ostream stream {this};
+    // Set short log format to filter log level
+    Log::setFormat(LogFormat::SHORT);
+    // Add stream to peary
+    Log::addStream(stream);
+}
+
+PearyLogger::~PearyLogger() {
+    // Delete log streams since logger goes out of scope
+    Log::clearStreams();
+}
+
+int PearyLogger::sync() {
     const auto message = this->view();
     // Get log level from message
     const auto level = getLogLevel(message.at(1));
@@ -68,17 +83,8 @@ int CaribouLogger::sync() {
     return 0;
 }
 
-std::ostream& CaribouLogger::stream() {
-    static std::ostream stream {this};
-    return stream;
-}
-
 CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
     : Satellite(type, name), manager_(std::make_shared<DeviceManager>()) {
-
-    // Add logger
-    Log::setFormat(LogFormat::SHORT);
-    Log::addStream(caribou_logger_.stream());
 
     // Custom Caribou commands for this satellite
     register_command(
@@ -143,11 +149,6 @@ CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
                          std::lock_guard<std::mutex> lock {device_mutex_};
                          return device_->getADC(name);
                      }));
-}
-
-CaribouSatellite::~CaribouSatellite() {
-    // Delete log streams
-    Log::clearStreams();
 }
 
 void CaribouSatellite::initializing(constellation::config::Configuration& config) {
