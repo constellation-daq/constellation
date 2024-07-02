@@ -126,14 +126,14 @@ CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
                          return device_->getPower(name);
                      }));
     register_command("get_register",
-                     "Read the value of register on the attached Caribou device. Provide register name as parameter.",
+                     "Read the value of a register on the attached Caribou device. Provide register name as parameter.",
                      {State::INIT, State::ORBIT, State::RUN},
                      std::function<uintptr_t(const std::string&)>([&](auto name) {
                          std::lock_guard<std::mutex> lock {device_mutex_};
                          return device_->getRegister(name);
                      }));
     register_command("get_memory",
-                     "Read the value of FPGA memory register on the attached Caribou device. Provide memory register "
+                     "Read the value of a FPGA memory register on the attached Caribou device. Provide memory register "
                      "name as parameter.",
                      {State::INIT, State::ORBIT, State::RUN},
                      std::function<uintptr_t(const std::string&)>([&](auto name) {
@@ -141,7 +141,7 @@ CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
                          return device_->getMemory(name);
                      }));
     register_command("get_adc",
-                     "Read the voltage from the ADC voltage NAME (in V) via the attached Caribou device. Provide the "
+                     "Read the voltage from the Carboard ADC (in V) via the attached Caribou device. Provide the "
                      "voltage name as string.",
                      {State::INIT, State::ORBIT, State::RUN},
                      std::function<double(const std::string&)>([&](auto name) {
