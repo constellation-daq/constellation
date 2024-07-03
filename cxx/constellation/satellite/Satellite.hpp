@@ -164,7 +164,10 @@ namespace constellation::satellite {
                                    metrics::Type type,
                                    metrics::Clock::duration interval,
                                    std::initializer_list<State> states = {},
-                                   const config::Value& value = {});
+                                   const config::Value& value = {}) {
+            metrics_manager_.registerMetric(
+                name, std::make_shared<constellation::metrics::TimedMetric>(unit, type, interval, states, value));
+        }
 
         /**
          * Register a metric which will be emitted in regular intervals, evaluated from the provided function
@@ -181,7 +184,10 @@ namespace constellation::satellite {
                                    metrics::Type type,
                                    metrics::Clock::duration interval,
                                    std::initializer_list<State> states,
-                                   const std::function<config::Value()>& func);
+                                   const std::function<config::Value()>& func) {
+            metrics_manager_.registerMetric(
+                name, std::make_shared<constellation::metrics::TimedAutoMetric>(unit, type, interval, states, func));
+        }
 
         /**
          * Register a metric which will be emitted after having been triggered a given number of times
@@ -198,7 +204,10 @@ namespace constellation::satellite {
                                        metrics::Type type,
                                        std::size_t triggers,
                                        std::initializer_list<State> states = {},
-                                       const config::Value& value = {});
+                                       const config::Value& value = {}) {
+            metrics_manager_.registerMetric(
+                name, std::make_shared<constellation::metrics::TriggeredMetric>(unit, type, triggers, states, value));
+        }
 
         /**
          * Update the value cached for the given metric
@@ -206,7 +215,7 @@ namespace constellation::satellite {
          * \param topic Unique topic of the metric
          * \param value New value of the metric
          */
-        void set_metric(const std::string& topic, const config::Value& value);
+        void set_metric(const std::string& topic, const config::Value& value) { metrics_manager_.setMetric(topic, value); }
 
         /**
          * @brief Register a new user command
