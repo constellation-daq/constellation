@@ -30,10 +30,12 @@ namespace constellation::metrics {
         MetricsManager() : logger_("STAT"), thread_(std::bind_front(&MetricsManager::run, this)) {};
 
         // No copy/move constructor/assignment
+        /// @cond doxygen_suppress
         MetricsManager(MetricsManager& other) = delete;
         MetricsManager& operator=(MetricsManager other) = delete;
         MetricsManager(MetricsManager&& other) = delete;
         MetricsManager& operator=(MetricsManager&& other) = delete;
+        /// @endcond
 
         virtual ~MetricsManager() noexcept;
 
