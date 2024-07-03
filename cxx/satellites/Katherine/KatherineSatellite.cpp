@@ -34,6 +34,11 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     LOG(DEBUG) << "Attempting to connect to Katherine system at " << ip_address;
 
     try {
+        // If we already have a device connected, remove it - we might be calling initialize multiple times!
+        if(device_) {
+            device_.reset();
+        }
+
         // Connect to Katherine system, print device ID
         device_ = std::make_shared<katherine::device>(ip_address);
 
