@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <map>
@@ -89,7 +90,7 @@ namespace constellation::metrics {
         void run(const std::stop_token& stop_token);
 
         log::Logger logger_;
-        message::State current_state_ {message::State::NEW};
+        std::atomic<message::State> state_ {message::State::NEW};
 
         /** Map of registered metrics */
         std::map<std::string, std::shared_ptr<MetricTimer>, std::less<>> metrics_;

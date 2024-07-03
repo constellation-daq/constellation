@@ -36,7 +36,7 @@ MetricsManager::~MetricsManager() noexcept {
 void MetricsManager::updateState(State state) {
     const std::lock_guard lock {mt_};
 
-    current_state_ = state;
+    state_ = state;
 
     LOG(logger_, TRACE) << "Received state change, notifying metrics thread";
     cv_.notify_all();
@@ -84,7 +84,7 @@ void MetricsManager::run(const std::stop_token& stop_token) {
 
         auto next = Clock::time_point::max();
         for(auto& [key, metric] : metrics_) {
-            if(metric->check(current_state_)) {
+            if(metric->check(state_)) {
                 LOG(logger_, TRACE) << "Timer of metric \"" << key << "\" expired, sending...";
 
                 // Send this metric into the CMDP sink:
