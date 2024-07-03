@@ -6,3 +6,4 @@ method = cmake
 
 [provide]
 katherine = katherine_dep
+katherinexx = katherinexx_dep
