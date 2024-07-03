@@ -9,6 +9,7 @@
 
 #include "KatherineSatellite.hpp"
 
+#include <condition_variable>
 #include <fstream>
 #include <string_view>
 
@@ -155,6 +156,9 @@ void KatherineSatellite::starting(std::string_view) {
 
     acquisition_->set_frame_started_handler(std::bind_front(&KatherineSatellite::frame_started, this));
     acquisition_->set_frame_ended_handler(std::bind_front(&KatherineSatellite::frame_ended, this));
+
+    // Start the data acquisition:
+    acquisition_->begin(katherine_config_, ro_type);
 }
 
 void KatherineSatellite::stopping() {
@@ -164,7 +168,7 @@ void KatherineSatellite::stopping() {
                 << "dropped " << acquisition_->dropped_measurement_data() << " measurement data items";
 }
 
-void KatherineSatellite::running(const std::stop_token&) {
+void KatherineSatellite::running(const std::stop_token& stop_token) {
 
     // Start Katherine run thread:
     std::thread runthread([this]() {
@@ -179,7 +183,12 @@ void KatherineSatellite::running(const std::stop_token&) {
         }
     });
 
-    // FIXME - wait for stop token request and then:
+    // FIXME - wait for stop token request and then - is there a better method?
+    std::condition_variable_any cv;
+    std::mutex cv_m;
+    cv.wait(cv_m, stop_token, [&] { return stop_token.stop_requested(); });
+
+    // End the acquisition:
     acquisition_->abort();
 
     // Join thread once it is done
