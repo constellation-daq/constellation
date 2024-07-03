@@ -338,12 +338,10 @@ void BaseSatellite::store_config(config::Configuration&& config) {
     if(!unused_kvps.empty()) {
         LOG(logger_, WARNING) << unused_kvps.size() << " keys of the configuration were not used: "
                               << range_to_string(std::views::keys(unused_kvps));
-        // Only store used keys
-        config_ = {config.getDictionary(ALL, USED), true};
-    } else {
-        // Move configuration
-        config_ = std::move(config);
     }
+
+    // Move configuration
+    config_ = std::move(config);
 
     // Log config
     LOG(logger_, INFO) << "Configuration: " << config_.size(USER) << " settings" << config_.getDictionary(USER).to_string();
