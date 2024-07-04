@@ -29,7 +29,7 @@ requires-python = ">=3.11"
 dependencies = [
     "pyzmq",
     "msgpack",
-    "python-statemachine",
+    "python-statemachine>=2.3.3",
     "numpy",
     "coloredlogs",
     "psutil",
