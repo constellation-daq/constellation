@@ -213,5 +213,5 @@ void CMDPSink::sinkStats(const std::string& key, const std::shared_ptr<metrics::
     auto msghead = CMDP1Message::Header(sender_name_, std::chrono::system_clock::now());
 
     // Create and send CMDP message
-    CMDP1StatMessage(key, std::move(msghead), metric).assemble().send(publisher_);
+    CMDP1StatMessage(key, std::move(msghead), metric).assemble().send(pub_socket_);
 }
