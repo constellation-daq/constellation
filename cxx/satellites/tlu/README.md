@@ -1,5 +1,4 @@
 ## State -- Immature
-* Compiles, but does not start, because exe can not find uhal libaries.
 * Only initialization implemented for now.
 
 ## Needs
