@@ -101,8 +101,7 @@ void RunControlGUI::on_btnInit_clicked() {
 
     auto responses = runcontrol_.sendCommands("initialize", constellation::config::Dictionary());
     for(auto& response : responses) {
-        LOG(logger_, STATUS) << "Initialize: " << response.first << ": "
-                             << utils::to_string(response.second.getVerb().first);
+        LOG(logger_, DEBUG) << "Initialize: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
@@ -114,8 +113,8 @@ void RunControlGUI::on_btnTerminate_clicked() {
     } else {
         auto responses = runcontrol_.sendCommands("shutdown");
         for(auto& response : responses) {
-            LOG(logger_, STATUS) << "Shutdown: " << response.first << ": "
-                                 << utils::to_string(response.second.getVerb().first);
+            LOG(logger_, DEBUG) << "Shutdown: " << response.first << ": "
+                                << utils::to_string(response.second.getVerb().first);
         }
     }
 }
@@ -123,14 +122,14 @@ void RunControlGUI::on_btnTerminate_clicked() {
 void RunControlGUI::on_btnConfig_clicked() {
     auto responses = runcontrol_.sendCommands("launch");
     for(auto& response : responses) {
-        LOG(logger_, STATUS) << "Launch: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
+        LOG(logger_, DEBUG) << "Launch: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
 void RunControlGUI::on_btnLand_clicked() {
     auto responses = runcontrol_.sendCommands("land");
     for(auto& response : responses) {
-        LOG(logger_, STATUS) << "Land: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
+        LOG(logger_, DEBUG) << "Land: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
@@ -149,14 +148,14 @@ void RunControlGUI::on_btnStart_clicked() {
     auto responses = runcontrol_.sendCommands("start", std::to_string(current_run_nr_));
 
     for(auto& response : responses) {
-        LOG(logger_, STATUS) << "Start: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
+        LOG(logger_, DEBUG) << "Start: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
 void RunControlGUI::on_btnStop_clicked() {
     auto responses = runcontrol_.sendCommands("stop");
     for(auto& response : responses) {
-        LOG(logger_, STATUS) << "Stop: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
+        LOG(logger_, DEBUG) << "Stop: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
@@ -193,7 +192,8 @@ State RunControlGUI::updateInfos() {
     QRegExp rx_conf(".+(\\.conf$)");
     bool confLoaded = rx_conf.exactMatch(txtConfigFileName->text());
 
-    btnInit->setEnabled((state == State::NEW || state == State::INIT || state == State::ERROR) && confLoaded);
+    btnInit->setEnabled((state == State::NEW || state == State::INIT || state == State::ERROR || state == State::SAFE) &&
+                        confLoaded);
     btnLand->setEnabled(state == State::ORBIT);
     btnConfig->setEnabled(state == State::INIT);
     btnLoadConf->setEnabled(state != State::RUN || state != State::ORBIT);
@@ -516,16 +516,16 @@ int main(int argc, char** argv) {
     SinkManager::getInstance().setGlobalConsoleLevel(default_level.value());
 
     // Check broadcast and any address
-    asio::ip::address brd_addr {};
+    asio::ip::address_v4 brd_addr {};
     try {
-        brd_addr = asio::ip::address::from_string(get_arg(parser, "brd"));
+        brd_addr = asio::ip::make_address_v4(get_arg(parser, "brd"));
     } catch(const asio::system_error& error) {
         LOG(logger, CRITICAL) << "Invalid broadcast address \"" << get_arg(parser, "brd") << "\"";
         return 1;
     }
-    asio::ip::address any_addr {};
+    asio::ip::address_v4 any_addr {};
     try {
-        any_addr = asio::ip::address::from_string(get_arg(parser, "any"));
+        any_addr = asio::ip::make_address_v4(get_arg(parser, "any"));
     } catch(const asio::system_error& error) {
         LOG(logger, CRITICAL) << "Invalid any address \"" << get_arg(parser, "any") << "\"";
         return 1;
