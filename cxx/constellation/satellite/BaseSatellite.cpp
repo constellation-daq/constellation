@@ -61,7 +61,7 @@ using namespace std::chrono_literals;
 BaseSatellite::BaseSatellite(std::string_view type, std::string_view name)
     : logger_("SATELLITE"), cscp_rep_socket_(*global_zmq_context(), zmq::socket_type::rep),
       cscp_port_(bind_ephemeral_port(cscp_rep_socket_)), satellite_type_(type), satellite_name_(name), fsm_(this),
-      cscp_logger_("CSCP"), heartbeat_manager_(
+      cscp_logger_("CSCP"), metrics_manager_([&]() { return fsm_.getState(); }), heartbeat_manager_(
                                 getCanonicalName(),
                                 [&]() { return fsm_.getState(); },
                                 [&](std::string_view reason) { fsm_.requestInterrupt(reason); }) {

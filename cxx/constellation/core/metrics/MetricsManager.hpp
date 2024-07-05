@@ -27,7 +27,12 @@ namespace constellation::metrics {
     /** Manager for Metrics handling & transmission */
     class CNSTLN_API MetricsManager {
     public:
-        MetricsManager() : logger_("STAT"), thread_(std::bind_front(&MetricsManager::run, this)) {};
+        /**
+         * @brief MetricManager taking care of emitting metrics messages
+         *
+         * @param state_callback Callback to fetch the current state from the finite state machine
+         */
+        MetricsManager(std::function<message::State()> state_callback);
 
         // No copy/move constructor/assignment
         /// @cond doxygen_suppress
@@ -38,15 +43,6 @@ namespace constellation::metrics {
         /// @endcond
 
         virtual ~MetricsManager() noexcept;
-
-        /**
-         * @brief Update the current state of the sender
-         * @details This method will receive the latest state from the FSM such that metrics with designated states are only
-         * broadcast when appropriate.
-         *
-         * @param state New state
-         */
-        CNSTLN_API void updateState(message::State state);
 
         /**
          * Update the value cached for the given metric
@@ -92,7 +88,9 @@ namespace constellation::metrics {
         void run(const std::stop_token& stop_token);
 
         log::Logger logger_;
-        std::atomic<message::State> state_ {message::State::NEW};
+
+        /** Function returning the current state */
+        std::function<message::State()> state_callback_;
 
         /** Map of registered metrics */
         std::map<std::string, std::shared_ptr<MetricTimer>, std::less<>> metrics_;

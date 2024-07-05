@@ -24,6 +24,9 @@ using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::metrics;
 
+MetricsManager::MetricsManager(std::function<State()> state_callback)
+    : logger_("STAT"), state_callback_(std::move(state_callback)), thread_(std::bind_front(&MetricsManager::run, this)) {};
+
 MetricsManager::~MetricsManager() noexcept {
     thread_.request_stop();
     cv_.notify_all();
@@ -31,15 +34,6 @@ MetricsManager::~MetricsManager() noexcept {
     if(thread_.joinable()) {
         thread_.join();
     }
-}
-
-void MetricsManager::updateState(State state) {
-    const std::lock_guard lock {mt_};
-
-    state_ = state;
-
-    LOG(logger_, TRACE) << "Received state change, notifying metrics thread";
-    cv_.notify_all();
 }
 
 void MetricsManager::setMetric(std::string_view topic, const config::Value& value) {
@@ -84,7 +78,7 @@ void MetricsManager::run(const std::stop_token& stop_token) {
 
         auto next = Clock::time_point::max();
         for(auto& [key, metric] : metrics_) {
-            if(metric->check(state_)) {
+            if(metric->check(state_callback_())) {
                 LOG(logger_, TRACE) << "Timer of metric \"" << key << "\" expired, sending...";
 
                 // Send this metric into the CMDP sink:
