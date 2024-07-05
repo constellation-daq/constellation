@@ -102,8 +102,8 @@ void TluSatellite::landing() {
 
 void TluSatellite::reconfiguring(const constellation::config::Configuration& /*partial_config*/) {}
 
-void TluSatellite::starting(std::uint32_t run_number) {
-    LOG(logger_, INFO) << "Starting run " << run_number << "...";
+void TluSatellite::starting(std::string_view run_identifier) {
+    LOG(logger_, INFO) << "Starting run " << run_identifier << "...";
 }
 
 void TluSatellite::stopping() {
