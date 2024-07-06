@@ -213,10 +213,10 @@
           <bool>false</bool>
          </property>
          <property name="toolTip">
-          <string>Reset all satellites</string>
+          <string>Recover satellites from safe mode</string>
          </property>
          <property name="text">
-          <string>Reset</string>
+          <string>Recover</string>
          </property>
         </widget>
        </item>

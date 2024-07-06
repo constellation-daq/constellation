@@ -160,7 +160,10 @@ void RunControlGUI::on_btnStop_clicked() {
 }
 
 void RunControlGUI::on_btnReset_clicked() {
-    // FIXME reset?
+    auto responses = runcontrol_.sendCommands("recover");
+    for(auto& response : responses) {
+        LOG(logger_, DEBUG) << "Recover: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
+    }
 }
 
 void RunControlGUI::on_btnLog_clicked() {
@@ -170,7 +173,8 @@ void RunControlGUI::on_btnLog_clicked() {
 
 void RunControlGUI::on_btnLoadConf_clicked() {
     QString usedpath = QFileInfo(txtConfigFileName->text()).path();
-    QString filename = QFileDialog::getOpenFileName(this, tr("Open File"), usedpath, tr("*.conf (*.conf)"));
+    QString filename =
+        QFileDialog::getOpenFileName(this, tr("Open File"), usedpath, tr("Configurations (*.conf *.toml *.ini)"));
     if(!filename.isNull()) {
         txtConfigFileName->setText(filename);
     }
@@ -188,8 +192,7 @@ State RunControlGUI::updateInfos() {
 
     auto state = runcontrol_.getLowestState();
 
-    QRegExp rx_init(".+(\\.ini$)");
-    QRegExp rx_conf(".+(\\.conf$)");
+    QRegExp rx_conf(".+(\\.conf$|\\.ini$|\\.toml$)");
     bool confLoaded = rx_conf.exactMatch(txtConfigFileName->text());
 
     btnInit->setEnabled((state == State::NEW || state == State::INIT || state == State::ERROR || state == State::SAFE) &&
@@ -199,9 +202,8 @@ State RunControlGUI::updateInfos() {
     btnLoadConf->setEnabled(state != State::RUN || state != State::ORBIT);
     btnStart->setEnabled(state == State::ORBIT);
     btnStop->setEnabled(state == State::RUN);
-    // FIXME
-    // btnReset->setEnabled(state != State::RUN);
-    // btnTerminate->setEnabled(state != State::STATE_RUNNING);
+    btnReset->setEnabled(state == State::SAFE);
+    btnTerminate->setEnabled(state == State::SAFE || state == State::INIT || state == State::NEW);
 
     lblCurrent->setText(state_str_.at(state));
 
