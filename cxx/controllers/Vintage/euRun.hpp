@@ -56,7 +56,9 @@ private:
     QRunControl runcontrol_;
     constellation::log::Logger logger_;
     constellation::log::Logger user_logger_;
-    std::uint32_t current_run_nr_;
+
+    QString current_run_nr_;
+    QString m_run_n_qsettings;
 
     static std::map<constellation::satellite::State, QString> state_str_;
     std::map<QString, QString> m_map_label_str;
@@ -65,7 +67,6 @@ private:
     QTimer m_timer_display;
     std::map<QString, QLabel*> m_str_label;
 
-    uint32_t m_run_n_qsettings;
     int m_display_col, m_display_row;
     QMenu* contextMenu;
     bool m_lastexit_success;
