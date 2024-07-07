@@ -1,5 +1,7 @@
 #include "euRun.hpp"
 
+#include <chrono>
+#include <format>
 #include <fstream>
 #include <iostream>
 
@@ -21,7 +23,7 @@ using namespace constellation::utils;
 
 RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view group_name)
     : QMainWindow(), runcontrol_(controller_name), logger_("GUI"), user_logger_("OP"), m_display_col(0), m_display_row(0) {
-    m_map_label_str = {{"RUN", "Run"}};
+    m_map_label_str = {{"RUN", "Run"}, {"DUR", "Duration"}};
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
 
@@ -154,6 +156,9 @@ void RunControlGUI::on_btnStart_clicked() {
     // FIXME run number
     auto responses = runcontrol_.sendCommands("start", current_run_.toStdString());
 
+    // Start timer for this run
+    run_timer_.start();
+
     for(auto& response : responses) {
         LOG(logger_, DEBUG) << "Start: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
@@ -164,6 +169,9 @@ void RunControlGUI::on_btnStop_clicked() {
     for(auto& response : responses) {
         LOG(logger_, DEBUG) << "Stop: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
+
+    // Invalidate run timer:
+    run_timer_.invalidate();
 
     // Increment run sequence:
     qsettings_run_seq_++;
@@ -232,6 +240,14 @@ State RunControlGUI::updateInfos() {
             m_str_label.at("RUN")->setText(current_run_);
         } else {
             m_str_label.at("RUN")->setText(current_run_ + " (next run)");
+        }
+    }
+
+    if(m_str_label.count("DUR")) {
+        // Update only when valid:
+        if(run_timer_.isValid()) {
+            auto duration = std::format("{:%H:%M:%S}", std::chrono::milliseconds(run_timer_.elapsed()));
+            m_str_label.at("DUR")->setText(QString::fromStdString(duration));
         }
     }
 

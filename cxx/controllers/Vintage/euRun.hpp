@@ -3,6 +3,7 @@
 
 #include <QCloseEvent>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileDialog>
 #include <QGridLayout>
 #include <QInputDialog>
@@ -61,6 +62,8 @@ private:
     QString current_run_;
     QString qsettings_run_id_;
     int qsettings_run_seq_;
+
+    QElapsedTimer run_timer_;
 
     static std::map<constellation::satellite::State, QString> state_str_;
     std::map<QString, QString> m_map_label_str;
