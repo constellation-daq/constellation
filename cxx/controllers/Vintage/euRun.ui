@@ -16,6 +16,10 @@
   <property name="windowTitle">
    <string>Constellation Run Control</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="euRun.qrc">
+    <normaloff>:/logo.png</normaloff>:/logo.png</iconset>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout">
     <property name="spacing">
@@ -81,7 +85,7 @@
           <string/>
          </property>
          <property name="pixmap">
-          <pixmap>../../../docs/logo/logo.png</pixmap>
+          <pixmap resource="euRun.qrc">:/logo.png</pixmap>
          </property>
          <property name="scaledContents">
           <bool>true</bool>
@@ -436,7 +440,9 @@
    </property>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="euRun.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>txtLogmsg</sender>
