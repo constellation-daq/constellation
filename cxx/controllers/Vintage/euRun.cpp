@@ -19,13 +19,15 @@ using namespace constellation::log;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 
-RunControlGUI::RunControlGUI(std::string_view controller_name)
+RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view group_name)
     : QMainWindow(), runcontrol_(controller_name), logger_("GUI"), user_logger_("OP"), m_display_col(0), m_display_row(0) {
     m_map_label_str = {{"RUN", "Run Number"}};
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
 
+    cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
     lblCurrent->setText(state_str_.at(State::NEW));
+
     for(auto& label_str : m_map_label_str) {
         QLabel* lblname = new QLabel(grpStatus);
         lblname->setObjectName("lbl_st_" + label_str.first);
@@ -250,19 +252,19 @@ void RunControlGUI::Exec() {
 }
 
 std::map<satellite::State, QString> RunControlGUI::state_str_ = {
-    {State::NEW, "<font size=12 color='gray'><b>Current State: New </b></font>"},
-    {State::initializing, "<font size=12 color='gray'><b>Current State: Initializing... </b></font>"},
-    {State::INIT, "<font size=12 color='gray'><b>Current State: Initialized </b></font>"},
-    {State::launching, "<font size=12 color='orange'><b>Current State: Launching... </b></font>"},
-    {State::landing, "<font size=12 color='orange'><b>Current State: Landing... </b></font>"},
-    {State::reconfiguring, "<font size=12 color='orange'><b>Current State: Reconfiguring... </b></font>"},
-    {State::ORBIT, "<font size=12 color='orange'><b>Current State: Orbiting </b></font>"},
-    {State::starting, "<font size=12 color='green'><b>Current State: Starting... </b></font>"},
-    {State::stopping, "<font size=12 color='green'><b>Current State: Stopping... </b></font>"},
-    {State::RUN, "<font size=12 color='green'><b>Current State: Running </b></font>"},
-    {State::SAFE, "<font size=12 color='red'><b>Current State: Safe Mode </b></font>"},
-    {State::interrupting, "<font size=12 color='red'><b>Current State: Interrupting... </b></font>"},
-    {State::ERROR, "<font size=12 color='darkred'><b>Current State: Error </b></font>"}};
+    {State::NEW, "<font color='gray'><b>New</b></font>"},
+    {State::initializing, "<font color='gray'><b>Initializing...</b></font>"},
+    {State::INIT, "<font color='gray'><b>Initialized</b></font>"},
+    {State::launching, "<font color='orange'><b>Launching...</b></font>"},
+    {State::landing, "<font color='orange'><b>Landing...</b></font>"},
+    {State::reconfiguring, "<font color='orange'><b>Reconfiguring...</b></font>"},
+    {State::ORBIT, "<font color='orange'><b>Orbiting</b></font>"},
+    {State::starting, "<font color='green'><b>Starting...</b></font>"},
+    {State::stopping, "<font color='green'><b>Stopping...</b></font>"},
+    {State::RUN, "<font color='green'><b>Running</b></font>"},
+    {State::SAFE, "<font color='red'><b>Safe Mode</b></font>"},
+    {State::interrupting, "<font color='red'><b>Interrupting...</b></font>"},
+    {State::ERROR, "<font color='darkred'><b>Error</b></font>"}};
 
 void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     QModelIndex index = viewConn->indexAt(point);
@@ -550,7 +552,7 @@ int main(int argc, char** argv) {
     // Register CMDP in CHIRP and set sender name for CMDP
     SinkManager::getInstance().enableCMDPSending(controller_name);
 
-    RunControlGUI gui(controller_name);
+    RunControlGUI gui(controller_name, parser.get("group"));
     gui.Exec();
     return 0;
 }

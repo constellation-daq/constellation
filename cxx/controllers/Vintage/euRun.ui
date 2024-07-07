@@ -19,26 +19,32 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout">
     <property name="spacing">
-     <number>4</number>
+     <number>8</number>
     </property>
     <property name="leftMargin">
-     <number>4</number>
+     <number>9</number>
     </property>
     <property name="topMargin">
-     <number>4</number>
+     <number>9</number>
     </property>
     <property name="rightMargin">
-     <number>4</number>
+     <number>9</number>
     </property>
     <property name="bottomMargin">
-     <number>4</number>
+     <number>9</number>
     </property>
     <item>
-     <widget class="QGroupBox" name="grpCurrentState">
-      <property name="title">
-       <string>State:</string>
+     <widget class="QWidget" name="widget" native="true">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
       </property>
-      <layout class="QHBoxLayout">
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>15</number>
+       </property>
        <property name="leftMargin">
         <number>0</number>
        </property>
@@ -49,13 +55,99 @@
         <number>0</number>
        </property>
        <property name="bottomMargin">
-        <number>0</number>
+        <number>10</number>
        </property>
        <item>
-        <widget class="QLabel" name="lblCurrent">
-         <property name="text">
-          <string>Current State:</string>
+        <widget class="QLabel" name="label_2">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
+         <property name="minimumSize">
+          <size>
+           <width>45</width>
+           <height>45</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>45</width>
+           <height>45</height>
+          </size>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="pixmap">
+          <pixmap>../../../docs/logo/logo.png</pixmap>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="cnstlnBox">
+         <property name="title">
+          <string>Constellation</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <property name="topMargin">
+           <number>3</number>
+          </property>
+          <property name="bottomMargin">
+           <number>3</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="cnstlnName">
+            <property name="text">
+             <string>&lt;font color='gray'&gt;&lt;b&gt;groupname&lt;/b&gt;&lt;/font&gt;</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="stateBox">
+         <property name="title">
+          <string>State</string>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+         <layout class="QHBoxLayout">
+          <property name="spacing">
+           <number>9</number>
+          </property>
+          <property name="leftMargin">
+           <number>9</number>
+          </property>
+          <property name="topMargin">
+           <number>3</number>
+          </property>
+          <property name="rightMargin">
+           <number>9</number>
+          </property>
+          <property name="bottomMargin">
+           <number>3</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="lblCurrent">
+            <property name="frameShape">
+             <enum>QFrame::Shape::NoFrame</enum>
+            </property>
+            <property name="text">
+             <string>&lt;font color='gray'&gt;&lt;b&gt;New&lt;/b&gt;&lt;/font&gt;</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
       </layout>
@@ -68,69 +160,20 @@
       </property>
       <layout class="QGridLayout">
        <property name="leftMargin">
-        <number>0</number>
+        <number>9</number>
        </property>
        <property name="topMargin">
-        <number>0</number>
+        <number>9</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>9</number>
        </property>
        <property name="bottomMargin">
-        <number>0</number>
+        <number>9</number>
        </property>
-       <property name="horizontalSpacing">
+       <property name="spacing">
         <number>8</number>
        </property>
-       <property name="verticalSpacing">
-        <number>4</number>
-       </property>
-       <item row="0" column="5">
-        <widget class="QPushButton" name="btnInit">
-         <property name="text">
-          <string>Initialize</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="6">
-        <widget class="QPushButton" name="btnStop">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="toolTip">
-          <string>Stop the run</string>
-         </property>
-         <property name="text">
-          <string>Stop</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="6">
-        <widget class="QPushButton" name="btnReset">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="toolTip">
-          <string>Recover satellites from safe mode</string>
-         </property>
-         <property name="text">
-          <string>Recover</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="4">
-        <widget class="QPushButton" name="btnLog">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="toolTip">
-          <string>Send a log message</string>
-         </property>
-         <property name="text">
-          <string>Log</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="2">
         <widget class="QLineEdit" name="txtInitFileName">
          <property name="text">
@@ -158,47 +201,17 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="5">
-        <widget class="QPushButton" name="btnStart">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="toolTip">
-          <string>Start a run</string>
-         </property>
-         <property name="text">
-          <string>Start</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="4">
-        <widget class="QPushButton" name="btnLoadConf">
-         <property name="text">
-          <string>Load</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="2" colspan="2">
-        <widget class="QLineEdit" name="txtLogmsg">
-         <property name="toolTip">
-          <string>Send a log message</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="4">
-        <widget class="QSpinBox" name="runSequence">
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Run sequence&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="maximum">
-          <number>999999</number>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="0">
         <widget class="QLabel" name="lblConfig">
          <property name="text">
           <string>Configuration: </string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="lblLogmsg">
+         <property name="text">
+          <string>Log: </string>
          </property>
         </widget>
        </item>
@@ -221,8 +234,61 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="2">
-        <widget class="QLineEdit" name="runIdentifier"/>
+       <item row="2" column="6">
+        <widget class="QPushButton" name="btnStop">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string>Stop the run</string>
+         </property>
+         <property name="text">
+          <string>Stop</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="4">
+        <widget class="QSpinBox" name="runSequence">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Run sequence&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="maximum">
+          <number>999999</number>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="6">
+        <widget class="QPushButton" name="btnReset">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string>Recover satellites from safe mode</string>
+         </property>
+         <property name="text">
+          <string>Recover</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="5">
+        <widget class="QPushButton" name="btnInit">
+         <property name="text">
+          <string>Initialize</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="5">
+        <widget class="QPushButton" name="btnStart">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string>Start a run</string>
+         </property>
+         <property name="text">
+          <string>Start</string>
+         </property>
+        </widget>
        </item>
        <item row="2" column="3">
         <widget class="QLabel" name="label">
@@ -230,6 +296,22 @@
           <string>Sequence:</string>
          </property>
         </widget>
+       </item>
+       <item row="3" column="4">
+        <widget class="QPushButton" name="btnLog">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string>Send a log message</string>
+         </property>
+         <property name="text">
+          <string>Log</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLineEdit" name="runIdentifier"/>
        </item>
        <item row="1" column="5">
         <widget class="QPushButton" name="btnConfig">
@@ -250,6 +332,20 @@
          </property>
         </widget>
        </item>
+       <item row="0" column="4">
+        <widget class="QPushButton" name="btnLoadConf">
+         <property name="text">
+          <string>Load</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2" colspan="2">
+        <widget class="QLineEdit" name="txtLogmsg">
+         <property name="toolTip">
+          <string>Send a log message</string>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="2" colspan="2">
         <widget class="QLineEdit" name="txtConfigFileName">
          <property name="whatsThis">
@@ -257,13 +353,6 @@
          </property>
          <property name="text">
           <string>Configuration file not set</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QLabel" name="lblLogmsg">
-         <property name="text">
-          <string>Log: </string>
          </property>
         </widget>
        </item>

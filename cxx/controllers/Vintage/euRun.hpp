@@ -19,7 +19,7 @@ class RunControlGUI : public QMainWindow, public Ui::wndRun {
 
     Q_OBJECT
 public:
-    RunControlGUI(std::string_view controller_name);
+    RunControlGUI(std::string_view controller_name, std::string_view group_name);
 
     void Exec();
 
