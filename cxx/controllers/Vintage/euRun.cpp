@@ -87,7 +87,7 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     btnStart->setEnabled(1);
     btnStop->setEnabled(1);
     btnReset->setEnabled(1);
-    btnTerminate->setEnabled(1);
+    btnShutdown->setEnabled(1);
     btnLog->setEnabled(1);
 
     QSettings settings_output("Constellation collaboration", "Constellation");
@@ -107,7 +107,7 @@ void RunControlGUI::on_btnInit_clicked() {
     }
 }
 
-void RunControlGUI::on_btnTerminate_clicked() {
+void RunControlGUI::on_btnShutdown_clicked() {
     // We don't close the GUI but shutdown satellites instead:
     if(QMessageBox::question(this, "Quitting", "Shutdown all satellites?", QMessageBox::Ok | QMessageBox::Cancel) ==
        QMessageBox::Cancel) {
@@ -204,7 +204,7 @@ State RunControlGUI::updateInfos() {
     btnStart->setEnabled(state == State::ORBIT);
     btnStop->setEnabled(state == State::RUN);
     btnReset->setEnabled(state == State::SAFE);
-    btnTerminate->setEnabled(state == State::SAFE || state == State::INIT || state == State::NEW);
+    btnShutdown->setEnabled(state == State::SAFE || state == State::INIT || state == State::NEW);
 
     lblCurrent->setText(state_str_.at(state));
 
