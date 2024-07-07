@@ -50,7 +50,7 @@ private:
     bool updateStatusDisplay();
     bool addToGrid(const QString& objectName, QString displayedName = "");
     bool addAdditionalStatus(std::string info);
-    bool checkFile(QString file, QString usecase);
+    std::map<std::string, constellation::controller::Controller::CommandPayload> parseConfigFile(QString file);
 
     bool allConnectionsInState(constellation::satellite::State state);
 

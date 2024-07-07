@@ -17,6 +17,7 @@
 
 using namespace constellation;
 using namespace constellation::chirp;
+using namespace constellation::controller;
 using namespace constellation::log;
 using namespace constellation::satellite;
 using namespace constellation::utils;
@@ -105,11 +106,15 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
 }
 
 void RunControlGUI::on_btnInit_clicked() {
-    std::string settings = txtConfigFileName->text().toStdString();
-    if(!checkFile(QString::fromStdString(settings), QString::fromStdString("config file")))
-        return;
+    // Read config file from UI
+    auto configs = parseConfigFile(txtConfigFileName->text());
 
-    auto responses = runcontrol_.sendCommands("initialize", constellation::config::Dictionary());
+    // Nothing read - nothing to do
+    if(configs.empty()) {
+        return;
+    }
+
+    auto responses = runcontrol_.sendCommands("initialize", configs);
     for(auto& response : responses) {
         LOG(logger_, DEBUG) << "Initialize: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
@@ -458,13 +463,14 @@ bool RunControlGUI::addAdditionalStatus(std::string info) {
     return true;
 }
 
-bool RunControlGUI::checkFile(QString file, QString usecase) {
+std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile(QString file) {
     QFileInfo check_file(file);
     if(!check_file.exists() || !check_file.isFile()) {
-        QMessageBox::warning(NULL, "ERROR", QString(usecase + " file does not exist."));
-        return false;
-    } else
-        return true;
+        QMessageBox::warning(NULL, "ERROR", "Configuration file does not exist.");
+        return {};
+    }
+
+    return {};
 }
 
 /**
