@@ -21,12 +21,12 @@ using namespace constellation::utils;
 
 RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view group_name)
     : QMainWindow(), runcontrol_(controller_name), logger_("GUI"), user_logger_("OP"), m_display_col(0), m_display_row(0) {
-    m_map_label_str = {{"RUN", "Run Number"}};
+    m_map_label_str = {{"RUN", "Run"}};
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
 
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
-    lblCurrent->setText(state_str_.at(State::NEW));
+    labelState->setText(state_str_.at(State::NEW));
 
     for(auto& label_str : m_map_label_str) {
         QLabel* lblname = new QLabel(grpStatus);
@@ -51,9 +51,15 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
 
     QRect geom(-1, -1, 150, 200);
     QRect geom_from_last_program_run;
-    QSettings settings("Constellation collaboration", "Constellation");
+
+    QSettings settings("Constellation", "Vintage");
     settings.beginGroup("qcontrol");
-    m_run_n_qsettings = settings.value("runidentifier", "run_0").toString();
+
+    qsettings_run_id_ = settings.value("runidentifier", "run").toString();
+    qsettings_run_seq_ = settings.value("runsequence", 0).toInt();
+    runIdentifier->setText(qsettings_run_id_);
+    runSequence->setValue(qsettings_run_seq_);
+
     m_lastexit_success = settings.value("successexit", 1).toUInt();
     geom_from_last_program_run.setSize(settings.value("size", geom.size()).toSize());
     geom_from_last_program_run.moveTo(settings.value("pos", geom.topLeft()).toPoint());
@@ -90,7 +96,7 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     btnShutdown->setEnabled(1);
     btnLog->setEnabled(1);
 
-    QSettings settings_output("Constellation collaboration", "Constellation");
+    QSettings settings_output("Constellation", "Vintage");
     settings_output.beginGroup("qcontrol");
     settings_output.setValue("successexit", 0);
     settings_output.endGroup();
@@ -136,17 +142,17 @@ void RunControlGUI::on_btnLand_clicked() {
 }
 
 void RunControlGUI::on_btnStart_clicked() {
-    QString qs_run_identifier = runIdentifier->text();
-    int qs_run_sequence = runSequence->value();
-    if(!qs_run_identifier.isEmpty()) {
-        current_run_nr_ = qs_run_identifier + "_";
+    qsettings_run_id_ = runIdentifier->text();
+    qsettings_run_seq_ = runSequence->value();
+    if(!qsettings_run_id_.isEmpty()) {
+        current_run_ = qsettings_run_id_ + "_";
     } else {
-        current_run_nr_.clear();
+        current_run_.clear();
     }
-    current_run_nr_ += QString::number(qs_run_sequence);
+    current_run_ += QString::number(qsettings_run_seq_);
 
     // FIXME run number
-    auto responses = runcontrol_.sendCommands("start", current_run_nr_.toStdString());
+    auto responses = runcontrol_.sendCommands("start", current_run_.toStdString());
 
     for(auto& response : responses) {
         LOG(logger_, DEBUG) << "Start: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
@@ -158,6 +164,10 @@ void RunControlGUI::on_btnStop_clicked() {
     for(auto& response : responses) {
         LOG(logger_, DEBUG) << "Stop: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
+
+    // Increment run sequence:
+    qsettings_run_seq_++;
+    runSequence->setValue(qsettings_run_seq_);
 }
 
 void RunControlGUI::on_btnReset_clicked() {
@@ -206,20 +216,22 @@ State RunControlGUI::updateInfos() {
     btnReset->setEnabled(state == State::SAFE);
     btnShutdown->setEnabled(state == State::SAFE || state == State::INIT || state == State::NEW);
 
-    lblCurrent->setText(state_str_.at(state));
+    labelState->setText(state_str_.at(state));
 
-    if(m_run_n_qsettings != current_run_nr_) {
-        m_run_n_qsettings = current_run_nr_;
-        QSettings settings("Constellation collaboration", "Constellation");
+    auto stored_run = qsettings_run_id_ + "_" + QString::number(qsettings_run_seq_);
+    if(stored_run != current_run_) {
+        current_run_ = stored_run;
+        QSettings settings("Constellation", "Vintage");
         settings.beginGroup("qcontrol");
-        settings.setValue("runidentifier", m_run_n_qsettings);
+        settings.setValue("runidentifier", qsettings_run_id_);
+        settings.setValue("runsequence", qsettings_run_seq_);
         settings.endGroup();
     }
     if(m_str_label.count("RUN")) {
         if(state == State::RUN) {
-            m_str_label.at("RUN")->setText(current_run_nr_);
+            m_str_label.at("RUN")->setText(current_run_);
         } else {
-            m_str_label.at("RUN")->setText(current_run_nr_ + " (next run)");
+            m_str_label.at("RUN")->setText(current_run_ + " (next run)");
         }
     }
 
@@ -227,12 +239,12 @@ State RunControlGUI::updateInfos() {
 }
 
 void RunControlGUI::closeEvent(QCloseEvent* event) {
-    QSettings settings("Constellation collaboration", "Constellation");
+    QSettings settings("Constellation", "Vintage");
     settings.beginGroup("qcontrol");
-    if(current_run_nr_ != 0)
-        settings.setValue("runidentifier", current_run_nr_);
-    else
-        settings.setValue("runidentifier", m_run_n_qsettings);
+
+    settings.setValue("runidentifier", qsettings_run_id_);
+    settings.setValue("runsequence", qsettings_run_seq_);
+
     settings.setValue("size", size());
     settings.setValue("pos", pos());
     settings.setValue("lastConfigFile", txtConfigFileName->text());
@@ -294,7 +306,7 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
 
     QAction* startAction = new QAction("Start", this);
     connect(startAction, &QAction::triggered, this, [this, index]() {
-        runcontrol_.sendQCommand(index, "start", current_run_nr_.toStdString());
+        runcontrol_.sendQCommand(index, "start", current_run_.toStdString());
     });
     contextMenu->addAction(startAction);
 

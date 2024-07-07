@@ -57,8 +57,10 @@ private:
     constellation::log::Logger logger_;
     constellation::log::Logger user_logger_;
 
-    QString current_run_nr_;
-    QString m_run_n_qsettings;
+    /* Run identifier */
+    QString current_run_;
+    QString qsettings_run_id_;
+    int qsettings_run_seq_;
 
     static std::map<constellation::satellite::State, QString> state_str_;
     std::map<QString, QString> m_map_label_str;
