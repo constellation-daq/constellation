@@ -204,13 +204,6 @@
           <item row="1" column="0">
            <widget class="QWidget" name="spacer" native="true"/>
           </item>
-          <item row="4" column="2" colspan="2">
-           <widget class="QLineEdit" name="txtLogmsg">
-            <property name="toolTip">
-             <string>Send a log message</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="labelConfig">
             <property name="text">
@@ -261,6 +254,23 @@
           </item>
           <item row="3" column="2">
            <widget class="QLineEdit" name="runIdentifier"/>
+          </item>
+          <item row="4" column="2">
+           <widget class="QLineEdit" name="txtLogmsg">
+            <property name="toolTip">
+             <string>Send a log message</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3">
+           <widget class="QComboBox" name="comboBoxLogLevel">
+            <property name="currentIndex">
+             <number>-1</number>
+            </property>
+            <property name="maxVisibleItems">
+             <number>6</number>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -487,6 +497,7 @@
   <tabstop>runIdentifier</tabstop>
   <tabstop>runSequence</tabstop>
   <tabstop>txtLogmsg</tabstop>
+  <tabstop>comboBoxLogLevel</tabstop>
   <tabstop>btnLog</tabstop>
   <tabstop>btnInit</tabstop>
   <tabstop>btnConfig</tabstop>

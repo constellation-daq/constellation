@@ -31,6 +31,12 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
     labelState->setText(state_str_.at(State::NEW));
 
+    for(const auto& lvl : {Level::TRACE, Level::DEBUG, Level::INFO, Level::WARNING, Level::STATUS, Level::CRITICAL}) {
+        comboBoxLogLevel->addItem(QString::fromStdString(utils::to_string(lvl)));
+    }
+    // Default to INFO
+    comboBoxLogLevel->setCurrentIndex(2);
+
     for(auto& label_str : m_map_label_str) {
         QLabel* lblname = new QLabel(grpStatus);
         lblname->setObjectName("lbl_st_" + label_str.first);
@@ -191,8 +197,10 @@ void RunControlGUI::on_btnReset_clicked() {
 }
 
 void RunControlGUI::on_btnLog_clicked() {
-    std::string msg = txtLogmsg->text().toStdString();
-    LOG(user_logger_, INFO) << msg;
+    const auto msg = txtLogmsg->text().toStdString();
+    const auto level = static_cast<Level>(comboBoxLogLevel->currentIndex());
+    LOG(user_logger_, level) << msg;
+    txtLogmsg->clear();
 }
 
 void RunControlGUI::on_btnLoadConf_clicked() {
