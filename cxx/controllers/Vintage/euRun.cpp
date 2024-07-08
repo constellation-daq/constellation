@@ -9,6 +9,8 @@
 #include <QApplication>
 #include <QDateTime>
 
+#include <toml++/toml.hpp>
+
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/logging/log.hpp"
@@ -488,11 +490,91 @@ std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile
         return {};
     }
 
-    auto connections = runcontrol_.getConnections();
+    // Parse input file:
+    LOG(logger_, DEBUG) << "Parsing configuration file " << check_file.canonicalFilePath().toStdString();
+    toml::table tbl;
+    try {
+        tbl = toml::parse_file(check_file.canonicalFilePath().toStdString());
+    } catch(const toml::parse_error& err) {
+        std::stringstream s;
+        s << err;
+        QMessageBox::warning(NULL, "ERROR", QString::fromStdString("Parsing failed: " + s.str()));
+        return {};
+    }
 
+    auto connections = runcontrol_.getConnections();
     std::map<std::string, Controller::CommandPayload> payloads;
     for(const auto& conn : connections) {
-        payloads.emplace(conn, config::Dictionary {});
+        // Trying to access the node of this satellite
+        if(const auto& node = tbl.at_path("satellites." + conn)) {
+            config::Dictionary dict {};
+
+            if(!node.is_table()) {
+                // throw
+            }
+
+            // Write individual keys
+            node.as_table()->for_each([&](const toml::key& key, auto&& val) {
+                if constexpr(toml::is_array<decltype(val)>) {
+                    if(val.is_homogeneous()) {
+                        const auto& arr = val.as_array();
+                        LOG(logger_, CRITICAL) << toml::node_view(arr->front()) << " -> " << arr->front().type();
+
+                        if(arr->empty()) {
+                            dict[std::string(key.str())] = std::monostate {};
+                        } else if(arr->front().is_integer()) {
+                            std::vector<std::int64_t> return_value;
+                            for(auto&& elem : *arr) {
+                                return_value.push_back(elem.as_integer()->get());
+                            }
+                            dict[std::string(key.str())] = std::move(return_value);
+                        } else if(arr->front().is_floating_point()) {
+                            std::vector<double> return_value;
+                            for(auto&& elem : *arr) {
+                                return_value.push_back(elem.as_floating_point()->get());
+                            }
+                            dict[std::string(key.str())] = std::move(return_value);
+                        } else if(arr->front().is_boolean()) {
+                            std::vector<bool> return_value;
+                            for(auto&& elem : *arr) {
+                                return_value.push_back(elem.as_boolean()->get());
+                            }
+                            dict[std::string(key.str())] = std::move(return_value);
+                        } else if(arr->front().is_string()) {
+                            std::vector<std::string> return_value;
+                            for(auto&& elem : *arr) {
+                                return_value.push_back(elem.as_string()->get());
+                            }
+                            dict[std::string(key.str())] = std::move(return_value);
+                        } else {
+                            LOG(logger_, WARNING) << "Unknown type of array for key " << key;
+                            // throw
+                        }
+                    } else {
+                        LOG(logger_, WARNING) << "Array with key " << key << " is not homogeneous";
+                        // throw
+                    }
+                } else {
+                    LOG(logger_, WARNING) << "is single value " << key;
+                    if constexpr(toml::is_integer<decltype(val)>) {
+                        dict[std::string(key.str())] = val.as_integer()->get();
+                    } else if constexpr(toml::is_floating_point<decltype(val)>) {
+                        dict[std::string(key.str())] = val.as_floating_point()->get();
+                    } else if constexpr(toml::is_boolean<decltype(val)>) {
+                        dict[std::string(key.str())] = val.as_boolean()->get();
+                    } else if constexpr(toml::is_string<decltype(val)>) {
+                        dict[std::string(key.str())] = val.as_string()->get();
+                    } else {
+                        LOG(logger_, WARNING) << "Unknown value type for key " << key;
+                        // throw
+                    }
+                }
+            });
+
+            payloads.emplace(conn, dict);
+        } else {
+            LOG(logger_, WARNING) << "Could not find node for " << std::quoted(conn);
+        }
     }
     return payloads;
 }
