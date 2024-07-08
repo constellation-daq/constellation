@@ -135,6 +135,18 @@ class CaenHvSatellite(Satellite):
             self.log.exception(e)
         return val
 
+    def get_channel_status(self, board: int, channel: int, par: str) -> str:
+        """Return the status of a given channel."""
+        if not self._ready():
+            return ""
+        try:
+            with self.caen as crate:
+                status = crate.boards[board].channels[channel].status
+        except Exception as e:
+            status = [f"{repr(e)}"]
+            self.log.exception(e)
+        return ", ".join(status)
+
     @cscp_requestable
     def get_parameter(self, request: CSCPMessage) -> Tuple[str, None, None]:
         """Return the value of a parameter.
@@ -210,6 +222,16 @@ class CaenHvSatellite(Satellite):
                             ),
                             10.0,
                         )
+                    self.schedule_metric(
+                        f"b{brdno}_ch{chno}_status",
+                        partial(
+                            self.get_channel_status,
+                            board=brdno,
+                            channel=chno,
+                            par=par,
+                        ),
+                        30.0,
+                    )
 
     def _power_up(self) -> int:
         """Loop over channels and enable them according to configuration."""
