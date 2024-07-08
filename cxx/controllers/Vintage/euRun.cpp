@@ -488,7 +488,13 @@ std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile
         return {};
     }
 
-    return {};
+    auto connections = runcontrol_.getConnections();
+
+    std::map<std::string, Controller::CommandPayload> payloads;
+    for(const auto& conn : connections) {
+        payloads.emplace(conn, config::Dictionary {});
+    }
+    return payloads;
 }
 
 /**
