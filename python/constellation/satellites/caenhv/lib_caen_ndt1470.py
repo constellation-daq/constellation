@@ -317,12 +317,12 @@ class CaenNDT1470Manager:
         return buffer
 
     def __enter__(self):
-        """Acquire the lock to prevent the keep-alive thread from interfering."""
+        """Acquire the lock to prevent the other threads from interfering."""
         self._lock.acquire()
         return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
-        """Release the lock to allow the keep-alive thread from continuing."""
+        """Release the lock to allow other threads access."""
         self._lock.release()
 
 

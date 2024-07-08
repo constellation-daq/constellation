@@ -229,6 +229,7 @@ class CaenHvSatellite(Satellite):
         with self.caen as crate:
             for brdno, brd in crate.boards.items():
                 for ch in brd.channels:
+                    self.log.debug(f"Powering down ch {ch.index} on board {brdno}")
                     ch.switch_off()
         self.log.info("All channels powered down.")
 
