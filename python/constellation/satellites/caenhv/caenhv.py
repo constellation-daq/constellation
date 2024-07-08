@@ -161,6 +161,37 @@ class CaenHvSatellite(Satellite):
         val = self.get_channel_value(board, chno, par)
         return val, None, None
 
+    def _get_parameter_is_allowed(self, request: CSCPMessage) -> bool:
+        return self._ready()
+
+    @cscp_requestable
+    def get_hv_status(self, request: CSCPMessage) -> Tuple[str, dict[str, str], None]:
+        """Return the collected state of all channels.
+
+        Payload: None.
+
+        """
+        res = {}
+        errors = []
+        npowered = 0
+        with self.caen as crate:
+            for brdno, brd in crate.boards.items():
+                for ch in brd.channels:
+                    status = ch.status
+                    if status:
+                        res[f"board{brdno}_ch{ch.index}"] = ", ".join(status)
+                        if any(s.lower() in ["on"] for s in status):
+                            npowered += 1
+                        if any(s.lower() not in ["on"] for s in status):
+                            errors.append(f"board{brdno}_ch{ch.index}")
+        msg = f"All OK, {npowered} powered"
+        if errors:
+            msg = "{npowered} powered, additional bits set in: " + ", ".join(errors)
+        return msg, res, None
+
+    def _get_status_is_allowed(self, request: CSCPMessage) -> bool:
+        return self._ready()
+
     @cscp_requestable
     def get_hw_config(self, request: CSCPMessage) -> Tuple[str, dict[str, str], None]:
         """Read and return the current hardware configuration.
