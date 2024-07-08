@@ -146,7 +146,8 @@ class CommandReceiver(BaseSatelliteFrame):
                 if not is_allowed:
                     self.log.error("Command not allowed: %s", req)
                     self._cmd_tm.send_reply(
-                        f"Not allowed: {req.msg_verb}", CSCPMessageVerb.INVALID
+                        "Command not allowed (in current state)",
+                        CSCPMessageVerb.INVALID,
                     )
                     continue
             except AttributeError:
