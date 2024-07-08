@@ -212,6 +212,8 @@ class CaenNDT1470Manager:
         server_address = (link_arg, 1470)  # default port for NDT1470: 1470
         # set timeout
         sock.settimeout(1)  # tcp connection will take time
+        # enable keepalive (Linux only)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         # establish connection
         sock.connect(server_address)
         return sock
