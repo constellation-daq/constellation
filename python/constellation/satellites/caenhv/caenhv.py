@@ -125,13 +125,7 @@ class CaenHvSatellite(Satellite):
 
     def get_channel_value(self, board: int, channel: int, par: str) -> Any:
         """Return the value of a given channel parameter."""
-        if SatelliteState[self.fsm.current_state.id] in [
-            SatelliteState.NEW,
-            SatelliteState.ERROR,
-            SatelliteState.DEAD,
-            SatelliteState.initializing,
-            SatelliteState.reconfiguring,
-        ]:
+        if not self._ready():
             return None
         try:
             with self.caen as crate:
@@ -164,14 +158,7 @@ class CaenHvSatellite(Satellite):
         Returns: dictionary with all R/W parameters and their current values.
 
         """
-        print(self.fsm.current_state)
-        if SatelliteState[self.fsm.current_state.id] in [
-            SatelliteState.NEW,
-            SatelliteState.ERROR,
-            SatelliteState.DEAD,
-            SatelliteState.initializing,
-            SatelliteState.reconfiguring,
-        ]:
+        if not self._ready():
             raise RuntimeError(
                 f"Command not allowed in state '{self.fsm.current_state.id}'"
             )
@@ -244,6 +231,18 @@ class CaenHvSatellite(Satellite):
                             )
                             ch.switch_off()
         return npowered
+
+    def _ready(self) -> bool:
+        """From the FSM state, determine whether we are ready."""
+        if SatelliteState[self.fsm.current_state.id] in [
+            SatelliteState.NEW,
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return False
+        return True
 
 
 # ---
