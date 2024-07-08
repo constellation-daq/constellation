@@ -225,7 +225,7 @@ class CaenHvSatellite(Satellite):
                         )
 
     def _power_up(self) -> int:
-        """Loop over channels and power them if they were configured such."""
+        """Loop over channels and enable them according to configuration."""
         npowered = 0  # number of powered channels
         with self.caen as crate:
             for brdno, brd in crate.boards.items():
@@ -237,6 +237,12 @@ class CaenHvSatellite(Satellite):
                         self.log.debug("Powering board %s channel %s", brdno, chno)
                         ch.switch_on()
                         npowered += 1
+                    else:
+                        if ch.is_powered():
+                            self.log.info(
+                                "Powering DOWN board %s channel %s", brdno, chno
+                            )
+                            ch.switch_off()
         return npowered
 
 
