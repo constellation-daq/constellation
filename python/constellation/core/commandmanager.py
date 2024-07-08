@@ -248,7 +248,9 @@ class CommandReceiver(BaseSatelliteFrame):
         # Controller)
         def reentry_timer(sat: BaseSatelliteFrame) -> None:
             time.sleep(0.5)
-            sat.reentry()
+            import sys
+
+            sys.exit(0)
 
         # This command is put into the queue: it will only execute after
         # previously queued actions (e.g. state transitions) have been
