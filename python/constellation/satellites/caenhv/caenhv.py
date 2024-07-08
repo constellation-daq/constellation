@@ -148,7 +148,7 @@ class CaenHvSatellite(Satellite):
         return ", ".join(status)
 
     @cscp_requestable
-    def get_parameter(self, request: CSCPMessage) -> Tuple[str, None, None]:
+    def get_parameter(self, request: CSCPMessage) -> Tuple[Any, None, None]:
         """Return the value of a parameter.
 
         Payload: dictionary with 'board', 'channel' and 'parameter' keys
