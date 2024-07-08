@@ -442,6 +442,7 @@ class BaseController(CHIRPBroadcaster):
             pass
         try:
             self._hb_checker.stop()
+            self._hb_checker.close()
         except Exception as e:
             self.log.warning(
                 "Encountered problem shutting heartbeat checker down: %s", repr(e)

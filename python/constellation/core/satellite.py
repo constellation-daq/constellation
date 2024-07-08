@@ -346,6 +346,8 @@ class Satellite(
                             "Timeout while joining state thread, continuing."
                         )
             res: str = self.fail_gracefully()
+            # close heartbeat checker
+            self.hb_checker.close()
             return res
         # NOTE: we cannot have a non-handled exception disallow the state
         # transition to failure state!

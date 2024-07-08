@@ -12,9 +12,33 @@ import zmq
 
 from typing import Optional, Callable, Any
 from .fsm import SatelliteState
-from .chp import CHPTransmitter
+from .chp import CHPDecodeMessage
 
 logger = logging.getLogger("HeartbeatChecker")
+
+
+class HeartbeatState:
+    def __init__(self, name: str, evt: threading.Event, lives: int, interval: int):
+        self.name = name
+        self.lives = lives
+        self.interval = interval
+        self.last_refresh = datetime.now()
+        self.state = SatelliteState.NEW
+        self.failed: threading.Event = evt
+        self._started = False
+
+    def refresh(self, ts: datetime | None = None) -> None:
+        if not ts:
+            self.last_refresh = datetime.now()
+        else:
+            self.last_refresh = ts
+        self._started = True
+
+    @property
+    def seconds_since_refresh(self) -> float:
+        if not self._started:
+            return 0.0
+        return (datetime.now() - self.last_refresh).total_seconds()
 
 
 class HeartbeatChecker:
@@ -36,12 +60,12 @@ class HeartbeatChecker:
     ) -> None:
         self._callback = callback
         self._callback_lock = threading.Lock()
-        self._transmitters = dict[str, CHPTransmitter]()
-        self._threads = dict[str, threading.Thread]()
+        self._threads: threading.Thread | None = None
         self._stop_threads: threading.Event | None = None
-        self._states_lock = threading.Lock()
-        self._states = dict[str, SatelliteState]()
-        self._failed = dict[str, threading.Event]()
+        self._poller = zmq.Poller()
+        # dict to keep states mapped to socket
+        self._states = dict[zmq.Socket, HeartbeatState]()
+
         self.auto_recover = False  # clear fail Event if Satellite reappears?
 
     def register(
@@ -56,101 +80,104 @@ class HeartbeatChecker:
         socket = ctx.socket(zmq.SUB)
         socket.connect(address)
         socket.setsockopt_string(zmq.SUBSCRIBE, "")
-        tm = CHPTransmitter(name, socket)
         evt = threading.Event()
-        self._transmitters[name] = tm
-        self._failed[name] = evt
+        self._states[socket] = HeartbeatState(
+            name, evt, self.HB_INIT_LIVES, self.HB_INIT_PERIOD
+        )
         logger.info(f"Registered heartbeating check for {address}")
         return evt
 
     def is_registered(self, name: str) -> bool:
         """Check whether a given Satellite is already registered."""
-        return name in self._transmitters.keys()
+        registered = False
+        for hb in self._states.values():
+            if hb.name == name:
+                registered = True
+                break
+        return registered
 
     @property
     def states(self) -> dict[str, SatelliteState]:
         """Return a dictionary of the monitored Satellites' state."""
-        return self._states
+        res = {}
+        for hb in self._states.values():
+            res[hb.name] = hb.state
+        return res
 
     @property
     def fail_events(self) -> dict[str, threading.Event]:
         """Return a dictionary of Events triggered for failed Satellites."""
-        return self._failed
+        res = {}
+        for hb in self._states.values():
+            if hb.failed.is_set():
+                res[hb.name] = hb.failed
+        return res
 
-    def _set_state(self, name: str, state: SatelliteState) -> None:
-        with self._states_lock:
-            self._states[name] = state
+    def _run_thread(self) -> None:
+        logger.info("Starting heartbeat check thread")
+        last_check = datetime.now()
 
-    def _run_thread(
-        self, name: str, transmitter: CHPTransmitter, fail_evt: threading.Event
-    ) -> None:
-        logger.info(f"Thread for {name} starting heartbeat check")
-        lives = self.HB_INIT_LIVES
-        interval = self.HB_INIT_PERIOD
-        last = datetime.now()
-        self._set_state(name, SatelliteState.NEW)
         # assert for mypy static type analysis
         assert isinstance(
             self._stop_threads, threading.Event
         ), "Thread Event not set up correctly"
+
         while not self._stop_threads.is_set():
-            last_diff = (datetime.now() - last).total_seconds()
-            if last_diff < interval / 1000:
-                time.sleep(0.1)
-            else:
-                host, ts, stateid, new_interval = transmitter.recv()
-                if not stateid or not ts or not new_interval:
-                    if last_diff > (interval / 1000) * 1.5:
-                        # no message after 150% of the interval, subtract life
-                        lives -= 1
-                        logger.debug(f"{name} unresponsive, removed life, now {lives}")
-                        if lives <= 0:
-                            # no lives left, interrupt
-                            if not fail_evt.is_set():
-                                logger.debug(
-                                    f"{name} unresponsive causing interrupt callback to be called"
-                                )
-                                fail_evt.set()
-                                self._interrupt(name, SatelliteState.DEAD)
-                            # update states
-                            self._set_state(name, SatelliteState.DEAD)
-                        # try again later
-                        last = datetime.now()
-                        continue
-                    else:
-                        # try again later
-                        continue
-                # got a heartbeat!
-                state = SatelliteState(stateid)
-                interval = new_interval
-                lives = self.HB_INIT_LIVES
-                # update states
-                self._set_state(name, state)
-                if state in [
+            # check for heatbeats ready to be received
+            sockets_ready = dict(self._poller.poll(timeout=250))
+            for socket in sockets_ready.keys():
+                binmsg = socket.recv()
+                _host, timestamp, state, interval = CHPDecodeMessage(binmsg)
+                hb = self._states[socket]
+                # update values
+                hb.refresh(timestamp.to_datetime())
+                hb.state = SatelliteState(state)
+                hb.interval = interval
+                # refresh lives
+                hb.lives = self.HB_INIT_LIVES
+                if hb.state in [
                     SatelliteState.ERROR,
                     SatelliteState.SAFE,
                     SatelliteState.DEAD,
                 ]:
-                    # other satellite in error state, interrupt
-                    if not fail_evt.is_set():
+                    # satellite in error state, interrupt
+                    if not hb.failed.is_set():
                         logger.debug(
-                            f"{name} state causing interrupt callback to be called"
+                            f"{hb.name} state causing interrupt callback to be called"
                         )
-                        fail_evt.set()
-                        self._interrupt(name, state)
+                        hb.failed.set()
+                        self._interrupt(hb.name, hb.state)
                 else:
-                    # maybe recover?
-                    if self.auto_recover and fail_evt.is_set():
-                        fail_evt.clear()
-                if ts.to_unix() < last.timestamp():
-                    # received hb older than last update; we are lagging behind;
-                    # skip to next without updating 'last' (or sleeping)
-                    logger.debug(
-                        f"{name} lagging behind, consuming heartbeats without rest"
-                    )
-                    continue
+                    # recover?
+                    if self.auto_recover and hb.failed.is_set():
+                        hb.failed.clear()
+
+            # regularly check for stale connections and missed heartbeats
+            if (last_check - datetime.now()).total_seconds() > 0.25:
+                for hb in self._states.values():
+                    if hb.seconds_since_refresh > (hb.interval / 1000) * 1.5:
+                        # no message after 150% of the interval, subtract life
+                        hb.lives -= 1
+                        logger.debug(
+                            f"{hb.name} unresponsive, removed life, now {hb.lives}"
+                        )
+                        if hb.lives <= 0:
+                            # no lives left, interrupt
+                            if not hb.failed.is_set():
+                                logger.debug(
+                                    f"{hb.name} unresponsive causing interrupt callback to be called"
+                                )
+                                hb.failed.set()
+                                self._interrupt(hb.name, SatelliteState.DEAD)
+                                # update state
+                                hb.state = SatelliteState.DEAD
+                            # try again later
+                            hb.refresh()
+                        else:
+                            # refresh, try again later
+                            hb.refresh()
                 # update timestamp for this round
-                last = datetime.now()
+                last_check = datetime.now()
 
     def _interrupt(self, name: str, state: SatelliteState) -> None:
         with self._callback_lock:
@@ -160,67 +187,68 @@ class HeartbeatChecker:
                 except Exception:
                     pass
 
-    def _reset(self) -> None:
-        self._stop_threads = threading.Event()
-        for evt in self._failed.values():
-            evt.clear()
-        self._threads = dict[str, threading.Thread]()
-
     def get_failed(self) -> list[str]:
         """Get a list of the names of all failed Satellites."""
         res = list[str]()
-        for name, evt in self._failed.items():
-            if evt.is_set() or (
-                self._stop_threads and not self._threads[name].is_alive()
-            ):
-                res.append(name)
+        for hb in self._states.values():
+            if hb.failed.is_set():
+                res.append(hb.name)
         return res
 
-    def start(self, name: str) -> None:
-        """Start the heartbeat checking for a single registered Satellite."""
+    def _run(self) -> None:
+        """Run background thread performing the heartbeat checking."""
         # prepare
         if not self._stop_threads:
             self._stop_threads = threading.Event()
-        self._failed[name].clear()
-        # set up thread
-        self._threads[name] = threading.Thread(
-            target=self._run_thread,
-            args=(name, self._transmitters[name], self._failed[name]),
-            daemon=True,  # kill threads when main app closes
-        )
-        # start thread
-        self._threads[name].start()
-
-    def start_all(self) -> None:
-        """Start the heartbeat checking for all registered Satellites."""
-        # reset lists
-        self._reset()
-        # set up threads
-        for name, tm in self._transmitters.items():
-            self._threads[name] = threading.Thread(
+            # set up thread
+            self._threads = threading.Thread(
                 target=self._run_thread,
-                args=(name, tm, self._failed[name]),
                 daemon=True,  # kill threads when main app closes
             )
-        # start threads
-        for thread in self._threads.values():
-            thread.start()
+            # start thread
+            self._threads.start()
+
+    def start(self, name: str) -> None:
+        """Start the heartbeat checking for a single Satellite."""
+        registered = False
+        for socket, hb in self._states.items():
+            if hb.name == name:
+                self._poller.register(socket, zmq.POLLIN)
+                registered = True
+                break
+        if not registered:
+            logger.error(f"Could not find registered Satellite with name '{name}'")
+            raise RuntimeError(
+                f"Could not find registered Satellite with name '{name}'"
+            )
+        self._run()
+
+    def start_all(self) -> None:
+        """Start the heartbeat checking all registered Satellites."""
+        for socket in self._states.keys():
+            self._poller.register(socket, zmq.POLLIN)
+        self._run()
 
     def stop(self) -> None:
         """Stop heartbeat checking."""
         if self._stop_threads:
             self._stop_threads.set()
-        for thread in self._threads.values():
-            thread.join(1)
-        for tm in self._transmitters.values():
-            tm.close()
-        self._reset()
+            if self._threads:
+                self._threads.join(2)
+        for socket in self._states.keys():
+            self._poller.unregister(socket)
+        self._stop_threads = None
+        self._threads = None
+
+    def close(self) -> None:
+        for socket in self._states.keys():
+            socket.close()
+        self._states = dict[zmq.Socket, HeartbeatState]()
 
 
 def main(args: Any = None) -> None:
     """Receive heartbeats from a single host."""
     import argparse
-    import time
     import coloredlogs  # type: ignore[import-untyped]
 
     parser = argparse.ArgumentParser(description=main.__doc__)
