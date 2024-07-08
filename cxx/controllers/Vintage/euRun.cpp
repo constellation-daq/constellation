@@ -351,9 +351,17 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     connect(terminateAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "shutdown"); });
     contextMenu->addAction(terminateAction);
 
+    // Draw separator
+    contextMenu->addSeparator();
+
     // Request possible commands from remote:
     auto dict = runcontrol_.getQCommands(index);
     for(const auto& [key, value] : dict) {
+        // Filter out transition commands to not list them twice
+        if(magic_enum::enum_cast<TransitionCommand>(key, magic_enum::case_insensitive).has_value()) {
+            continue;
+        }
+
         QAction* action = new QAction(QString::fromStdString(key), this);
         connect(action, &QAction::triggered, this, [this, index, key]() { runcontrol_.sendQCommand(index, key); });
         contextMenu->addAction(action);
