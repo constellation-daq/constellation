@@ -94,7 +94,7 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
 
     setWindowTitle("Constellation QControl " CNSTLN_VERSION);
     connect(&m_timer_display, SIGNAL(timeout()), this, SLOT(DisplayTimer()));
-    m_timer_display.start(1000); // internal update time of GUI
+    m_timer_display.start(300); // internal update time of GUI
     btnInit->setEnabled(1);
     btnLand->setEnabled(1);
     btnConfig->setEnabled(1);
@@ -259,7 +259,9 @@ State RunControlGUI::updateInfos() {
     if(m_str_label.count("DUR")) {
         // Update only when valid:
         if(run_timer_.isValid()) {
-            auto duration = std::format("{:%H:%M:%S}", std::chrono::milliseconds(run_timer_.elapsed()));
+            auto duration = std::format(
+                "{:%H:%M:%S}",
+                std::chrono::duration_cast<std::chrono::seconds>(std::chrono::milliseconds(run_timer_.elapsed())));
             m_str_label.at("DUR")->setText(QString::fromStdString(duration));
         }
     }
