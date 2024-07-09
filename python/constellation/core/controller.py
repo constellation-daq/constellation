@@ -278,6 +278,8 @@ class BaseController(CHIRPBroadcaster):
             for hbservice in self.get_discovered(CHIRPServiceIdentifier.HEARTBEAT):
                 if hbservice.host_uuid == service.host_uuid:
                     canonical_name = f"{cls}.{name}"
+                    if self._hb_checker.is_registered(canonical_name):
+                        self._hb_checker.unregister(canonical_name)
                     self._hb_checker.register(
                         name=canonical_name,
                         address=f"tcp://{hbservice.address}:{hbservice.port}",
