@@ -14,7 +14,7 @@ from typing import Optional, Callable, Any
 from .fsm import SatelliteState
 from .chp import CHPDecodeMessage
 
-logger = logging.getLogger("HeartbeatChecker")
+logger = logging.getLogger(__name__)
 
 
 class HeartbeatState:
