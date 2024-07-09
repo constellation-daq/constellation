@@ -190,6 +190,8 @@ class HeartbeatChecker:
                             hb.refresh()
                 # update timestamp for this round
                 last_check = datetime.now(timezone.utc)
+            # finally, wait a moment
+            time.sleep(0.150)
 
     def _interrupt(self, name: str, state: SatelliteState) -> None:
         with self._callback_lock:
