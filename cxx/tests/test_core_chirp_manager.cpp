@@ -41,8 +41,8 @@ TEST_CASE("Sorting of registered services", "[chirp]") {
 TEST_CASE("Sorting of discovered services", "[chirp]") {
     auto id1 = MD5Hash("a");
     auto id2 = MD5Hash("b");
-    auto ip1 = asio::ip::make_address("1.2.3.4");
-    auto ip2 = asio::ip::make_address("4.3.2.1");
+    auto ip1 = asio::ip::make_address_v4("1.2.3.4");
+    auto ip2 = asio::ip::make_address_v4("4.3.2.1");
 
     // test self not smaller than self
     REQUIRE_FALSE(DiscoveredService({ip1, id1, DATA, 0}) < DiscoveredService({ip1, id1, DATA, 0}));
@@ -161,7 +161,7 @@ TEST_CASE("Discover services in CHIRP manager", "[chirp][chirp::manager]") {
 
     // Test that message is correct
     REQUIRE(services_1[0].host_id == manager1.getHostID());
-    REQUIRE(services_1[0].address == asio::ip::make_address("127.0.0.1"));
+    REQUIRE(services_1[0].address == asio::ip::make_address_v4("127.0.0.1"));
     REQUIRE(services_1[0].identifier == DATA);
     REQUIRE(services_1[0].port == 24000);
 

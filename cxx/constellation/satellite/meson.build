@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: CC0-1.0
 
 satellite_src = files(
+  'BaseSatellite.cpp',
   'CommandRegistry.cpp',
   'FSM.cpp',
   'Satellite.cpp',
-  'SatelliteImplementation.cpp',
 )
 
 satellite_lib = library('ConstellationSatellite',
@@ -25,12 +25,12 @@ satellite_dep = declare_dependency(
 )
 
 install_headers(
+  'BaseSatellite.hpp',
   'CommandRegistry.hpp',
-  'CommandRegistry.tpp',
+  'CommandRegistry.ipp',
   'exceptions.hpp',
   'FSM.hpp',
   'fsm_definitions.hpp',
   'Satellite.hpp',
-  'SatelliteImplementation.hpp',
   subdir: 'constellation/satellite',
 )

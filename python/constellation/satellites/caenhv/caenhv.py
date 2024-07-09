@@ -203,7 +203,7 @@ class CaenHvSatellite(Satellite):
         """
         if not self._ready():
             raise RuntimeError(
-                f"Command not allowed in state '{self.fsm.current_state.id}'"
+                f"Command not allowed in state '{self.fsm.current_state_value.name}'"
             )
         res = {}
         with self.caen as crate:
@@ -288,7 +288,7 @@ class CaenHvSatellite(Satellite):
 
     def _ready(self) -> bool:
         """From the FSM state, determine whether we are ready."""
-        if SatelliteState[self.fsm.current_state.id] in [
+        if self.fsm.current_state_value in [
             SatelliteState.NEW,
             SatelliteState.ERROR,
             SatelliteState.DEAD,

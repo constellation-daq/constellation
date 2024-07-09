@@ -20,7 +20,7 @@ namespace constellation::exec {
      * @ingroup Exceptions
      * @brief Error while interacting with a Dynamic Shared Object (DSO)
      */
-    class DSOLoaderError : public utils::RuntimeError {
+    class CNSTLN_API DSOLoaderError : public utils::RuntimeError {
     protected:
         DSOLoaderError() = default;
     };
@@ -29,7 +29,7 @@ namespace constellation::exec {
      * @ingroup Exceptions
      * @brief Error while loading a Dynamic Shared Object (DSO)
      */
-    class DSOLoadingError : public DSOLoaderError {
+    class CNSTLN_API DSOLoadingError : public DSOLoaderError {
     public:
         explicit DSOLoadingError(std::string_view dso_name, std::string_view reason) {
             error_message_ = "Error while loading shared library \"";
@@ -43,7 +43,7 @@ namespace constellation::exec {
      * @ingroup Exceptions
      * @brief Requested function not found in Dynamic Shared Object (DSO)
      */
-    class DSOFunctionLoadingError : public DSOLoaderError {
+    class CNSTLN_API DSOFunctionLoadingError : public DSOLoaderError {
     public:
         explicit DSOFunctionLoadingError(std::string_view function, std::string_view dso_name, std::string_view reason) {
             error_message_ = "Error while loading function \"";

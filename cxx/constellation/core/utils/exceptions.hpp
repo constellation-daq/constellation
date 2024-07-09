@@ -18,13 +18,15 @@
 #include <string>
 #include <string_view>
 
+#include "constellation/build.hpp"
+
 namespace constellation::utils {
 
     /**
      * @ingroup Exceptions
      * @brief Base class for all non-internal exceptions in framework.
      */
-    class Exception : public std::exception {
+    class CNSTLN_API Exception : public std::exception {
     public:
         /**
          * @brief Creates exception with the specified problem
@@ -44,7 +46,7 @@ namespace constellation::utils {
          */
         Exception() = default;
 
-        // NOLINTNEXTLINE(*-non-private-member-variables-in-classes)
+        // NOLINTNEXTLINE(misc-non-private-member-variables-in-classes)
         std::string error_message_;
     };
 
@@ -54,7 +56,7 @@ namespace constellation::utils {
      *
      * Problems that could never have been detected at compile time
      */
-    class RuntimeError : public Exception {
+    class CNSTLN_API RuntimeError : public Exception {
     public:
         /**
          * @brief Creates exception with the given runtime problem
@@ -75,7 +77,7 @@ namespace constellation::utils {
      *
      * Problems that could also have been detected at compile time by specialized software
      */
-    class LogicError : public Exception {
+    class CNSTLN_API LogicError : public Exception {
     public:
         /**
          * @brief Creates exception with the given logical problem
@@ -94,7 +96,7 @@ namespace constellation::utils {
      * @ingroup Exceptions
      * @brief Errors related to the creation of ZeroMQ sockets
      */
-    class ZMQInitError : public RuntimeError {
+    class CNSTLN_API ZMQInitError : public RuntimeError {
     public:
         /**
          * @brief Creates exception with the given ZeroMQ problem

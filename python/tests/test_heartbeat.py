@@ -44,23 +44,6 @@ def mock_heartbeat_sender():
         yield hbs
 
 
-@pytest.fixture
-def mock_heartbeat_checker():
-    """Create a mock HeartbeatChecker instance."""
-
-    def mocket_factory(*args, **kwargs):
-        m = mocket()
-        m.endpoint = 1
-        return m
-
-    with patch("constellation.core.heartbeatchecker.zmq.Context") as mock:
-        mock_context = MagicMock()
-        mock_context.socket = mocket_factory
-        mock.return_value = mock_context
-        hbc = HeartbeatChecker()
-        yield hbc
-
-
 @pytest.mark.forked
 def test_hb_check_init():
     hbc = HeartbeatChecker()

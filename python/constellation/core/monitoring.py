@@ -408,15 +408,21 @@ class MonitoringListener(CHIRPBroadcaster):
                 # nothing to process
                 pass
 
-    def reentry(self) -> None:
-        """Shutdown Monitor."""
+    def _monitor_shutdown(self) -> None:
+        """Close open connections of Monitor."""
         self._metrics_receiver_shutdown.set()
         for _uuid, listener in self._log_listeners.items():
             listener.stop()
+        self._log_listeners = {}
         with self._poller_lock:
             for _uuid, socket in self._metric_sockets.items():
                 self.poller.unregister(socket)
                 socket.close()
+        self._metric_sockets = {}
+
+    def reentry(self) -> None:
+        """Shutdown Monitor."""
+        self._monitor_shutdown()
         super().reentry()
 
 

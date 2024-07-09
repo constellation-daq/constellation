@@ -149,11 +149,11 @@ namespace constellation::utils {
         return out;
     }
 
-    /** Converts a range to a string */
+    /** Converts a range to a string with custom delimiter */
     template <typename R>
         requires std::ranges::range<R> && convertible_to_string<std::ranges::range_value_t<R>>
-    inline std::string range_to_string(const R& range) {
-        return range_to_string(range, constellation::utils::to_string<std::ranges::range_value_t<R>>);
+    inline std::string range_to_string(const R& range, const std::string& delim = ", ") {
+        return range_to_string(range, to_string<std::ranges::range_value_t<R>>, delim);
     }
 
     /** Range that can be converted to a string */

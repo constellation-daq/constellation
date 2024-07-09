@@ -12,5 +12,5 @@
 using namespace constellation::exec;
 
 int main(int argc, char* argv[]) {
-    return satellite_main(argc, argv, "satellite_@SATELLITE_CLASS@", SatelliteType("@SATELLITE_CLASS@"));
+    return satellite_main(argc, argv, "satellite_@SATELLITE_TYPE@", SatelliteType("@SATELLITE_TYPE@"));
 }

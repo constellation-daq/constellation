@@ -26,7 +26,7 @@ namespace constellation::config {
     /**
      * List type with serialization functions for MessagePack
      */
-    class List final : public std::vector<Value> {
+    class List : public std::vector<Value> {
     public:
         /** Pack list with msgpack */
         CNSTLN_API void msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpack_packer) const;
@@ -44,7 +44,7 @@ namespace constellation::config {
     /**
      * Dictionary type with serialization functions for MessagePack and ZeroMQ
      */
-    class Dictionary final : public std::map<std::string, Value> {
+    class Dictionary : public std::map<std::string, Value> {
     public:
         /** Pack dictionary with msgpack */
         CNSTLN_API void msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpack_packer) const;

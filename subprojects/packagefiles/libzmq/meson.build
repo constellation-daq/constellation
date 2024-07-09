@@ -518,13 +518,20 @@ configure_file(
   format: 'cmake@',
 )
 
-libzmq_lib = library('libzmq',
+# Add flags for static or shared libraries
+if get_option('default_library') == 'static'
+  libzmq_flags_public += '-DZMQ_STATIC'
+elif get_option('default_library') == 'shared'
+  libzmq_flags_private += '-DDLL_EXPORT'
+else
+  error('Building both static and shared libraries is not possible')
+endif
+
+libzmq_lib = library('zmq',
   sources: libzmq_src,
   include_directories: [libzmq_inc_private, libzmq_inc_public],
   dependencies: [libzmq_deps_private, libzmq_deps_public],
   cpp_args: [libzmq_flags_private, libzmq_flags_public],
-  cpp_shared_args: ['-DDLL_EXPORT'],
-  cpp_static_args: ['-DZMQ_STATIC'],
   version: '5.2.5',
   soversion: 5,
   gnu_symbol_visibility: 'hidden',

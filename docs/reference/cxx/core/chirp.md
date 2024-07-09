@@ -1,4 +1,4 @@
-# CHIRP Library
+# CHIRP
 
 ## Notes on sockets
 
@@ -14,50 +14,12 @@ To opposite to the broadcast address is the "any" address, which accepts incomin
 
 If no network (with DHCP) is available, the default broadcast address (255.255.255.255) does not work. As a workaround, the default any address (0.0.0.0) can be used to broadcast over localhost.
 
-## Tools for Testing CHRIP
-
-### Broadcasting
-
-To receive broadcasts:
-
-```sh
-./build/cxx/constellation/tools/broadcast_recv [ANY_IP] [ANY_PORT]
-```
-
-To send broadcasts:
-
-```sh
-./build/cxx/constellation/tools/broadcast_send [BRD_IP] [BRD_PORT]
-```
-
-See [above](#notes-on-broadcast-addresses) for details on the broadcast address.
-
-### CHIRP Messages
-
-To receive CHIRP messages:
-
-```sh
-./build/cxx/constellation/tools/chirp_recv [ANY_IP]
-```
-
-To send CHIRP messages:
-
-```sh
-./build/cxx/constellation/tools/chirp_send [BRD_IP]
-```
-
-See [above](#notes-on-broadcast-addresses) for details on the broadcast address.
-
-TODO:
-
-- [ ] Mention MD5 hashing and service identifiers somewhere - in CHIRP itself or other RFC?
-
-### CHIRP Manager
+## CHIRP Manager
 
 To run the CHIRP manager, run:
 
 ```sh
-./build/cxx/constellation/tools/chirp_manager [NAME] [BRD_IP] [GROUP] [ANY_IP]
+./build/cxx/constellation/tools/chirp_manager [CONSTELLATION_GROUP] [NAME] [BRD_ADDR] [ANY_ADDR]
 ```
 
 The following commands are available:
@@ -72,9 +34,10 @@ The following commands are available:
 - `reset`: unregister all services and callbacks, and forget discovered services
 - `quit`
 
-## The CHIRP Namespace
+## `constellation::chirp` Namespace
 
 ```{doxygennamespace} constellation::chirp
+:content-only:
 :members:
 :protected-members:
 :undoc-members:

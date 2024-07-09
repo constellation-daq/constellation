@@ -38,7 +38,7 @@ namespace constellation::exec {
      * @param satellite_type Optional satellite type to pre-load
      */
     CNSTLN_API int satellite_main(int argc,
-                                  char* argv[], // NOLINT(*-avoid-c-arrays)
+                                  char* argv[], // NOLINT(modernize-avoid-c-arrays)
                                   std::string_view program,
                                   std::optional<SatelliteType> satellite_type = std::nullopt) noexcept;
 

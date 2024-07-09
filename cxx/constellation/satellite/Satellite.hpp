@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Satellite class with user functions
+ * @brief Satellite class with transitional user functions
  *
  * @copyright Copyright (c) 2024 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
@@ -9,132 +9,125 @@
 
 #pragma once
 
-#include <any>
-#include <cstdint>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <stop_token>
 #include <string>
 #include <string_view>
-#include <thread>
+#include <utility>
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Configuration.hpp"
-#include "constellation/core/config/Dictionary.hpp"
-#include "constellation/core/config/Value.hpp"
-#include "constellation/core/logging/Logger.hpp"
-#include "constellation/satellite/CommandRegistry.hpp"
+#include "constellation/satellite/BaseSatellite.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
 namespace constellation::satellite {
 
-    class FSM;
-
-    class CNSTLN_API Satellite {
+    /**
+     * @brief Satellite class with transitional user functions
+     */
+    class CNSTLN_API Satellite : public BaseSatellite {
     public:
         virtual ~Satellite() = default;
 
         // No copy/move constructor/assignment
+        /// @cond doxygen_suppress
         Satellite(const Satellite& other) = delete;
         Satellite& operator=(const Satellite& other) = delete;
         Satellite(Satellite&& other) = delete;
         Satellite& operator=(Satellite&& other) = delete;
+        /// @endcond
 
     public:
         /**
-         * Initialize satellite, e.g. check config, connect to device
+         * @brief Initialize satellite
          *
-         * Note: do not perform actions that require actions before shutdown or another initialization
+         * In this function a satellite can for example check the configuration or establish connection to a device.
          *
-         * @param config Configuration of the Satellite
-         */
-        virtual void initializing(config::Configuration& config);
-
-        /**
-         * Launch satellite, i.e. apply configuration
-         */
-        virtual void launching();
-
-        /**
-         * Landing satellite, i.e. undo what was done in the `launching` function
-         */
-        virtual void landing();
-
-        /**
-         * Reconfigure satellite, i.e. apply a partial configuration to the already launched satellite
+         * @note A satellite can be re-initializied from INIT, i.e. this function can be called twice in a row. Any actions
+         *       required to be undone before another initialization should be done in `launching()` instead.
          *
-         * @param partial_config Changes to the configuration of the Satellite
+         * @param config Configuration of the satellite
          */
-        virtual void reconfiguring(const config::Configuration& partial_config);
+        void initializing(config::Configuration& config) override;
 
         /**
-         * Start satellite, i.e. prepare for immediate data taking, e.g. opening files or creating buffers
+         * @brief Launch satellite
+         *
+         * In this function the configuration should be applied and the satellite prepared for data taking, for example by
+         * ramping up the high voltage of a device.
+         */
+        void launching() override;
+
+        /**
+         * @brief Land satellite
+         *
+         * In this function should actions performed in the `launching()` function should be undone, for example by ramping
+         * down the high voltage of a device.
+         */
+        void landing() override;
+
+        /**
+         * @brief Reconfigure satellite
+         *
+         * In this function a partial configuration should be applied to the already launched satellite. This function should
+         * throw if a configuration parameter is changed that is not supported in online reconfiguration.
+         *
+         * @note By default, the satellite does not support online reconfiguration. Support for online reconfiguration can be
+         *       enabled with `support_reconfigure()`.
+         *
+         * @param partial_config Changes to the configuration of the satellite
+         */
+        void reconfiguring(const config::Configuration& partial_config) override;
+
+        /**
+         * @brief Start satellite
+         *
+         * In this function the data acquisition of the satellite should be started, for example by opening the output file.
+         *
+         * @note This function should not take a long time to execute. Slow actions such as applying a configuration should
+         *       be performed in the `launching()` function.
          *
          * @param run_identifier Run identifier for the upcoming run
          */
-        virtual void starting(std::string_view run_identifier);
+        void starting(std::string_view run_identifier) override;
 
         /**
-         * Stop satellite, i.e. prepare to return to ORBIT state, e.g. closing open files
+         * @brief Stop satellite
+         *
+         * In this function the data acquisition of the satellite should be stopped, for example by closing the output file.
          */
-        virtual void stopping();
+        void stopping() override;
 
         /**
-         * Run function, i.e. run data acquisition
+         * @brief Run function
+         *
+         * In this function the data acquisition of the satellite should be continuously executed.
          *
          * @param stop_token Token which tracks if running should be stopped or aborted
          */
-        virtual void running(const std::stop_token& stop_token);
+        void running(const std::stop_token& stop_token) override;
 
         /**
-         * Interrupt function, i.e. go immediately from ORBIT or RUN to SAFE state
+         * @brief Interrupt function
          *
-         * By default, this function calls `stopping` (if in RUN state) and then `landing`.
+         * In this function a response for the transition from ORBIT or RUN to the SAFE state can be implemented. This
+         * includes for example closing open files or turning off the high voltage. By default, this function calls
+         * `stopping()` (if in RUN state) and then `landing()`.
          *
-         * @param previous_state State in which the Satellite was being interrupted
+         * @param previous_state State in which the satellite was being interrupted
          */
-        virtual void interrupting(State previous_state);
+        void interrupting(State previous_state) override;
 
         /**
-         * On-Failure function, i.e. executed when entering the ERROR state
+         * @brief Failure function
          *
-         * @param previous_state State in which the Satellite was before experiencing a failure
-         */
-        virtual void on_failure(State previous_state);
-
-    public:
-        /** Whether or not the reconfigure function is implemented */
-        constexpr bool supportsReconfigure() const { return support_reconfigure_; }
-
-        /** Return status of the satellite */
-        std::string_view getStatus() const { return status_; }
-
-        /** Return the name of the satellite type */
-        constexpr std::string_view getType() const { return satellite_type_; }
-
-        /** Return the name of the satellite */
-        constexpr std::string_view getSatelliteName() const { return satellite_name_; }
-
-        /** Return the canonical satellite name (type_name.satellite_name) */
-        std::string getCanonicalName() const;
-
-        /**
-         * @brief Call a user-registered command
+         * In this function a response to uncatched errors can be implemented. It is executed after entering the ERROR state.
          *
-         * @param state Current state of the satellite finite state machine
-         * @param name Name of the command to be called
-         * @param args List with arguments for the command
-         * @return Return value of the command
+         * @param previous_state State in which the satellite was before experiencing a failure
          */
-        config::Value callUserCommand(State state, const std::string& name, const config::List& args) {
-            return user_commands_.call(state, name, args);
-        }
-
-        /** Return map of user-registered commands with their description */
-        std::map<std::string, std::string> getUserCommands() const { return user_commands_.describeCommands(); }
-
-        /** Return a const reference to the satellite configuration */
-        const config::Configuration& getConfig() const { return config_; }
-
-        /** Return the current run identifier */
-        std::string_view getRunIdentifier() const { return run_identifier_; }
+        void failure(State previous_state) override;
 
     protected:
         /**
@@ -145,11 +138,14 @@ namespace constellation::satellite {
          */
         Satellite(std::string_view type, std::string_view name);
 
-        /** Enable or disable support for reconfigure transition (disabled by default) */
+        /**
+         * @brief Enable or disable support for reconfigure transition
+         *
+         * Required to enable the `reconfiguring()` function (disabled by default).
+         *
+         * @param enable If online reconfiguration support should be enabled
+         */
         constexpr void support_reconfigure(bool enable = true) { support_reconfigure_ = enable; }
-
-        /** Set status of the satellite */
-        void set_status(std::string status) { status_ = std::move(status); }
 
         /**
          * @brief Register a new user command
@@ -184,31 +180,6 @@ namespace constellation::satellite {
                               std::function<R(Args...)> func) {
             user_commands_.add(name, std::move(description), states, func);
         }
-
-    private:
-        // FSM needs access to configuration
-        friend FSM;
-
-        /** Store configuration in satellite */
-        void store_config(config::Configuration&& config);
-
-        /** Updated configuration stored in satellite */
-        void update_config(const config::Configuration& partial_config);
-
-        /** Update the run identifier */
-        void update_run_identifier(std::string_view run_identifier) { run_identifier_ = run_identifier; }
-
-    private:
-        /** Logger to use */
-        log::Logger logger_;
-
-        bool support_reconfigure_ {false};
-        std::string status_;
-        std::string_view satellite_type_;
-        std::string_view satellite_name_;
-        config::Configuration config_;
-        std::string run_identifier_ {};
-        CommandRegistry user_commands_;
     };
 
     // Generator function that needs to be exported in a satellite library

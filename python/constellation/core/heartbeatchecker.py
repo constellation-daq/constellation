@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 import logging
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import zmq
 
@@ -22,23 +22,19 @@ class HeartbeatState:
         self.name = name
         self.lives = lives
         self.interval = interval
-        self.last_refresh = datetime.now()
+        self.last_refresh = datetime.now(timezone.utc)
         self.state = SatelliteState.NEW
         self.failed: threading.Event = evt
-        self._started = False
 
     def refresh(self, ts: datetime | None = None) -> None:
         if not ts:
-            self.last_refresh = datetime.now()
+            self.last_refresh = datetime.now(timezone.utc)
         else:
             self.last_refresh = ts
-        self._started = True
 
     @property
     def seconds_since_refresh(self) -> float:
-        if not self._started:
-            return 0.0
-        return (datetime.now() - self.last_refresh).total_seconds()
+        return (datetime.now(timezone.utc) - self.last_refresh).total_seconds()
 
 
 class HeartbeatChecker:
@@ -64,7 +60,7 @@ class HeartbeatChecker:
         self._stop_threads: threading.Event | None = None
         self._poller = zmq.Poller()
         # dict to keep states mapped to socket
-        self._states = dict[zmq.Socket, HeartbeatState]()
+        self._states = dict[zmq.Socket, HeartbeatState]()  # type: ignore[type-arg]
 
         self.auto_recover = False  # clear fail Event if Satellite reappears?
 
@@ -115,7 +111,11 @@ class HeartbeatChecker:
 
     def _run_thread(self) -> None:
         logger.info("Starting heartbeat check thread")
-        last_check = datetime.now()
+        last_check = datetime.now(timezone.utc)
+
+        # refresh all tokens
+        for hb in self._states.values():
+            hb.refresh()
 
         # assert for mypy static type analysis
         assert isinstance(
@@ -153,7 +153,7 @@ class HeartbeatChecker:
                         hb.failed.clear()
 
             # regularly check for stale connections and missed heartbeats
-            if (last_check - datetime.now()).total_seconds() > 0.25:
+            if (datetime.now(timezone.utc) - last_check).total_seconds() > 0.25:
                 for hb in self._states.values():
                     if hb.seconds_since_refresh > (hb.interval / 1000) * 1.5:
                         # no message after 150% of the interval, subtract life
@@ -177,7 +177,7 @@ class HeartbeatChecker:
                             # refresh, try again later
                             hb.refresh()
                 # update timestamp for this round
-                last_check = datetime.now()
+                last_check = datetime.now(timezone.utc)
 
     def _interrupt(self, name: str, state: SatelliteState) -> None:
         with self._callback_lock:
@@ -243,7 +243,7 @@ class HeartbeatChecker:
     def close(self) -> None:
         for socket in self._states.keys():
             socket.close()
-        self._states = dict[zmq.Socket, HeartbeatState]()
+        self._states = dict[zmq.Socket, HeartbeatState]()  # type: ignore[type-arg]
 
 
 def main(args: Any = None) -> None:

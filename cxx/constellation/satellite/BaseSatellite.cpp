@@ -1,25 +1,24 @@
 /**
  * @file
- * @brief Implementation of Satellite implementation
+ * @brief Implementation of base satellite
  *
  * @copyright Copyright (c) 2024 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include "SatelliteImplementation.hpp"
+#include "BaseSatellite.hpp"
 
 #include <cctype>
 #include <chrono>
 #include <exception>
 #include <functional>
-#include <memory>
 #include <optional>
+#include <ranges>
 #include <stop_token>
 #include <string>
 #include <string_view>
 #include <thread>
-#include <typeinfo>
 #include <utility>
 #include <variant>
 
@@ -39,8 +38,8 @@
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/message/satellite_definitions.hpp"
-#include "constellation/core/utils/casts.hpp"
-#include "constellation/core/utils/ports.hpp"
+#include "constellation/core/utils/exceptions.hpp"
+#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/exceptions.hpp"
@@ -54,57 +53,66 @@ using namespace constellation::satellite;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 
-SatelliteImplementation::SatelliteImplementation(std::shared_ptr<Satellite> satellite)
-    : rep_(context_, zmq::socket_type::rep), port_(bind_ephemeral_port(rep_)), satellite_(std::move(satellite)),
-      heartbeat_manager_(std::make_shared<HeartbeatManager>(satellite_->getCanonicalName())), fsm_(satellite_),
-      logger_("CSCP") {
-    // Set receive timeout for socket
-    rep_.set(zmq::sockopt::rcvtimeo, static_cast<int>(std::chrono::milliseconds(100).count()));
+BaseSatellite::BaseSatellite(std::string_view type, std::string_view name)
+    : logger_("SATELLITE"), rep_socket_(context_, zmq::socket_type::rep), port_(bind_ephemeral_port(rep_socket_)),
+      satellite_type_(type), satellite_name_(name), fsm_(this), cscp_logger_("CSCP"),
+      heartbeat_manager_(getCanonicalName(), [&]() { return fsm_.getState(); }) {
+
+    // Check name
+    if(!is_valid_name(to_string(name))) {
+        throw RuntimeError("Satellite name is invalid");
+    }
+
+    // Set receive timeout for CSCP socket
+    rep_socket_.set(zmq::sockopt::rcvtimeo, static_cast<int>(std::chrono::milliseconds(100).count()));
+
     // Announce service via CHIRP
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
     if(chirp_manager != nullptr) {
         chirp_manager->registerService(chirp::CONTROL, port_);
     } else {
-        LOG(logger_, WARNING) << "Failed to advertise command receiver on the network, satellite might not be discovered";
+        LOG(cscp_logger_, WARNING)
+            << "Failed to advertise command receiver on the network, satellite might not be discovered";
     }
-    LOG(logger_, INFO) << "Starting to listen to commands on port " << port_;
+    LOG(cscp_logger_, INFO) << "Starting to listen to commands on port " << port_;
+
+    // Start receiving CSCP commands
+    cscp_thread_ = std::jthread(std::bind_front(&BaseSatellite::cscp_loop, this));
 
     // Start sending heartbeats
-    heartbeat_manager_->setInterruptCallback([ptr = &fsm_]() { ptr->interrupt(); });
-    fsm_.registerStateCallback(std::bind_front(&HeartbeatManager::updateState, heartbeat_manager_));
+    heartbeat_manager_.setInterruptCallback([ptr = &fsm_]() { ptr->interrupt(); });
+    fsm_.registerStateCallback([&](State) { heartbeat_manager_.sendExtrasystole(); });
 }
 
-SatelliteImplementation::~SatelliteImplementation() {
-    main_thread_.request_stop();
-    if(main_thread_.joinable()) {
-        main_thread_.join();
+BaseSatellite::~BaseSatellite() {
+    cscp_thread_.request_stop();
+    join();
+}
+
+std::string BaseSatellite::getCanonicalName() const {
+    return to_string(satellite_type_) + "." + to_string(satellite_name_);
+}
+
+void BaseSatellite::join() {
+    if(cscp_thread_.joinable()) {
+        cscp_thread_.join();
     }
 }
 
-void SatelliteImplementation::start() {
-    // jthread immediately starts on construction
-    main_thread_ = std::jthread(std::bind_front(&SatelliteImplementation::main_loop, this));
-}
+void BaseSatellite::terminate() {
+    // Request stop on the CSCP thread
+    cscp_thread_.request_stop();
 
-void SatelliteImplementation::join() {
-    if(main_thread_.joinable()) {
-        main_thread_.join();
-    }
-}
-
-void SatelliteImplementation::terminate() {
-    // Request stop on main thread
-    main_thread_.request_stop();
-    // We cannot join the main thread here since this method might be called from there and would result in a race condition
+    // We cannot join the CSCP thread here since this method might be called from there and would result in a race condition
 
     // Tell the FSM to interrupt, which will go to SAFE in case of ORBIT or RUN state:
     fsm_.interrupt();
 }
 
-std::optional<CSCP1Message> SatelliteImplementation::get_next_command() {
+std::optional<CSCP1Message> BaseSatellite::get_next_command() {
     // Receive next message
     zmq::multipart_t recv_msg {};
-    auto received = recv_msg.recv(rep_);
+    auto received = recv_msg.recv(rep_socket_);
 
     // Return if timeout
     if(!received) {
@@ -114,22 +122,21 @@ std::optional<CSCP1Message> SatelliteImplementation::get_next_command() {
     // Try to disamble message
     auto message = CSCP1Message::disassemble(recv_msg);
 
-    LOG(logger_, DEBUG) << "Received CSCP message of type " << to_string(message.getVerb().first) << " with verb \""
-                        << message.getVerb().second << "\"" << (message.hasPayload() ? " and a payload"sv : ""sv) << " from "
-                        << message.getHeader().getSender();
+    LOG(cscp_logger_, DEBUG) << "Received CSCP message of type " << to_string(message.getVerb().first) << " with verb \""
+                             << message.getVerb().second << "\"" << (message.hasPayload() ? " and a payload"sv : ""sv)
+                             << " from " << message.getHeader().getSender();
 
     return message;
 }
 
-void SatelliteImplementation::send_reply(std::pair<CSCP1Message::Type, std::string> reply_verb,
-                                         message::PayloadBuffer payload) {
-    auto msg = CSCP1Message({satellite_->getCanonicalName()}, std::move(reply_verb));
-    msg.addPayload(std::move(payload)); // CSCP1Message handle handle nullptr and empty messages
-    msg.assemble().send(rep_);
+void BaseSatellite::send_reply(std::pair<CSCP1Message::Type, std::string> reply_verb, message::PayloadBuffer payload) {
+    auto msg = CSCP1Message({getCanonicalName()}, std::move(reply_verb));
+    msg.addPayload(std::move(payload));
+    msg.assemble().send(rep_socket_);
 }
 
 std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::PayloadBuffer>>
-SatelliteImplementation::handle_standard_command(std::string_view command) {
+BaseSatellite::handle_standard_command(std::string_view command) {
     std::pair<message::CSCP1Message::Type, std::string> return_verb {};
     message::PayloadBuffer return_payload {};
 
@@ -141,7 +148,7 @@ SatelliteImplementation::handle_standard_command(std::string_view command) {
     using enum StandardCommand;
     switch(command_enum.value()) {
     case get_name: {
-        return_verb = {CSCP1Message::Type::SUCCESS, satellite_->getCanonicalName()};
+        return_verb = {CSCP1Message::Type::SUCCESS, getCanonicalName()};
         break;
     }
     case get_version: {
@@ -155,7 +162,7 @@ SatelliteImplementation::handle_standard_command(std::string_view command) {
         command_dict["initialize"] = "Initialize satellite (payload: config as flat MessagePack dict with strings as keys)";
         command_dict["launch"] = "Launch satellite";
         command_dict["land"] = "Land satellite";
-        if(satellite_->supportsReconfigure()) {
+        if(support_reconfigure_) {
             command_dict["reconfigure"] =
                 "Reconfigure satellite (payload: partial config as flat MessagePack dict with strings as keys)";
         }
@@ -173,7 +180,7 @@ SatelliteImplementation::handle_standard_command(std::string_view command) {
             "Get config of satellite (returned in payload as flat MessagePack dict with strings as keys)";
 
         // Append user commands
-        const auto user_commands = satellite_->getUserCommands();
+        const auto user_commands = user_commands_.describeCommands();
         for(const auto& cmd : user_commands) {
             command_dict.emplace(cmd.first, cmd.second);
         }
@@ -187,17 +194,16 @@ SatelliteImplementation::handle_standard_command(std::string_view command) {
         break;
     }
     case get_status: {
-        return_verb = {CSCP1Message::Type::SUCCESS, to_string(satellite_->getStatus())};
+        return_verb = {CSCP1Message::Type::SUCCESS, status_};
         break;
     }
     case get_config: {
         return_verb = {CSCP1Message::Type::SUCCESS, "Configuration attached in payload"};
-        return_payload =
-            satellite_->getConfig().getDictionary(Configuration::Group::ALL, Configuration::Usage::USED).assemble();
+        return_payload = config_.getDictionary(Configuration::Group::ALL, Configuration::Usage::USED).assemble();
         break;
     }
     case get_run_id: {
-        return_verb = {CSCP1Message::Type::SUCCESS, to_string(satellite_->getRunIdentifier())};
+        return_verb = {CSCP1Message::Type::SUCCESS, run_identifier_};
         break;
     }
     case shutdown: {
@@ -217,8 +223,8 @@ SatelliteImplementation::handle_standard_command(std::string_view command) {
 }
 
 std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::PayloadBuffer>>
-SatelliteImplementation::handle_user_command(std::string_view command, const message::PayloadBuffer& payload) {
-    LOG(logger_, DEBUG) << "Attempting to handle command \"" << command << "\" as user command";
+BaseSatellite::handle_user_command(std::string_view command, const message::PayloadBuffer& payload) {
+    LOG(cscp_logger_, DEBUG) << "Attempting to handle command \"" << command << "\" as user command";
 
     std::pair<message::CSCP1Message::Type, std::string> return_verb {};
     message::PayloadBuffer return_payload {};
@@ -229,8 +235,8 @@ SatelliteImplementation::handle_user_command(std::string_view command, const mes
             args = config::List::disassemble(payload);
         }
 
-        auto retval = satellite_->callUserCommand(fsm_.getState(), std::string(command), args);
-        LOG(logger_, DEBUG) << "User command \"" << command << "\" succeeded, packing return value.";
+        auto retval = user_commands_.call(fsm_.getState(), std::string(command), args);
+        LOG(cscp_logger_, DEBUG) << "User command \"" << command << "\" succeeded, packing return value.";
 
         // Return the call value as payload only if it is not std::monostate
         if(!std::holds_alternative<std::monostate>(retval)) {
@@ -251,17 +257,17 @@ SatelliteImplementation::handle_user_command(std::string_view command, const mes
         // Any other issue with executing the user command (missing arguments, wrong arguments, ...)
         return_verb = {CSCP1Message::Type::INCOMPLETE, error.what()};
     } catch(const std::exception& error) {
-        LOG(logger_, DEBUG) << "Caught exception while calling user command \"" << command << "\": " << error.what();
+        LOG(cscp_logger_, DEBUG) << "Caught exception while calling user command \"" << command << "\": " << error.what();
         return std::nullopt;
     } catch(...) {
-        LOG(logger_, DEBUG) << "Caught unknown exception while calling user command \"" << command << "\"";
+        LOG(cscp_logger_, DEBUG) << "Caught unknown exception while calling user command \"" << command << "\"";
         return std::nullopt;
     }
 
     return std::make_pair(return_verb, std::move(return_payload));
 }
 
-void SatelliteImplementation::main_loop(const std::stop_token& stop_token) {
+void BaseSatellite::cscp_loop(const std::stop_token& stop_token) {
     while(!stop_token.stop_requested()) {
         try {
             // Receive next command
@@ -275,7 +281,7 @@ void SatelliteImplementation::main_loop(const std::stop_token& stop_token) {
 
             // Ensure we have a REQUEST message
             if(message.getVerb().first != CSCP1Message::Type::REQUEST) {
-                LOG(logger_, WARNING) << "Received message via CSCP that is not REQUEST type - ignoring";
+                LOG(cscp_logger_, WARNING) << "Received message via CSCP that is not REQUEST type - ignoring";
                 send_reply({CSCP1Message::Type::ERROR, "Can only handle CSCP messages with REQUEST type"});
                 continue;
             }
@@ -308,16 +314,103 @@ void SatelliteImplementation::main_loop(const std::stop_token& stop_token) {
             std::string unknown_command_reply = "Command \"";
             unknown_command_reply += command_string;
             unknown_command_reply += "\" is not known";
-            LOG(logger_, WARNING) << "Received unknown command \"" << command_string << "\" - ignoring";
+            LOG(cscp_logger_, WARNING) << "Received unknown command \"" << command_string << "\" - ignoring";
             send_reply({CSCP1Message::Type::UNKNOWN, std::move(unknown_command_reply)});
 
         } catch(const zmq::error_t& error) {
-            LOG(logger_, CRITICAL) << "ZeroMQ error while trying to receive a message: " << error.what();
-            LOG(logger_, CRITICAL) << "Stopping command receiver loop, no further commands can be received";
+            LOG(cscp_logger_, CRITICAL) << "ZeroMQ error while trying to receive a message: " << error.what();
+            LOG(cscp_logger_, CRITICAL) << "Stopping command receiver loop, no further commands can be received";
             break;
         } catch(const MessageDecodingError& error) {
-            LOG(logger_, WARNING) << error.what();
+            LOG(cscp_logger_, WARNING) << error.what();
             send_reply({CSCP1Message::Type::ERROR, error.what()});
         }
     }
+}
+
+void BaseSatellite::store_config(config::Configuration&& config) {
+    using enum config::Configuration::Group;
+    using enum config::Configuration::Usage;
+
+    // Check for unused KVPs
+    const auto unused_kvps = config.getDictionary(ALL, UNUSED);
+    if(!unused_kvps.empty()) {
+        LOG(logger_, WARNING) << unused_kvps.size() << " keys of the configuration were not used: "
+                              << range_to_string(std::views::keys(unused_kvps));
+        // Only store used keys
+        config_ = {config.getDictionary(ALL, USED), true};
+    } else {
+        // Move configuration
+        config_ = std::move(config);
+    }
+
+    // Log config
+    LOG(logger_, INFO) << "Configuration: " << config_.size(USER) << " settings" << config_.getDictionary(USER).to_string();
+    LOG(logger_, DEBUG) << "Internal configuration: " << config_.size(INTERNAL) << " settings"
+                        << config_.getDictionary(INTERNAL).to_string();
+}
+
+void BaseSatellite::update_config(const config::Configuration& partial_config) {
+    using enum config::Configuration::Group;
+    using enum config::Configuration::Usage;
+
+    // Check for unused KVPs
+    const auto unused_kvps = partial_config.getDictionary(ALL, UNUSED);
+    if(!unused_kvps.empty()) {
+        LOG(logger_, WARNING) << unused_kvps.size() << " keys of the configuration were not used: "
+                              << range_to_string(std::views::keys(unused_kvps));
+    }
+
+    // Update configuration (only updates used values of partial config)
+    config_.update(partial_config);
+
+    // Log config
+    LOG(logger_, INFO) << "Configuration: " << config_.size(USER) << " settings" << config_.getDictionary(USER).to_string();
+    LOG(logger_, DEBUG) << "Internal configuration: " << config_.size(INTERNAL) << " settings"
+                        << config_.getDictionary(INTERNAL).to_string();
+}
+
+void BaseSatellite::initializing_wrapper(config::Configuration&& config) {
+    initializing(config);
+
+    // Store config after initializing
+    store_config(std::move(config));
+}
+
+void BaseSatellite::launching_wrapper() {
+    launching();
+}
+
+void BaseSatellite::landing_wrapper() {
+    landing();
+}
+
+void BaseSatellite::reconfiguring_wrapper(const config::Configuration& partial_config) {
+    reconfiguring(partial_config);
+
+    // Update stored config after reconfigure
+    update_config(partial_config);
+}
+
+void BaseSatellite::starting_wrapper(std::string run_identifier) {
+    starting(run_identifier);
+
+    // Store run identifier
+    run_identifier_ = std::move(run_identifier);
+}
+
+void BaseSatellite::stopping_wrapper() {
+    stopping();
+}
+
+void BaseSatellite::running_wrapper(const std::stop_token& stop_token) {
+    running(stop_token);
+}
+
+void BaseSatellite::interrupting_wrapper(State previous_state) {
+    interrupting(previous_state);
+}
+
+void BaseSatellite::failure_wrapper(State previous_state) {
+    failure(previous_state);
 }

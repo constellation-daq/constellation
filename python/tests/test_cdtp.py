@@ -195,7 +195,7 @@ def test_sending_package(
     commander.send_request("start", "100102")
     wait_for_state(transmitter.fsm, "RUN")
     assert (
-        transmitter.fsm.current_state.id == "RUN"
+        transmitter.fsm.current_state_value.name == "RUN"
     ), "Could not set up test environment"
 
     BOR = True
@@ -213,7 +213,7 @@ def test_sending_package(
 
     time.sleep(0.2)
     # still in RUN?
-    assert transmitter.fsm.current_state.id == "RUN", "Ended RUN state early"
+    assert transmitter.fsm.current_state_value.name == "RUN", "Ended RUN state early"
     # go to stop to send EOR
     commander.send_request("stop", "")
     wait_for_state(transmitter.fsm, "ORBIT")
@@ -251,9 +251,9 @@ def test_receive_writing_package(
         payload = np.array(np.arange(1000), dtype=np.int16)
         assert receiver.run_identifier == ""
 
-        for run_num in range(1, 3):
+        for run_num in range(1, 4):
             # Send new data to handle
-            tx.send_start({"mock_cfg": 1, "other_val": "mockval"})
+            tx.send_start({"mock_cfg": run_num, "other_val": "mockval"})
             # send once as byte array with and once w/o dtype
             tx.send_data(payload.tobytes(), {"dtype": f"{payload.dtype}"})
             tx.send_data(payload.tobytes())
@@ -262,17 +262,22 @@ def test_receive_writing_package(
             # Running satellite
             commander.request_get_response("start", str(run_num))
             wait_for_state(receiver.fsm, "RUN", 1)
+            timeout = 0.5
+            while not receiver.active_satellites or timeout < 0:
+                time.sleep(0.05)
+                timeout -= 0.05
+            assert len(receiver.active_satellites) == 1, "No BOR received!"
             assert (
-                receiver.fsm.current_state.id == "RUN"
+                receiver.fsm.current_state_value.name == "RUN"
             ), "Could not set up test environment"
             commander.request_get_response("stop")
             time.sleep(0.5)
             # receiver should still be in 'stopping' as no EOR has been sent
             assert (
-                receiver.fsm.current_state.id.lower() == "stopping"
+                receiver.fsm.current_state_value.name == "stopping"
             ), "Receiver stopped before receiving EORE"
             # send EORE
-            tx.send_end({"mock_end": "whatanend"})
+            tx.send_end({"mock_end": f"whatanend{run_num}"})
             wait_for_state(receiver.fsm, "ORBIT", 1)
             assert receiver.run_identifier == str(run_num)
 
@@ -286,7 +291,7 @@ def test_receive_writing_package(
             h5file = h5py.File(tmpdir / pathlib.Path(fn))
             assert "simple_sender" in h5file.keys()
             assert bor in h5file["simple_sender"].keys()
-            assert h5file["simple_sender"][bor]["mock_cfg"][()] == 1
+            assert h5file["simple_sender"][bor]["mock_cfg"][()] == run_num
             assert eor in h5file["simple_sender"].keys()
             assert "whatanend" in str(
                 h5file["simple_sender"][eor]["mock_end"][()], encoding="utf-8"
@@ -355,13 +360,21 @@ def test_receiver_stats(
         # send EORE
         tx.send_end({"mock_end": 22})
         wait_for_state(receiver.fsm, "ORBIT", 1)
-    time.sleep(0.5)
+    timeout = 4
+    while timeout > 0 and not len(ml._metric_sockets) > 0:
+        time.sleep(0.05)
+        timeout -= 0.05
     assert len(receiver.receiver_stats) == 2
     assert len(receiver._metrics_callbacks) > 1
     assert len(ml._metric_sockets) == 1
     assert os.path.exists(
         os.path.join(tmpdir, "stats")
     ), "Stats output directory not created"
-    assert os.path.exists(
-        os.path.join(tmpdir, "stats", "mock_receiver_nbytes.csv")
-    ), "Expected output metrics csv not found"
+    statfile = os.path.join(tmpdir, "stats", "mock_receiver_nbytes.csv")
+    timeout = 4
+    while timeout > 0 and not os.path.exists(statfile):
+        time.sleep(0.05)
+        timeout -= 0.05
+    assert os.path.exists(statfile), "Expected output metrics csv not found"
+    # close thread and connections to allow temp dir to be removed
+    ml._monitor_shutdown()

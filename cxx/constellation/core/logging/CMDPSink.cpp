@@ -33,7 +33,7 @@
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
-#include "constellation/core/utils/ports.hpp"
+#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/windows.hpp"
 
@@ -63,11 +63,11 @@ std::string get_rel_file_path(std::string file_path_char) {
 }
 
 CMDPSink::CMDPSink(std::shared_ptr<spdlog::async_logger> cmdp_console_logger)
-    : cmdp_console_logger_(std::move(cmdp_console_logger)), publisher_(context_, zmq::socket_type::xpub),
-      port_(bind_ephemeral_port(publisher_)) {
+    : cmdp_console_logger_(std::move(cmdp_console_logger)), pub_socket_(context_, zmq::socket_type::xpub),
+      port_(bind_ephemeral_port(pub_socket_)) {
     // Set reception timeout for subscription messages on XPUB socket to zero because we need to mutex-lock the socket
     // while reading and cannot log at the same time.
-    publisher_.set(zmq::sockopt::rcvtimeo, 0);
+    pub_socket_.set(zmq::sockopt::rcvtimeo, 0);
 }
 
 CMDPSink::~CMDPSink() {
@@ -85,7 +85,7 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
 
         // Receive subscription message
         zmq::multipart_t recv_msg {};
-        auto received = recv_msg.recv(publisher_);
+        auto received = recv_msg.recv(pub_socket_);
 
         socket_lock.unlock();
 
@@ -185,5 +185,5 @@ void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
     // Create and send CMDP message
     CMDP1LogMessage(from_spdlog_level(msg.level), to_string(msg.logger_name), std::move(msghead), to_string(msg.payload))
         .assemble()
-        .send(publisher_);
+        .send(pub_socket_);
 }

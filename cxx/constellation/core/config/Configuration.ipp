@@ -13,7 +13,6 @@
 
 #include <stdexcept>
 #include <string>
-#include <typeinfo>
 #include <vector>
 
 #include <magic_enum.hpp>
@@ -21,6 +20,7 @@
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/core/utils/type.hpp"
 
 namespace constellation::config {
 
@@ -36,7 +36,7 @@ namespace constellation::config {
             throw MissingKeyError(key);
         } catch(const std::bad_variant_access&) {
             // Value held by the dictionary entry could not be cast to desired type
-            throw InvalidTypeError(key, config_.at(key_lc).type(), typeid(T));
+            throw InvalidTypeError(key, config_.at(key_lc).demangle(), utils::demangle<T>());
         } catch(const std::invalid_argument& error) {
             // Value held by the dictionary entry could not be converted to desired type
             throw InvalidValueError(config_.at(key_lc).str(), key, error.what());
@@ -58,11 +58,11 @@ namespace constellation::config {
             config_[key_lc] = {Value::set(val), mark_used};
         } catch(const std::bad_cast&) {
             // Value held by the dictionary entry could not be cast to desired type
-            throw InvalidTypeError(key, typeid(T), typeid(value_t));
+            throw InvalidTypeError(key, utils::demangle<T>(), utils::demangle<value_t>());
         } catch(const std::overflow_error& error) {
             if constexpr(utils::convertible_to_string<T>) {
                 throw InvalidValueError(utils::to_string(val), key, error.what());
-            } if constexpr(utils::convertible_range_to_string<T>) {
+            } else if constexpr(utils::convertible_range_to_string<T>) {
                 throw InvalidValueError(utils::range_to_string(val), key, error.what());
             } else {
                 throw InvalidValueError("<unknown>", key, error.what());
@@ -85,7 +85,7 @@ namespace constellation::config {
     template <typename F> void Configuration::for_each(Group group, Usage usage, F f) const {
         using enum Group;
         using enum Usage;
-        for(auto& [key, value] : config_) {
+        for(const auto& [key, value] : config_) {
             if((group == ALL || (group == USER && !key.starts_with("_")) || (group == INTERNAL && key.starts_with("_"))) &&
                (usage == ANY || (usage == USED && value.isUsed()) || (usage == UNUSED && !value.isUsed()))) {
                 f(key, value);

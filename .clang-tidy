@@ -1,30 +1,43 @@
 # SPDX-FileCopyrightText: 2023 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
+#
+# First "Checks" block enables all relevant categories
+# Second "Checks" block disables all aliases (run again otherwise)
+# For clang-tidy 16, re-check aliases online on clang-tidy update
+#
+# TODO(stephan.lachnit): on update clang-tidy update: Array of string for Checks, HeaderFilterRegex -> HeaderFileExtensions
 
 Checks:  '-*,
           bugprone-*,-bugprone-easily-swappable-parameters,
           cert-*,
           concurrency-*,
-          cppcoreguidelines-*,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-pro-bounds-pointer-arithmetic,
+          cppcoreguidelines-*,-cppcoreguidelines-pro-bounds-pointer-arithmetic,
           google-*,-google-build-using-namespace,-google-explicit-constructor,-google-readability-casting,
-          hicpp-*,-hicpp-explicit-conversions,
+          hicpp-*,
           llvm-*,-llvm-header-guard,-llvm-include-order,
           misc-*,
           modernize-*,-modernize-use-nodiscard,-modernize-use-trailing-return-type,
           performance-*,
           portability-*,
           readability-*,-readability-identifier-length,-readability-function-cognitive-complexity,-readability-magic-numbers,-readability-redundant-access-specifiers,
+          -bugprone-narrowing-conversions,
+          -cert-con36-c,-cert-con54-cpp,-cert-dcl03-c,-cert-dcl16-c,-cert-dcl37-c,-cert-dcl51-cpp,-cert-dcl54-cpp,-cert-dcl59-cpp,-cert-err09-cpp,-cert-err61-cpp,-cert-exp42-c,-cert-fio38-c,-cert-flp37-c,-cert-msc30-c,-cert-msc32-c,-cert-msc54-cpp,-cert-oop11-cpp,-cert-oop54-cpp,-cert-pos44-c,-cert-pos47-c,-cert-sig30-c,-cert-str34-c,
+          -cppcoreguidelines-avoid-c-arrays,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-c-copy-assignment-signature,-cppcoreguidelines-explicit-virtual-functions,-cppcoreguidelines-macro-to-enum,-cppcoreguidelines-non-private-member-variables-in-classes,
+          -google-readability-braces-around-statements,-google-readability-function-size,-google-readability-namespace-comments,
+          -hicpp-avoid-c-arrays,-hicpp-braces-around-statements,-hicpp-deprecated-headers,-hicpp-explicit-conversions,-hicpp-function-size,-hicpp-invalid-access-moved,-hicpp-member-init,-hicpp-move-const-arg,-hicpp-named-parameter,-hicpp-new-delete-operators,-hicpp-no-array-decay,-hicpp-no-malloc,-hicpp-noexcept-move,-hicpp-special-member-functions,-hicpp-static-assert,-hicpp-undelegated-constructor,-hicpp-uppercase-literal-suffix,-hicpp-use-auto,-hicpp-use-emplace,-hicpp-use-equals-default,-hicpp-use-equals-delete,-hicpp-use-noexcept,-hicpp-use-nullptr,-hicpp-use-override,-hicpp-vararg,
+          -llvm-else-after-return,-llvm-qualified-auto,
          '
 WarningsAsErrors: '*'
-HeaderFilterRegex: '*.h *.hpp *.tpp'
+HeaderFilterRegex: '*\.(h|hpp|ipp)$'
 CheckOptions:
   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: 'true'
+  modernize-use-override.IgnoreDestructors: 'true'
   cppcoreguidelines-avoid-do-while.IgnoreMacros: 'true'
   readability-identifier-naming.NamespaceCase: lower_case
   readability-identifier-naming.ClassCase: CamelCase
   readability-identifier-naming.ClassIgnoredRegexp: '^is_.+$'
   readability-identifier-naming.PublicMethodCase: camelBack
-  readability-identifier-naming.PublicMethodIgnoredRegexp: '^msgpack_.+$|^to_.+$|^on_failure$'
+  readability-identifier-naming.PublicMethodIgnoredRegexp: '^msgpack_.+$|^to_.+$'
   readability-identifier-naming.ProtectedMethodCase: lower_case
   readability-identifier-naming.PrivateMethodCase: lower_case
   readability-identifier-naming.PrivateMemberCase: lower_case

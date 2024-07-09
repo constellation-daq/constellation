@@ -12,6 +12,7 @@
 #include <string>
 #include <string_view>
 
+#include "constellation/build.hpp"
 #include "constellation/core/message/Protocol.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 
@@ -22,7 +23,7 @@ namespace constellation::message {
      *
      * The message cannot be correctly decoded because the format does not adhere to protocol.
      */
-    class MessageDecodingError : public utils::RuntimeError {
+    class CNSTLN_API MessageDecodingError : public utils::RuntimeError {
     public:
         explicit MessageDecodingError(const std::string& reason) {
             error_message_ = "Error decoding message: ";
@@ -39,7 +40,7 @@ namespace constellation::message {
      *
      * The message identifier does not represent a valid or known protocol identifier
      */
-    class InvalidProtocolError : public MessageDecodingError {
+    class CNSTLN_API InvalidProtocolError : public MessageDecodingError {
     public:
         explicit InvalidProtocolError(const std::string& protocol) {
             error_message_ = "Invalid protocol identifier \"";
@@ -54,7 +55,7 @@ namespace constellation::message {
      *
      * The protocol identifier of the message does not match the expected protocol
      */
-    class UnexpectedProtocolError : public MessageDecodingError {
+    class CNSTLN_API UnexpectedProtocolError : public MessageDecodingError {
     public:
         explicit UnexpectedProtocolError(const Protocol& prot_recv, const Protocol& prot_exp) {
             error_message_ = "Received protocol \"";
@@ -71,7 +72,7 @@ namespace constellation::message {
      *
      * The message type does not match the requested operation
      */
-    class IncorrectMessageType : public utils::RuntimeError {
+    class CNSTLN_API IncorrectMessageType : public utils::RuntimeError {
     public:
         explicit IncorrectMessageType(std::string_view why) {
             error_message_ = "Message type is incorrect: ";

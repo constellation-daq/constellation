@@ -31,7 +31,7 @@
 namespace constellation::heartbeat {
 
     /**
-     * Manager for CHP publishing and receiving
+     * @brief Manager for CHP publishing and receiving
      *
      * This manager holds a heartbeat sender and receiver as well as the logic for calling FSM interrupts based on
      * received heartbeats. It keeps track of received heartbeats from remote heartbeat senders, counts their lives and
@@ -40,32 +40,31 @@ namespace constellation::heartbeat {
     class HeartbeatManager {
     public:
         /**
-         * Construct a heartbeat manager
+         * @brief Construct a heartbeat manager
          *
          * The constructor directly starts sender and receiver as well as the manager's watchdog thread which keeps track
          * of remote heartbeat rates and states
          *
          * @param sender Canonical name of the heartbeat sender
+         * @param state_callback Function that return the current state
          */
-        CNSTLN_API HeartbeatManager(std::string sender);
+        CNSTLN_API HeartbeatManager(std::string sender, std::function<message::State()> state_callback);
 
         /** Deconstruct the manager. This stops the watchdog thread */
         CNSTLN_API virtual ~HeartbeatManager();
 
         // No copy/move constructor/assignment
+        /// @cond doxygen_suppress
         HeartbeatManager(const HeartbeatManager& other) = delete;
         HeartbeatManager& operator=(const HeartbeatManager& other) = delete;
         HeartbeatManager(HeartbeatManager&& other) = delete;
         HeartbeatManager& operator=(HeartbeatManager&& other) = delete;
+        /// @endcond
 
         /**
-         * @brief Update the current state to be broadcasted
-         * @details This method will update the state of the FSM to be broadcasted via CHP. Updating the state will also
-         * trigger the emission of an extrasystole CHP message with the new state
-         *
-         * @param state New state
+         * @brief Send an extrasystole
          */
-        CNSTLN_API void updateState(message::State state);
+        CNSTLN_API void sendExtrasystole();
 
         /**
          * @brief Obtain the current state registered from a given remote

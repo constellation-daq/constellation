@@ -28,7 +28,7 @@ namespace constellation::chirp {
         std::vector<std::byte> content;
 
         /** Address from which the broadcast message was received */
-        asio::ip::address address;
+        asio::ip::address_v4 address;
 
         /** Convert the content of the broadcast message to a string */
         CNSTLN_API std::string to_string() const;
@@ -43,7 +43,7 @@ namespace constellation::chirp {
          * @param any_address Address for incoming broadcasts (e.g. `asio::ip::address_v4::any()`)
          * @param port Port for outgoing broadcasts
          */
-        CNSTLN_API BroadcastRecv(const asio::ip::address& any_address, asio::ip::port_type port);
+        CNSTLN_API BroadcastRecv(const asio::ip::address_v4& any_address, asio::ip::port_type port);
 
         /**
          * Construct broadcast receiver using human readable IP address

@@ -9,14 +9,18 @@
 
 #include "BaseHeader.hpp"
 
+#include <chrono>
+#include <cstddef>
 #include <ios>
+#include <span>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
-#include <magic_enum.hpp>
 #include <msgpack.hpp>
 
+#include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"

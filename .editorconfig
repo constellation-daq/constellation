@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 CERN and the Constellation authors
+# SPDX-FileCopyrightText: 2023 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
 root = true
@@ -9,7 +9,7 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-[*.{h,hpp,cpp,tpp,C,py}]
+[*.{h,hpp,cpp,ipp,py}]
 indent_style = space
 indent_size = 4
 

@@ -6,30 +6,30 @@ build-backend = "mesonpy"
 requires = ["meson-python"]
 
 [project]
-name = "constellation"
+name = "ConstellationDAQ"
 authors = [{name = "Constellation Authors"}]
-description = "Constellation SCADA System"
+description = "The Autonomous Control and Data Acquisition System for Dynamic Experimental Setups"
 readme = "README.md"
-keywords = ["DAQ", "SCADA", "experimental control"]
 license = {text = "EUPL-1.2"}
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 3 - Alpha",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: C++",
     "Operating System :: Unix",
     "License :: OSI Approved",
     "License :: OSI Approved :: European Union Public Licence 1.2 (EUPL 1.2)",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
 ]
 dynamic = ["version"]
 requires-python = ">=3.11"
 dependencies = [
     "pyzmq",
     "msgpack",
-    "python-statemachine",
+    "python-statemachine>=2.3.3",
     "numpy",
     "coloredlogs",
     "psutil",
@@ -88,5 +88,5 @@ disallow_incomplete_defs = true
 disallow_untyped_defs = true
 files = "./python/constellation/core"
 exclude = [
-        "^test_",
+    "^test_",
 ]

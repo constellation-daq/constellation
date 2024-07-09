@@ -15,7 +15,6 @@
 #include <span>
 #include <string>
 #include <type_traits>
-#include <typeinfo>
 #include <variant>
 #include <vector>
 
@@ -44,10 +43,6 @@ std::string Value::str() const {
             return out;
         },
         *this);
-}
-
-const std::type_info& Value::type() const {
-    return std::visit([](auto&& x) -> decltype(auto) { return typeid(x); }, *this);
 }
 
 void Value::msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpack_packer) const {

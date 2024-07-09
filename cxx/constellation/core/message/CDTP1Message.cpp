@@ -33,7 +33,7 @@ using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::string_view_literals;
 
-// Similar to Header::disassemble in Header.tpp, check when modifying
+// Similar to BaseHeader::disassemble in BaseHeader.cpp, check when modifying
 CDTP1Message::Header CDTP1Message::Header::disassemble(std::span<const std::byte> data) {
     try {
         // Offset since we decode four separate msgpack objects

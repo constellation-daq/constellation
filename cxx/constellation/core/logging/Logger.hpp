@@ -39,10 +39,12 @@ namespace constellation::log {
             inline ~LogStream() final { logger_.log(level_, this->view(), src_loc_); }
 
             // No copy/move constructor/assignment
+            /// @cond doxygen_suppress
             LogStream(const LogStream& other) = delete;
             LogStream& operator=(const LogStream& other) = delete;
             LogStream(LogStream&& other) = delete;
             LogStream& operator=(LogStream&& other) = delete;
+            /// @endcond
 
         private:
             const Logger& logger_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -66,11 +68,13 @@ namespace constellation::log {
 
         CNSTLN_API virtual ~Logger();
 
-        // No copy constructor/assignment
+        // No copy/move constructor/assignment
+        /// @cond doxygen_suppress
         Logger(const Logger& other) = delete;
         Logger& operator=(const Logger& other) = delete;
         Logger(Logger&& other) = delete;
         Logger& operator=(Logger&& other) = delete;
+        /// @endcond
 
         /**
          * Check if a message should be logged given the currently configured log level

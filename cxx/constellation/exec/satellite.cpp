@@ -32,13 +32,11 @@
 #include "constellation/core/logging/log.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
-#include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/exec/DSOLoader.hpp"
 #include "constellation/exec/exceptions.hpp"
 #include "constellation/satellite/Satellite.hpp"
-#include "constellation/satellite/SatelliteImplementation.hpp"
 
 using namespace constellation;
 using namespace constellation::exec;
@@ -53,7 +51,7 @@ extern "C" void signal_hander(int signal) {
     signal_handler_f(signal);
 }
 
-// NOLINTNEXTLINE(*-avoid-c-arrays)
+// NOLINTNEXTLINE(modernize-avoid-c-arrays)
 void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser, bool needs_type) {
     // If not a predefined type, requires that the satellite type is specified
     if(needs_type) {
@@ -109,7 +107,7 @@ std::string get_arg(argparse::ArgumentParser& parser, std::string_view arg) noex
 }
 
 int constellation::exec::satellite_main(int argc,
-                                        char* argv[], // NOLINT(*-avoid-c-arrays)
+                                        char* argv[], // NOLINT(modernize-avoid-c-arrays)
                                         std::string_view program,
                                         std::optional<SatelliteType> satellite_type) noexcept {
     // Ensure that ZeroMQ doesn't fail creating the CMDP sink
@@ -146,16 +144,16 @@ int constellation::exec::satellite_main(int argc,
     SinkManager::getInstance().setGlobalConsoleLevel(default_level.value());
 
     // Check broadcast and any address
-    asio::ip::address brd_addr {};
+    asio::ip::address_v4 brd_addr {};
     try {
-        brd_addr = asio::ip::address::from_string(get_arg(parser, "brd"));
+        brd_addr = asio::ip::make_address_v4(get_arg(parser, "brd"));
     } catch(const asio::system_error& error) {
         LOG(logger, CRITICAL) << "Invalid broadcast address \"" << get_arg(parser, "brd") << "\"";
         return 1;
     }
-    asio::ip::address any_addr {};
+    asio::ip::address_v4 any_addr {};
     try {
-        any_addr = asio::ip::address::from_string(get_arg(parser, "any"));
+        any_addr = asio::ip::make_address_v4(get_arg(parser, "any"));
     } catch(const asio::system_error& error) {
         LOG(logger, CRITICAL) << "Invalid any address \"" << get_arg(parser, "any") << "\"";
         return 1;
@@ -208,16 +206,12 @@ int constellation::exec::satellite_main(int argc,
         return 1;
     }
 
-    // Start satellite
-    SatelliteImplementation satellite_implementation {std::move(satellite)};
-    satellite_implementation.start();
-
     // Register signal handlers
     std::once_flag shut_down_flag {};
     signal_handler_f = [&](int /*signal*/) -> void {
         std::call_once(shut_down_flag, [&]() {
             LOG(logger, STATUS) << "Terminating satellite";
-            satellite_implementation.terminate();
+            satellite->terminate();
         });
     };
     // NOLINTBEGIN(cert-err33-c)
@@ -226,7 +220,7 @@ int constellation::exec::satellite_main(int argc,
     // NOLINTEND(cert-err33-c)
 
     // Wait for signal to join
-    satellite_implementation.join();
+    satellite->join();
 
     return 0;
 }

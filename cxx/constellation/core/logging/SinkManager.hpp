@@ -26,7 +26,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/logging/CMDPSink.hpp"
 #include "constellation/core/logging/Level.hpp"
-#include "constellation/core/utils/ports.hpp"
+#include "constellation/core/utils/networking.hpp"
 
 namespace constellation::log {
     /**
@@ -37,7 +37,7 @@ namespace constellation::log {
     class SinkManager {
     private:
         // Formatter for the log level (overwrites spdlog defaults)
-        class CNSTLN_API ConstellationLevelFormatter final : public spdlog::custom_flag_formatter {
+        class ConstellationLevelFormatter : public spdlog::custom_flag_formatter {
         public:
             ConstellationLevelFormatter(bool format_short);
             void format(const spdlog::details::log_msg& msg, const std::tm& tm, spdlog::memory_buf_t& dest) override;
@@ -48,7 +48,7 @@ namespace constellation::log {
         };
 
         // Formatter for the topic (adds brackets except for the default logger)
-        class CNSTLN_API ConstellationTopicFormatter final : public spdlog::custom_flag_formatter {
+        class ConstellationTopicFormatter : public spdlog::custom_flag_formatter {
         public:
             void format(const spdlog::details::log_msg& msg, const std::tm& tm, spdlog::memory_buf_t& dest) override;
             std::unique_ptr<spdlog::custom_flag_formatter> clone() const override;
@@ -60,10 +60,12 @@ namespace constellation::log {
         ~SinkManager() = default;
 
         // No copy/move constructor/assignment
+        /// @cond doxygen_suppress
         SinkManager(const SinkManager& other) = delete;
         SinkManager& operator=(const SinkManager& other) = delete;
         SinkManager(SinkManager&& other) = delete;
         SinkManager& operator=(SinkManager&& other) = delete;
+        /// @endcond
 
         /**
          * Set the global (default) console log level

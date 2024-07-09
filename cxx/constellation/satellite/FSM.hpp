@@ -7,16 +7,15 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include <any>
+#pragma once
+
 #include <functional>
 #include <map>
-#include <memory>
 #include <string>
 #include <thread>
 #include <utility>
+#include <variant>
 #include <vector>
-
-#include <zmq.hpp>
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Configuration.hpp"
@@ -26,9 +25,9 @@
 #include "constellation/satellite/fsm_definitions.hpp"
 
 namespace constellation::satellite {
-    class Satellite;
+    class BaseSatellite;
 
-    class FSM final {
+    class FSM {
     public:
         /** Payload of a transition function: variant with config, partial_config or run identifier */
         using TransitionPayload = std::variant<std::monostate, config::Configuration, std::string>;
@@ -44,37 +43,37 @@ namespace constellation::satellite {
 
     public:
         /**
-         * Construct the final state machine of a satellite
+         * @brief Construct the final state machine of a satellite
          *
          * @param satellite Satellite class with functions of transitional states
          */
-        FSM(std::shared_ptr<Satellite> satellite) : satellite_(std::move(satellite)), logger_("FSM") {}
+        FSM(BaseSatellite* satellite) : satellite_(satellite), logger_("FSM") {}
 
         CNSTLN_API ~FSM();
 
         // No copy/move constructor/assignment
+        /// @cond doxygen_suppress
         FSM(const FSM& other) = delete;
         FSM& operator=(const FSM& other) = delete;
         FSM(FSM&& other) = delete;
         FSM& operator=(FSM&& other) = delete;
+        /// @endcond
 
         /**
-         * Returns the current state of the FSM
-         *
-         * @return Current state
+         * @brief Returns the current state of the FSM
          */
         constexpr State getState() const { return state_; }
 
         /**
-         * Checks if a FSM transition is allowed in current state
+         * @brief Check if a FSM transition is allowed in current state
          *
          * @param transition Transition to check if allowed
          * @return True if transition is possible
          */
-        CNSTLN_API bool isAllowed(Transition transition);
+        CNSTLN_API bool isAllowed(Transition transition) const;
 
         /**
-         * Perform a FSM transition
+         * @brief Perform a FSM transition
          *
          * @param transition Transition to perform
          * @param payload Payload for the transition function
@@ -83,9 +82,7 @@ namespace constellation::satellite {
         CNSTLN_API void react(Transition transition, TransitionPayload payload = {});
 
         /**
-         * Perform a FSM transition if allowed, otherwise do nothing
-         *
-         * TODO(stephan.lachnit): only useful for interrupt and failure, maybe private?
+         * @brief Perform a FSM transition if allowed, otherwise do nothing
          *
          * @param transition Transition to perform if allowed
          * @param payload Payload for the transition function
@@ -94,7 +91,7 @@ namespace constellation::satellite {
         CNSTLN_API bool reactIfAllowed(Transition transition, TransitionPayload payload = {});
 
         /**
-         * Perform a FSM transition via a CSCP message
+         * @brief Perform a FSM transition via a CSCP message
          *
          * @param transition_command Transition command from CSCP
          * @param payload Payload frame from CSCP
@@ -121,32 +118,39 @@ namespace constellation::satellite {
          *
          * @param callback Callback taking the new state as argument
          */
-        void registerStateCallback(std::function<void(State)> callback);
+        void registerStateCallback(std::function<void(State)> callback) {
+            state_callbacks_.emplace_back(std::move(callback));
+        }
 
     private:
         /**
-         * Call a satellite function
+         * @brief Find the transition function for a given transition in the current state
          *
-         * @param satellite Satellite the function should be called for
+         * @param transition Transition to search for a transition function
+         * @return Transition function corresponding to the transition
+         * @throw FSMError if the transition is not a valid transition in the current state
+         */
+        TransitionFunction find_transition_function(Transition transition) const;
+
+        /**
+         * @brief Call all state callbacks
+         */
+        void call_state_callbacks();
+
+        /**
+         * @brief Call a satellite function
+         *
          * @param func Function to be called
          * @param success_transition Transition to be performed once the function successfully returned
          * @param args Function arguments
          * @return Transition after function call, either success transition or failure
          */
         template <typename Func, typename... Args>
-        static Transition
-        call_satellite_function(Satellite* satellite, Func func, Transition success_transition, Args... args);
+        Transition call_satellite_function(Func func, Transition success_transition, Args&&... args);
 
         /**
-         * Find the transition function for a given transition in the current state
-         *
-         * @param transition Transition to search for a transition function
-         * @return Transition function corresponding to the transition
-         * @throw FSMError if the transition is not a valid transition in the current state
+         * @brief Stop and join the run_thread
          */
-        TransitionFunction find_transition_function(Transition transition);
-
-        /** Stop and join the run_thread */
         void stop_run_thread();
 
         CNSTLN_API auto initialize(TransitionPayload payload) -> State;
@@ -228,7 +232,7 @@ namespace constellation::satellite {
 
     private:
         State state_ {State::NEW};
-        std::shared_ptr<Satellite> satellite_;
+        BaseSatellite* satellite_;
         log::Logger logger_;
         std::thread transitional_thread_;
         std::jthread run_thread_;

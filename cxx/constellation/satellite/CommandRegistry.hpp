@@ -158,4 +158,4 @@ namespace constellation::satellite {
 } // namespace constellation::satellite
 
 // Include template members
-#include "CommandRegistry.tpp"
+#include "CommandRegistry.ipp"

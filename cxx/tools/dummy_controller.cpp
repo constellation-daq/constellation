@@ -22,6 +22,7 @@
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/satellite_definitions.hpp"
+#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation;
@@ -58,9 +59,9 @@ void cli_loop(std::span<char*> args) {
     std::cout << "Connecting to " << uri << std::endl;
 
     zmq::context_t context {};
-    zmq::socket_t req {context, zmq::socket_type::req};
+    zmq::socket_t req_socket {context, zmq::socket_type::req};
 
-    req.connect(uri);
+    req_socket.connect(uri);
 
     while(true) {
         std::string command;
@@ -79,11 +80,11 @@ void cli_loop(std::span<char*> args) {
             send_msg.addPayload(std::move(sbuf));
             std::cout << "Added run identifier \"" << run_identifier << "\" to message" << std::endl;
         }
-        send_msg.assemble().send(req);
+        send_msg.assemble().send(req_socket);
 
         // Receive reply
         zmq::multipart_t recv_zmq_msg {};
-        recv_zmq_msg.recv(req);
+        recv_zmq_msg.recv(req_socket);
         auto recv_msg = CSCP1Message::disassemble(recv_zmq_msg);
 
         // Print message

@@ -25,7 +25,7 @@
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
-#include "constellation/core/utils/ports.hpp"
+#include "constellation/core/utils/networking.hpp"
 
 using namespace constellation::chirp;
 using namespace constellation::log;
@@ -71,8 +71,8 @@ void cli_loop(std::span<char*> args) {
 
     auto group = "constellation"s;
     auto name = "chirp_manager"s;
-    asio::ip::address brd_address = asio::ip::address_v4::broadcast();
-    asio::ip::address any_address = asio::ip::address_v4::any();
+    auto brd_address = asio::ip::address_v4::broadcast();
+    auto any_address = asio::ip::address_v4::any();
     if(args.size() >= 2) {
         group = args[1];
     }
@@ -82,7 +82,7 @@ void cli_loop(std::span<char*> args) {
     }
     if(args.size() >= 4) {
         try {
-            brd_address = asio::ip::make_address(args[3]);
+            brd_address = asio::ip::make_address_v4(args[3]);
         } catch(const asio::system_error& error) {
             std::cerr << "Unable to use specified broadcast address " << std::quoted(args[3]) << ", using default instead"
                       << std::endl;
@@ -90,7 +90,7 @@ void cli_loop(std::span<char*> args) {
     }
     if(args.size() >= 5) {
         try {
-            any_address = asio::ip::make_address(args[4]);
+            any_address = asio::ip::make_address_v4(args[4]);
         } catch(const asio::system_error& error) {
             std::cerr << "Unable to use specified any address " << std::quoted(args[4]) << ", using default instead"
                       << std::endl;

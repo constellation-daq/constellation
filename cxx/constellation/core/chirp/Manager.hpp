@@ -25,7 +25,7 @@
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
-#include "constellation/core/utils/ports.hpp"
+#include "constellation/core/utils/networking.hpp"
 
 namespace constellation::chirp {
 
@@ -43,7 +43,7 @@ namespace constellation::chirp {
     /** A service discovered by the `Manager` */
     struct DiscoveredService {
         /** Address of the discovered service */
-        asio::ip::address address;
+        asio::ip::address_v4 address;
 
         /** Host ID of the discovered service */
         message::MD5Hash host_id;
@@ -113,8 +113,8 @@ namespace constellation::chirp {
          * @param group_name Group name of the group to join
          * @param host_name Host name for outgoing messages
          */
-        CNSTLN_API Manager(const asio::ip::address& brd_address,
-                           const asio::ip::address& any_address,
+        CNSTLN_API Manager(const asio::ip::address_v4& brd_address,
+                           const asio::ip::address_v4& any_address,
                            std::string_view group_name,
                            std::string_view host_name);
 
@@ -130,10 +130,12 @@ namespace constellation::chirp {
         CNSTLN_API virtual ~Manager();
 
         // No copy/move constructor/assignment
+        /// @cond doxygen_suppress
         Manager(const Manager& other) = delete;
         Manager& operator=(const Manager& other) = delete;
         Manager(Manager&& other) = delete;
         Manager& operator=(Manager&& other) = delete;
+        /// @endcond
 
         /**
          * @return Group ID (MD5Hash of the group name)

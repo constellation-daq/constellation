@@ -12,6 +12,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <stop_token>
 #include <string>
@@ -21,7 +22,7 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/message/satellite_definitions.hpp"
-#include "constellation/core/utils/ports.hpp"
+#include "constellation/core/utils/networking.hpp"
 
 namespace constellation::heartbeat {
 
@@ -35,18 +36,23 @@ namespace constellation::heartbeat {
          * CHIRP heartbeat service.
          *
          * @param sender Canonical name of the sender
+         * @param state_callback Function that return the current state
          * @param interval Interval at which the heartbeats are sent
          */
-        CNSTLN_API HeartbeatSend(std::string sender, std::chrono::milliseconds interval);
+        CNSTLN_API HeartbeatSend(std::string sender,
+                                 std::function<message::State()> state_callback,
+                                 std::chrono::milliseconds interval);
 
         /** Destructor which unregisters the CHIRP heartbeat service and stops the heartbeat thread */
         CNSTLN_API ~HeartbeatSend();
 
         // No copy/move constructor/assignment
+        /// @cond doxygen_suppress
         HeartbeatSend(const HeartbeatSend& other) = delete;
         HeartbeatSend& operator=(const HeartbeatSend& other) = delete;
         HeartbeatSend(HeartbeatSend&& other) = delete;
         HeartbeatSend& operator=(HeartbeatSend&& other) = delete;
+        /// @endcond
 
         /**
          * @brief Get ephemeral port to which the CHP socket is bound
@@ -65,11 +71,9 @@ namespace constellation::heartbeat {
         void updateInterval(std::chrono::milliseconds interval) { interval_ = interval; }
 
         /**
-         * @brief Update the currently emitted state
-         *
-         * @param state State to be broadcasted
+         * @brief Send an extrasystole
          */
-        CNSTLN_API void updateState(message::State state);
+        CNSTLN_API void sendExtrasystole();
 
     private:
         /**
@@ -80,17 +84,18 @@ namespace constellation::heartbeat {
          */
         void loop(const std::stop_token& stop_token);
 
+    private:
         /** ZMQ context for the emitting socket */
         zmq::context_t context_;
         /** Publisher socket for emitting heartbeats */
-        zmq::socket_t pub_;
+        zmq::socket_t pub_socket_;
         /** Ephemeral port selected for the heartbeat emission */
         utils::Port port_;
 
         /** Canonical sender name */
         std::string sender_;
-        /** Currently broadcasted state */
-        std::atomic<message::State> state_ {message::State::NEW};
+        /** Function returning the current state */
+        std::function<message::State()> state_callback_;
         /** Maximum heartbeat broadcasting interval */
         std::atomic<std::chrono::milliseconds> interval_;
 

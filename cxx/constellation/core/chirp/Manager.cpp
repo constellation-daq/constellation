@@ -43,7 +43,7 @@ bool RegisteredService::operator<(const RegisteredService& other) const {
 }
 
 std::string DiscoveredService::to_uri() const {
-    return "tcp://" + address.to_string() + ":" + to_string(port);
+    return "tcp://" + range_to_string(address.to_bytes(), ".") + ":" + to_string(port);
 }
 
 bool DiscoveredService::operator<(const DiscoveredService& other) const {
@@ -87,8 +87,8 @@ void Manager::setAsDefaultInstance() {
     Manager::default_manager_instance_ = this;
 }
 
-Manager::Manager(const asio::ip::address& brd_address,
-                 const asio::ip::address& any_address,
+Manager::Manager(const asio::ip::address_v4& brd_address,
+                 const asio::ip::address_v4& any_address,
                  std::string_view group_name,
                  std::string_view host_name)
     : receiver_(any_address, CHIRP_PORT), sender_(brd_address, CHIRP_PORT), group_id_(MD5Hash(group_name)),
@@ -101,7 +101,7 @@ Manager::Manager(const asio::ip::address& brd_address,
 }
 
 Manager::Manager(std::string_view brd_ip, std::string_view any_ip, std::string_view group_name, std::string_view host_name)
-    : Manager(asio::ip::make_address(brd_ip), asio::ip::make_address(any_ip), group_name, host_name) {}
+    : Manager(asio::ip::make_address_v4(brd_ip), asio::ip::make_address_v4(any_ip), group_name, host_name) {}
 
 Manager::~Manager() {
     // First stop Run function

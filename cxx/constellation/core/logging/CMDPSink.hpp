@@ -21,7 +21,7 @@
 #include <zmq.hpp>
 
 #include "constellation/core/logging/Level.hpp"
-#include "constellation/core/utils/ports.hpp"
+#include "constellation/core/utils/networking.hpp"
 
 namespace constellation::log {
     /**
@@ -78,8 +78,7 @@ namespace constellation::log {
         std::shared_ptr<spdlog::async_logger> cmdp_console_logger_;
 
         zmq::context_t context_;
-        zmq::socket_t publisher_;
-
+        zmq::socket_t pub_socket_;
         utils::Port port_;
         std::string sender_name_;
 

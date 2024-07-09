@@ -11,6 +11,10 @@ This satellite does very little, just as its [namesake](https://en.wikipedia.org
 
 This section describes the functions of the satellite and all relevant information about the connected hardware as well as its requirements or external software dependencies.
 
+## Building
+
+The Sputnik satellite has no additional dependencies and is build by default.
+
 ## Parameters
 
 The following parameters are read and interpreted by this satellite. Parameters without a default value are required.

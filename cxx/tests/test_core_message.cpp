@@ -7,6 +7,7 @@
 #include <chrono>
 #include <ctime>
 #include <limits>
+#include <numbers>
 #include <string>
 
 #include <catch2/catch_test_macros.hpp>
@@ -107,11 +108,11 @@ TEST_CASE("Header Packing / Unpacking", "[core][core::message]") {
 
     // Compare unpacked header
     REQUIRE(cscp1_header_unpacked.getTags().size() == 5);
-    REQUIRE(std::get<bool>(cscp1_header_unpacked.getTag("test_b")));
-    REQUIRE(std::get<std::int64_t>(cscp1_header_unpacked.getTag("test_i")) == std::numeric_limits<std::int64_t>::max());
-    REQUIRE(std::get<double>(cscp1_header_unpacked.getTag("test_d")) == std::numbers::pi);
-    REQUIRE_THAT(std::get<std::string>(cscp1_header_unpacked.getTag("test_s")), Equals("String"));
-    REQUIRE(std::get<std::chrono::system_clock::time_point>(cscp1_header_unpacked.getTag("test_t")) == tp);
+    REQUIRE(cscp1_header_unpacked.getTag<bool>("test_b"));
+    REQUIRE(cscp1_header_unpacked.getTag<std::int64_t>("test_i") == std::numeric_limits<std::int64_t>::max());
+    REQUIRE(cscp1_header_unpacked.getTag<double>("test_d") == std::numbers::pi);
+    REQUIRE_THAT(cscp1_header_unpacked.getTag<std::string>("test_s"), Equals("String"));
+    REQUIRE(cscp1_header_unpacked.getTag<std::chrono::system_clock::time_point>("test_t") == tp);
 }
 
 TEST_CASE("Header Packing / Unpacking (invalid protocol)", "[core][core::message]") {

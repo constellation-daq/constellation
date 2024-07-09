@@ -28,9 +28,10 @@ using namespace constellation::message;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 
-HeartbeatManager::HeartbeatManager(std::string sender)
+HeartbeatManager::HeartbeatManager(std::string sender, std::function<State()> state_callback)
     : receiver_([this](auto&& arg) { process_heartbeat(std::forward<decltype(arg)>(arg)); }),
-      sender_(std::move(sender), 1000ms), logger_("CHP"), watchdog_thread_(std::bind_front(&HeartbeatManager::run, this)) {}
+      sender_(std::move(sender), std::move(state_callback), 1000ms), logger_("CHP"),
+      watchdog_thread_(std::bind_front(&HeartbeatManager::run, this)) {}
 
 HeartbeatManager::~HeartbeatManager() {
     watchdog_thread_.request_stop();
@@ -41,8 +42,8 @@ HeartbeatManager::~HeartbeatManager() {
     }
 }
 
-void HeartbeatManager::updateState(State state) {
-    sender_.updateState(state);
+void HeartbeatManager::sendExtrasystole() {
+    sender_.sendExtrasystole();
 }
 
 std::optional<State> HeartbeatManager::getRemoteState(const std::string& remote) {

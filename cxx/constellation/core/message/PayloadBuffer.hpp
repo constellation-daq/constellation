@@ -29,16 +29,16 @@
 namespace constellation::message {
 
     /**
-     * @brief Buffer holding an arbitrary object that can be turned into a zmq::message_t
+     * @brief Buffer holding an arbitrary object that can be turned into a `zmq::message_t`
      *
-     * This buffer takes ownership of an arbitrary object that owns some memory. The buffer stores the object in an std::any
-     * and memory range owned by the object in a span. The buffer features manual memory management to allow for zero-copy
-     * message transport with ZeroMQ.
+     * This buffer takes ownership of an arbitrary object that owns some memory. The buffer stores the object in an
+     * `std::any` and memory range owned by the object in a span. The buffer features manual memory management to allow for
+     * zero-copy message transport with ZeroMQ.
      *
-     * To make the zero-copy mechanism work, the std::any is allocated via new on the heap. This allows to pass a free
-     * function to ZeroMQ, which deallocates the std::any via delete. However, to avoid that the std::any is deleted when the
-     * buffer goes out of scope, the buffer has to be released. This simply means that it resets the pointer to the std::any
-     * such that it does not get deleted in the destructor of the buffer.
+     * To make the zero-copy mechanism work, the `std::any` is allocated via new on the heap. This allows to pass a free
+     * function to ZeroMQ, which deallocates the `std::any` via delete. However, to avoid that the `std::any` is deleted when
+     * the buffer goes out of scope, the buffer has to be released. This simply means that it resets the pointer to the
+     * `std::any` such that it does not get deleted in the destructor of the buffer.
      *
      */
     class PayloadBuffer {
@@ -46,48 +46,66 @@ namespace constellation::message {
         /**
          * @brief Construct buffer given by moving an arbitrary object
          *
-         * @note If T doesn't construct nicely to an std::any, one possibility is moving it into an std::shared_ptr
+         * @note If T doesn't construct nicely to an `std::any`, one possibility is moving it into an `std::shared_ptr`
          *
          * @param t L-Value Reference of object T to move into the buffer
-         * @param f Function F that takes a reference of T and returns an std::span<std::byte>
+         * @param f Function F that takes a reference of T and returns an `std::span<std::byte>`
          */
         template <typename T, typename F>
             requires std::move_constructible<T> && std::is_invocable_r_v<std::span<std::byte>, F, T&>
         PayloadBuffer(T&& t, F f) : any_ptr_(new std::any(std::forward<T>(t))), span_(f(std::any_cast<T&>(*any_ptr_))) {}
 
-        /** Specialized constructor for zmq::message_t */
+        /**
+         * @brief Specialized constructor for `zmq::message_t`
+         */
         PayloadBuffer(zmq::message_t&& msg)
             : PayloadBuffer(std::make_shared<zmq::message_t>(std::move(msg)),
                             [](std::shared_ptr<zmq::message_t>& msg_ref) -> std::span<std::byte> {
                                 return {utils::to_byte_ptr(msg_ref->data()), msg_ref->size()};
                             }) {}
 
-        /** Specialized constructor for msgpack::sbuffer */
+        /**
+         * @brief Specialized constructor for `msgpack::sbuffer`
+         */
         PayloadBuffer(msgpack::sbuffer&& buf)
             : PayloadBuffer(std::make_shared<msgpack::sbuffer>(std::move(buf)),
                             [](std::shared_ptr<msgpack::sbuffer>& buf_ref) -> std::span<std::byte> {
                                 return {utils::to_byte_ptr(buf_ref->data()), buf_ref->size()};
                             }) {}
 
-        /** Specialized constructor for non-const ranges */
+        /**
+         * @brief Specialized constructor for non-const ranges
+         */
         template <typename R>
             requires std::ranges::contiguous_range<R> && (!std::ranges::constant_range<R>)
         PayloadBuffer(R&& range) // NOLINT(bugprone-forwarding-reference-overload) FIXME: remove on clang-tidy>=17
             : PayloadBuffer(std::forward<R>(range),
                             [](R& range_ref) -> std::span<std::byte> { return utils::to_byte_span(range_ref); }) {}
 
+        /**
+         * @brief Default constructor (empty payload)
+         */
         PayloadBuffer() = default;
 
+        /**
+         * @brief Destructor deleting the `std::any`
+         */
         ~PayloadBuffer() { delete any_ptr_; }
 
         // No copy constructor/assignment
+        /// @cond doxygen_suppress
         PayloadBuffer(const PayloadBuffer& other) = delete;
         PayloadBuffer& operator=(const PayloadBuffer& other) = delete;
+        /// @endcond
 
-        // Move constructor: take over other pointer and release other buffer
+        /**
+         * @brief Move constructor taking over other pointer and releasing other buffer
+         */
         PayloadBuffer(PayloadBuffer&& other) noexcept : any_ptr_(other.any_ptr_), span_(other.span_) { other.release(); }
 
-        // Move assignment: free buffer, take over other pointer and release other buffer
+        /**
+         * @brief Move assignment freeing the buffer, taking over other pointer and releasing other buffer
+         */
         PayloadBuffer& operator=(PayloadBuffer&& other) noexcept {
             // Free any memory still owned
             delete any_ptr_;

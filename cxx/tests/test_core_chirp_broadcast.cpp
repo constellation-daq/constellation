@@ -69,7 +69,7 @@ TEST_CASE("Get IP address of broadcast from localhost", "[chirp][broadcast]") {
     // Receive message
     auto msg = msg_future.get();
 
-    REQUIRE(msg.address == asio::ip::make_address("127.0.0.1"));
+    REQUIRE(msg.address == asio::ip::make_address_v4("127.0.0.1"));
 }
 
 TEST_CASE("Send and receive broadcast asynchronously", "[chirp][broadcast]") {

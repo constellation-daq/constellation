@@ -74,12 +74,16 @@ variables:
   variables:
     CXX: ccache clang++
     CXX_LD: lld
+    CC: ccache clang
+    CC_LD: lld
 
 .debian-clang:
   image: gitlab.desy.de:5555/constellation/build-images/debian-clang:latest
   variables:
     CXX: ccache clang++
     CXX_LD: lld
+    CC: ccache clang
+    CC_LD: lld
 
 .debian-gcc:
   image: gitlab.desy.de:5555/constellation/build-images/debian-gcc:latest
@@ -102,8 +106,6 @@ variables:
 
 .ubuntu-24.04:
   image: gitlab.desy.de:5555/constellation/build-images/ubuntu-24.04:latest
-  variables:
-    CXX: ccache g++
 
 # Python templates
 
@@ -130,6 +132,7 @@ variables:
   before_script:
     - python3 -m venv venv
     - source venv/bin/activate
+    - pip install --upgrade pip setuptools
     - pip install meson-python meson ninja
 
 .python-3.11:
@@ -151,8 +154,6 @@ variables:
 
 .fedora-sphinx:
   image: gitlab.desy.de:5555/constellation/build-images/fedora-sphinx:latest
-  before_script:
-    - source /venv/bin/activate
 
 # build stage
 
@@ -195,7 +196,16 @@ build:debian-clang:
     - .debian-clang
   variables:
     BUILD_TYPE: "debug"
-    BUILD_OPTIONS: "-Dcpp_stdlib=c++ -Db_sanitize=address -Db_lundef=false"
+    BUILD_OPTIONS: "-Db_sanitize=address -Db_lundef=false"
+
+build:debian-clang-libcxx:
+  extends:
+    - .build-cpp
+    - .debian-clang
+  variables:
+    BUILD_TYPE: "debugoptimized"
+    BUILD_OPTIONS: "--wrap-mode=forcefallback -Dspdlog:external_fmt=disabled -Db_sanitize=address -Db_lundef=false"
+    CXXFLAGS: "-stdlib=libc++ -fexperimental-library"
 
 build:debian-gcc:
   extends:
@@ -286,6 +296,14 @@ test:debian-clang:
     - .debian-clang
   needs:
     - job: build:debian-clang
+      artifacts: true
+
+test:debian-clang-libcxx:
+  extends:
+    - .test-cpp
+    - .debian-clang
+  needs:
+    - job: build:debian-clang-libcxx
       artifacts: true
 
 test:debian-gcc:
@@ -434,7 +452,7 @@ lint:clang-scan-build:
     CCC_CC: clang
     CCC_CXX: clang++
   script:
-    - meson setup build -Dimpl_cxx=enabled -Dbuildtype=debug
+    - meson setup build -Dimpl_cxx=enabled -Dcxx_tests=disabled -Dbuildtype=debug
     - ninja -C build scan-build
     - if [ ! -z "$(ls -A build/meson-logs/scanbuild)" ]; then false; fi
   artifacts:
@@ -532,10 +550,12 @@ docs:doxygen:
 docs:html:
   extends:
     - .docs
+    - .python-venv
     - .fedora-sphinx
   variables:
     SPHINXOPTS: -W --keep-going
   script:
+    - pip install --no-build-isolation -e .[docs]
     - make -C docs html
   needs:
     - job: docs:doxygen

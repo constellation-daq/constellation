@@ -1,6 +1,11 @@
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
+# Build satellite if feature is not disabled:
+if get_option('satellite_sputnik').disabled()
+  subdir_done()
+endif
+
 # Type this satellite identifies as:
 satellite_type = 'Sputnik'
 
@@ -11,7 +16,7 @@ satellite_sources = files(
 
 # Automatic generation of library interface and satellite executable:
 satellite_cfg_data = configuration_data()
-satellite_cfg_data.set('SATELLITE_CLASS', satellite_type)
+satellite_cfg_data.set('SATELLITE_TYPE', satellite_type)
 satellite_generator = configure_file(
   input: satellite_generator_template,
   output: 'generator.cpp',
@@ -23,7 +28,8 @@ satellite_main = configure_file(
   configuration: satellite_cfg_data,
 )
 
-shared_library(satellite_type,
+# Explicitly store sputnik lib variable for core/exec test:
+sputnik_lib = shared_library(satellite_type,
   sources: [satellite_generator, satellite_sources],
   dependencies: [core_dep, satellite_dep],
   gnu_symbol_visibility: 'hidden',
@@ -37,3 +43,6 @@ executable('satellite' + satellite_type,
   install: true,
   install_rpath: constellation_rpath,
 )
+
+# Add satellite to build summary:
+satellites_to_build += satellite_type

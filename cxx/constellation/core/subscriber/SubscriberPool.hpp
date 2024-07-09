@@ -58,10 +58,12 @@ namespace constellation::utils {
         virtual ~SubscriberPool();
 
         // No copy/move constructor/assignment
+        /// @cond doxygen_suppress
         SubscriberPool(const SubscriberPool& other) = delete;
         SubscriberPool& operator=(const SubscriberPool& other) = delete;
         SubscriberPool(SubscriberPool&& other) = delete;
         SubscriberPool& operator=(SubscriberPool&& other) = delete;
+        /// @endcond
 
         /**
          * @brief Callback for CHIRP service discovery
@@ -110,9 +112,11 @@ namespace constellation::utils {
         /** Disconnect from all registered services */
         void disconnect_all();
 
+    private:
         chirp::ServiceIdentifier service_;
 
         const log::Logger& logger_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+
         zmq::context_t context_;
         zmq::active_poller_t poller_;
         std::map<chirp::DiscoveredService, zmq::socket_t> sockets_;
@@ -127,4 +131,4 @@ namespace constellation::utils {
 } // namespace constellation::utils
 
 // Include template members
-#include "SubscriberPool.tpp"
+#include "SubscriberPool.ipp"

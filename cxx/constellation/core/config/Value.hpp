@@ -21,6 +21,7 @@
 #include <msgpack/sbuffer_decl.hpp>
 
 #include "constellation/build.hpp"
+#include "constellation/core/utils/type.hpp"
 
 namespace constellation::config {
 
@@ -31,11 +32,6 @@ namespace constellation::config {
     template <typename T, typename... Ts>
     struct is_one_of<T, std::variant<Ts...>> : std::bool_constant<(std::is_same_v<T, Ts> || ...)> {};
     template <typename T, typename... Ts> inline constexpr bool is_one_of_v = is_one_of<T, Ts...>::value;
-
-    // Type trait for std::vector
-    template <typename T> struct is_vector : std::false_type {};
-    template <typename T> struct is_vector<std::vector<T>> : std::true_type {};
-    template <typename T> inline constexpr bool is_vector_v = is_vector<T>::value;
 
     // Concept for bounded C arrays of given type U
     template <typename U, typename T>
@@ -66,7 +62,7 @@ namespace constellation::config {
      * @class Value
      * @brief Augmented std::variant with MsgPack packer and unpacker routines
      */
-    class CNSTLN_API Value : public value_t {
+    class Value : public value_t {
     public:
         using value_t::value_t;
         using value_t::operator=;
@@ -75,7 +71,7 @@ namespace constellation::config {
          * @brief Convert value to string representation
          * @return String representation of the value
          */
-        std::string str() const;
+        CNSTLN_API std::string str() const;
 
         /**
          * @brief Get value in requested type
@@ -96,10 +92,12 @@ namespace constellation::config {
         template <typename T> static inline Value set(const T& value);
 
         /**
-         * @brief Get type info of the value currently stored in the variant
-         * @return Type info of the currently held value
+         * @brief Demangle type held by the Value
+         * @return Demangled name of the currently held type
          */
-        const std::type_info& type() const;
+        inline std::string demangle() const {
+            return std::visit([&](auto&& arg) { return utils::demangle<std::decay_t<decltype(arg)>>(); }, *this);
+        }
 
         /** Pack value with msgpack */
         CNSTLN_API void msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpack_packer) const;
@@ -110,4 +108,4 @@ namespace constellation::config {
 } // namespace constellation::config
 
 // Include template members
-#include "Value.tpp"
+#include "Value.ipp"

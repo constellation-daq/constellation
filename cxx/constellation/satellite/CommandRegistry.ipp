@@ -21,6 +21,7 @@
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/message/satellite_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/core/utils/type.hpp"
 #include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/fsm_definitions.hpp"
 
@@ -30,7 +31,7 @@ namespace constellation::satellite {
         try {
             return value.get<T>();
         } catch(const std::bad_variant_access&) {
-            throw InvalidUserCommandArguments(typeid(T), value.type());
+            throw InvalidUserCommandArguments(utils::demangle<T>(), value.demangle());
         }
     }
 
@@ -38,7 +39,7 @@ namespace constellation::satellite {
         try {
             return config::Value::set(value);
         } catch(const std::bad_cast&) {
-            throw InvalidUserCommandResult(typeid(T));
+            throw InvalidUserCommandResult(utils::demangle<T>());
         }
     }
 
@@ -69,11 +70,8 @@ namespace constellation::satellite {
     }
 
     template <typename T, typename R, typename... Args>
-    inline void CommandRegistry::add(const std::string& name,
-                                     std::string description,
-                                     std::initializer_list<State> states,
-                                     R (T::*func)(Args...),
-                                     T* t) {
+    inline void CommandRegistry::add(
+        const std::string& name, std::string description, std::initializer_list<State> states, R (T::*func)(Args...), T* t) {
         if(!func || !t) {
             throw utils::LogicError("Object and member function pointers must not be nullptr");
         }

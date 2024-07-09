@@ -11,8 +11,9 @@
 
 #include <initializer_list>
 #include <string>
-#include <typeinfo>
+#include <string_view>
 
+#include "constellation/build.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/type.hpp"
 
@@ -21,13 +22,13 @@ namespace constellation::config {
      * @ingroup Exceptions
      * @brief Base class for all configurations exceptions in the framework.
      */
-    class ConfigurationError : public utils::RuntimeError {};
+    class CNSTLN_API ConfigurationError : public utils::RuntimeError {};
 
     /**
      * @ingroup Exceptions
      * @brief Informs of a missing key that should have been defined
      */
-    class MissingKeyError : public ConfigurationError {
+    class CNSTLN_API MissingKeyError : public ConfigurationError {
     public:
         /**
          * @brief Construct an error for a missing key
@@ -40,7 +41,7 @@ namespace constellation::config {
      * @ingroup Exceptions
      * @brief Indicates a problem converting the value of a configuration key to the value it should represent
      */
-    class InvalidTypeError : public ConfigurationError {
+    class CNSTLN_API InvalidTypeError : public ConfigurationError {
     public:
         /**
          * @brief Construct an error for a value with an invalid type
@@ -49,18 +50,18 @@ namespace constellation::config {
          * @param type Type the value should have been converted to
          * @param reason Reason why the conversion failed
          */
-        InvalidTypeError(const std::string& key,
-                         const std::type_info& vtype,
-                         const std::type_info& type,
-                         const std::string& reason = "") {
+        InvalidTypeError(std::string_view key, std::string_view vtype, std::string_view type, std::string_view reason = "") {
             // FIXME wording
             error_message_ = "Could not convert value of type '";
-            error_message_ += utils::demangle(vtype);
+            error_message_ += vtype;
             error_message_ += "' to type '";
-            error_message_ += utils::demangle(type);
-            error_message_ += "' for key '" + key + "'";
+            error_message_ += type;
+            error_message_ += "' for key '";
+            error_message_ += key;
+            error_message_ += "'";
             if(!reason.empty()) {
-                error_message_ += ": " + reason;
+                error_message_ += ": ";
+                error_message_ += reason;
             }
         }
     };
@@ -72,7 +73,7 @@ namespace constellation::config {
      * Should be raised if the data contains valid data for its type (otherwise an \ref InvalidTypeError should have been
      * raised earlier), but the value is not in the range of allowed values.
      */
-    class InvalidValueError : public ConfigurationError {
+    class CNSTLN_API InvalidValueError : public ConfigurationError {
     public:
         /**
          * @brief Construct an error for an invalid value
@@ -98,7 +99,7 @@ namespace constellation::config {
      * Should be raised if a disallowed combination of keys is used, such as two optional parameters which cannot be used at
      * the same time because they contradict each other.
      */
-    class InvalidCombinationError : public ConfigurationError {
+    class CNSTLN_API InvalidCombinationError : public ConfigurationError {
     public:
         /**
          * @brief Construct an error for an invalid combination of keys

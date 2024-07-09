@@ -22,24 +22,27 @@
 
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/core/utils/type.hpp"
 
 namespace constellation::config {
 
     template <typename T> T Value::get() const {
 
+        // When asking for a vector but we get NIL, let's return an empty vector of the right type
+        // since we also set std::monostate when encountering an empty msgpack array
+        if(utils::is_std_vector_v<T> && std::holds_alternative<std::monostate>(*this)) {
+            return {};
+        }
+
         // Value is directly held by variant
         if constexpr(is_one_of_v<T, value_t>) {
-            // If it's one of the supported vector types but we have a std::monostate, return an empty vector since this is
-            // what we build from an empty msgpack array:
-            if(is_vector_v<T> && std::holds_alternative<std::monostate>(*this)) {
-                return {};
-            }
             return std::get<T>(*this);
 
         } else if constexpr(std::is_arithmetic_v<T>) {
             if(std::holds_alternative<std::int64_t>(*this)) {
                 return static_cast<T>(std::get<std::int64_t>(*this));
-            } else {
+            }
+            if(std::holds_alternative<double>(*this)) {
                 return static_cast<T>(std::get<double>(*this));
             }
 
@@ -52,19 +55,15 @@ namespace constellation::config {
             }
             return enum_val.value();
 
-        } else if constexpr(is_vector_v<T>) {
+        } else if constexpr(utils::is_std_vector_v<T>) {
             using U = typename T::value_type;
 
-            if(std::holds_alternative<std::monostate>(*this)) {
-                // When asking for a vector but we get NIL, let's return an empty vector of the right type because we also
-                // set std::monostate when encountering an empty msgpack array
-                return {};
-
-            } else if constexpr(std::is_arithmetic_v<U>) {
+            if constexpr(std::is_arithmetic_v<U>) {
                 if(std::holds_alternative<std::vector<std::int64_t>>(*this)) {
                     const auto& vec = std::get<std::vector<std::int64_t>>(*this);
                     return T(vec.begin(), vec.end());
-                } else {
+                }
+                if(std::holds_alternative<std::vector<double>>(*this)) {
                     const auto& vec = std::get<std::vector<double>>(*this);
                     return T(vec.begin(), vec.end());
                 }
@@ -82,14 +81,10 @@ namespace constellation::config {
                     result.emplace_back(enum_val.value());
                 });
                 return result;
-
-            } else {
-                throw std::bad_variant_access();
             }
-
-        } else {
-            throw std::bad_variant_access();
         }
+
+        throw std::bad_variant_access();
     }
 
     template <typename T> Value Value::set(const T& val) {
@@ -115,7 +110,7 @@ namespace constellation::config {
         } else if constexpr(std::is_enum_v<T>) {
             return {utils::to_string(val)};
 
-        } else if constexpr(is_vector_v<T>) {
+        } else if constexpr(utils::is_std_vector_v<T>) {
             using U = typename T::value_type;
 
             if constexpr(std::is_integral_v<U>) {
@@ -141,14 +136,10 @@ namespace constellation::config {
                 std::for_each(
                     val.begin(), val.end(), [&](const auto& enum_val) { nval.emplace_back(utils::to_string(enum_val)); });
                 return {nval};
-
-            } else {
-                throw std::bad_cast();
             }
-
-        } else {
-            throw std::bad_cast();
         }
+
+        throw std::bad_cast();
     }
 
 } // namespace constellation::config

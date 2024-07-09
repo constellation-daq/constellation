@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Helpers for obtaining open ephemeral ports
+ * @brief Helpers for ZeroMQ
  *
  * @copyright Copyright (c) 2024 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
@@ -10,13 +10,15 @@
 #pragma once
 
 #include <charconv>
+#include <cstdint>
+#include <string_view>
 
 #include <zmq.hpp>
 
 namespace constellation::utils {
 
     /**
-     * Port number for a network connection
+     * @brief Port number for a network connection
      *
      * Note that most ports in Constellation are ephemeral ports, meaning that the port numbers are allocated dynamically.
      * See also https://en.wikipedia.org/wiki/Ephemeral_port.
@@ -24,7 +26,7 @@ namespace constellation::utils {
     using Port = std::uint16_t;
 
     /**
-     * Bind ZeroMQ socket to wildcard address with ephemeral port
+     * @brief Bind ZeroMQ socket to wildcard address with ephemeral port
      *
      * See also https://libzmq.readthedocs.io/en/latest/zmq_tcp.html.
      *

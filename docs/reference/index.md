@@ -24,7 +24,7 @@ protocols
 :maxdepth: 2
 
 cxx/core/index
-cxx/satellite
+cxx/satellite/index
 ```
 
 ```{toctree}

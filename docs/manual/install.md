@@ -18,15 +18,36 @@ procedure for the two versions separately, but installing both in parallel on th
 The C++ version of Constellation requires:
 
 - [Meson](https://mesonbuild.com/) 0.61 or newer
-- C++20 capable compiler like GCC 12 or newer and LLVM 16 or newer
+- C++20 capable compiler like GCC 12 or newer and clang 16 or newer
+- C++20 enabled standard library (GCC's libstdc++ 12 or newer and LLVM's libc++ 18 or newer)
 
 The prerequisites can be installed as follows:
 
 ::::{tab-set}
 :::{tab-item} Debian/Ubuntu
 
+Starting with Ubuntu 24.04 and Debian 12 or newer, the official packages for GCC and Meson can be used:
+
 ```sh
 sudo apt install meson g++
+```
+
+Ubuntu 22.04 requires a newer version of GCC than installed by default. Version 12 is recommended and available in the
+regular package repositories:
+
+```sh
+sudo apt install meson g++-12
+export CXX="g++-12"
+```
+
+Ubuntu 20.04 requires newer versions of GCC and Meson than available from the standard package repositories. They are available in official PPAs:
+
+```sh
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo add-apt-repository ppa:ubuntu-support-team/meson
+sudo apt update
+sudo apt install meson g++-13
+export CXX="g++-13"
 ```
 
 :::
@@ -53,38 +74,13 @@ Assuming `${HOMEBREW_PREFIX}` is set (likely `/opt/homebrew`, can otherwise be f
 export CXX="${HOMEBREW_PREFIX}/opt/llvm/bin/clang++"
 export CC="${HOMEBREW_PREFIX}/opt/llvm/bin/clang"
 export LDFLAGS="-L${HOMEBREW_PREFIX}/opt/llvm/lib/c++ -Wl,-rpath,${HOMEBREW_PREFIX}/opt/llvm/lib/c++"
+export CXXFLAGS="-fexperimental-library"
 ```
 
 :::
 :::{tab-item} Windows
 
 TODO
-
-:::
-:::{tab-item} Ubuntu 22.04
-
-Ubuntu 22.04 requires a newer version of GCC than installed by default. Version 12 is recommended and available in the
-regular package repositories:
-
-```sh
-sudo apt install meson g++-12
-export CXX="g++-12"
-```
-
-:::
-
-:::{tab-item} Ubuntu 20.04
-
-Ubuntu 20.04 requires a newer version of GCC than available from the standard package repositories. An installation from the
-[`ubuntu-toolchain-r` PPA](https://launchpad.net/~ubuntu-toolchain-r) is recommended:
-
-```sh
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-sudo add-apt-repository ppa:ubuntu-support-team/meson
-sudo apt update
-sudo apt install meson g++-13
-export CXX="g++-13"
-```
 
 :::
 ::::

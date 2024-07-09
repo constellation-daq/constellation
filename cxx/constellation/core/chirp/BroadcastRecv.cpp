@@ -22,7 +22,7 @@ std::string BroadcastMessage::to_string() const {
     return ret;
 }
 
-BroadcastRecv::BroadcastRecv(const asio::ip::address& any_address, asio::ip::port_type port)
+BroadcastRecv::BroadcastRecv(const asio::ip::address_v4& any_address, asio::ip::port_type port)
     : endpoint_(any_address, port), socket_(io_context_, endpoint_.protocol()) {
     // Set reusable address socket option
     socket_.set_option(asio::socket_base::reuse_address(true));
@@ -31,7 +31,7 @@ BroadcastRecv::BroadcastRecv(const asio::ip::address& any_address, asio::ip::por
 }
 
 BroadcastRecv::BroadcastRecv(std::string_view any_ip, asio::ip::port_type port)
-    : BroadcastRecv(asio::ip::make_address(any_ip), port) {}
+    : BroadcastRecv(asio::ip::make_address_v4(any_ip), port) {}
 
 BroadcastMessage BroadcastRecv::recvBroadcast() {
     BroadcastMessage message {};
@@ -44,7 +44,7 @@ BroadcastMessage BroadcastRecv::recvBroadcast() {
     auto length = socket_.receive_from(asio::buffer(message.content), sender_endpoint);
 
     // Store IP address
-    message.address = sender_endpoint.address();
+    message.address = sender_endpoint.address().to_v4();
 
     // Resize content to actual message length
     message.content.resize(length);
@@ -71,7 +71,7 @@ std::optional<BroadcastMessage> BroadcastRecv::asyncRecvBroadcast(std::chrono::s
         return std::nullopt;
     }
 
-    message.address = sender_endpoint.address();
+    message.address = sender_endpoint.address().to_v4();
     message.content.resize(length_future.get());
     return message;
 }

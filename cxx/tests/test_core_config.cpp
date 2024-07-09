@@ -29,7 +29,7 @@ using namespace std::literals::string_view_literals;
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
 
 TEST_CASE("Set & Get Values", "[core][core::config]") {
-    Configuration config;
+    Configuration config {};
 
     config.set("bool", true);
 
@@ -81,7 +81,7 @@ TEST_CASE("Set & Get Values", "[core][core::config]") {
 }
 
 TEST_CASE("Keys Are Case-Insensitive", "[core][core::config]") {
-    Configuration config;
+    Configuration config {};
 
     config.set("bool", true);
     config.set("INT64", std::int64_t(63));
@@ -94,7 +94,7 @@ TEST_CASE("Keys Are Case-Insensitive", "[core][core::config]") {
 }
 
 TEST_CASE("Enum Values Are Case-Insensitive", "[core][core::config]") {
-    Configuration config;
+    Configuration config {};
 
     enum MyEnum {
         ONE,
@@ -112,7 +112,7 @@ TEST_CASE("Enum Values Are Case-Insensitive", "[core][core::config]") {
 }
 
 TEST_CASE("Set & Get Array Values", "[core][core::config]") {
-    Configuration config;
+    Configuration config {};
 
     config.setArray<bool>("bool", {true, false, true});
 
@@ -162,7 +162,7 @@ TEST_CASE("Set & Get Array Values", "[core][core::config]") {
 }
 
 TEST_CASE("Handle monostate", "[core][core::config]") {
-    Configuration config;
+    Configuration config {};
 
     config.set<std::monostate>("monostate", {});
 
@@ -178,7 +178,7 @@ TEST_CASE("Handle monostate", "[core][core::config]") {
 }
 
 TEST_CASE("Set & Get Path Values", "[core][core::config]") {
-    Configuration config;
+    Configuration config {};
 
     config.set<std::string>("path", "/tmp/somefile.txt");
     config.set<double>("tisnotapath", 16.5);
@@ -432,7 +432,7 @@ TEST_CASE("Set & Use Aliases", "[core][core::config]") {
 }
 
 TEST_CASE("Invalid Key Access", "[core][core::config]") {
-    Configuration config;
+    Configuration config {};
 
     // Check for invalid key to be detected
     REQUIRE_THROWS_AS(config.get<bool>("invalidkey"), MissingKeyError);
@@ -470,7 +470,7 @@ TEST_CASE("Value Overflow", "[core][core::config]") {
     REQUIRE_THROWS_AS(Value::set(val), std::overflow_error);
     REQUIRE_THROWS_AS(Value::set(std::vector<std::size_t>({val})), std::overflow_error);
 
-    Configuration config;
+    Configuration config {};
     REQUIRE_THROWS_AS(config.set("size", val), InvalidValueError);
 }
 
@@ -497,13 +497,10 @@ TEST_CASE("Update Configuration", "[core][core::config]") {
     REQUIRE(config_base.get<bool>("bool") == true);
 }
 
-TEST_CASE("Copy & Move Configurations", "[core][core::config]") {
+TEST_CASE("Move Configuration", "[core][core::config]") {
     Configuration config {};
 
     config.set("bool", true);
-
-    const Configuration config_copy = config;
-    REQUIRE(config_copy.get<bool>("bool") == true);
 
     const Configuration config_move = std::move(config);
     REQUIRE(config_move.get<bool>("bool") == true);
@@ -605,7 +602,7 @@ TEST_CASE("Generate Configurations from Dictionary", "[core][core::config]") {
 }
 
 TEST_CASE("Assemble ZMQ Message from Configuration", "[core][core::config]") {
-    Configuration config;
+    Configuration config {};
     config.set("bool", true);
     config.set("int64", std::int64_t(63));
     config.set("size", std::size_t(1));

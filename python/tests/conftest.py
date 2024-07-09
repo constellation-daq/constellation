@@ -29,6 +29,7 @@ from constellation.core.cscp import CommandTransmitter
 from constellation.core.cdtp import DataTransmitter
 from constellation.core.controller import BaseController
 from constellation.core.configuration import Configuration, flatten_config, load_config
+from constellation.core.heartbeatchecker import HeartbeatChecker
 
 # chirp
 mock_chirp_packet_queue = []
@@ -153,10 +154,7 @@ class mocket(MagicMock):
     def recv(self, flags=None):
         """Pop single entry from queue."""
         if flags == zmq.NOBLOCK:
-            if (
-                self.port not in self._get_queue(False)
-                or not self._get_queue(False)[self.port]
-            ):
+            if self.has_no_data():
                 raise zmq.ZMQError("Resource temporarily unavailable")
 
             dat = self._get_queue(False)[self.port].pop(0)
@@ -168,10 +166,7 @@ class mocket(MagicMock):
             return r
         else:
             # block
-            while (
-                self.port not in self._get_queue(False)
-                or not self._get_queue(False)[self.port]
-            ):
+            while self.has_no_data():
                 time.sleep(0.01)
             dat = self._get_queue(False)[self.port].pop(0)
             if isinstance(dat, list) and SNDMORE_MARK in dat:
@@ -192,6 +187,12 @@ class mocket(MagicMock):
     def connect(self, host):
         self.port = int(host.split(":")[2])
         print(f"Bound Mocket on {self.port}")
+
+    def has_no_data(self):
+        return (
+            self.port not in self._get_queue(False)
+            or not self._get_queue(False)[self.port]
+        )
 
 
 @pytest.fixture
@@ -231,7 +232,37 @@ def mock_data_receiver(mock_socket_receiver):
 
 
 @pytest.fixture
-def mock_satellite(mock_chirp_transmitter):
+def mock_heartbeat_checker():
+    """Create a mock HeartbeatChecker instance."""
+
+    mockets = []
+
+    def mocket_factory(*args, **kwargs):
+        m = mocket()
+        m.endpoint = 1
+        mockets.append([m, 1])
+        return m
+
+    def poll(*args, **kwargs):
+        res = [m for m in mockets if not m[0].has_no_data()]
+        if not res:
+            time.sleep(0.25)
+        return res
+
+    with patch("constellation.core.heartbeatchecker.zmq.Context") as mock:
+        with patch("constellation.core.heartbeatchecker.zmq.Poller") as mock_p:
+            mock_context = MagicMock()
+            mock_context.socket = mocket_factory
+            mock.return_value = mock_context
+            mock_poller = MagicMock()
+            mock_poller.poll.side_effect = poll
+            mock_p.return_value = mock_poller
+            hbc = HeartbeatChecker()
+            yield hbc
+
+
+@pytest.fixture
+def mock_satellite(mock_chirp_transmitter, mock_heartbeat_checker):
     """Create a mock Satellite base instance."""
 
     def mocket_factory(*args, **kwargs):
@@ -253,7 +284,7 @@ def mock_satellite(mock_chirp_transmitter):
 
 
 @pytest.fixture
-def mock_controller(mock_chirp_transmitter):
+def mock_controller(mock_chirp_transmitter, mock_heartbeat_checker):
     """Create a mock Controller base instance."""
 
     def mocket_factory(*args, **kwargs):
@@ -337,10 +368,10 @@ def monitoringlistener():
 
 
 def wait_for_state(fsm, state: str, timeout: float = 2.0):
-    while timeout > 0 and fsm.current_state.id != state:
+    while timeout > 0 and fsm.current_state_value.name != state:
         time.sleep(0.05)
         timeout -= 0.05
     if timeout < 0:
         raise RuntimeError(
-            f"Never reached {state}, now in state {fsm.current_state.id} with status '{fsm.status}'"
+            f"Never reached {state}, now in state {fsm.current_state_value.name} with status '{fsm.status}'"
         )
