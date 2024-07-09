@@ -83,6 +83,21 @@ class HeartbeatChecker:
         logger.info(f"Registered heartbeating check for {address}")
         return evt
 
+    def unregister(self, name: str) -> None:
+        """Unregister a heartbeat check for a specific Satellite."""
+        s: zmq.Socket | None = None  # type: ignore[type-arg]
+        for socket, hb in self._states.items():
+            if hb.name == name:
+                s = socket
+                break
+        if not s:
+            return
+        with self._socket_lock:
+            self._poller.unregister(s)
+            self._states.pop(s)
+            s.close()
+        logger.info("Removed heartbeat check for %s", name)
+
     def is_registered(self, name: str) -> bool:
         """Check whether a given Satellite is already registered."""
         registered = False
