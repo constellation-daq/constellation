@@ -11,9 +11,11 @@
 
 #include <filesystem>
 #include <string_view>
+#include <thread>
 
 #include <katherinexx/katherinexx.hpp>
 
+#include "constellation/core/logging/log.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 class KatherineSatellite final : public constellation::satellite::Satellite {
@@ -58,10 +60,10 @@ private:
     void frame_started(int frame_idx);
     void frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info);
 
-    template <typename T> void pixels_received(const T*, size_t count) {
+    template <typename T> void pixels_received(const T* px, size_t count) {
         for(size_t i = 0; i < count; ++i) {
             if constexpr(std::is_same_v<T, katherine::acq::f_toa_tot::pixel_type>) {
-                // LOG(TRACE) << px[i].coord.x << px[i].coord.y << px[i].ftoa << px[i].toa << px[i].tot;
+	      LOG(TRACE) << (int)px[i].coord.x << " " << (int)px[i].coord.y;
             }
         }
     }
@@ -70,4 +72,7 @@ private:
     std::shared_ptr<katherine::device> device_;
     std::shared_ptr<katherine::base_acquisition> acquisition_;
     katherine::config katherine_config_ {};
+    std::thread runthread_;
+    katherine::readout_type ro_type_ {};
+    OperationMode opmode_ {};
 };
