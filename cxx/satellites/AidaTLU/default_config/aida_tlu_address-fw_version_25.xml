@@ -22,7 +22,7 @@
   <node id="InternalShutterPeriodRW" address="0x2" permission="rw" description="Internal trig generator period ( units = number of strobe pulses)"/>
   <node id="ShutterOnTimeRW"         address="0x3" permission="rw" description="Time between input trigger being received and shutter asserted(T1) ( units = number of strobe pulses)"/>
   <node id="ShutterVetoOffTimeRW"         address="0x4" permission="rw" description="time between input trigger and veto being de-asserted(T2) ( units = number of strobe pulses)"/>
-  <node id="ShutterOffTimeRW"         address="0x5" permission="rw" description="time between input trigger and time at which shutter de-asserted and veto reasserted(T3) ( units = number of strobe pulses)"/>  
+  <node id="ShutterOffTimeRW"         address="0x5" permission="rw" description="time between input trigger and time at which shutter de-asserted and veto reasserted(T3) ( units = number of strobe pulses)"/>
   <node id="RunActiveRW"                address="0x6" permission="rw" description="Writing '1' to Bit-0 of this register raises the run_active line and causes sync line to pulse for one strobe-pulse interval"/>
 </node>
 
