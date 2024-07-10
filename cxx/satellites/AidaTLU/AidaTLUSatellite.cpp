@@ -24,7 +24,7 @@ void AidaTLUSatellite::initializing(constellation::config::Configuration& config
 
     LOG(logger_, INFO) << "TLU INITIALIZE ID: " + std::to_string(config.get<int>("initid", 0));
     std::string uhal_conn =
-        "file:///home/feindtf/programs/constellation/cxx/satellites/tlu/default_config/aida_tlu_connection.xml";
+        "file:///home/feindtf/programs/constellation/cxx/satellites/AidaTLU/default_config/aida_tlu_connection.xml";
     std::string uhal_node = "aida_tlu.controlhub";
     uhal_conn = config.get<std::string>("ConnectionFile", uhal_conn);
     uhal_node = config.get<std::string>("DeviceName", uhal_node);
@@ -67,7 +67,7 @@ void AidaTLUSatellite::initializing(constellation::config::Configuration& config
         if(config.get<bool>("CONFCLOCK", true)) {
             std::string clkConfFile;
             std::string defaultCfgFile =
-                "/home/feindtf/programs/constellation/cxx/satellites/tlu/default_config/aida_tlu_clk_config.txt";
+                "/home/feindtf/programs/constellation/cxx/satellites/AidaTLU/default_config/aida_tlu_clk_config.txt";
             clkConfFile = config.get<std::string>("CLOCK_CFG_FILE", defaultCfgFile);
             if(clkConfFile == defaultCfgFile) {
                 LOG(logger_, WARNING)
