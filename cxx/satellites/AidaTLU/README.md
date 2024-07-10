@@ -5,11 +5,18 @@
 IPbus installation. See https://ipbus.web.cern.ch/doc/user/html/index.html.
 Provide path when setting up meson. E.g.
 ```
-meson setup build -Dcactus_root=/opt/cactus/
+meson setup build -Dbuildtype=debugoptimized -Dsatellite_aidatlu=enabled -Dcactus_root=/opt/cactus/ % or
+meson setup --reconfigure build -Dbuildtype=debugoptimized -Dsatellite_aidatlu=enabled -Dcactus_root=/opt/cactus/
+% then
+meson compile -C build
 ```
-Requires to set `LD_LIBRARY_PREFIX` to execute. E.g.
+Set `LD_LIBRARY_PATH`, e.g.
 ```
-LD_LIBRARY_PREFIX=/opt/cactus/lib ./satellite_tlu -g cnstln1
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/cactus/lib
+```
+Run
+```
+./build/cxx/satellites/AidaTLU/satelliteAidaTLU -g Tatoo
 ```
 
 ## ToDo
