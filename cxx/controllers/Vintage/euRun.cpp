@@ -502,79 +502,119 @@ std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile
         return {};
     }
 
+    auto get_value = [&](const toml::key& key, auto&& val) -> config::Value {
+        if constexpr(toml::is_table<decltype(val)>) {
+            LOG(logger_, DEBUG) << "Skipping table for key " << key;
+            return {};
+        } else if constexpr(toml::is_array<decltype(val)>) {
+            if(val.is_homogeneous()) {
+                const auto& arr = val.as_array();
+                LOG(logger_, CRITICAL) << toml::node_view(arr->front()) << " -> " << arr->front().type();
+
+                if(arr->empty()) {
+                    return std::monostate {};
+                } else if(arr->front().is_integer()) {
+                    std::vector<std::int64_t> return_value;
+                    for(auto&& elem : *arr) {
+                        return_value.push_back(elem.as_integer()->get());
+                    }
+                    return return_value;
+                } else if(arr->front().is_floating_point()) {
+                    std::vector<double> return_value;
+                    for(auto&& elem : *arr) {
+                        return_value.push_back(elem.as_floating_point()->get());
+                    }
+                    return return_value;
+                } else if(arr->front().is_boolean()) {
+                    std::vector<bool> return_value;
+                    for(auto&& elem : *arr) {
+                        return_value.push_back(elem.as_boolean()->get());
+                    }
+                    return return_value;
+                } else if(arr->front().is_string()) {
+                    std::vector<std::string> return_value;
+                    for(auto&& elem : *arr) {
+                        return_value.push_back(elem.as_string()->get());
+                    }
+                    return return_value;
+                } else {
+                    LOG(logger_, WARNING) << "Unknown type of array for key " << key;
+                    // throw
+                    return {};
+                }
+            } else {
+                LOG(logger_, WARNING) << "Array with key " << key << " is not homogeneous";
+                // throw
+                return {};
+            }
+        } else {
+            if constexpr(toml::is_integer<decltype(val)>) {
+                return val.as_integer()->get();
+            } else if constexpr(toml::is_floating_point<decltype(val)>) {
+                return val.as_floating_point()->get();
+            } else if constexpr(toml::is_boolean<decltype(val)>) {
+                return val.as_boolean()->get();
+            } else if constexpr(toml::is_string<decltype(val)>) {
+                return val.as_string()->get();
+            } else {
+                LOG(logger_, WARNING) << "Unknown value type for key " << key;
+                // throw
+                return {};
+            }
+        }
+    };
+
     auto connections = runcontrol_.getConnections();
     std::map<std::string, Controller::CommandPayload> payloads;
     for(const auto& conn : connections) {
+        // Start with empty dictionary:
+        payloads.emplace(conn, config::Dictionary {});
+
+        const auto separator = conn.find_first_of('.');
+        const auto type = conn.substr(0, separator);
+
         // Trying to access the node of this satellite
         if(const auto& node = tbl.at_path("satellites." + conn)) {
-            config::Dictionary dict {};
-
             if(!node.is_table()) {
                 // throw
             }
 
             // Write individual keys
             node.as_table()->for_each([&](const toml::key& key, auto&& val) {
-                if constexpr(toml::is_array<decltype(val)>) {
-                    if(val.is_homogeneous()) {
-                        const auto& arr = val.as_array();
-                        LOG(logger_, CRITICAL) << toml::node_view(arr->front()) << " -> " << arr->front().type();
-
-                        if(arr->empty()) {
-                            dict[std::string(key.str())] = std::monostate {};
-                        } else if(arr->front().is_integer()) {
-                            std::vector<std::int64_t> return_value;
-                            for(auto&& elem : *arr) {
-                                return_value.push_back(elem.as_integer()->get());
-                            }
-                            dict[std::string(key.str())] = std::move(return_value);
-                        } else if(arr->front().is_floating_point()) {
-                            std::vector<double> return_value;
-                            for(auto&& elem : *arr) {
-                                return_value.push_back(elem.as_floating_point()->get());
-                            }
-                            dict[std::string(key.str())] = std::move(return_value);
-                        } else if(arr->front().is_boolean()) {
-                            std::vector<bool> return_value;
-                            for(auto&& elem : *arr) {
-                                return_value.push_back(elem.as_boolean()->get());
-                            }
-                            dict[std::string(key.str())] = std::move(return_value);
-                        } else if(arr->front().is_string()) {
-                            std::vector<std::string> return_value;
-                            for(auto&& elem : *arr) {
-                                return_value.push_back(elem.as_string()->get());
-                            }
-                            dict[std::string(key.str())] = std::move(return_value);
-                        } else {
-                            LOG(logger_, WARNING) << "Unknown type of array for key " << key;
-                            // throw
-                        }
-                    } else {
-                        LOG(logger_, WARNING) << "Array with key " << key << " is not homogeneous";
-                        // throw
-                    }
-                } else {
-                    LOG(logger_, WARNING) << "is single value " << key;
-                    if constexpr(toml::is_integer<decltype(val)>) {
-                        dict[std::string(key.str())] = val.as_integer()->get();
-                    } else if constexpr(toml::is_floating_point<decltype(val)>) {
-                        dict[std::string(key.str())] = val.as_floating_point()->get();
-                    } else if constexpr(toml::is_boolean<decltype(val)>) {
-                        dict[std::string(key.str())] = val.as_boolean()->get();
-                    } else if constexpr(toml::is_string<decltype(val)>) {
-                        dict[std::string(key.str())] = val.as_string()->get();
-                    } else {
-                        LOG(logger_, WARNING) << "Unknown value type for key " << key;
-                        // throw
-                    }
+                auto value = get_value(key, val);
+                if(!std::holds_alternative<std::monostate>(value)) {
+                    std::get<config::Dictionary>(payloads[conn]).emplace(std::string(key.str()), value);
                 }
             });
 
-            payloads.emplace(conn, dict);
         } else {
             LOG(logger_, WARNING) << "Could not find node for " << std::quoted(conn);
-            payloads.emplace(conn, config::Dictionary {});
+        }
+
+        // Find type of satellite and add keys
+        if(const auto& node = tbl.at_path("satellites." + type)) {
+            // Write individual keys if not present yet:
+            node.as_table()->for_each([&](const toml::key& key, auto&& val) {
+                auto value = get_value(key, val);
+                if(!std::holds_alternative<std::monostate>(value)) {
+                    std::get<config::Dictionary>(payloads[conn]).emplace(std::string(key.str()), value);
+                }
+            });
+        } else {
+            LOG(logger_, WARNING) << "Could not find node for satellite type " << std::quoted(type);
+        }
+
+        // Find satellites base node and add keys
+        if(const auto& node = tbl.at_path("satellites")) {
+            // Write individual keys if not present yet:
+            node.as_table()->for_each([&](const toml::key& key, auto&& val) {
+                auto value = get_value(key, val);
+                if(!std::holds_alternative<std::monostate>(value)) {
+                    std::get<config::Dictionary>(payloads[conn]).emplace(std::string(key.str()), value);
+                }
+            });
+        } else {
+            LOG(logger_, WARNING) << "Could not find base node for satellites";
         }
     }
     return payloads;
