@@ -370,7 +370,7 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
         connect(action, &QAction::triggered, this, [this, index, key]() {
             auto response = runcontrol_.sendQCommand(index, key);
             if(response.has_value()) {
-                QMessageBox::information(NULL, "Response", QString::fromStdString(response));
+                QMessageBox::information(NULL, "Satellite Response", QString::fromStdString(response.value()));
             }
         });
         contextMenu->addAction(action);

@@ -111,11 +111,15 @@ std::optional<std::string> QRunControl::sendQCommand(const QModelIndex& index,
     // Unlock so the controller can grab it
     lock.unlock();
 
-    const auto msg = Controller::sendCommand(it->first, verb, payload);
-    const auto payload = msg.getPayload();
+    const auto& msg = Controller::sendCommand(it->first, verb, payload);
+    const auto& response = msg.getPayload();
 
-    if(!payload.empty()) {
-        return std::string(msg.getPayload().to_string_view());
+    if(!response.empty()) {
+        try {
+            return Dictionary::disassemble(response).to_string();
+        } catch(msgpack::type_error&) {
+            return std::string(response.to_string_view());
+        }
     }
 
     return {};
