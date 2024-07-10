@@ -160,6 +160,8 @@ void KatherineSatellite::frame_ended(int frame_idx, bool completed, const kather
 
 void KatherineSatellite::starting(std::string_view) {
 
+    // This needs to be called *before* we start the run thread with acquitions->read
+    // otherwise the read function falls through directly with an error
     acquisition_->begin(katherine_config_, ro_type_);
 
     // Start Katherine run thread:
