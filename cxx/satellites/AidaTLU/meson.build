@@ -42,7 +42,7 @@ satellite_type = 'AidaTLU'
 
 # Source files to be compiled for this satellite:
 satellite_sources = files(
-  'TluSatellite.cpp',
+  'AidaTLUSatellite.cpp',
   'aida_src/AidaTluDisplay.cc',
   'aida_src/AidaTluController.cc',
   'aida_src/AidaTluPowerModule.cc',

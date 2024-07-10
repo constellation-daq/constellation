@@ -16,9 +16,9 @@
 using namespace constellation::config;
 using namespace constellation::satellite;
 
-class TluSatellite : public Satellite {
+class AidaTLUSatellite : public Satellite {
 public:
-    TluSatellite(std::string_view type, std::string_view name);
+    AidaTLUSatellite(std::string_view type, std::string_view name);
 
 public:
     void initializing(Configuration& config) override;

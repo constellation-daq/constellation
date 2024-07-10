@@ -230,7 +230,7 @@ unsigned int Si5345::getDeviceVersion(uint8_t verbose) {
     // Read registers containing chip information
     int nwords = 2;
     unsigned char myaddr = 0x02;
-    unsigned int chipID;
+    unsigned int chipID {};
     setPage(0, verbose);
     for(int i = 0; i < nwords; i++) {
         char nibble = m_Clkcore->ReadI2CChar(m_i2cAddr, myaddr);
