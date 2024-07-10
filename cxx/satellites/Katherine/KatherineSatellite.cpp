@@ -48,11 +48,6 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     } catch(katherine::system_error& error) {
         throw CommunicationError("Katherine error: " + std::string(error.what()));
     }
-}
-
-void KatherineSatellite::launching() {
-
-    const auto config = getConfig();
 
     LOG(DEBUG) << "Configuring Katherine system";
     katherine_config_ = katherine::config {};
@@ -101,38 +96,18 @@ void KatherineSatellite::launching() {
 
     auto px_config = parse_px_config_file(config.getPath("px_config_file"));
     katherine_config_.set_pixel_config(std::move(px_config));
-}
-
-void KatherineSatellite::landing() {}
-
-void KatherineSatellite::frame_started(int frame_idx) {
-    LOG(DEBUG) << "Started frame " << frame_idx << std::endl;
-}
-
-void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
-    const double recv_perc = 100. * info.received_pixels / info.sent_pixels;
-
-    LOG(DEBUG) << "Ended frame " << frame_idx << "." << std::endl;
-    LOG(DEBUG) << " - tpx3->katherine lost " << info.lost_pixels << " pixels" << std::endl
-               << " - katherine->pc sent " << info.sent_pixels << " pixels" << std::endl
-               << " - katherine->pc received " << info.received_pixels << " pixels (" << recv_perc << " %)" << std::endl
-               << " - state: " << (completed ? "completed" : "not completed") << std::endl
-               << " - start time: " << info.start_time.d << std::endl
-               << " - end time: " << info.end_time.d << std::endl;
-}
-
-void KatherineSatellite::starting(std::string_view) {
-    const auto config = getConfig();
 
     // Set datadriven or framebased mode:
-    auto ro_type =
+    ro_type_ =
         (config.get<bool>("sequential_mode") ? katherine::readout_type::sequential : katherine::readout_type::data_driven);
+    opmode_ = config.get<OperationMode>("op_mode");
+}
 
+void KatherineSatellite::launching() {
     // If we are in data-driven mode, disable timeout:
-    auto timeout = (ro_type == katherine::readout_type::data_driven) ? -1s : 10s;
+    auto timeout = (ro_type_ == katherine::readout_type::data_driven) ? -1s : 10s;
 
     // Select acquisition mode and create acquisition object
-    auto opmode = config.get<OperationMode>("op_mode");
     if(opmode == OperationMode::TOA_TOT) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_tot>>(
             *device_, katherine::md_size * 34952533, sizeof(katherine::acq::f_toa_tot::pixel_type) * 65536, 500ms, timeout);
@@ -155,28 +130,40 @@ void KatherineSatellite::starting(std::string_view) {
         acq->set_pixels_received_handler(
             std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_event_itot::pixel_type>, this));
         acquisition_ = acq;
-    } else {
-        throw SatelliteError("Wrong opmode");
     }
 
     acquisition_->set_frame_started_handler(std::bind_front(&KatherineSatellite::frame_started, this));
     acquisition_->set_frame_ended_handler(std::bind_front(&KatherineSatellite::frame_ended, this));
-
-    // Start the data acquisition:
-    acquisition_->begin(katherine_config_, ro_type);
 }
 
-void KatherineSatellite::stopping() {
-    LOG(STATUS) << "Acquisition completed:" << std::endl
-                << "state: " << katherine::str_acq_state(acquisition_->state()) << std::endl
-                << "received " << acquisition_->completed_frames() << " complete frames" << std::endl
-                << "dropped " << acquisition_->dropped_measurement_data() << " measurement data items";
+void KatherineSatellite::landing() {
+  if(acquisition_) {
+    acquisition_.reset();
+  }
 }
 
-void KatherineSatellite::running(const std::stop_token& stop_token) {
+void KatherineSatellite::frame_started(int frame_idx) {
+    LOG(DEBUG) << "Started frame " << frame_idx << std::endl;
+}
+
+void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
+    const double recv_perc = 100. * info.received_pixels / info.sent_pixels;
+
+    LOG(DEBUG) << "Ended frame " << frame_idx << "." << std::endl;
+    LOG(DEBUG) << " - tpx3->katherine lost " << info.lost_pixels << " pixels" << std::endl
+               << " - katherine->pc sent " << info.sent_pixels << " pixels" << std::endl
+               << " - katherine->pc received " << info.received_pixels << " pixels (" << recv_perc << " %)" << std::endl
+               << " - state: " << (completed ? "completed" : "not completed") << std::endl
+               << " - start time: " << info.start_time.d << std::endl
+               << " - end time: " << info.end_time.d << std::endl;
+}
+
+void KatherineSatellite::starting(std::string_view) {
+
+    acquisition_->begin(katherine_config_, ro_type_);
 
     // Start Katherine run thread:
-    std::thread runthread([this]() {
+    runthread_ = std::thread([this]() {
         try {
             acquisition_->read();
         } catch(katherine::system_error& e) {
@@ -187,17 +174,35 @@ void KatherineSatellite::running(const std::stop_token& stop_token) {
             }
         }
     });
+    runthread_.detach();
+}
 
-    // FIXME - wait for stop token request and then - is there a better method?
-    std::condition_variable_any cv;
-    std::mutex cv_m;
-    cv.wait(cv_m, stop_token, [&] { return stop_token.stop_requested(); });
+void KatherineSatellite::running(const std::stop_token& stop_token) {
+  
 
+  // Start the data acquisition:
+  while(!stop_token.stop_requested()) {
+    std::this_thread::sleep_for(2s);
+
+    LOG(INFO) << "State:   " << katherine::str_acq_state(acquisition_->state());
+    LOG(INFO) << "dropped: " << acquisition_->dropped_measurement_data();
+
+  }
+}
+
+void KatherineSatellite::stopping() {
     // End the acquisition:
     acquisition_->abort();
 
     // Join thread once it is done
-    runthread.join();
+    if(runthread_.joinable()) {
+      runthread_.join();
+    }
+
+    LOG(STATUS) << "Acquisition completed:" << std::endl
+                << "state: " << katherine::str_acq_state(acquisition_->state()) << std::endl
+                << "received " << acquisition_->completed_frames() << " complete frames" << std::endl
+                << "dropped " << acquisition_->dropped_measurement_data() << " measurement data items";
 }
 
 katherine::dacs KatherineSatellite::parse_dacs_file(std::filesystem::path file_path) {
