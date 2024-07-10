@@ -367,7 +367,12 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
         }
 
         QAction* action = new QAction(QString::fromStdString(key), this);
-        connect(action, &QAction::triggered, this, [this, index, key]() { runcontrol_.sendQCommand(index, key); });
+        connect(action, &QAction::triggered, this, [this, index, key]() {
+            auto response = runcontrol_.sendQCommand(index, key);
+            if(response.has_value()) {
+                QMessageBox::information(NULL, "Response", QString::fromStdString(response));
+            }
+        });
         contextMenu->addAction(action);
     }
 

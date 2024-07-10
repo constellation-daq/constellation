@@ -2,6 +2,7 @@
 
 #include <array>
 #include <memory>
+#include <optional>
 
 #include "constellation/controller/Controller.hpp"
 
@@ -20,7 +21,9 @@ public:
 
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
-    void sendQCommand(const QModelIndex& index, const std::string& verb, const CommandPayload& payload = {});
+    std::optional<std::string> sendQCommand(const QModelIndex& index,
+                                            const std::string& verb,
+                                            const CommandPayload& payload = {});
 
     constellation::config::Dictionary getQCommands(const QModelIndex& index);
 

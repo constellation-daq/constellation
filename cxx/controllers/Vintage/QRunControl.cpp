@@ -99,7 +99,9 @@ Dictionary QRunControl::getQCommands(const QModelIndex& index) {
     return Dictionary::disassemble(msg.getPayload());
 }
 
-void QRunControl::sendQCommand(const QModelIndex& index, const std::string& verb, const CommandPayload& payload) {
+std::optional<std::string> QRunControl::sendQCommand(const QModelIndex& index,
+                                                     const std::string& verb,
+                                                     const CommandPayload& payload) {
     std::unique_lock<std::mutex> lock(connection_mutex_);
 
     // Select connection by index:
@@ -109,5 +111,12 @@ void QRunControl::sendQCommand(const QModelIndex& index, const std::string& verb
     // Unlock so the controller can grab it
     lock.unlock();
 
-    Controller::sendCommand(it->first, verb, payload);
+    const auto msg = Controller::sendCommand(it->first, verb, payload);
+    const auto payload = msg.getPayload();
+
+    if(!payload.empty()) {
+        return std::string(msg.getPayload().to_string_view());
+    }
+
+    return {};
 }
