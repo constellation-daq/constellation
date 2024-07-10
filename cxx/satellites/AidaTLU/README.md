@@ -18,6 +18,21 @@ Run
 ```
 ./build/cxx/satellites/AidaTLU/satelliteAidaTLU -g Tatoo
 ```
+Start python controller:
+```
+python -m constellation.core.controller --group Tatoo
+```
+
+Do stuff:
+```
+constellation.satellites.get('AidaTLU.feindtflap').get_name()
+% or
+constellation.AidaTLU.feindtflap.get_name()
+% or
+constellation.AidaTLU.feindtflap.initialize({})
+```
+Where the latter option supports tab completion
+For now, the configuration files are hard-coded in `AidaTLUSatellite.cpp` and need to be adjusted ¯\_(ツ)_/¯.
 
 ## ToDo
 * Aida files are copied from EUDAQ2, fixing only compiler warnings. Might need revision
