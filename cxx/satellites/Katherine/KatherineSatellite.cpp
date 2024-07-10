@@ -16,6 +16,7 @@
 #include "constellation/core/logging/log.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
+using namespace constellation::config;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
@@ -52,6 +53,11 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     LOG(DEBUG) << "Configuring Katherine system";
     katherine_config_ = katherine::config {};
 
+    // Set datadriven or framebased mode:
+    ro_type_ =
+        (config.get<bool>("sequential_mode") ? katherine::readout_type::sequential : katherine::readout_type::data_driven);
+    opmode_ = config.get<OperationMode>("op_mode");
+
     // Set threshold polarity
     katherine_config_.set_polarity_holes(config.get<bool>("positive_polarity"));
 
@@ -82,9 +88,13 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     katherine_config_.set_bias_id(0);
     katherine_config_.set_bias(0);
 
-    // FIXME set number of frames to acquire?
-    katherine_config_.set_no_frames(1);
 
+    // FIXME set number of frames to acquire?
+    katherine_config_.set_no_frames(config.get<int>("no_frames"));
+    if(ro_type_ == katherine::readout_type::data_driven && katherine_config_.no_frames() > 1) {
+      throw InvalidValueError("FIXME", "no_frames", "Data-driven mode requires a single frame");
+    }
+    
     katherine_config_.set_gray_disable(false);
     katherine_config_.set_phase(katherine::phase::p1);
     katherine_config_.set_freq(katherine::freq::f40);
@@ -96,11 +106,6 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
 
     auto px_config = parse_px_config_file(config.getPath("px_config_file"));
     katherine_config_.set_pixel_config(std::move(px_config));
-
-    // Set datadriven or framebased mode:
-    ro_type_ =
-        (config.get<bool>("sequential_mode") ? katherine::readout_type::sequential : katherine::readout_type::data_driven);
-    opmode_ = config.get<OperationMode>("op_mode");
 }
 
 void KatherineSatellite::launching() {
@@ -108,19 +113,19 @@ void KatherineSatellite::launching() {
     auto timeout = (ro_type_ == katherine::readout_type::data_driven) ? -1s : 10s;
 
     // Select acquisition mode and create acquisition object
-    if(opmode == OperationMode::TOA_TOT) {
+    if(opmode_ == OperationMode::TOA_TOT) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_tot>>(
             *device_, katherine::md_size * 34952533, sizeof(katherine::acq::f_toa_tot::pixel_type) * 65536, 500ms, timeout);
         acq->set_pixels_received_handler(
             std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_toa_tot::pixel_type>, this));
         acquisition_ = acq;
-    } else if(opmode == OperationMode::TOA) {
+    } else if(opmode_ == OperationMode::TOA) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_only>>(
             *device_, katherine::md_size * 34952533, sizeof(katherine::acq::f_toa_only::pixel_type) * 65536, 500ms, timeout);
         acq->set_pixels_received_handler(
             std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_toa_only::pixel_type>, this));
         acquisition_ = acq;
-    } else if(opmode == OperationMode::EVT_ITOT) {
+    } else if(opmode_ == OperationMode::EVT_ITOT) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_event_itot>>(
             *device_,
             katherine::md_size * 34952533,
