@@ -140,7 +140,7 @@ class HeartbeatChecker:
         while not self._stop_threads.is_set():
             # check for heatbeats ready to be received
             with self._socket_lock:
-                sockets_ready = dict(self._poller.poll(timeout=150))
+                sockets_ready = dict(self._poller.poll(timeout=50))
                 for socket in sockets_ready.keys():
                     binmsg = socket.recv()
                     _host, timestamp, state, interval = CHPDecodeMessage(binmsg)
@@ -206,7 +206,7 @@ class HeartbeatChecker:
                 # update timestamp for this round
                 last_check = datetime.now(timezone.utc)
             # finally, wait a moment
-            time.sleep(0.150)
+            time.sleep(0.05)
 
     def _interrupt(self, name: str, state: SatelliteState) -> None:
         with self._callback_lock:

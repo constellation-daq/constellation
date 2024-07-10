@@ -28,6 +28,7 @@ extensions = [
     "sphinxcontrib.plantuml",
     "sphinx_design",
     "sphinx_favicon",
+    "sphinx_copybutton",
 ]
 
 # general settings

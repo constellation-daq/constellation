@@ -81,13 +81,16 @@ def test_hb_send_recv_lag(mock_heartbeat_sender, mock_heartbeat_checker):
     hbc = mock_heartbeat_checker
     hbs = mock_heartbeat_sender
     hbc.HB_INIT_PERIOD = 180
-    hbs.heartbeat_period = 200
+    hbs.heartbeat_period = 120
     hbc.register("mock_sender", f"tcp://127.0.0.1:{HB_PORT}")
     time.sleep(2)
+    stack = len(mock_packet_queue_sender[HB_PORT])
+    assert stack >= 8
     hbc.start("mock_sender")
     hbs.fsm.initialize("running mock init")
     hbs.fsm.initialized("done with mock init")
-    time.sleep(0.4)
+    time.sleep(1)
+    assert len(mock_packet_queue_sender[HB_PORT]) <= stack / 2
     assert hbc.states["mock_sender"] == SatelliteState.INIT
     assert not hbc.get_failed()
 

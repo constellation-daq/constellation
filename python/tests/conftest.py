@@ -245,8 +245,11 @@ def mock_heartbeat_checker():
 
     def poll(*args, **kwargs):
         res = [m for m in mockets if not m[0].has_no_data()]
-        if not res:
-            time.sleep(0.25)
+        timeout = 0.05
+        while not res and timeout > 0:
+            time.sleep(0.01)
+            timeout -= 0.01
+            res = [m for m in mockets if not m[0].has_no_data()]
         return res
 
     with patch("constellation.core.heartbeatchecker.zmq.Context") as mock:
