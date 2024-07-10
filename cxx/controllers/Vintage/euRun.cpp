@@ -509,8 +509,6 @@ std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile
         } else if constexpr(toml::is_array<decltype(val)>) {
             if(val.is_homogeneous()) {
                 const auto& arr = val.as_array();
-                LOG(logger_, CRITICAL) << toml::node_view(arr->front()) << " -> " << arr->front().type();
-
                 if(arr->empty()) {
                     return std::monostate {};
                 } else if(arr->front().is_integer()) {
