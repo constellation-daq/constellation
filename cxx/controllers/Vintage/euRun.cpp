@@ -574,6 +574,7 @@ std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile
             payloads.emplace(conn, dict);
         } else {
             LOG(logger_, WARNING) << "Could not find node for " << std::quoted(conn);
+            payloads.emplace(conn, config::Dictionary {});
         }
     }
     return payloads;
