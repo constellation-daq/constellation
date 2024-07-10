@@ -216,6 +216,18 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
         }
     }
 
+    // Prepare ADC info to be distributed as metrics
+    if(config.has("adc_signal")) {
+        // Select which ADC signal to regularly fetch:
+        adc_signal_ = config.get<std::string>("adc_signal");
+        adc_freq_ = config.get<std::uint64_t>("adc_frequency");
+
+        // Try it out directly to catch mis-configuration
+        auto adc_value = device_->getADC(adc_signal_);
+        LOG(INFO) << "Will probe ADC signal \"" << adc_signal_ << "\" every " << adc_freq_ << " frames";
+        LOG(TRACE) << "ADC value: " << adc_value; // FIXME: unused variable, send as stats instead
+    }
+
     // Cache the number of frames to attach to a single data message:
     number_of_frames_ = config.get<std::size_t>("number_of_frames");
 }
@@ -238,19 +250,6 @@ void CaribouSatellite::launching() {
 
     if(secondary_device_ != nullptr) {
         secondary_device_->configure();
-    }
-
-    // Set additional registers from the configuration:
-    const auto& config = getConfig();
-    if(config.has("adc_signal")) {
-        // Select which ADC signal to regularly fetch:
-        adc_signal_ = config.get<std::string>("adc_signal");
-        adc_freq_ = config.get<std::uint64_t>("adc_frequency");
-
-        // Try it out directly to catch mis-configuration
-        auto adc_value = device_->getADC(adc_signal_);
-        LOG(INFO) << "Will probe ADC signal \"" << adc_signal_ << "\" every " << adc_freq_ << " frames";
-        LOG(TRACE) << "ADC value: " << adc_value; // FIXME: unused variable, send as stats instead
     }
 }
 
