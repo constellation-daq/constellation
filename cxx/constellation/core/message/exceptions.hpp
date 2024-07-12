@@ -9,12 +9,12 @@
 
 #pragma once
 
-#include <string>
 #include <string_view>
 
 #include "constellation/build.hpp"
 #include "constellation/core/message/Protocol.hpp"
 #include "constellation/core/utils/exceptions.hpp"
+#include "constellation/core/utils/string.hpp"
 
 namespace constellation::message {
     /**
@@ -25,7 +25,7 @@ namespace constellation::message {
      */
     class CNSTLN_API MessageDecodingError : public utils::RuntimeError {
     public:
-        explicit MessageDecodingError(const std::string& reason) {
+        explicit MessageDecodingError(std::string_view reason) {
             error_message_ = "Error decoding message: ";
             error_message_ += reason;
         }
@@ -42,9 +42,9 @@ namespace constellation::message {
      */
     class CNSTLN_API InvalidProtocolError : public MessageDecodingError {
     public:
-        explicit InvalidProtocolError(const std::string& protocol) {
+        explicit InvalidProtocolError(std::string_view protocol_identifier) {
             error_message_ = "Invalid protocol identifier \"";
-            error_message_ += protocol;
+            error_message_ += protocol_identifier;
             error_message_ += "\"";
         }
     };
@@ -57,11 +57,11 @@ namespace constellation::message {
      */
     class CNSTLN_API UnexpectedProtocolError : public MessageDecodingError {
     public:
-        explicit UnexpectedProtocolError(const Protocol& prot_recv, const Protocol& prot_exp) {
+        explicit UnexpectedProtocolError(Protocol prot_recv, Protocol prot_exp) {
             error_message_ = "Received protocol \"";
-            error_message_ += get_readable_protocol(prot_recv);
-            error_message_ += "\" does not match expected identifier \"";
-            error_message_ += get_readable_protocol(prot_exp);
+            error_message_ += utils::to_string(prot_recv);
+            error_message_ += "\" does not match expected protocol \"";
+            error_message_ += utils::to_string(prot_exp);
             error_message_ += "\"";
         }
     };

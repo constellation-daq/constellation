@@ -10,7 +10,3 @@ License: MIT
 Files: docs/*
 Copyright: 2024 DESY and the Constellation authors
 License: CC-BY-4.0
-
-Files: cxx/constellation/core/external/md5.h
-Copyright: Copyright 2017-2020 by Mike Tzou (Chocobo1)
-License: GPL-3.0-or-later

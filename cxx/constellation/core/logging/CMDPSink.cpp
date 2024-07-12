@@ -28,8 +28,7 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
-#include "constellation/core/chirp/CHIRP_definitions.hpp"
-#include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/chirp/CHIRPManager.hpp"
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"

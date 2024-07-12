@@ -15,7 +15,7 @@
 #include <string>
 #include <thread>
 
-#include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/chirp/CHIRPManager.hpp"
 #include "constellation/core/heartbeat/HeartbeatRecv.hpp"
 #include "constellation/core/logging/log.hpp"
 #include "constellation/core/logging/Logger.hpp"

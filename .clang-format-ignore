@@ -1,5 +1,0 @@
-# SPDX-FileCopyrightText: 2023 DESY and the Constellation authors
-# SPDX-License-Identifier: CC0-1.0
-
-# Ignore external files
-cxx/constellation/core/external/*

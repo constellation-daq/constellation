@@ -88,9 +88,9 @@ void BaseHeader::msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpack_packer)
 std::string BaseHeader::to_string() const {
     std::ostringstream out {};
     std::boolalpha(out);
-    out << "Header: "sv << get_readable_protocol(protocol_) << '\n' //
-        << "Sender: "sv << sender_ << '\n'                          //
-        << "Time:   "sv << utils::to_string(time_) << '\n'          //
+    out << "Header: "sv << utils::to_string(protocol_) << '\n' //
+        << "Sender: "sv << sender_ << '\n'                     //
+        << "Time:   "sv << utils::to_string(time_) << '\n'     //
         << "Tags:"sv << tags_.to_string();
 
     return out.str();

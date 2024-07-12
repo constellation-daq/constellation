@@ -13,6 +13,7 @@
 #include <string_view>
 
 #include "constellation/core/logging/Level.hpp"
+#include "constellation/core/logging/Logger.hpp"
 
 using enum constellation::log::Level;                // Forward log level enum
 using namespace std::literals::string_view_literals; // NOLINT(google-global-names-in-headers)

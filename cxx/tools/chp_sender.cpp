@@ -14,7 +14,7 @@
 
 #include <magic_enum.hpp>
 
-#include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/chirp/CHIRPManager.hpp"
 #include "constellation/core/heartbeat/HeartbeatSend.hpp"
 #include "constellation/core/logging/Level.hpp"
 #include "constellation/core/logging/SinkManager.hpp"

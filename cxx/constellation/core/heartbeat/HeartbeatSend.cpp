@@ -17,8 +17,7 @@
 #include <thread>
 #include <utility>
 
-#include "constellation/core/chirp/CHIRP_definitions.hpp"
-#include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/chirp/CHIRPManager.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
 #include "constellation/core/message/satellite_definitions.hpp"
 #include "constellation/core/utils/networking.hpp"

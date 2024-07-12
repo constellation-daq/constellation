@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: CC0-1.0
 
 core_src = files(
-  'chirp/BroadcastRecv.cpp',
-  'chirp/BroadcastSend.cpp',
-  'chirp/Manager.cpp',
+  'chirp/CHIRPListener.cpp',
+  'chirp/CHIRPManager.cpp',
+  'chirp/CHIRPSocket.cpp',
   'config/Configuration.cpp',
   'config/Dictionary.cpp',
   'config/Value.cpp',
@@ -15,7 +15,7 @@ core_src = files(
   'logging/Logger.cpp',
   'logging/SinkManager.cpp',
   'message/CDTP1Message.cpp',
-  'message/CHIRPMessage.cpp',
+  'message/CHIRP2Message.cpp',
   'message/CHP1Message.cpp',
   'message/CMDP1Message.cpp',
   'message/CSCP1Message.cpp',
@@ -32,10 +32,10 @@ core_lib = library('ConstellationCore',
 )
 
 install_headers(
-  'chirp/BroadcastRecv.hpp',
-  'chirp/BroadcastSend.hpp',
-  'chirp/CHIRP_definitions.hpp',
-  'chirp/Manager.hpp',
+  'chirp/CHIRPListener.hpp',
+  'chirp/CHIRPManager.hpp',
+  'chirp/CHIRPService.hpp',
+  'chirp/CHIRPSocket.hpp',
   subdir: 'constellation/core/chirp',
 )
 
@@ -50,11 +50,6 @@ install_headers(
 )
 
 install_headers(
-  'external/md5.h',
-  subdir: 'constellation/core/external',
-)
-
-install_headers(
   'heartbeat/HeartbeatRecv.hpp',
   'heartbeat/HeartbeatSend.hpp',
   'heartbeat/HeartbeatManager.hpp',
@@ -62,9 +57,6 @@ install_headers(
 )
 
 install_headers(
-  'logging/CMDPSink.hpp',
-  'logging/Level.hpp',
-  'logging/log.hpp',
   'logging/Logger.hpp',
   'logging/ProxySink.hpp',
   'logging/SinkManager.hpp',
@@ -74,7 +66,7 @@ install_headers(
 install_headers(
   'message/BaseHeader.hpp',
   'message/CDTP1Message.hpp',
-  'message/CHIRPMessage.hpp',
+  'message/CHIRP2Message.hpp',
   'message/CHP1Message.hpp',
   'message/CMDP1Message.hpp',
   'message/CSCP1Message.hpp',

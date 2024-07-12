@@ -6,8 +6,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "constellation/core/chirp/CHIRP_definitions.hpp"
-#include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/chirp/CHIRPManager.hpp"
 #include "constellation/core/logging/log.hpp"
 #include "constellation/core/logging/Logger.hpp"
 #include "constellation/core/logging/SinkManager.hpp"

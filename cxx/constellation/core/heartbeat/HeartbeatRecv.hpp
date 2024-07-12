@@ -20,7 +20,7 @@
 #include <zmq_addon.hpp>
 
 #include "constellation/build.hpp"
-#include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/chirp/CHIRPManager.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
 #include "constellation/core/subscriber/SubscriberPool.hpp"
 

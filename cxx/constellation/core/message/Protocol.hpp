@@ -14,85 +14,61 @@
 #include <string_view>
 #include <utility>
 
+#include <magic_enum.hpp>
+
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
 namespace constellation::message {
 
-    /** Protocol Enum (excluding CHIRP) */
+    /** Protocol Enum */
     enum class Protocol {
+        /** Constellation Host Identification and Reconnaissance Protocol v2 */
+        CHIRP2,
         /** Constellation Satellite Control Protocol v1 */
         CSCP1,
         /** Constellation Monitoring Distribution Protocol v1 */
         CMDP1,
         /** Constellation Data Transmission Protocol v1 */
         CDTP1,
-        /** Constellation Heartbeat  Protocol v1 */
+        /** Constellation Heartbeat Protocol v1 */
         CHP1,
     };
     using enum Protocol;
 
     /**
-     * Get protocol identifier string for CSCP, CMDP and CDTP protocols
+     * @brief Get protocol identifier string
      *
      * @param protocol Protocol
      * @return Protocol identifier string in message header
      */
-    constexpr std::string_view get_protocol_identifier(Protocol protocol) {
-        switch(protocol) {
-        case CSCP1: return {"CSCP\x01"};
-        case CMDP1: return {"CMDP\x01"};
-        case CDTP1: return {"CDTP\x01"};
-        case CHP1: return {"CHP\x01"};
-        default: std::unreachable();
-        }
+    std::string get_protocol_identifier(Protocol protocol) {
+        // Convert to human readable string
+        auto protocol_identifier = utils::to_string(protocol);
+        // We know we only have 1-digit versions at the moment, so we can just convert the last digit
+        // Digits in ASCII go from 48 (=0) to 57 (=9), so subtract 48 to get as int
+        protocol_identifier.back() -= 48;
+        return protocol_identifier;
     }
 
     /**
-     * Get protocol from a protocol identifier string
+     * @brief Get protocol from a protocol identifier string
      *
      * @param protocol_identifier Protocol identifier string
      * @return Protocol
+     * @throw std::invalid_argument If unknown protocol identifier
      */
-    constexpr Protocol get_protocol(std::string_view protocol_identifier) {
-        if(protocol_identifier == "CSCP\x01") {
-            return CSCP1;
+    Protocol get_protocol(std::string protocol_identifier) {
+        // We know we only have 1-digit versions at the moment, so we can just convert the last character
+        // Digits in ASCII go from 48 (=0) to 57 (=9), so add 48 to get as digit
+        protocol_identifier.back() += 48;
+        // Try to cast to enum
+        const auto protocol_opt = magic_enum::enum_cast<Protocol>(protocol_identifier);
+        if(protocol_opt.has_value()) {
+            return protocol_opt.value();
         }
-        if(protocol_identifier == "CMDP\x01") {
-            return CMDP1;
-        }
-        if(protocol_identifier == "CDTP\x01") {
-            return CDTP1;
-        }
-        if(protocol_identifier == "CHP\x01") {
-            return CHP1;
-        }
-        // Unknown protocol:
-        throw std::invalid_argument(std::string(protocol_identifier).c_str());
-    }
-
-    /**
-     * Get human-readable protocol identifier string for CSCP, CMDP and CDTP protocols
-     *
-     * @param protocol_identifier Protocol identifier string
-     * @return Protocol identifier string with byte version replaced to human-readable version
-     */
-    inline std::string get_readable_protocol(std::string_view protocol_identifier) {
-        std::string out {protocol_identifier.data(), protocol_identifier.size() - 1};
-        // TODO(stephan.lachnit): make this general by finding all non-ASCII symbols and convert them to numbers
-        out += utils::to_string(protocol_identifier.back());
-        return out;
-    }
-
-    /**
-     * Get human-readable protocol identifier string for CSCP, CMDP and CDTP protocols
-     *
-     * @param protocol Protocol
-     * @return Protocol identifier string with byte version replaced to human-readable version
-     */
-    inline std::string get_readable_protocol(Protocol protocol) {
-        auto protocol_identifier = get_protocol_identifier(protocol);
-        return get_readable_protocol(protocol_identifier);
+        // Otherwise unknown protocol
+        throw std::invalid_argument(protocol_identifier);
     }
 
 } // namespace constellation::message

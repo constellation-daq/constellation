@@ -11,9 +11,13 @@
 
 #include <charconv>
 #include <cstdint>
+#include <string>
 #include <string_view>
 
+#include <asio/ip/address_v4.hpp>
 #include <zmq.hpp>
+
+#include "constellation/core/utils/string.hpp"
 
 namespace constellation::utils {
 
@@ -47,6 +51,22 @@ namespace constellation::utils {
         std::from_chars(port_substr.cbegin(), port_substr.cend(), port);
 
         return port;
+    }
+
+    /**
+     * @brief Converts an IP address to a human-readble IP
+     */
+    static inline std::string address_to_ip(const asio::ip::address_v4& address) {
+        return range_to_string(address.to_bytes(), ".");
+    }
+
+    /**
+     * @brief Converts an endpoint (IP address and port) to a URI with given protocol
+     */
+    static inline std::string endpoint_to_uri(const std::string& protocol,
+                                              const asio::ip::address_v4& address,
+                                              utils::Port port) {
+        return protocol + "://" + address_to_ip(address) + ":" + to_string(port);
     }
 
 } // namespace constellation::utils

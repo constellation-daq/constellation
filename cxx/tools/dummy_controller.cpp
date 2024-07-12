@@ -17,7 +17,7 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
-#include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/chirp/CHIRPManager.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/logging/SinkManager.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"

@@ -14,7 +14,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/utils/string.hpp"
 

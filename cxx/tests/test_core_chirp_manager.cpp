@@ -19,7 +19,7 @@
 
 #include "constellation/core/chirp/BroadcastRecv.hpp"
 #include "constellation/core/chirp/BroadcastSend.hpp"
-#include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/chirp/CHIRPManager.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 
 using namespace constellation::chirp;

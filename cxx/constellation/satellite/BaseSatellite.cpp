@@ -28,8 +28,7 @@
 #include <zmq_addon.hpp>
 
 #include "constellation/build.hpp"
-#include "constellation/core/chirp/CHIRP_definitions.hpp"
-#include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/chirp/CHIRPManager.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/heartbeat/HeartbeatManager.hpp"
