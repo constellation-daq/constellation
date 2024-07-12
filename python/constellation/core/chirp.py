@@ -7,6 +7,7 @@ Module implementing the Constellation Host Identification and Reconnaissance Pro
 
 from hashlib import md5
 import io
+import platform
 import socket
 from uuid import UUID
 from enum import Enum
@@ -151,10 +152,13 @@ class CHIRPBeaconTransmitter:
         self._sock = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
         )
-        # on socket layer (SOL_SOCKET), enable re-using address in case
-        # already bound (REUSEPORT)
+        # On socket layer (SOL_SOCKET), enable re-using already bound addresses
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        # BSD platforms also need SO_REUSEPORT for re-using wildcard binds
+        # On Linux this option is not required for UDP, so do not set it
+        # See https://stackoverflow.com/a/14388707 for details
+        if platform.system() != "Linux" and hasattr(socket, "SO_REUSEPORT"):
+            self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         # enable broadcasting
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         # non-blocking (i.e. a timeout of 0.0 seconds for recv calls)
