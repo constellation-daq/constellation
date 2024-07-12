@@ -11,6 +11,7 @@
 
 #include <string_view>
 
+#include "constellation/core/config/Configuration.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 class SputnikSatellite final : public constellation::satellite::Satellite {

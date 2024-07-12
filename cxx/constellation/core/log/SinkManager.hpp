@@ -27,6 +27,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/log/CMDPSink.hpp"
 #include "constellation/core/log/Level.hpp"
+#include "constellation/core/metrics/Metric.hpp"
 #include "constellation/core/utils/networking.hpp"
 
 namespace constellation::log {

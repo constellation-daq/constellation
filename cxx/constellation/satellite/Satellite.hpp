@@ -19,7 +19,7 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Configuration.hpp"
-#include "constellation/core/metrics/Manager.hpp"
+#include "constellation/core/metrics/Metric.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
 #include "constellation/satellite/CommandRegistry.hpp"
@@ -150,7 +150,7 @@ namespace constellation::satellite {
         constexpr void support_reconfigure(bool enable = true) { support_reconfigure_ = enable; }
 
         /**
-         * Register a metric which will be emitted in regular intervals
+         * @brief Register a metric which will be emitted in regular intervals
          *
          * @param name Unique topic of the metric
          * @param unit Unit of the provided value
@@ -165,12 +165,12 @@ namespace constellation::satellite {
                                    metrics::Clock::duration interval,
                                    std::initializer_list<State> states = {},
                                    const config::Value& value = {}) {
-            metrics_manager_.registerMetric(
-                name, std::make_shared<constellation::metrics::TimedMetric>(unit, type, interval, states, value));
+            metrics_manager_.registerMetric(name,
+                                            std::make_shared<metrics::TimedMetric>(unit, type, interval, states, value));
         }
 
         /**
-         * Register a metric which will be emitted in regular intervals, evaluated from the provided function
+         * @brief Register a metric which will be emitted in regular intervals, evaluated from the provided function
          *
          * @param name Unique topic of the metric
          * @param unit Unit of the provided value
@@ -185,12 +185,12 @@ namespace constellation::satellite {
                                    metrics::Clock::duration interval,
                                    std::initializer_list<State> states,
                                    const std::function<config::Value()>& func) {
-            metrics_manager_.registerMetric(
-                name, std::make_shared<constellation::metrics::TimedAutoMetric>(unit, type, interval, states, func));
+            metrics_manager_.registerMetric(name,
+                                            std::make_shared<metrics::TimedAutoMetric>(unit, type, interval, states, func));
         }
 
         /**
-         * Register a metric which will be emitted after having been triggered a given number of times
+         * @brief Register a metric which will be emitted after having been triggered a given number of times
          *
          * @param name Unique topic of the metric
          * @param unit Unit of the provided value
@@ -205,15 +205,15 @@ namespace constellation::satellite {
                                        std::size_t triggers,
                                        std::initializer_list<State> states = {},
                                        const config::Value& value = {}) {
-            metrics_manager_.registerMetric(
-                name, std::make_shared<constellation::metrics::TriggeredMetric>(unit, type, triggers, states, value));
+            metrics_manager_.registerMetric(name,
+                                            std::make_shared<metrics::TriggeredMetric>(unit, type, triggers, states, value));
         }
 
         /**
-         * Update the value cached for the given metric
+         * @brief Update the value cached for the given metric
          *
-         * \param topic Unique topic of the metric
-         * \param value New value of the metric
+         * @param topic Unique topic of the metric
+         * @param value New value of the metric
          */
         void set_metric(const std::string& topic, const config::Value& value) { metrics_manager_.setMetric(topic, value); }
 

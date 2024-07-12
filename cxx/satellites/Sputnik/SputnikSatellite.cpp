@@ -9,9 +9,13 @@
 
 #include "SputnikSatellite.hpp"
 
+#include <chrono>
+#include <cstdint>
 #include <string_view>
 
+#include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/log/log.hpp"
+#include "constellation/core/metrics/Metric.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 using namespace constellation;
