@@ -68,7 +68,6 @@ private:
     static std::map<constellation::satellite::State, QString> state_str_;
     std::map<QString, QString> m_map_label_str;
 
-    QItemDelegate m_delegate;
     QTimer m_timer_display;
     std::map<QString, QLabel*> m_str_label;
 

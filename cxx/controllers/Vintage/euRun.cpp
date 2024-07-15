@@ -55,8 +55,6 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     }
 
     viewConn->setModel(&runcontrol_);
-    viewConn->setItemDelegate(&m_delegate);
-
     viewConn->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(viewConn, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(onCustomContextMenu(const QPoint&)));
 
@@ -662,7 +660,7 @@ void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser) {
     parser.add_argument("-n", "--name").help("controller name").default_value("qruncontrol");
 
     // Constellation group (-g)
-    parser.add_argument("-g", "--group").help("group name").required();
+    parser.add_argument("-g", "--group").help("group name");
 
     // Console log level (-l)
     parser.add_argument("-l", "--level").help("log level").default_value("INFO");
@@ -747,10 +745,24 @@ int main(int argc, char** argv) {
     // Log the version after all the basic checks are done
     LOG(logger, STATUS) << "Constellation v" << CNSTLN_VERSION;
 
+    // Get Constellation group:
+    std::string group_name;
+    if(parser.is_used("group")) {
+        group_name = get_arg(parser, "group");
+    } else {
+        QString text = QInputDialog::getText(NULL, "Constellation", "Constellation group to connect to:", QLineEdit::Normal);
+        if(!text.isEmpty()) {
+            group_name = text.toStdString();
+        } else {
+            LOG(logger, CRITICAL) << "Invalid or empty constellation group name";
+            return 1;
+        }
+    }
+
     // Create CHIRP manager and set as default
     std::unique_ptr<chirp::Manager> chirp_manager {};
     try {
-        chirp_manager = std::make_unique<chirp::Manager>(brd_addr, any_addr, parser.get("group"), controller_name);
+        chirp_manager = std::make_unique<chirp::Manager>(brd_addr, any_addr, group_name, controller_name);
         chirp_manager->setAsDefaultInstance();
         chirp_manager->start();
     } catch(const std::exception& error) {
@@ -760,7 +772,7 @@ int main(int argc, char** argv) {
     // Register CMDP in CHIRP and set sender name for CMDP
     SinkManager::getInstance().enableCMDPSending(controller_name);
 
-    RunControlGUI gui(controller_name, parser.get("group"));
+    RunControlGUI gui(controller_name, group_name);
     gui.Exec();
     return 0;
 }
