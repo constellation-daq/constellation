@@ -19,10 +19,9 @@ The Sputnik satellite has no additional dependencies and is build by default.
 
 The following parameters are read and interpreted by this satellite. Parameters without a default value are required.
 
-| Parameter     | Description | Type | Default Value |
-|---------------|-------------|------|---------------|
-| `interval`    | Interval in which beep signals are emitted in units of milliseconds | Unsigned 8-bit integer | `3000` |
-| `comm_module` | Name of the communication module | String | `"antenna"` |
+| Parameter  | Description | Type | Default Value |
+|------------|-------------|------|---------------|
+| `interval` | Interval in which beep signals are emitted in units of milliseconds | Unsigned integer | `3000` |
 
 ### Configuration Example
 
@@ -34,22 +33,20 @@ my_param = 7
 other_param = "antenna"
 ```
 
+## Metrics
+
+The following metrics are distributed by this satellite and can be subscribed to. Timed metrics provide an interval in units of time, triggered metrics in number of calls.
+
+| Metric | Description | Interval | Type | States |
+|--------|-------------|----------|------|--------|
+| `STAT/BEEP` | Sputnik beep signal, only emitted while in RUN state | configurable, default 3s | `LAST_VALUE` | `ORBIT`, `RUN` |
+
 ## Custom Commands
 
 This section describes all custom commands the satellite exposes to the command interface. The description should contain the name and the description of the
 command as well as all of its arguments, the return value and the allowed states:
 
-
 | Command | Description | Arguments | Return Value | Allowed States |
 |---------|-------------|-----------|--------------|----------------|
 | `get_channel_reading` | This command returns the reading from the given channel number | channel number, `int` | channel reading, `double` | `INIT`, `ORBIT` |
 | `get_module_name` | Reads the name of the communication module | - | module name, `string` | all |
-
-
-## Metrics
-
-The following metrics are distributed by this satellite and can be subscribed to. Timed metrics provide an interval in units of time, triggered metrics in number of calls.
-
-| Metric      | Description | Interval | Type |
-|-------------|-------------|----------|------|
-| `STAT/BEEP` | Sputnik beep signal, only emitted while in RUN state | configurable, default 3s | LAST_VALUE |
