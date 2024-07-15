@@ -574,6 +574,9 @@ namespace tlu {
     }
 
     uint32_t AidaTluController::PackBits(std::vector<unsigned int> rawValues) {
+
+        // ToDo: this should test the applied delay!
+
         // Pack 6 number using only 5-bits for each.
         unsigned int nChannels = m_nTrgIn;
         uint32_t packedbits = 0;

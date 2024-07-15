@@ -36,5 +36,6 @@ For now, the configuration files are hard-coded in `AidaTLUSatellite.cpp` and ne
 
 ## ToDo
 * Aida files are copied from EUDAQ2, fixing only compiler warnings. Might need revision
+  * E.g. handle verbosity... move to proper constellation debug output
+  * Proper error catching instead of just printing `CRITICAL`
 * Make the `meson.build` file nicer, e.g. catch when cactus path is not provided.
-* Introduce error handling instead of just printing `CRITICAL`

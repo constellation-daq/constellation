@@ -30,14 +30,68 @@ public:
     void running(const std::stop_token& stop_token) override;
 
 private:
+    struct launch_configuration{
+        unsigned int confid;
+        uint8_t verbose;
+        uint32_t delayStart;
+        bool skipconf;
+        unsigned int HDMI1_set;
+        unsigned int HDMI2_set;
+        unsigned int HDMI3_set;
+        unsigned int HDMI4_set;
+        unsigned int HDMI1_clk;
+        unsigned int HDMI2_clk;
+        unsigned int HDMI3_clk;
+        unsigned int HDMI4_clk;
+        bool LEMOclk;
+        float DACThreshold0;
+        float DACThreshold1;
+        float DACThreshold2;
+        float DACThreshold3;
+        float DACThreshold4;
+        float DACThreshold5;
+        unsigned int in0_STR;
+        unsigned int in1_STR;
+        unsigned int in2_STR;
+        unsigned int in3_STR;
+        unsigned int in4_STR;
+        unsigned int in5_STR;
+        unsigned int in0_DEL;
+        unsigned int in1_DEL;
+        unsigned int in2_DEL;
+        unsigned int in3_DEL;
+        unsigned int in4_DEL;
+        unsigned int in5_DEL;
+        uint32_t trigMaskHi;
+        uint32_t trigMaskLo;
+        uint64_t trigPol;
+        float PMT1_V;
+        float PMT2_V;
+        float PMT3_V;
+        float PMT4_V;
+        int32_t DUTMask;
+        int32_t DUTMaskMode;
+        int32_t DUTMaskModeModifier;
+        int32_t DUTIgnoreBusy;
+        int32_t DUTIgnoreShutterVeto;
+        bool EnableShutterMode;
+        int8_t ShutterSource;
+        int32_t ShutterOnTime;
+        int32_t ShutterOffTime;
+        int32_t ShutterVetoOffTime;
+        int32_t InternalShutterInterval;
+        uint32_t InternalTriggerFreq;
+        uint32_t EnableRecordData;
+    } m_launch_config;
+    void load_launch_config(Configuration& config);
+
     bool m_exit_of_run;
     std::mutex m_mtx_tlu;
 
     std::unique_ptr<tlu::AidaTluController> m_tlu;
+
+    // ToDo can we add them to the launch config?
     uint64_t m_starttime = 0;
     uint64_t m_lasttime = 0;
     double m_duration = 0;
-
-    uint8_t m_verbose;
-    uint32_t m_delayStart;
 };
