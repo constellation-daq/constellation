@@ -723,7 +723,7 @@ int main(int argc, char** argv) {
                               << ", possible values are: " << utils::list_enum_names<Level>();
         return 1;
     }
-    SinkManager::getInstance().setGlobalConsoleLevel(default_level.value());
+    SinkManager::getInstance().setConsoleLevels(default_level.value());
 
     // Check broadcast and any address
     asio::ip::address_v4 brd_addr {};
