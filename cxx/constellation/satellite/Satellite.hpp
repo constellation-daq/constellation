@@ -162,7 +162,7 @@ namespace constellation::satellite {
         void register_timed_metric(std::string name,
                                    std::string unit,
                                    metrics::Type type,
-                                   metrics::Clock::duration interval,
+                                   std::chrono::high_resolution_clock::duration interval,
                                    std::initializer_list<State> states = {},
                                    config::Value&& initial_value = {}) {
             metrics_manager_.registerMetric(
@@ -183,7 +183,7 @@ namespace constellation::satellite {
         void register_timed_metric(std::string name,
                                    std::string unit,
                                    metrics::Type type,
-                                   metrics::Clock::duration interval,
+                                   std::chrono::high_resolution_clock::duration interval,
                                    std::initializer_list<State> states,
                                    const std::function<config::Value()>& func) {
             metrics_manager_.registerMetric(

@@ -88,18 +88,18 @@ bool MetricTimer::check(State state) {
 
 bool TimedMetric::condition() {
 
-    auto duration = Clock::now() - last_trigger_;
+    auto duration = std::chrono::high_resolution_clock::now() - last_trigger_;
 
     if(duration >= interval_) {
         last_trigger_ += interval_;
         return true;
     }
 
-    last_check_ = Clock::now();
+    last_check_ = std::chrono::high_resolution_clock::now();
     return false;
 }
 
-Clock::time_point TimedMetric::nextTrigger() const {
+std::chrono::high_resolution_clock::time_point TimedMetric::nextTrigger() const {
     return last_check_ + interval_;
 }
 

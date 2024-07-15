@@ -96,8 +96,6 @@ namespace constellation::metrics {
         config::Value value_ {};
     };
 
-    using Clock = std::chrono::high_resolution_clock;
-
     /**
      * @class MetricTimer
      * @brief Helper class for the controlled emission of the metric
@@ -115,11 +113,11 @@ namespace constellation::metrics {
          * @param states List of states in which this metric should be distributed
          * @param value Initial metric value
          */
-        MetricTimer(std::string_view unit,
-                    const Type type,
+        MetricTimer(std::string unit,
+                    Type type,
                     std::initializer_list<message::State> states,
-                    const config::Value& value = {})
-            : Metric(unit, type, value), states_(states) {}
+                    config::Value&& initial_value = {})
+            : Metric(std::move(unit), std::move(type), std::move(initial_value)), states_(states) {}
 
         /**
          * @brief Checks if this metric should be distributed now
@@ -137,7 +135,9 @@ namespace constellation::metrics {
          * condition is met. This helps the sending thread to sleep until the next metric is sent
          * @return Time point in the future when the next metric distribution is expected
          */
-        virtual Clock::time_point nextTrigger() const { return Clock::time_point::max(); }
+        virtual std::chrono::high_resolution_clock::time_point nextTrigger() const {
+            return std::chrono::high_resolution_clock::time_point::max();
+        }
 
         /**
          * @brief Update method for the metric value
@@ -168,21 +168,22 @@ namespace constellation::metrics {
      */
     class CNSTLN_API TimedMetric : public MetricTimer {
     public:
-        TimedMetric(std::string_view unit,
+        TimedMetric(std::string unit,
                     Type type,
-                    Clock::duration interval,
+                    std::chrono::high_resolution_clock::duration interval,
                     std::initializer_list<message::State> states,
-                    const config::Value& value = {})
-            : MetricTimer(unit, type, states, value), interval_(interval), last_trigger_(Clock::now()),
-              last_check_(Clock::now()) {}
+                    config::Value&& initial_value = {})
+            : MetricTimer(std::move(unit), type, states, std::move(initial_value)), interval_(interval),
+              last_trigger_(std::chrono::high_resolution_clock::now()),
+              last_check_(std::chrono::high_resolution_clock::now()) {}
 
         bool condition() override;
-        Clock::time_point nextTrigger() const override;
+        std::chrono::high_resolution_clock::time_point nextTrigger() const override;
 
     private:
-        Clock::duration interval_;
-        Clock::time_point last_trigger_;
-        Clock::time_point last_check_;
+        std::chrono::high_resolution_clock::duration interval_;
+        std::chrono::high_resolution_clock::time_point last_trigger_;
+        std::chrono::high_resolution_clock::time_point last_check_;
     };
 
     /**
@@ -192,12 +193,12 @@ namespace constellation::metrics {
      */
     class CNSTLN_API TimedAutoMetric : public TimedMetric {
     public:
-        TimedAutoMetric(std::string_view unit,
+        TimedAutoMetric(std::string unit,
                         Type type,
-                        Clock::duration interval,
+                        std::chrono::high_resolution_clock::duration interval,
                         std::initializer_list<message::State> states,
                         std::function<config::Value()> func)
-            : TimedMetric(unit, type, interval, states), func_(std::move(func)) {}
+            : TimedMetric(std::move(unit), type, interval, states), func_(std::move(func)) {}
 
         bool condition() override;
 

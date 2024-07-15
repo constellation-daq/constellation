@@ -76,7 +76,7 @@ void MetricsManager::run(const std::stop_token& stop_token) {
     std::unique_lock<std::mutex> lock {mt_};
     while(!stop_token.stop_requested()) {
 
-        auto next = Clock::time_point::max();
+        auto next = std::chrono::high_resolution_clock::time_point::max();
         for(auto& [key, metric] : metrics_) {
             if(metric->check(state_callback_())) {
                 LOG(logger_, TRACE) << "Timer of metric \"" << key << "\" expired, sending...";
