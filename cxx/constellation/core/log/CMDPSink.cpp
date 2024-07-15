@@ -205,7 +205,7 @@ void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
         .send(pub_socket_);
 }
 
-void CMDPSink::sinkStats(const std::string& key, const std::shared_ptr<metrics::Metric>& metric) {
+void CMDPSink::sinkStats(std::string key, const std::shared_ptr<metrics::Metric>& metric) {
 
     // Lock the mutex - automatically done for regular logging:
     const std::lock_guard<std::mutex> lock(mutex_);
@@ -214,5 +214,5 @@ void CMDPSink::sinkStats(const std::string& key, const std::shared_ptr<metrics::
     auto msghead = CMDP1Message::Header(sender_name_, std::chrono::system_clock::now());
 
     // Create and send CMDP message
-    CMDP1StatMessage(key, std::move(msghead), metric).assemble().send(pub_socket_);
+    CMDP1StatMessage(std::move(key), std::move(msghead), metric).assemble().send(pub_socket_);
 }

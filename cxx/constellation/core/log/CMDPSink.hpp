@@ -67,7 +67,13 @@ namespace constellation::log {
          */
         void enableSending(std::string sender_name);
 
-        void sinkStats(const std::string& key, const std::shared_ptr<metrics::Metric>& metric);
+        /**
+         * Sink metric
+         *
+         * @param key Name of the metric
+         * @param metric Metric to sink
+         */
+        void sinkStats(std::string key, const std::shared_ptr<metrics::Metric>& metric);
 
     protected:
         void sink_it_(const spdlog::details::log_msg& msg) final;

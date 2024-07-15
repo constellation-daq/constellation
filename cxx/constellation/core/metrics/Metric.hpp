@@ -214,11 +214,11 @@ namespace constellation::metrics {
      */
     class CNSTLN_API TriggeredMetric : public MetricTimer {
     public:
-        TriggeredMetric(std::string_view unit,
+        TriggeredMetric(std::string unit,
                         Type type,
                         std::size_t triggers,
                         std::initializer_list<message::State> states,
-                        const config::Value& value);
+                        config::Value&& initial_value);
 
         void update(const config::Value& value) override;
 

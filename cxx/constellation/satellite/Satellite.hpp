@@ -159,14 +159,15 @@ namespace constellation::satellite {
          * @param states States in which this metric will be emitted, empty list will always broadcast this metric
          * @param value Initial value of the metric
          */
-        void register_timed_metric(std::string_view name,
-                                   std::string_view unit,
+        void register_timed_metric(std::string name,
+                                   std::string unit,
                                    metrics::Type type,
                                    metrics::Clock::duration interval,
                                    std::initializer_list<State> states = {},
-                                   const config::Value& value = {}) {
-            metrics_manager_.registerMetric(name,
-                                            std::make_shared<metrics::TimedMetric>(unit, type, interval, states, value));
+                                   config::Value&& initial_value = {}) {
+            metrics_manager_.registerMetric(
+                std::move(name),
+                std::make_shared<metrics::TimedMetric>(std::move(unit), type, interval, states, std::move(initial_value)));
         }
 
         /**
@@ -179,14 +180,14 @@ namespace constellation::satellite {
          * @param states States in which this metric will be emitted, empty list will always broadcast this metric
          * @param func Function to evaluate for this metric
          */
-        void register_timed_metric(std::string_view name,
-                                   std::string_view unit,
+        void register_timed_metric(std::string name,
+                                   std::string unit,
                                    metrics::Type type,
                                    metrics::Clock::duration interval,
                                    std::initializer_list<State> states,
                                    const std::function<config::Value()>& func) {
-            metrics_manager_.registerMetric(name,
-                                            std::make_shared<metrics::TimedAutoMetric>(unit, type, interval, states, func));
+            metrics_manager_.registerMetric(
+                std::move(name), std::make_shared<metrics::TimedAutoMetric>(std::move(unit), type, interval, states, func));
         }
 
         /**
@@ -199,14 +200,15 @@ namespace constellation::satellite {
          * @param states States in which this metric will be emitted, empty list will always broadcast this metric
          * @param value Initial value of the metric
          */
-        void register_triggered_metric(std::string_view name,
-                                       std::string_view unit,
+        void register_triggered_metric(std::string name,
+                                       std::string unit,
                                        metrics::Type type,
                                        std::size_t triggers,
                                        std::initializer_list<State> states = {},
-                                       const config::Value& value = {}) {
-            metrics_manager_.registerMetric(name,
-                                            std::make_shared<metrics::TriggeredMetric>(unit, type, triggers, states, value));
+                                       config::Value&& initial_value = {}) {
+            metrics_manager_.registerMetric(std::move(name),
+                                            std::make_shared<metrics::TriggeredMetric>(
+                                                std::move(unit), type, triggers, states, std::move(initial_value)));
         }
 
         /**
