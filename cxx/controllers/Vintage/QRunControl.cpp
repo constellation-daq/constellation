@@ -124,3 +124,13 @@ std::optional<std::string> QRunControl::sendQCommand(const QModelIndex& index,
 
     return {};
 }
+
+bool QRunControlSortProxy::lessThan(const QModelIndex& left, const QModelIndex& right) const {
+
+    QVariant leftData = sourceModel()->data(left);
+    QVariant rightData = sourceModel()->data(right);
+
+    QString leftString = leftData.toString();
+    QString rightString = rightData.toString();
+    return QString::localeAwareCompare(leftString, rightString) < 0;
+}

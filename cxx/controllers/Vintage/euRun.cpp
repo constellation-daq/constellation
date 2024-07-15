@@ -54,7 +54,9 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
         }
     }
 
-    viewConn->setModel(&runcontrol_);
+    sorting_proxy_.setSourceModel(&runcontrol_);
+    viewConn->setModel(&sorting_proxy_);
+
     viewConn->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(viewConn, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(onCustomContextMenu(const QPoint&)));
 

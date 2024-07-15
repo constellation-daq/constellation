@@ -55,6 +55,7 @@ private:
     bool allConnectionsInState(constellation::satellite::State state);
 
     QRunControl runcontrol_;
+    QRunControlSortProxy sorting_proxy_;
     constellation::log::Logger logger_;
     constellation::log::Logger user_logger_;
 

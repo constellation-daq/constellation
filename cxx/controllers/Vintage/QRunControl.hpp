@@ -1,4 +1,5 @@
 #include <QAbstractListModel>
+#include <QSortFilterProxyModel>
 
 #include <array>
 #include <memory>
@@ -35,4 +36,9 @@ private:
         "type", "name", "state", "connection", "last response", " last message"};
 
     std::size_t current_rows_ {0};
+};
+
+class QRunControlSortProxy : public QSortFilterProxyModel {
+
+    bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
 };
