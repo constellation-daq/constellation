@@ -21,6 +21,8 @@ AidaTLUSatellite::AidaTLUSatellite(std::string_view type, std::string_view name)
 
 void AidaTLUSatellite::initializing(constellation::config::Configuration& config) {
 
+    std::lock_guard<std::mutex> lock {m_tlu_mutex};
+
     // return to clean state before starting to initialize
     m_tlu.reset();
 
@@ -157,17 +159,18 @@ void AidaTLUSatellite::load_launch_config(constellation::config::Configuration& 
 void AidaTLUSatellite::launching() {
     LOG(logger_, INFO) << "Launching " << getCanonicalName();
 
-    LOG(logger_,INFO) << "CONFIG ID: " + std::to_string(m_launch_config.confid);
-    LOG(logger_,INFO) << "TLU VERBOSITY SET TO: " + std::to_string(m_launch_config.verbose);
-    LOG(logger_,INFO) << "TLU DELAY START SET TO: " + std::to_string(m_launch_config.delayStart) + " ms";
+    LOG(logger_, INFO) << "CONFIG ID: " + std::to_string(m_launch_config.confid);
+    LOG(logger_, INFO) << "TLU VERBOSITY SET TO: " + std::to_string(m_launch_config.verbose);
+    LOG(logger_, INFO) << "TLU DELAY START SET TO: " + std::to_string(m_launch_config.delayStart) + " ms";
 
+    std::lock_guard<std::mutex> lock {m_tlu_mutex};
     m_tlu->SetTriggerVeto(1);
     if( m_launch_config.skipconf){
         LOG(logger_,INFO) << "TLU SKIPPING CONFIGURATION (skipconf = 1)";
     }
     else{
         // Enable HDMI connectors
-        LOG(logger_,INFO) << " -DUT CONFIGURATION";
+        LOG(logger_, INFO) << " -DUT CONFIGURATION";
         m_tlu->configureHDMI(1, m_launch_config.HDMI1_set, m_launch_config.verbose);
         m_tlu->configureHDMI(2, m_launch_config.HDMI2_set, m_launch_config.verbose);
         m_tlu->configureHDMI(3, m_launch_config.HDMI3_set, m_launch_config.verbose);
@@ -180,11 +183,11 @@ void AidaTLUSatellite::launching() {
         m_tlu->SetDutClkSrc(4, m_launch_config.HDMI4_clk, m_launch_config.verbose);
 
         //Set lemo clock
-        LOG(logger_,INFO) << " -CLOCK OUTPUT CONFIGURATION";
+        LOG(logger_, INFO) << " -CLOCK OUTPUT CONFIGURATION";
         m_tlu->enableClkLEMO(m_launch_config.LEMOclk, m_launch_config.verbose);
 
         // Set thresholds
-        LOG(logger_,INFO) << " -DISCRIMINATOR THRESHOLDS CONFIGURATION";
+        LOG(logger_, INFO) << " -DISCRIMINATOR THRESHOLDS CONFIGURATION";
         m_tlu->SetThresholdValue(0, m_launch_config.DACThreshold0, m_launch_config.verbose);
         m_tlu->SetThresholdValue(1, m_launch_config.DACThreshold1, m_launch_config.verbose);
         m_tlu->SetThresholdValue(2, m_launch_config.DACThreshold2, m_launch_config.verbose);
@@ -209,31 +212,31 @@ void AidaTLUSatellite::launching() {
             m_launch_config.in4_DEL,
             m_launch_config.in5_DEL};
 
-        LOG(logger_,INFO) << " -ADJUST STRETCH AND DELAY";
+        LOG(logger_, INFO) << " -ADJUST STRETCH AND DELAY";
         m_tlu->SetPulseStretchPack(stretcVec, m_launch_config.verbose);
         m_tlu->SetPulseDelayPack(delayVec, m_launch_config.verbose);
 
         // Set triggerMask
         // The conf function does not seem happy with a 32-bit default. Need to check.
-        LOG(logger_,INFO) << " -DEFINE TRIGGER MASK";
+        LOG(logger_, INFO) << " -DEFINE TRIGGER MASK";
         m_tlu->SetTriggerMask(m_launch_config.trigMaskHi, m_launch_config.trigMaskLo);
 
         // Set triggerPolarity
-        LOG(logger_,INFO) << " -DEFINE TRIGGER POLARITY";
+        LOG(logger_, INFO) << " -DEFINE TRIGGER POLARITY";
         m_tlu->SetTriggerPolarity(m_launch_config.trigPol);
 
         // Set PMT power
-        LOG(logger_,INFO) << " -PMT OUTPUT VOLTAGES";
+        LOG(logger_, INFO) << " -PMT OUTPUT VOLTAGES";
         m_tlu->pwrled_setVoltages(m_launch_config.PMT1_V, m_launch_config.PMT2_V, m_launch_config.PMT3_V, m_launch_config.PMT4_V, m_launch_config.verbose);
 
-        LOG(logger_,INFO) << " -DUT OPERATION MODE";
+        LOG(logger_, INFO) << " -DUT OPERATION MODE";
         m_tlu->SetDUTMask(m_launch_config.DUTMask, m_launch_config.verbose); // Which DUTs are on
         m_tlu->SetDUTMaskMode(m_launch_config.DUTMaskMode, m_launch_config.verbose); // AIDA (x1) or EUDET (x0)
         m_tlu->SetDUTMaskModeModifier(m_launch_config.DUTMaskModeModifier, m_launch_config.verbose); // Only for EUDET
         m_tlu->SetDUTIgnoreBusy(m_launch_config.DUTIgnoreBusy, m_launch_config.verbose); // Ignore busy in AIDA mode
         m_tlu->SetDUTIgnoreShutterVeto(m_launch_config.DUTIgnoreShutterVeto, m_launch_config.verbose); //
 
-        LOG(logger_,INFO) << " -SHUTTER OPERATION MODE";
+        LOG(logger_, INFO) << " -SHUTTER OPERATION MODE";
         m_tlu->SetShutterParameters(m_launch_config.EnableShutterMode,
             m_launch_config.ShutterSource,
             m_launch_config.ShutterOnTime,
@@ -241,10 +244,10 @@ void AidaTLUSatellite::launching() {
             m_launch_config.ShutterVetoOffTime,
             m_launch_config.InternalShutterInterval,
             m_launch_config.verbose);
-        LOG(logger_,INFO) << " -AUTO TRIGGER SETTINGS";
+        LOG(logger_, INFO) << " -AUTO TRIGGER SETTINGS";
         m_tlu->SetInternalTriggerFrequency(m_launch_config.InternalTriggerFreq, m_launch_config.verbose);
 
-        LOG(logger_,INFO) << " -FINALIZING TLU CONFIGURATION";
+        LOG(logger_, INFO) << " -FINALIZING TLU CONFIGURATION";
         m_tlu->SetEnableRecordData(m_launch_config.EnableRecordData);
         m_tlu->GetEventFifoCSR();
         m_tlu->GetEventFifoFillLevel();
