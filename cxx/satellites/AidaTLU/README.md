@@ -39,3 +39,4 @@ For now, the configuration files are hard-coded in `AidaTLUSatellite.cpp` and ne
   * E.g. handle verbosity... move to proper constellation debug output
   * Proper error catching instead of just printing `CRITICAL`
 * Make the `meson.build` file nicer, e.g. catch when cactus path is not provided.
+* I am actually not sure of the separation between initialize and configure makes sense, should some more steps be done in initialize?

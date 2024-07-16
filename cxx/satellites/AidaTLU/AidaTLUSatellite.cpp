@@ -24,7 +24,12 @@ AidaTLUSatellite::AidaTLUSatellite(std::string_view type, std::string_view name)
 }
 
 void AidaTLUSatellite::initializing(constellation::config::Configuration& config) {
-    LOG(logger_, INFO) << "Initializing " << getCanonicalName();
+
+    // return to clean state before starting to initialize
+    m_tlu.reset();
+
+    // start with initialization procedure, as in EUDAQ
+    LOG(logger_, INFO) << "Reset successful; start initializing " << getCanonicalName();
 
     LOG(logger_, INFO) << "TLU INITIALIZE ID: " + std::to_string(config.get<int>("initid", 0));
     std::string uhal_conn =
@@ -95,7 +100,7 @@ void AidaTLUSatellite::initializing(constellation::config::Configuration& config
         m_tlu->ResetTimestamp();
     }
 
-    // store configuration parameters used during launch procedure
+    // store configuration parameters needed during launch procedure
     load_launch_config(config);
 }
 
@@ -146,7 +151,7 @@ void AidaTLUSatellite::load_launch_config(constellation::config::Configuration& 
     m_launch_config.EnableShutterMode = config.get<bool>("EnableShutterMode",0);
     m_launch_config.ShutterSource = config.get<int8_t>("ShutterSource",0);
     m_launch_config.ShutterOnTime = config.get<int32_t>("ShutterOnTime",0);
-    m_launch_config.ShutterOffTime = config.get<int32_t>"ShutterOffTime",0),
+    m_launch_config.ShutterOffTime = config.get<int32_t>("ShutterOffTime",0),
     m_launch_config.ShutterVetoOffTime = config.get<int32_t>("ShutterVetoOffTime",0);
     m_launch_config.InternalShutterInterval = config.get<int32_t>("InternalShutterInterval",0);
     m_launch_config.InternalTriggerFreq = config.get<uint32_t>("InternalTriggerFreq", 0);
@@ -241,7 +246,7 @@ void AidaTLUSatellite::launching() {
             m_launch_config.InternalShutterInterval,
             m_launch_config.verbose);
         LOG(logger_,INFO) << " -AUTO TRIGGER SETTINGS";
-        m_tlu->SetInternalTriggerFrequency(m_launch_config.InternalTriggerFreq, m_launch_config.verbose );
+        m_tlu->SetInternalTriggerFrequency(m_launch_config.InternalTriggerFreq, m_launch_config.verbose);
 
         LOG(logger_,INFO) << " -FINALIZING TLU CONFIGURATION";
         m_tlu->SetEnableRecordData(m_launch_config.EnableRecordData);
