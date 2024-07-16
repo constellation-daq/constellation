@@ -257,6 +257,11 @@ void AidaTLUSatellite::launching() {
 
 void AidaTLUSatellite::landing() {
     LOG(logger_, INFO) << "Landing TLU";
+
+    std::lock_guard<std::mutex> lock {m_tlu_mutex};
+
+    LOG(logger_,INFO) << "  Set all PMT_V = 0";
+    m_tlu->pwrled_setVoltages(0, 0, 0, 0, m_launch_config.verbose);
 }
 
 void AidaTLUSatellite::reconfiguring(const constellation::config::Configuration& /*partial_config*/) {}

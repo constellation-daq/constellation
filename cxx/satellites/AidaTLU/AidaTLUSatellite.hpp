@@ -85,10 +85,8 @@ private:
     } m_launch_config;
     void load_launch_config(Configuration& config);
 
-    bool m_exit_of_run;
-    std::mutex m_mtx_tlu;
-
     std::unique_ptr<tlu::AidaTluController> m_tlu;
+    std::mutex m_tlu_mutex;
 
     // ToDo can we add them to the launch config?
     uint64_t m_starttime = 0;
