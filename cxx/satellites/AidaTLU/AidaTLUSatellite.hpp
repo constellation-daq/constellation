@@ -87,7 +87,7 @@ private:
     std::unique_ptr<tlu::AidaTluController> m_tlu;
     std::mutex m_tlu_mutex;
 
-    // ToDo can we add them to the launch config?
+    // can we remove them?
     uint64_t m_starttime = 0;
     uint64_t m_lasttime = 0;
     double m_duration = 0;

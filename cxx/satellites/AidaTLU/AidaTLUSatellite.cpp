@@ -272,15 +272,87 @@ void AidaTLUSatellite::stopping() {
 }
 
 void AidaTLUSatellite::running(const std::stop_token& stop_token) {
+    std::lock_guard<std::mutex> lock {m_tlu_mutex};
+
     LOG(logger_, INFO) << "Starting run loop...";
-    sleep(1);
+    bool isbegin = true;
+    m_tlu->ResetCounters();
+    m_tlu->ResetEventsBuffer();
+    m_tlu->ResetFIFO();
+    std::this_thread::sleep_for( std::chrono::milliseconds( m_launch_config.delayStart) );
+
+    // Send reset pulse to all DUTs and reset internal counters
+    m_tlu->SetRunActive(1);
+    m_tlu->SetTriggerVeto(0);
     LOG(logger_, INFO) << "Running, ";
 
     while(!stop_token.stop_requested()) {
-        // sleep 1s
-        sleep(1);
-        LOG(logger_, INFO) << "...keep on running";
+        m_lasttime=m_tlu->GetCurrentTimestamp()*25;
+        if(isbegin) m_starttime = m_lasttime;
+
+        m_tlu->ReceiveEvents(m_launch_config.verbose);
+        while (!m_tlu->IsBufferEmpty()){
+            tlu::fmctludata *data = m_tlu->PopFrontEvent();
+            uint32_t trigger_n = data->eventnumber;
+            uint64_t ts_raw = data->timestamp;
+            uint64_t ts_ns = ts_raw*25;
+            if(!trigger_n%100){
+                LOG(logger_,DEBUG) << "  Received trigger " << trigger_n << " after " << ts_ns << " ns.";
+            }
+            /* ToDo: how to store data?
+            auto ev = eudaq::Event::MakeUnique("TluRawDataEvent");
+            ev->SetTimestamp(ts_ns, ts_ns+25, false);
+            ev->SetTriggerN(trigger_n);
+
+            std::stringstream triggerss;
+            //triggerss<< data->input5 << data->input4 << data->input3 << data->input2 << data->input1 << data->input0;
+            triggerss<< std::to_string(data->input5) << std::to_string(data->input4) << std::to_string(data->input3) << std::to_string(data->input2) << std::to_string(data->input1) << std::to_string(data->input0);
+            ev->SetTag("TRIGGER", triggerss.str());
+            ev->SetTag("FINE_TS0", std::to_string(data->sc0));
+            ev->SetTag("FINE_TS1", std::to_string(data->sc1));
+            ev->SetTag("FINE_TS2", std::to_string(data->sc2));
+            ev->SetTag("FINE_TS3", std::to_string(data->sc3));
+            ev->SetTag("FINE_TS4", std::to_string(data->sc4));
+            ev->SetTag("FINE_TS5", std::to_string(data->sc5));
+            ev->SetTag("TYPE", std::to_string(data->eventtype));
+            */
+
+            if(m_tlu->IsBufferEmpty()){
+                uint32_t sl0,sl1,sl2,sl3, sl4, sl5, pt;
+                m_tlu->GetScaler(sl0,sl1,sl2,sl3,sl4,sl5);
+                pt=m_tlu->GetPreVetoTriggers();
+                if(!trigger_n%100){
+                    LOG(logger_,DEBUG) << "  Received particle " << pt << " after " << ts_ns << " ns.";
+                }
+                /* ToDo: how to store data?
+                ev->SetTag("PARTICLES", std::to_string(pt));
+                ev->SetTag("SCALER0", std::to_string(sl0));
+                ev->SetTag("SCALER1", std::to_string(sl1));
+                ev->SetTag("SCALER2", std::to_string(sl2));
+                ev->SetTag("SCALER3", std::to_string(sl3));
+                ev->SetTag("SCALER4", std::to_string(sl4));
+                ev->SetTag("SCALER5", std::to_string(sl5));
+                if(!stop_token.stop_requested()){
+                    ev->SetEORE();
+                }
+                */
+            }
+
+            if(isbegin){
+                isbegin = false;
+                /*  ToDo: how to store data?
+                ev->SetBORE();
+                ev->SetTag("FirmwareID", std::to_string(m_tlu->GetFirmwareVersion()));
+                ev->SetTag("BoardID", std::to_string(m_tlu->GetBoardID()));
+                */
+            }
+            //SendEvent(std::move(ev));
+            delete data;
+        }
     }
 
+    m_tlu->SetTriggerVeto(1);
+    // Set TLU internal logic to stop.
+    m_tlu->SetRunActive(0);
     LOG(logger_, INFO) << "Exiting run loop";
 }
