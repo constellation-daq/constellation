@@ -198,10 +198,12 @@ build:debian-clang:
     BUILD_TYPE: "debug"
     BUILD_OPTIONS: "-Db_sanitize=address -Db_lundef=false"
 
+# FIXME temporarily allow failure of this job due to upstream bug in Debian
 build:debian-clang-libcxx:
   extends:
     - .build-cpp
     - .debian-clang
+  allow_failure: true
   variables:
     BUILD_TYPE: "debugoptimized"
     BUILD_OPTIONS: "--wrap-mode=forcefallback -Dspdlog:external_fmt=disabled -Db_sanitize=address -Db_lundef=false"
