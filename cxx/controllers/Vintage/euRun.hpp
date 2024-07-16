@@ -42,7 +42,7 @@ private slots:
     void onCustomContextMenu(const QPoint& point);
 
 private:
-    constellation::satellite::State updateInfos();
+    constellation::protocol::CSCP::State updateInfos();
 
     bool loadConfigFile();
     bool addStatusDisplay(std::string satellite_name, std::string metric);
@@ -52,7 +52,7 @@ private:
     bool addAdditionalStatus(std::string info);
     std::map<std::string, constellation::controller::Controller::CommandPayload> parseConfigFile(QString file);
 
-    bool allConnectionsInState(constellation::satellite::State state);
+    bool allConnectionsInState(constellation::protocol::CSCP::State state);
 
     QRunControl runcontrol_;
     QRunControlSortProxy sorting_proxy_;
@@ -66,7 +66,7 @@ private:
 
     QElapsedTimer run_timer_;
 
-    static std::map<constellation::satellite::State, QString> state_str_;
+    static std::map<constellation::protocol::CSCP::State, QString> state_str_;
     std::map<QString, QString> m_map_label_str;
 
     QTimer m_timer_display;

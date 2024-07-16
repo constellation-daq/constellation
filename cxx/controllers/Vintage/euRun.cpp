@@ -13,15 +13,15 @@
 
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Configuration.hpp"
-#include "constellation/core/logging/log.hpp"
-#include "constellation/core/logging/SinkManager.hpp"
+#include "constellation/core/log/log.hpp"
+#include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/utils/casts.hpp"
 
 using namespace constellation;
 using namespace constellation::chirp;
 using namespace constellation::controller;
 using namespace constellation::log;
-using namespace constellation::satellite;
+using namespace constellation::protocol;
 using namespace constellation::utils;
 
 RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view group_name)
@@ -31,7 +31,7 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     setupUi(this);
 
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
-    labelState->setText(state_str_.at(State::NEW));
+    labelState->setText(state_str_.at(CSCP::State::NEW));
 
     for(const auto& lvl : {Level::TRACE, Level::DEBUG, Level::INFO, Level::WARNING, Level::STATUS, Level::CRITICAL}) {
         comboBoxLogLevel->addItem(QString::fromStdString(utils::to_string(lvl)));
@@ -219,7 +219,7 @@ void RunControlGUI::DisplayTimer() {
     updateStatusDisplay();
 }
 
-State RunControlGUI::updateInfos() {
+CSCP::State RunControlGUI::updateInfos() {
 
     // FIXME revisit what needs to be done here. Most infos are updated in the background by the controller via heartbeats!
     // We might need to handle metrics here and call addStatusDisoplay and removeStatusDisplay.
@@ -229,15 +229,16 @@ State RunControlGUI::updateInfos() {
     QRegExp rx_conf(".+(\\.conf$|\\.ini$|\\.toml$)");
     bool confLoaded = rx_conf.exactMatch(txtConfigFileName->text());
 
-    btnInit->setEnabled((state == State::NEW || state == State::INIT || state == State::ERROR || state == State::SAFE) &&
+    btnInit->setEnabled((state == CSCP::State::NEW || state == CSCP::State::INIT || state == CSCP::State::ERROR ||
+                         state == CSCP::State::SAFE) &&
                         confLoaded);
-    btnLand->setEnabled(state == State::ORBIT);
-    btnConfig->setEnabled(state == State::INIT);
-    btnLoadConf->setEnabled(state != State::RUN || state != State::ORBIT);
-    btnStart->setEnabled(state == State::ORBIT);
-    btnStop->setEnabled(state == State::RUN);
-    btnReset->setEnabled(state == State::SAFE);
-    btnShutdown->setEnabled(state == State::SAFE || state == State::INIT || state == State::NEW);
+    btnLand->setEnabled(state == CSCP::State::ORBIT);
+    btnConfig->setEnabled(state == CSCP::State::INIT);
+    btnLoadConf->setEnabled(state != CSCP::State::RUN || state != CSCP::State::ORBIT);
+    btnStart->setEnabled(state == CSCP::State::ORBIT);
+    btnStop->setEnabled(state == CSCP::State::RUN);
+    btnReset->setEnabled(state == CSCP::State::SAFE);
+    btnShutdown->setEnabled(state == CSCP::State::SAFE || state == CSCP::State::INIT || state == CSCP::State::NEW);
 
     labelState->setText(state_str_.at(state));
 
@@ -251,7 +252,7 @@ State RunControlGUI::updateInfos() {
         settings.endGroup();
     }
     if(m_str_label.count("RUN")) {
-        if(state == State::RUN) {
+        if(state == CSCP::State::RUN) {
             m_str_label.at("RUN")->setText(current_run_);
         } else {
             m_str_label.at("RUN")->setText(current_run_ + " (next run)");
@@ -296,20 +297,20 @@ void RunControlGUI::Exec() {
         LOG(logger_, CRITICAL) << "ERROR: RUNControlGUI::EXEC\n";
 }
 
-std::map<satellite::State, QString> RunControlGUI::state_str_ = {
-    {State::NEW, "<font color='gray'><b>New</b></font>"},
-    {State::initializing, "<font color='gray'><b>Initializing...</b></font>"},
-    {State::INIT, "<font color='gray'><b>Initialized</b></font>"},
-    {State::launching, "<font color='orange'><b>Launching...</b></font>"},
-    {State::landing, "<font color='orange'><b>Landing...</b></font>"},
-    {State::reconfiguring, "<font color='orange'><b>Reconfiguring...</b></font>"},
-    {State::ORBIT, "<font color='orange'><b>Orbiting</b></font>"},
-    {State::starting, "<font color='green'><b>Starting...</b></font>"},
-    {State::stopping, "<font color='green'><b>Stopping...</b></font>"},
-    {State::RUN, "<font color='green'><b>Running</b></font>"},
-    {State::SAFE, "<font color='red'><b>Safe Mode</b></font>"},
-    {State::interrupting, "<font color='red'><b>Interrupting...</b></font>"},
-    {State::ERROR, "<font color='darkred'><b>Error</b></font>"}};
+std::map<CSCP::State, QString> RunControlGUI::state_str_ = {
+    {CSCP::State::NEW, "<font color='gray'><b>New</b></font>"},
+    {CSCP::State::initializing, "<font color='gray'><b>Initializing...</b></font>"},
+    {CSCP::State::INIT, "<font color='gray'><b>Initialized</b></font>"},
+    {CSCP::State::launching, "<font color='orange'><b>Launching...</b></font>"},
+    {CSCP::State::landing, "<font color='orange'><b>Landing...</b></font>"},
+    {CSCP::State::reconfiguring, "<font color='orange'><b>Reconfiguring...</b></font>"},
+    {CSCP::State::ORBIT, "<font color='orange'><b>Orbiting</b></font>"},
+    {CSCP::State::starting, "<font color='green'><b>Starting...</b></font>"},
+    {CSCP::State::stopping, "<font color='green'><b>Stopping...</b></font>"},
+    {CSCP::State::RUN, "<font color='green'><b>Running</b></font>"},
+    {CSCP::State::SAFE, "<font color='red'><b>Safe Mode</b></font>"},
+    {CSCP::State::interrupting, "<font color='red'><b>Interrupting...</b></font>"},
+    {CSCP::State::ERROR, "<font color='darkred'><b>Error</b></font>"}};
 
 void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     QModelIndex index = viewConn->indexAt(point);
@@ -362,7 +363,7 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     auto dict = runcontrol_.getQCommands(index);
     for(const auto& [key, value] : dict) {
         // Filter out transition commands to not list them twice
-        if(magic_enum::enum_cast<TransitionCommand>(key, magic_enum::case_insensitive).has_value()) {
+        if(magic_enum::enum_cast<CSCP::TransitionCommand>(key, magic_enum::case_insensitive).has_value()) {
             continue;
         }
 
@@ -652,7 +653,7 @@ std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile
  * @param state to be checked
  * @return true if all connections are in state, false otherwise
  */
-bool RunControlGUI::allConnectionsInState(constellation::satellite::State state) {
+bool RunControlGUI::allConnectionsInState(CSCP::State state) {
     return runcontrol_.isInState(state);
 }
 
