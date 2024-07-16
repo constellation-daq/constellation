@@ -1,0 +1,91 @@
+[satellites]
+# General settings which apply to all satellites
+
+[satellites.AidaTLU]
+# Settings which apply to all satellites of type "AidaTLU"
+
+    # you can use this to track your changes, e.g. using the date
+    confid = 20241337
+
+    # Path on the PC with TLU Producer and relative path is starting path euRun!
+    ConnectionFile = "file://cxx/satellites/AidaTLU/misc/aida_tlu_connection.xml"
+    # ControlHub is recommended for Ubuntu, the name is the name in the conncetion file
+    DeviceName = "aida_tlu.controlhub"
+
+    # Set CONFCLOCK to 1 to configure clock, which is necessary after a power cycle
+    CONFCLOCK = true
+    # Path to clock file
+    CLOCK_CFG_FILE = "cxx/satellites/AidaTLU/misc/aida_tlu_clk_config.txt"
+    # Set skipini to 1, if you want to skip the init-step
+    skipini = false
+    # Same for configuration
+    skipconf = false
+
+    # verbosity for underlying AIDA TLU control software
+    verbose = 0
+
+    # Delay runstart
+    delayStart= 0
+
+    ## HDMI CONFIGURATION
+    #  4-bits to determine direction of HDMI pins
+    HDMI1_set= 0x7
+    HDMI2_set= 0x7
+    HDMI3_set= 0x7
+    HDMI4_set= 0x7
+    #  Clock source (0= no clock, 1= Si5345, 2= FPGA)
+    HDMI1_clk = 1
+    HDMI2_clk = 1
+    HDMI3_clk = 1
+    HDMI4_clk = 1
+    #  Enable/Disable clock on differential LEMO
+    LEMOclk = false
+
+    ## PMT POWER CONFIGURATION
+    PMT1_V= 0.85
+    PMT2_V= 0.85
+    PMT3_V= 0.85
+    PMT4_V= 0.85
+
+    ## TRIGGER CONFIGURATION
+    trigMaskHi = 0x00000000
+    trigMaskLo = 0x00000002
+    in0_STR = 1
+    in0_DEL = 0
+    in1_STR = 1
+    in1_DEL = 0
+    in2_STR = 1
+    in2_DEL = 0
+    in3_STR = 1
+    in3_DEL = 0
+    in4_STR = 1
+    in4_DEL = 0
+    in5_STR = 1
+    in5_DEL = 0
+    # Generate internal triggers (in Hz, 0= no triggers)
+    InternalTriggerFreq = 100
+    # Trigger polarity: 1 to trigger on falling edge, 0 to trigger on rising edge
+    trigPol = 0x3F
+    # Discriminator thresholds
+    DACThreshold0 = -0.4
+    DACThreshold1 = -0.4
+    DACThreshold2 = -0.4
+    DACThreshold3 = -0.4
+    DACThreshold4 = -0.4
+    DACThreshold5 = -0.4
+
+    ## DUT CONFIGURATION
+    # DUTMask Which DUTs are on
+    DUTMask= 0x8
+    # DUTMaskMode Define AIDA (11) or EUDET (00) mode (2 bits per DUT)
+    DUTMaskMode= 0xFC
+    # In EUDET mode: 0 = standard trigger/busy mode, 1 = raising BUSY outside handshake vetoes triggers (2 bits per DUT)
+    DUTMaskModeModifier= 0xC0
+    # Ignore the BUSY signal for a DUT (0xF)
+    DUTIgnoreBusy= 0xF
+    # Rising shutter ignores triggers
+    DUTIgnoreShutterVeto= 0x1
+
+[satellites.AidaTLU.Tatooine]
+# Settings which only apply to the satellite with name "AidaTLU.Tatooine"
+# For the unlikely case that you are using two TLUs

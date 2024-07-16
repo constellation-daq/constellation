@@ -29,9 +29,8 @@ void AidaTLUSatellite::initializing(constellation::config::Configuration& config
     // start with initialization procedure, as in EUDAQ
     LOG(logger_, INFO) << "Reset successful; start initializing " << getCanonicalName();
 
-    LOG(logger_, INFO) << "TLU INITIALIZE ID: " + std::to_string(config.get<int>("initid", 0));
-    std::string uhal_conn =
-        "file:///home/feindtf/programs/constellation/cxx/satellites/AidaTLU/default_config/aida_tlu_connection.xml";
+    LOG(logger_, INFO) << "TLU INITIALIZE ID: " + std::to_string(config.get<int>("confid", 0));
+    std::string uhal_conn = "file://cxx/satellites/AidaTLU/default_config/aida_tlu_connection.xml";
     std::string uhal_node = "aida_tlu.controlhub";
     uhal_conn = config.get<std::string>("ConnectionFile", uhal_conn);
     uhal_node = config.get<std::string>("DeviceName", uhal_node);
@@ -73,8 +72,7 @@ void AidaTLUSatellite::initializing(constellation::config::Configuration& config
         // Initialize the Si5345 clock chip using pre-generated file
         if(config.get<bool>("CONFCLOCK", true)) {
             std::string clkConfFile;
-            std::string defaultCfgFile =
-                "/home/feindtf/programs/constellation/cxx/satellites/AidaTLU/default_config/aida_tlu_clk_config.txt";
+            std::string defaultCfgFile = "cxx/satellites/AidaTLU/default_config/aida_tlu_clk_config.txt";
             clkConfFile = config.get<std::string>("CLOCK_CFG_FILE", defaultCfgFile);
             if(clkConfFile == defaultCfgFile) {
                 LOG(logger_, WARNING)
@@ -296,8 +294,8 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
             uint32_t trigger_n = data->eventnumber;
             uint64_t ts_raw = data->timestamp;
             uint64_t ts_ns = ts_raw*25;
-            if(!trigger_n%100){
-                LOG(logger_,DEBUG) << "  Received trigger " << trigger_n << " after " << ts_ns << " ns.";
+            if(!(trigger_n%100)){
+                LOG(logger_,INFO) << "  Received trigger " << trigger_n << " after " << ts_ns/1e9 << " s.";
             }
             /* ToDo: how to store data?
             auto ev = eudaq::Event::MakeUnique("TluRawDataEvent");
@@ -321,8 +319,8 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
                 uint32_t sl0,sl1,sl2,sl3, sl4, sl5, pt;
                 m_tlu->GetScaler(sl0,sl1,sl2,sl3,sl4,sl5);
                 pt=m_tlu->GetPreVetoTriggers();
-                if(!trigger_n%100){
-                    LOG(logger_,DEBUG) << "  Received particle " << pt << " after " << ts_ns << " ns.";
+                if(!(trigger_n%100)){
+                    LOG(logger_,INFO) << "  Received particle " << pt;
                 }
                 /* ToDo: how to store data?
                 ev->SetTag("PARTICLES", std::to_string(pt));
