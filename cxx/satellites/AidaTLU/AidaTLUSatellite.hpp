@@ -24,7 +24,6 @@ public:
     void initializing(Configuration& config) override;
     void launching() override;
     void landing() override;
-    void reconfiguring(const Configuration& partial_config) override;
     void starting(std::string_view run_identifier) override;
     void stopping() override;
     void running(const std::stop_token& stop_token) override;

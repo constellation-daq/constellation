@@ -17,10 +17,6 @@
 AidaTLUSatellite::AidaTLUSatellite(std::string_view type, std::string_view name)
     : Satellite(type, name), m_starttime(0), m_lasttime(0), m_duration(0) {
     LOG(logger_, STATUS) << "TluSatellite " << getCanonicalName() << " created";
-
-    // ToDo: implement
-    // This satellite supports reconfiguration:
-    //support_reconfigure();
 }
 
 void AidaTLUSatellite::initializing(constellation::config::Configuration& config) {
@@ -263,8 +259,6 @@ void AidaTLUSatellite::landing() {
     LOG(logger_,INFO) << "  Set all PMT_V = 0";
     m_tlu->pwrled_setVoltages(0, 0, 0, 0, m_launch_config.verbose);
 }
-
-void AidaTLUSatellite::reconfiguring(const constellation::config::Configuration& /*partial_config*/) {}
 
 void AidaTLUSatellite::starting(std::string_view run_identifier) {
     LOG(logger_, INFO) << "Starting run " << run_identifier << "...";
