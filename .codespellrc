@@ -6,4 +6,5 @@ skip = .git,.ci,subprojects,AUTHORS.md
 quiet-level = 2
 # Words to be ignored, put one word per line and sort alphabetically
 ignore-words-list =
- crate, Tatoo,
+ crate,
+ Tatoo
