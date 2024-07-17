@@ -29,7 +29,7 @@ public:
     void running(const std::stop_token& stop_token) override;
 
 private:
-    struct launch_configuration{
+    struct launch_configuration {
         unsigned int confid;
         uint8_t verbose;
         uint32_t delayStart;
