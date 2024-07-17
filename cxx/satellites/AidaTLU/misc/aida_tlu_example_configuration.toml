@@ -9,7 +9,7 @@
 
     # Path on the PC with TLU Producer and relative path is starting path euRun!
     ConnectionFile = "file://cxx/satellites/AidaTLU/misc/aida_tlu_connection.xml"
-    # ControlHub is recommended for Ubuntu, the name is the name in the conncetion file
+    # ControlHub is recommended for Ubuntu, the name is the name in the connection file
     DeviceName = "aida_tlu.controlhub"
 
     # Set CONFCLOCK to 1 to configure clock, which is necessary after a power cycle
