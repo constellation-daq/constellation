@@ -4,13 +4,13 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <string>
 
 #include <argparse/argparse.hpp>
 #include <QApplication>
 #include <QDateTime>
 
-#include <toml++/toml.hpp>
-
+#include "constellation/controller/ConfigParser.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/log/log.hpp"
@@ -496,156 +496,21 @@ std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile
         return {};
     }
 
-    // Parse input file:
-    LOG(logger_, DEBUG) << "Parsing configuration file " << check_file.canonicalFilePath().toStdString();
-    toml::table tbl;
     try {
-        tbl = toml::parse_file(check_file.canonicalFilePath().toStdString());
-    } catch(const toml::parse_error& err) {
-        std::stringstream s;
-        s << err;
-        QMessageBox::warning(NULL, "ERROR", QString::fromStdString("Parsing failed: " + s.str()));
+        auto connections = runcontrol_.getConnections();
+        ConfigParser parser(check_file.canonicalFilePath().toStdString(), connections);
+        auto dictionaries = parser.getAll();
+
+        // Convert to CommandPayloads:
+        std::map<std::string, Controller::CommandPayload> payloads;
+        for(const auto& [key, dict] : dictionaries) {
+            payloads.emplace(key, dict);
+        }
+        return payloads;
+    } catch(std::invalid_argument& err) {
+        QMessageBox::warning(NULL, "ERROR", QString::fromStdString(std::string("Parsing failed: ") + err.what()));
         return {};
     }
-
-    auto get_value = [&](const toml::key& key, auto&& val) -> std::optional<config::Value> {
-        if constexpr(toml::is_table<decltype(val)>) {
-            LOG(logger_, DEBUG) << "Skipping table for key " << key;
-            return {};
-        } else if constexpr(toml::is_array<decltype(val)>) {
-            if(val.is_homogeneous()) {
-                const auto& arr = val.as_array();
-                if(arr->empty()) {
-                    return std::monostate {};
-                } else if(arr->front().is_integer()) {
-                    std::vector<std::int64_t> return_value;
-                    for(auto&& elem : *arr) {
-                        return_value.push_back(elem.as_integer()->get());
-                    }
-                    return return_value;
-                } else if(arr->front().is_floating_point()) {
-                    std::vector<double> return_value;
-                    for(auto&& elem : *arr) {
-                        return_value.push_back(elem.as_floating_point()->get());
-                    }
-                    return return_value;
-                } else if(arr->front().is_boolean()) {
-                    std::vector<bool> return_value;
-                    for(auto&& elem : *arr) {
-                        return_value.push_back(elem.as_boolean()->get());
-                    }
-                    return return_value;
-                } else if(arr->front().is_string()) {
-                    std::vector<std::string> return_value;
-                    for(auto&& elem : *arr) {
-                        return_value.push_back(elem.as_string()->get());
-                    }
-                    return return_value;
-                } else {
-                    LOG(logger_, WARNING) << "Unknown type of array for key " << key;
-                    // throw
-                    return {};
-                }
-            } else {
-                LOG(logger_, WARNING) << "Array with key " << key << " is not homogeneous";
-                // throw
-                return {};
-            }
-        } else {
-            if constexpr(toml::is_integer<decltype(val)>) {
-                return val.as_integer()->get();
-            } else if constexpr(toml::is_floating_point<decltype(val)>) {
-                return val.as_floating_point()->get();
-            } else if constexpr(toml::is_boolean<decltype(val)>) {
-                return val.as_boolean()->get();
-            } else if constexpr(toml::is_string<decltype(val)>) {
-                return val.as_string()->get();
-            } else {
-                LOG(logger_, WARNING) << "Unknown value type for key " << key;
-                // throw
-                return {};
-            }
-        }
-    };
-
-    auto connections = runcontrol_.getConnections();
-    std::map<std::string, config::Dictionary> dictionaries;
-    for(const auto& conn : connections) {
-        // Start with empty dictionary:
-        dictionaries.emplace(conn, config::Dictionary {});
-
-        const auto separator = conn.find_first_of('.');
-        const auto type = conn.substr(0, separator);
-        const auto name = conn.substr(separator + 1);
-
-        // Find satellites base node and add keys
-        if(const auto& node = tbl.at_path("satellites")) {
-            config::Dictionary dict_all;
-            config::Dictionary dict_type;
-
-            // Write individual keys if not present yet:
-            node.as_table()->for_each([&](const toml::key& key, auto&& val) {
-                // Check if this is a table for this satellite type
-                if constexpr(toml::is_table<decltype(val)>) {
-                    if(utils::transform(key, ::tolower) == utils::transform(type, ::tolower)) {
-
-                        LOG(logger_, DEBUG) << "Found satellite type sub-node " << key;
-                        val.as_table()->for_each([&](const toml::key& key, auto&& val) {
-                            // Check if this is a table for this satellite name
-                            if constexpr(toml::is_table<decltype(val)>) {
-                                if(utils::transform(key, ::tolower) == utils::transform(name, ::tolower)) {
-                                    LOG(logger_, DEBUG) << "Found satellite name sub-node " << key;
-                                    val.as_table()->for_each([&](const toml::key& key, auto&& val) {
-                                        LOG(logger_, DEBUG) << "Reading name key " << key;
-
-                                        auto value = get_value(key, val);
-                                        if(value.has_value()) {
-                                            // Insert or assign - these keys always take priority
-                                            dictionaries[conn].emplace(std::string(key.str()), value.value());
-                                        }
-                                    });
-                                }
-                            } else {
-                                LOG(logger_, DEBUG) << "Reading type key " << key;
-
-                                auto value = get_value(key, val);
-                                if(value.has_value()) {
-                                    dict_type.emplace(std::string(key.str()), value.value());
-                                }
-                            }
-                        });
-                    }
-                } else {
-                    LOG(logger_, DEBUG) << "Reading satellites key " << key;
-                    auto value = get_value(key, val);
-                    if(value.has_value()) {
-                        dict_all.emplace(std::string(key.str()), value.value());
-                    }
-                }
-            });
-
-            // Combine dictionaries, do not overwrite existing keys:
-            for(const auto& [key, value] : dict_type) {
-                const auto& [it, inserted] = dictionaries[conn].insert({key, value});
-                LOG_IF(logger_, DEBUG, inserted) << "Added key " << key << " from type section";
-            }
-
-            for(const auto& [key, value] : dict_all) {
-                const auto& [it, inserted] = dictionaries[conn].insert({key, value});
-                LOG_IF(logger_, DEBUG, inserted) << "Added key " << key << " from global satellites section";
-            }
-
-        } else {
-            LOG(logger_, WARNING) << "Could not find base node for satellites";
-        }
-    }
-
-    // Convert to CommandPayloads:
-    std::map<std::string, Controller::CommandPayload> payloads;
-    for(const auto& [key, dict] : dictionaries) {
-        payloads.emplace(key, dict);
-    }
-    return payloads;
 }
 
 /**
