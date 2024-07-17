@@ -15,7 +15,7 @@
 
 #include <katherinexx/katherinexx.hpp>
 
-#include "constellation/core/logging/log.hpp"
+#include "constellation/core/log/log.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 class KatherineSatellite final : public constellation::satellite::Satellite {
@@ -63,7 +63,7 @@ private:
     template <typename T> void pixels_received(const T* px, size_t count) {
         for(size_t i = 0; i < count; ++i) {
             if constexpr(std::is_same_v<T, katherine::acq::f_toa_tot::pixel_type>) {
-	      LOG(TRACE) << (int)px[i].coord.x << " " << (int)px[i].coord.y;
+                LOG(TRACE) << (int)px[i].coord.x << " " << (int)px[i].coord.y;
             }
         }
     }
