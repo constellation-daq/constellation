@@ -1,3 +1,10 @@
+---
+# SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+# SPDX-License-Identifier: CC-BY-4.0 OR EUPL-1.2
+title: "AidaTLU"
+subtitle: "Constellation Satellite for controlling an AIDA TLU via the IPBUS control hub"
+---
+
 ## State -- Almost there
 Ported EUDAQ2 codes with minimal adaptation. Definitively room for improvement. Note that no data is stored at this point, since this is not yet supported on constellation side.
 
