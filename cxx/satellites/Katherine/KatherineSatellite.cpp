@@ -13,7 +13,7 @@
 #include <fstream>
 #include <string_view>
 
-#include "constellation/core/logging/log.hpp"
+#include "constellation/core/log/log.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 using namespace constellation::config;
@@ -88,13 +88,12 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     katherine_config_.set_bias_id(0);
     katherine_config_.set_bias(0);
 
-
     // FIXME set number of frames to acquire?
     katherine_config_.set_no_frames(config.get<int>("no_frames"));
     if(ro_type_ == katherine::readout_type::data_driven && katherine_config_.no_frames() > 1) {
-      throw InvalidValueError("FIXME", "no_frames", "Data-driven mode requires a single frame");
+        throw InvalidValueError("FIXME", "no_frames", "Data-driven mode requires a single frame");
     }
-    
+
     katherine_config_.set_gray_disable(false);
     katherine_config_.set_phase(katherine::phase::p1);
     katherine_config_.set_freq(katherine::freq::f40);
@@ -142,9 +141,9 @@ void KatherineSatellite::launching() {
 }
 
 void KatherineSatellite::landing() {
-  if(acquisition_) {
-    acquisition_.reset();
-  }
+    if(acquisition_) {
+        acquisition_.reset();
+    }
 }
 
 void KatherineSatellite::frame_started(int frame_idx) {
@@ -185,16 +184,14 @@ void KatherineSatellite::starting(std::string_view) {
 }
 
 void KatherineSatellite::running(const std::stop_token& stop_token) {
-  
 
-  // Start the data acquisition:
-  while(!stop_token.stop_requested()) {
-    std::this_thread::sleep_for(2s);
+    // Start the data acquisition:
+    while(!stop_token.stop_requested()) {
+        std::this_thread::sleep_for(2s);
 
-    LOG(INFO) << "State:   " << katherine::str_acq_state(acquisition_->state());
-    LOG(INFO) << "dropped: " << acquisition_->dropped_measurement_data();
-
-  }
+        LOG(INFO) << "State:   " << katherine::str_acq_state(acquisition_->state());
+        LOG(INFO) << "dropped: " << acquisition_->dropped_measurement_data();
+    }
 }
 
 void KatherineSatellite::stopping() {
@@ -203,7 +200,7 @@ void KatherineSatellite::stopping() {
 
     // Join thread once it is done
     if(runthread_.joinable()) {
-      runthread_.join();
+        runthread_.join();
     }
 
     LOG(STATUS) << "Acquisition completed:" << std::endl
