@@ -20,8 +20,8 @@
 #include <peary/device/Device.hpp>
 #include <peary/device/DeviceManager.hpp>
 
-#include "constellation/core/logging/Level.hpp"
-#include "constellation/core/logging/Logger.hpp"
+#include "constellation/core/log/Level.hpp"
+#include "constellation/core/log/Logger.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 class PearyLogger final : public std::stringbuf {
