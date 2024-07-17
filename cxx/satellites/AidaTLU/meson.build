@@ -1,5 +1,5 @@
 #SPDX - FileCopyrightText : 2024 DESY and the Constellation authors
-#SPDX - License - Identifier : CC0 - 1.0
+#SPDX - License - Identifier : CC0-1.0
 
 #Build satellite if feature is not disabled:
 if get_option('satellite_aidatlu')

@@ -1,3 +1,6 @@
+#SPDX - FileCopyrightText : 2024 DESY and the Constellation authors
+#SPDX - License - Identifier : CC0-1.0
+
 ## setup script for AIDA TLU
 
 # Add cactus to path
