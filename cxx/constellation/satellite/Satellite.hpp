@@ -163,7 +163,7 @@ namespace constellation::satellite {
                                    std::string unit,
                                    metrics::Type type,
                                    std::chrono::high_resolution_clock::duration interval,
-                                   std::initializer_list<State> states = {},
+                                   std::initializer_list<protocol::CSCP::State> states = {},
                                    config::Value&& initial_value = {}) {
             metrics_manager_.registerMetric(
                 std::move(name),
@@ -184,7 +184,7 @@ namespace constellation::satellite {
                                    std::string unit,
                                    metrics::Type type,
                                    std::chrono::high_resolution_clock::duration interval,
-                                   std::initializer_list<State> states,
+                                   std::initializer_list<protocol::CSCP::State> states,
                                    const std::function<config::Value()>& func) {
             metrics_manager_.registerMetric(
                 std::move(name), std::make_shared<metrics::TimedAutoMetric>(std::move(unit), type, interval, states, func));
@@ -204,7 +204,7 @@ namespace constellation::satellite {
                                        std::string unit,
                                        metrics::Type type,
                                        std::size_t triggers,
-                                       std::initializer_list<State> states = {},
+                                       std::initializer_list<protocol::CSCP::State> states = {},
                                        config::Value&& initial_value = {}) {
             metrics_manager_.registerMetric(std::move(name),
                                             std::make_shared<metrics::TriggeredMetric>(

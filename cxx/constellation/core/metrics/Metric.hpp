@@ -9,7 +9,11 @@
 
 #pragma once
 
+#include <chrono>
 #include <cstdint>
+#include <functional>
+#include <initializer_list>
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -18,6 +22,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 
 namespace constellation::metrics {
 
@@ -115,7 +120,7 @@ namespace constellation::metrics {
          */
         MetricTimer(std::string unit,
                     Type type,
-                    std::initializer_list<message::State> states,
+                    std::initializer_list<protocol::CSCP::State> states,
                     config::Value&& initial_value = {})
             : Metric(std::move(unit), std::move(type), std::move(initial_value)), states_(states) {}
 
@@ -127,7 +132,7 @@ namespace constellation::metrics {
          * @param state Current state of the FSM
          * @return True if the metric should be sent now, false otherwise
          */
-        bool check(message::State state);
+        bool check(protocol::CSCP::State state);
 
         /**
          * @brief Helper to check when the next time of distribution is expected
@@ -158,7 +163,7 @@ namespace constellation::metrics {
 
     private:
         bool changed_ {true};
-        std::set<message::State> states_;
+        std::set<protocol::CSCP::State> states_;
     };
 
     /**
@@ -171,7 +176,7 @@ namespace constellation::metrics {
         TimedMetric(std::string unit,
                     Type type,
                     std::chrono::high_resolution_clock::duration interval,
-                    std::initializer_list<message::State> states,
+                    std::initializer_list<protocol::CSCP::State> states,
                     config::Value&& initial_value = {})
             : MetricTimer(std::move(unit), type, states, std::move(initial_value)), interval_(interval),
               last_trigger_(std::chrono::high_resolution_clock::now()),
@@ -196,7 +201,7 @@ namespace constellation::metrics {
         TimedAutoMetric(std::string unit,
                         Type type,
                         std::chrono::high_resolution_clock::duration interval,
-                        std::initializer_list<message::State> states,
+                        std::initializer_list<protocol::CSCP::State> states,
                         std::function<config::Value()> func)
             : TimedMetric(std::move(unit), type, interval, states), func_(std::move(func)) {}
 
@@ -218,7 +223,7 @@ namespace constellation::metrics {
         TriggeredMetric(std::string unit,
                         Type type,
                         std::size_t triggers,
-                        std::initializer_list<message::State> states,
+                        std::initializer_list<protocol::CSCP::State> states,
                         config::Value&& initial_value);
 
         void update(const config::Value& value) override;

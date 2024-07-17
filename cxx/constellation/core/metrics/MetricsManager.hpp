@@ -18,8 +18,7 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Dictionary.hpp"
-#include "constellation/core/logging/Logger.hpp"
-#include "constellation/core/message/satellite_definitions.hpp"
+#include "constellation/core/log/Logger.hpp"
 #include "constellation/core/metrics/Metric.hpp"
 
 namespace constellation::metrics {
@@ -32,7 +31,7 @@ namespace constellation::metrics {
          *
          * @param state_callback Callback to fetch the current state from the finite state machine
          */
-        MetricsManager(std::function<message::State()> state_callback);
+        MetricsManager(std::function<protocol::CSCP::State()> state_callback);
 
         // No copy/move constructor/assignment
         /// @cond doxygen_suppress
@@ -90,7 +89,7 @@ namespace constellation::metrics {
         log::Logger logger_;
 
         /** Function returning the current state */
-        std::function<message::State()> state_callback_;
+        std::function<protocol::CSCP::State()> state_callback_;
 
         /** Map of registered metrics */
         std::map<std::string, std::shared_ptr<MetricTimer>, std::less<>> metrics_;

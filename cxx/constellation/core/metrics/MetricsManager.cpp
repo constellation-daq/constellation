@@ -15,16 +15,17 @@
 #include <map>
 #include <thread>
 
-#include "constellation/core/logging/log.hpp"
-#include "constellation/core/logging/SinkManager.hpp"
+#include "constellation/core/log/log.hpp"
+#include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 
 using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::metrics;
+using namespace constellation::protocol;
 
-MetricsManager::MetricsManager(std::function<State()> state_callback)
+MetricsManager::MetricsManager(std::function<CSCP::State()> state_callback)
     : logger_("STAT"), state_callback_(std::move(state_callback)), thread_(std::bind_front(&MetricsManager::run, this)) {};
 
 MetricsManager::~MetricsManager() noexcept {

@@ -20,11 +20,13 @@
 
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std_future.hpp"
 
 using namespace constellation::metrics;
 using namespace constellation::message;
+using namespace constellation::protocol;
 using namespace constellation::utils;
 
 PayloadBuffer Metric::assemble() const {
@@ -63,7 +65,7 @@ void MetricTimer::update(const config::Value& value) {
     changed_ = true;
 }
 
-bool MetricTimer::check(State state) {
+bool MetricTimer::check(CSCP::State state) {
 
     // First check the metric condition to update internals
     if(!condition()) {
@@ -103,8 +105,11 @@ std::chrono::high_resolution_clock::time_point TimedMetric::nextTrigger() const 
     return last_check_ + interval_;
 }
 
-TriggeredMetric::TriggeredMetric(
-    std::string unit, Type type, std::size_t triggers, std::initializer_list<State> states, config::Value&& initial_value)
+TriggeredMetric::TriggeredMetric(std::string unit,
+                                 Type type,
+                                 std::size_t triggers,
+                                 std::initializer_list<CSCP::State> states,
+                                 config::Value&& initial_value)
     : MetricTimer(std::move(unit), type, states, std::move(initial_value)), triggers_(triggers) {
     // We have an initial value, let's log it directly
     if(!std::holds_alternative<std::monostate>(initial_value)) {
