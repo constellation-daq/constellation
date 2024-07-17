@@ -23,9 +23,9 @@ and add the cactus library to `LD_LIBRARY_PATH`, e.g. by executing
 ```
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/cactus/lib
 ```
-Alternatively you can run this script `cxx/satellites/AidaTLU/misc/setup_aida-tlu.sh`.
+Alternatively you can source this script `cxx/satellites/AidaTLU/misc/setup_aida-tlu.sh`.
 
-Now you are ready to run the satelite:
+Now you are ready to run the satellite:
 ```
 ./build/cxx/satellites/AidaTLU/satelliteAidaTLU -g Tatoo -n Tatooine
 ```
