@@ -94,7 +94,7 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
         }
     }
 
-    setWindowTitle("Constellation QControl " CNSTLN_VERSION);
+    setWindowTitle("Constellation MissionControl " CNSTLN_VERSION);
     connect(&m_timer_display, SIGNAL(timeout()), this, SLOT(DisplayTimer()));
     m_timer_display.start(300); // internal update time of GUI
 
@@ -104,8 +104,8 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     });
     connect(runSequence, &QSpinBox::valueChanged, this, [&](int i) { update_run_identifier(runIdentifier->text(), i); });
 
-    QSettings settings_output("Constellation", "Vintage");
-    settings_output.beginGroup("qcontrol");
+    QSettings settings_output("Constellation", "MissionControl");
+    settings_output.beginGroup("runcontrol");
     settings_output.setValue("successexit", 0);
     settings_output.endGroup();
 }
@@ -122,8 +122,8 @@ void RunControlGUI::update_run_identifier(const QString& text, int number) {
     }
     current_run_ += QString::number(number);
 
-    QSettings settings("Constellation", "Vintage");
-    settings.beginGroup("qcontrol");
+    QSettings settings("Constellation", "MissionControl");
+    settings.beginGroup("runcontrol");
     settings.setValue("runidentifier", text);
     settings.setValue("runsequence", number);
     settings.endGroup();
@@ -276,8 +276,8 @@ CSCP::State RunControlGUI::updateInfos() {
 }
 
 void RunControlGUI::closeEvent(QCloseEvent* event) {
-    QSettings settings("Constellation", "Vintage");
-    settings.beginGroup("qcontrol");
+    QSettings settings("Constellation", "MissionControl");
+    settings.beginGroup("runcontrol");
 
     settings.setValue("size", size());
     settings.setValue("pos", pos());
@@ -512,7 +512,7 @@ bool RunControlGUI::allConnectionsInState(CSCP::State state) {
 // NOLINTNEXTLINE(*-avoid-c-arrays)
 void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser) {
     // Controller name (-n)
-    parser.add_argument("-n", "--name").help("controller name").default_value("qruncontrol");
+    parser.add_argument("-n", "--name").help("controller name").default_value("MissionControl");
 
     // Constellation group (-g)
     parser.add_argument("-g", "--group").help("group name");
