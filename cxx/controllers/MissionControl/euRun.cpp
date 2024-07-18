@@ -4,12 +4,12 @@
 #include <format>
 #include <fstream>
 #include <iostream>
-#include <string>
-
-#include <argparse/argparse.hpp>
 #include <QApplication>
 #include <QDateTime>
 #include <QSpinBox>
+#include <string>
+
+#include <argparse/argparse.hpp>
 
 #include "constellation/controller/ConfigParser.hpp"
 #include "constellation/core/chirp/Manager.hpp"
@@ -54,24 +54,41 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
 
     sorting_proxy_.setSourceModel(&runcontrol_);
     viewConn->setModel(&sorting_proxy_);
-
     viewConn->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(viewConn, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(onCustomContextMenu(const QPoint&)));
 
-    QRect geom(-1, -1, 150, 200);
-    QRect geom_from_last_program_run;
+    // Pick up latest run identifier information - either from running Constellation or from settings
+    auto run_id = runcontrol_.getRunIdentifier();
+    if(run_id.empty()) {
+        update_run_identifier(gui_settings_.value("run/identifier", "run").toString(),
+                              gui_settings_.value("run/sequence", 0).toInt());
+    } else {
+        // Attempt to find sequence:
+        std::size_t pos = run_id.find_last_of("_");
+        // FIXME check for invalid_argument
 
-    // Read and update run identifier information
-    auto run_id = gui_settings_.value("run/identifier", "run").toString();
-    auto run_seq = gui_settings_.value("run/sequence", 0).toInt();
-    update_run_identifier(run_id, run_seq);
+        auto identifier = (pos != std::string::npos ? run_id.substr(0, pos) : run_id);
+        std::size_t sequence = 0;
+        try {
+            sequence = (pos != std::string::npos ? std::stoi(run_id.substr(pos + 1)) : 0);
+        } catch(std::invalid_argument&) {
+        }
+
+        // This is an old run identifier, increment the sequence:
+        if(!runcontrol_.isInState(CSCP::State::RUN)) {
+            sequence++;
+        }
+        update_run_identifier(QString::fromStdString(identifier), sequence);
+    }
 
     m_lastexit_success = gui_settings_.value("successexit", 1).toUInt();
-    geom_from_last_program_run.setSize(gui_settings_.value("window/size", geom.size()).toSize());
-    geom_from_last_program_run.moveTo(gui_settings_.value("window/pos", geom.topLeft()).toPoint());
     // TODO: check last if last file exits. if not, use default value.
     txtConfigFileName->setText(gui_settings_.value("run/configfile", "config file not set").toString());
 
+    QRect geom(-1, -1, 150, 200);
+    QRect geom_from_last_program_run;
+    geom_from_last_program_run.setSize(gui_settings_.value("window/size", geom.size()).toSize());
+    geom_from_last_program_run.moveTo(gui_settings_.value("window/pos", geom.topLeft()).toPoint());
     QSize fsize = frameGeometry().size();
     if((geom.x() == -1) || (geom.y() == -1) || (geom.width() == -1) || (geom.height() == -1)) {
         if((geom_from_last_program_run.x() == -1) || (geom_from_last_program_run.y() == -1) ||
