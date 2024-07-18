@@ -99,6 +99,16 @@ Dictionary QRunControl::getQCommands(const QModelIndex& index) {
     return Dictionary::disassemble(msg.getPayload());
 }
 
+std::string QRunControl::getQName(const QModelIndex& index) const {
+    std::unique_lock<std::mutex> lock(connection_mutex_);
+
+    // Select connection by index:
+    auto it = connections_.begin();
+    std::advance(it, index.row());
+
+    return it->first;
+}
+
 std::optional<std::string> QRunControl::sendQCommand(const QModelIndex& index,
                                                      const std::string& verb,
                                                      const CommandPayload& payload) {

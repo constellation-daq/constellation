@@ -28,6 +28,8 @@ public:
 
     constellation::config::Dictionary getQCommands(const QModelIndex& index);
 
+    std::string getQName(const QModelIndex& index) const;
+
 protected:
     void propagate_update(std::size_t connections) override;
 
