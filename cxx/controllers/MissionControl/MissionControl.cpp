@@ -200,12 +200,16 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
         update_run_identifier(runIdentifier->text(), i);
     });
 
+    // Scan features:
+    viewParameters->setModel(&scanparams_);
+
     // Connect connection update signal and call it once:
     connect(&runcontrol_, &QController::connectionsChanged, this, &MissionControl::update_satellite_dropdown);
     update_satellite_dropdown();
 
     // Connect comboBox and stack:
     connect(comboBoxType, &QComboBox::currentIndexChanged, stackedWidgetType, &QStackedWidget::setCurrentIndex);
+    connect(btnClearParams, &QPushButton::clicked, &scanparams_, &QScanParameter::clear);
 
     // Connect connection update signal:
     connect(&runcontrol_, &QController::connectionsChanged, this, [&](std::size_t num) {
@@ -298,48 +302,56 @@ void MissionControl::on_btnAddParameter_clicked() {
     auto satellite = comboBoxSatellites->currentText();
     auto parameter = lineEditParameter->text();
 
+    if(satellite.isEmpty()) {
+        QMessageBox::warning(NULL, "ERROR", "Satellite name cannot be empty.");
+        return;
+    }
+
     if(parameter.isEmpty()) {
         QMessageBox::warning(NULL, "ERROR", "Parameter name cannot be empty.");
         return;
     }
 
+    LOG(logger_, DEBUG) << "Adding scan parameter " << parameter.toStdString() << " for " << satellite.toStdString();
+    std::vector<config::Value> steps {};
+
     // Get currently selected type:
     if(stackedWidgetType->currentIndex() == 0) {
-        auto start = spinBoxStart->value();
-        auto stop = spinBoxStop->value();
-        auto step = spinBoxStep->value();
-        std::vector<int> steps(std::abs(stop - start) / step + 1);
-        std::generate(steps.begin(), steps.end(), [n = start, step, dir = (stop > start)]() mutable {
-            auto c = n;
-            n += (dir ? step : -1 * step);
-            return c;
-        });
-        LOG(logger_, STATUS) << "Clicked INT for " << satellite.toStdString() << " on " << parameter.toStdString();
-        for(const auto& i : steps) {
-            LOG(logger_, STATUS) << i;
-        }
-    } else if(stackedWidgetType->currentIndex() == 1) {
         auto start = doubleSpinBoxStart->value();
         auto stop = doubleSpinBoxStop->value();
         auto step = doubleSpinBoxStep->value();
-        std::vector<double> steps(std::abs(stop - start) / step + 1);
-        std::generate(steps.begin(), steps.end(), [n = start, step, dir = (stop > start)]() mutable {
+        steps.resize(std::abs(stop - start) / step + 1);
+        std::generate(steps.begin(), steps.end(), [n = start, step, dir = (stop > start)]() mutable -> double {
             auto c = n;
             n += (dir ? step : -1 * step);
             return c;
         });
-        LOG(logger_, STATUS) << "Clicked FLOAT for " << satellite.toStdString() << " on " << parameter.toStdString();
-        for(const auto& i : steps) {
-            LOG(logger_, STATUS) << i;
-        }
+        doubleSpinBoxStart->clear();
+        doubleSpinBoxStop->clear();
+        doubleSpinBoxStep->clear();
+    } else if(stackedWidgetType->currentIndex() == 1) {
+        auto start = spinBoxStart->value();
+        auto stop = spinBoxStop->value();
+        auto step = spinBoxStep->value();
+        steps.resize(std::abs(stop - start) / step + 1);
+        std::generate(steps.begin(), steps.end(), [n = start, step, dir = (stop > start)]() mutable -> std::int64_t {
+            auto c = n;
+            n += (dir ? step : -1 * step);
+            return c;
+        });
+        spinBoxStart->clear();
+        spinBoxStop->clear();
+        spinBoxStep->clear();
     } else {
-        auto txt = lineEditParamValues->text();
-        auto list = txt.split(',', Qt::SkipEmptyParts);
-        LOG(logger_, STATUS) << "Clicked STR for " << satellite.toStdString() << " on " << parameter.toStdString();
-        for(const auto& i : list) {
-            LOG(logger_, STATUS) << i.trimmed().toStdString();
+        for(const auto& str : lineEditParamValues->text().split(',', Qt::SkipEmptyParts)) {
+            steps.push_back(str.trimmed().toStdString());
         }
+        lineEditParamValues->clear();
     }
+
+    // Register scan parameter set
+    scanparams_.add(satellite.toStdString(), parameter.toStdString(), steps);
+    lineEditParameter->clear();
 }
 
 void MissionControl::on_btnInit_clicked() {
