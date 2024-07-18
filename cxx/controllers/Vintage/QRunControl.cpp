@@ -82,6 +82,8 @@ void QRunControl::propagate_update(std::size_t connections) {
         emit dataChanged(createIndex(0, 0), createIndex(connections - 1, headers_.size() - 1));
     }
     current_rows_ = connections;
+
+    emit connectionsChanged();
 }
 
 Dictionary QRunControl::getQCommands(const QModelIndex& index) {
