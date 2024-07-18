@@ -97,15 +97,6 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     setWindowTitle("Constellation QControl " CNSTLN_VERSION);
     connect(&m_timer_display, SIGNAL(timeout()), this, SLOT(DisplayTimer()));
     m_timer_display.start(300); // internal update time of GUI
-    btnInit->setEnabled(1);
-    btnLand->setEnabled(1);
-    btnConfig->setEnabled(1);
-    btnLoadConf->setEnabled(1);
-    btnStart->setEnabled(1);
-    btnStop->setEnabled(1);
-    btnReset->setEnabled(1);
-    btnShutdown->setEnabled(1);
-    btnLog->setEnabled(1);
 
     QSettings settings_output("Constellation", "Vintage");
     settings_output.beginGroup("qcontrol");
@@ -239,6 +230,10 @@ CSCP::State RunControlGUI::updateInfos() {
     btnStop->setEnabled(state == CSCP::State::RUN);
     btnReset->setEnabled(state == CSCP::State::SAFE);
     btnShutdown->setEnabled(state == CSCP::State::SAFE || state == CSCP::State::INIT || state == CSCP::State::NEW);
+
+    // Deactivate run identifier fields during run:
+    runIdentifier->setEnabled(state != CSCP::State::RUN && state != CSCP::State::starting && state != CSCP::State::stopping);
+    runSequence->setEnabled(state != CSCP::State::RUN && state != CSCP::State::starting && state != CSCP::State::stopping);
 
     // Update state display
     labelState->setText(state_str_.at(state));
