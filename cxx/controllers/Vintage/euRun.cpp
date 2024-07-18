@@ -240,7 +240,25 @@ CSCP::State RunControlGUI::updateInfos() {
     btnReset->setEnabled(state == CSCP::State::SAFE);
     btnShutdown->setEnabled(state == CSCP::State::SAFE || state == CSCP::State::INIT || state == CSCP::State::NEW);
 
+    // Update state display
     labelState->setText(state_str_.at(state));
+
+    // Update run timer:
+    if(run_timer_.isValid()) {
+        auto duration =
+            std::format("{:%H:%M:%S}",
+                        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::milliseconds(run_timer_.elapsed())));
+        runDuration->setText("<b>" + QString::fromStdString(duration) + "</b>");
+    } else {
+        runDuration->setText("<font color=gray>" + runDuration->text() + "</font>");
+    }
+
+    // Update run identifier:
+    if(state == CSCP::State::RUN) {
+        runID->setText("<b>" + current_run_ + "</b>");
+    } else {
+        runID->setText("<font color=gray><b>" + current_run_ + "</b> (next)</font>");
+    }
 
     auto stored_run = qsettings_run_id_ + "_" + QString::number(qsettings_run_seq_);
     if(stored_run != current_run_) {
@@ -344,10 +362,6 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     QAction* stopAction = new QAction("Stop", this);
     connect(stopAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "stop"); });
     contextMenu->addAction(stopAction);
-
-    // QAction *resetAction = new QAction("Reset", this);
-    // connect(resetAction, &QAction::triggered, this, [this,index]() { runcontrol_.reset(index); });
-    // contextMenu->addAction(resetAction);
 
     QAction* terminateAction = new QAction("Shutdown", this);
     connect(terminateAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "shutdown"); });

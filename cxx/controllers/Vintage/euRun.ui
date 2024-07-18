@@ -144,10 +144,42 @@
           <item>
            <widget class="QLabel" name="labelState">
             <property name="frameShape">
-             <enum>QFrame::Shape::NoFrame</enum>
+             <enum>QFrame::NoFrame</enum>
             </property>
             <property name="text">
              <string>&lt;font color='gray'&gt;&lt;b&gt;New&lt;/b&gt;&lt;/font&gt;</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="runidBox">
+         <property name="title">
+          <string>Run Identifier</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <item>
+           <widget class="QLabel" name="runID">
+            <property name="text">
+             <string>&lt;font color='gray'&gt;&lt;b&gt;-&lt;/b&gt;&lt;/font&gt;</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="runtimeBox">
+         <property name="title">
+          <string>Run Duration</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_6">
+          <item>
+           <widget class="QLabel" name="runDuration">
+            <property name="text">
+             <string>&lt;font color='gray'&gt;&lt;b&gt;00:00:00&lt;/b&gt;&lt;/font&gt;</string>
             </property>
            </widget>
           </item>
@@ -486,7 +518,7 @@
      <x>0</x>
      <y>0</y>
      <width>1033</width>
-     <height>23</height>
+     <height>24</height>
     </rect>
    </property>
   </widget>
