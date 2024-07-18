@@ -209,6 +209,7 @@ namespace constellation::satellite {
         std::string status_;
         config::Configuration config_;
         std::string run_identifier_;
+        std::chrono::system_clock::time_point run_start_time_;
 
         CommandRegistry user_commands_;
 
