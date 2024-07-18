@@ -241,7 +241,7 @@
           <item row="0" column="4">
            <widget class="QPushButton" name="btnLoadConf">
             <property name="text">
-             <string>Load</string>
+             <string>Select</string>
             </property>
            </widget>
           </item>

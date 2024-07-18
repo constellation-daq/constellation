@@ -44,13 +44,13 @@ private slots:
 private:
     constellation::protocol::CSCP::State updateInfos();
 
-    bool loadConfigFile();
     bool addStatusDisplay(std::string satellite_name, std::string metric);
     bool removeStatusDisplay(std::string satellite_name, std::string metric);
     bool updateStatusDisplay();
     bool addToGrid(const QString& objectName, QString displayedName = "");
     bool addAdditionalStatus(std::string info);
     std::map<std::string, constellation::controller::Controller::CommandPayload> parseConfigFile(QString file);
+    constellation::controller::Controller::CommandPayload parseConfigFile(QString file, const QModelIndex& index);
 
     bool allConnectionsInState(constellation::protocol::CSCP::State state);
 

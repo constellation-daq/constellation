@@ -320,13 +320,10 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
 
     QMenu* contextMenu = new QMenu(viewConn);
 
-    // load an eventually updated file
-    loadConfigFile();
-
-    // FIXME pass configuration
     QAction* initialiseAction = new QAction("Initialize", this);
     connect(initialiseAction, &QAction::triggered, this, [this, index]() {
-        runcontrol_.sendQCommand(index, "initialize", constellation::config::Dictionary());
+        auto config = parseConfigFile(txtConfigFileName->text(), index);
+        runcontrol_.sendQCommand(index, "initialize", config);
     });
     contextMenu->addAction(initialiseAction);
 
@@ -378,18 +375,6 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     }
 
     contextMenu->exec(viewConn->viewport()->mapToGlobal(point));
-}
-
-bool RunControlGUI::loadConfigFile() {
-    std::string settings = txtConfigFileName->text().toStdString();
-    QFileInfo check_file(txtConfigFileName->text());
-    if(!check_file.exists() || !check_file.isFile()) {
-        QMessageBox::warning(NULL, "ERROR", "Config file does not exist.");
-        return false;
-    }
-
-    // FIXME read and parse config file
-    return true;
 }
 
 bool RunControlGUI::addStatusDisplay(std::string satellite_name, std::string metric) {
@@ -511,6 +496,12 @@ std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile
         QMessageBox::warning(NULL, "ERROR", QString::fromStdString(std::string("Parsing failed: ") + err.what()));
         return {};
     }
+}
+
+Controller::CommandPayload RunControlGUI::parseConfigFile(QString file, const QModelIndex& index) {
+    auto payloads = parseConfigFile(file);
+    auto name = runcontrol_.getQName(index);
+    return payloads[name];
 }
 
 /**
