@@ -56,6 +56,7 @@ satellite needs to implement:
 | `get_status`   | Returns the current [status message](#state-and-status) of the satellite
 | `get_config`   | Returns the applied configuration
 | `get_run_id`   | Returns the current or last run identifier
+| `get_run_time` | Returns the starting time of the current or last run
 | `initialize`   | Requests FSM transition "initialize". Only valid when in `INIT` or `NEW` states.
 | `launch`       | Requests FSM transition "launch". Only valid when in `INIT` state.
 | `land`         | Requests FSM transition "land". Only valid when in `ORBIT` state.

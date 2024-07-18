@@ -44,6 +44,7 @@ objects.
 | `get_status` | - | Current status | -
 | `get_config` | - | Acknowledgement | Satellite configuration as flat MsgPack map/dictionary
 | `get_run_id` | - | Current or last run identifier (as string) | -
+| `get_run_time` | - | Acknowledgement | Starting point in time of the last run as single MsgPack time value
 | `initialize` | Satellite configuration as flat MsgPack map/dictionary | Acknowledgement | -
 | `launch` | - | Acknowledgement | -
 | `land` | - | Acknowledgement | -
