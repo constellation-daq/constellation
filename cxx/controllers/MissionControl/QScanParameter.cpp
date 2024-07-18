@@ -6,6 +6,10 @@
 using namespace constellation::config;
 
 void QScanParameter::add(const std::string& satellite, const std::string& parameter, const std::vector<Value>& values) {
+    if(values.empty()) {
+        return;
+    }
+
     beginInsertRows(QModelIndex(), 0, 0);
     parameters_.emplace_back(satellite, parameter, values);
     endInsertRows();
@@ -39,9 +43,22 @@ QVariant QScanParameter::data(const QModelIndex& index, int role) const {
         return QString::fromStdString(std::get<1>(*it));
     }
     case 2: {
-        return static_cast<uint>(std::get<2>(*it).size());
+        auto val = std::get<2>(*it).front();
+        if(std::holds_alternative<double>(val)) {
+            return "float";
+        } else if(std::holds_alternative<std::int64_t>(val)) {
+            return "int";
+        } else if(std::holds_alternative<std::string>(val)) {
+            return "str";
+        } else if(std::holds_alternative<bool>(val)) {
+            return "bool";
+        }
+        return "<?>";
     }
     case 3: {
+        return static_cast<uint>(std::get<2>(*it).size());
+    }
+    case 4: {
         std::stringstream s;
         for(const auto& v : std::get<2>(*it)) {
             s << v.str() << ",";

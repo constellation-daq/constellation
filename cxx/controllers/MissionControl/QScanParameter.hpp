@@ -30,7 +30,6 @@ public:
     void clear();
 
 private:
-    static constexpr std::array<const char*, 4> headers_ {"Satellite", "Parameter", "Steps", "Values"};
-
+    static constexpr std::array<const char*, 5> headers_ {"Satellite", "Parameter", "Type", "Steps", "Values"};
     std::vector<std::tuple<std::string, std::string, std::vector<constellation::config::Value>>> parameters_;
 };
