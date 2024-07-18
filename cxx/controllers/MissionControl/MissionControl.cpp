@@ -319,9 +319,26 @@ void MissionControl::on_btnAddParameter_clicked() {
             LOG(logger_, STATUS) << i;
         }
     } else if(stackedWidgetType->currentIndex() == 1) {
+        auto start = doubleSpinBoxStart->value();
+        auto stop = doubleSpinBoxStop->value();
+        auto step = doubleSpinBoxStep->value();
+        std::vector<double> steps(std::abs(stop - start) / step + 1);
+        std::generate(steps.begin(), steps.end(), [n = start, step, dir = (stop > start)]() mutable {
+            auto c = n;
+            n += (dir ? step : -1 * step);
+            return c;
+        });
         LOG(logger_, STATUS) << "Clicked FLOAT for " << satellite.toStdString() << " on " << parameter.toStdString();
+        for(const auto& i : steps) {
+            LOG(logger_, STATUS) << i;
+        }
     } else {
+        auto txt = lineEditParamValues->text();
+        auto list = txt.split(',', Qt::SkipEmptyParts);
         LOG(logger_, STATUS) << "Clicked STR for " << satellite.toStdString() << " on " << parameter.toStdString();
+        for(const auto& i : list) {
+            LOG(logger_, STATUS) << i.trimmed().toStdString();
+        }
     }
 }
 
