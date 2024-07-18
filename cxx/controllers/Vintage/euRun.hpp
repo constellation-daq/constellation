@@ -30,6 +30,8 @@ private:
 private slots:
     void DisplayTimer();
 
+    void update_run_identifier(const QString& text, int number);
+
     void on_btnInit_clicked();
     void on_btnLand_clicked();
     void on_btnConfig_clicked();
@@ -61,9 +63,6 @@ private:
 
     /* Run identifier */
     QString current_run_;
-    QString qsettings_run_id_;
-    int qsettings_run_seq_;
-
     QElapsedTimer run_timer_;
 
     static std::map<constellation::protocol::CSCP::State, QString> state_str_;

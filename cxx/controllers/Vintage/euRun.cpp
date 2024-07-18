@@ -9,6 +9,7 @@
 #include <argparse/argparse.hpp>
 #include <QApplication>
 #include <QDateTime>
+#include <QSpinBox>
 
 #include "constellation/controller/ConfigParser.hpp"
 #include "constellation/core/chirp/Manager.hpp"
@@ -66,10 +67,9 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     QSettings settings("Constellation", "Vintage");
     settings.beginGroup("qcontrol");
 
-    qsettings_run_id_ = settings.value("runidentifier", "run").toString();
-    qsettings_run_seq_ = settings.value("runsequence", 0).toInt();
-    runIdentifier->setText(qsettings_run_id_);
-    runSequence->setValue(qsettings_run_seq_);
+    auto qsettings_run_id = settings.value("runidentifier", "run").toString();
+    auto qsettings_run_seq = settings.value("runsequence", 0).toInt();
+    update_run_identifier(qsettings_run_id, qsettings_run_seq);
 
     m_lastexit_success = settings.value("successexit", 1).toUInt();
     geom_from_last_program_run.setSize(settings.value("size", geom.size()).toSize());
@@ -98,10 +98,37 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     connect(&m_timer_display, SIGNAL(timeout()), this, SLOT(DisplayTimer()));
     m_timer_display.start(300); // internal update time of GUI
 
+    // Connect run identifier edit boxes:
+    connect(runIdentifier, &QLineEdit::editingFinished, this, [&]() {
+        update_run_identifier(runIdentifier->text(), runSequence->value());
+    });
+    connect(runSequence, &QSpinBox::valueChanged, this, [&](int i) { update_run_identifier(runIdentifier->text(), i); });
+
     QSettings settings_output("Constellation", "Vintage");
     settings_output.beginGroup("qcontrol");
     settings_output.setValue("successexit", 0);
     settings_output.endGroup();
+}
+
+void RunControlGUI::update_run_identifier(const QString& text, int number) {
+
+    runIdentifier->setText(text);
+    runSequence->setValue(number);
+
+    if(!text.isEmpty()) {
+        current_run_ = text + "_";
+    } else {
+        current_run_.clear();
+    }
+    current_run_ += QString::number(number);
+
+    QSettings settings("Constellation", "Vintage");
+    settings.beginGroup("qcontrol");
+    settings.setValue("runidentifier", text);
+    settings.setValue("runsequence", number);
+    settings.endGroup();
+
+    LOG(logger_, DEBUG) << "Updated run identifier to " << current_run_.toStdString();
 }
 
 void RunControlGUI::on_btnInit_clicked() {
@@ -148,16 +175,6 @@ void RunControlGUI::on_btnLand_clicked() {
 }
 
 void RunControlGUI::on_btnStart_clicked() {
-    qsettings_run_id_ = runIdentifier->text();
-    qsettings_run_seq_ = runSequence->value();
-    if(!qsettings_run_id_.isEmpty()) {
-        current_run_ = qsettings_run_id_ + "_";
-    } else {
-        current_run_.clear();
-    }
-    current_run_ += QString::number(qsettings_run_seq_);
-
-    // FIXME run number
     auto responses = runcontrol_.sendCommands("start", current_run_.toStdString());
 
     // Start timer for this run
@@ -178,8 +195,7 @@ void RunControlGUI::on_btnStop_clicked() {
     run_timer_.invalidate();
 
     // Increment run sequence:
-    qsettings_run_seq_++;
-    runSequence->setValue(qsettings_run_seq_);
+    runSequence->setValue(runSequence->value() + 1);
 }
 
 void RunControlGUI::on_btnReset_clicked() {
@@ -219,17 +235,17 @@ CSCP::State RunControlGUI::updateInfos() {
 
     QRegularExpression rx_conf(".+(\\.conf$|\\.ini$|\\.toml$)");
     auto m = rx_conf.match(txtConfigFileName->text());
-    bool confLoaded = m.hasMatch();
 
     btnInit->setEnabled((state == CSCP::State::NEW || state == CSCP::State::INIT || state == CSCP::State::ERROR ||
                          state == CSCP::State::SAFE) &&
-                        confLoaded);
+                        m.hasMatch());
+    btnReset->setEnabled(state == CSCP::State::SAFE && m.hasMatch());
+
     btnLand->setEnabled(state == CSCP::State::ORBIT);
     btnConfig->setEnabled(state == CSCP::State::INIT);
     btnLoadConf->setEnabled(state != CSCP::State::RUN || state != CSCP::State::ORBIT);
     btnStart->setEnabled(state == CSCP::State::ORBIT);
     btnStop->setEnabled(state == CSCP::State::RUN);
-    btnReset->setEnabled(state == CSCP::State::SAFE);
     btnShutdown->setEnabled(state == CSCP::State::SAFE || state == CSCP::State::INIT || state == CSCP::State::NEW);
 
     // Deactivate run identifier fields during run:
@@ -256,25 +272,12 @@ CSCP::State RunControlGUI::updateInfos() {
         runID->setText("<font color=gray><b>" + current_run_ + "</b> (next)</font>");
     }
 
-    auto stored_run = qsettings_run_id_ + "_" + QString::number(qsettings_run_seq_);
-    if(stored_run != current_run_) {
-        current_run_ = stored_run;
-        QSettings settings("Constellation", "Vintage");
-        settings.beginGroup("qcontrol");
-        settings.setValue("runidentifier", qsettings_run_id_);
-        settings.setValue("runsequence", qsettings_run_seq_);
-        settings.endGroup();
-    }
-
     return state;
 }
 
 void RunControlGUI::closeEvent(QCloseEvent* event) {
     QSettings settings("Constellation", "Vintage");
     settings.beginGroup("qcontrol");
-
-    settings.setValue("runidentifier", qsettings_run_id_);
-    settings.setValue("runsequence", qsettings_run_seq_);
 
     settings.setValue("size", size());
     settings.setValue("pos", pos());
