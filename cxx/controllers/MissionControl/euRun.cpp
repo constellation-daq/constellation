@@ -98,6 +98,11 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     });
     connect(runSequence, &QSpinBox::valueChanged, this, [&](int i) { update_run_identifier(runIdentifier->text(), i); });
 
+    // Connect connection update signal:
+    connect(&runcontrol_, &QRunControl::connectionsChanged, this, [&](std::size_t num) {
+        labelNrSatellites->setText("<font color='gray'><b>" + QString::number(num) + "</b></font>");
+    });
+
     gui_settings_.setValue("successexit", 0);
 }
 

@@ -31,7 +31,7 @@ public:
     std::string getQName(const QModelIndex& index) const;
 
 signals:
-    void connectionsChanged();
+    void connectionsChanged(std::size_t connections);
 
 protected:
     void propagate_update(std::size_t connections) override;
