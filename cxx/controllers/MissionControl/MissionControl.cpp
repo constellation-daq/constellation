@@ -65,8 +65,6 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     } else {
         // Attempt to find sequence:
         std::size_t pos = run_id.find_last_of("_");
-        // FIXME check for invalid_argument
-
         auto identifier = (pos != std::string::npos ? run_id.substr(0, pos) : run_id);
         std::size_t sequence = 0;
         try {
@@ -79,6 +77,14 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
             sequence++;
         }
         update_run_identifier(QString::fromStdString(identifier), sequence);
+    }
+
+    // Pick up the current run timer from the constellation of available:
+    auto run_time = runcontrol_.getRunStartTime();
+    if(run_time.time_since_epoch() > std::chrono::seconds::zero()) {
+        // FIXME use time!
+        if(!runcontrol_.isInState(CSCP::State::RUN)) {
+        }
     }
 
     m_lastexit_success = gui_settings_.value("successexit", 1).toUInt();
