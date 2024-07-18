@@ -342,11 +342,20 @@ void MissionControl::on_btnAddParameter_clicked() {
         spinBoxStart->clear();
         spinBoxStop->clear();
         spinBoxStep->clear();
-    } else {
+    } else if(stackedWidgetType->currentIndex() == 2) {
         for(const auto& str : lineEditParamValues->text().split(',', Qt::SkipEmptyParts)) {
             steps.push_back(str.trimmed().toStdString());
         }
         lineEditParamValues->clear();
+    } else {
+        if(checkBoxParamTrue->checkState() == Qt::Checked) {
+            steps.push_back(true);
+        }
+        if(checkBoxParamFalse->checkState() == Qt::Checked) {
+            steps.push_back(false);
+        }
+        checkBoxParamTrue->setCheckState(Qt::Unchecked);
+        checkBoxParamFalse->setCheckState(Qt::Unchecked);
     }
 
     // Register scan parameter set
