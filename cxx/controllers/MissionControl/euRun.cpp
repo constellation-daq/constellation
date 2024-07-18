@@ -64,19 +64,16 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     QRect geom(-1, -1, 150, 200);
     QRect geom_from_last_program_run;
 
-    QSettings settings("Constellation", "Vintage");
-    settings.beginGroup("qcontrol");
+    // Read and update run identifier information
+    auto run_id = gui_settings_.value("run/identifier", "run").toString();
+    auto run_seq = gui_settings_.value("run/sequence", 0).toInt();
+    update_run_identifier(run_id, run_seq);
 
-    auto qsettings_run_id = settings.value("runidentifier", "run").toString();
-    auto qsettings_run_seq = settings.value("runsequence", 0).toInt();
-    update_run_identifier(qsettings_run_id, qsettings_run_seq);
-
-    m_lastexit_success = settings.value("successexit", 1).toUInt();
-    geom_from_last_program_run.setSize(settings.value("size", geom.size()).toSize());
-    geom_from_last_program_run.moveTo(settings.value("pos", geom.topLeft()).toPoint());
+    m_lastexit_success = gui_settings_.value("successexit", 1).toUInt();
+    geom_from_last_program_run.setSize(gui_settings_.value("window/size", geom.size()).toSize());
+    geom_from_last_program_run.moveTo(gui_settings_.value("window/pos", geom.topLeft()).toPoint());
     // TODO: check last if last file exits. if not, use default value.
-    txtConfigFileName->setText(settings.value("lastConfigFile", "config file not set").toString());
-    settings.endGroup();
+    txtConfigFileName->setText(gui_settings_.value("run/configfile", "config file not set").toString());
 
     QSize fsize = frameGeometry().size();
     if((geom.x() == -1) || (geom.y() == -1) || (geom.width() == -1) || (geom.height() == -1)) {
@@ -104,10 +101,7 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     });
     connect(runSequence, &QSpinBox::valueChanged, this, [&](int i) { update_run_identifier(runIdentifier->text(), i); });
 
-    QSettings settings_output("Constellation", "MissionControl");
-    settings_output.beginGroup("runcontrol");
-    settings_output.setValue("successexit", 0);
-    settings_output.endGroup();
+    gui_settings_.setValue("successexit", 0);
 }
 
 void RunControlGUI::update_run_identifier(const QString& text, int number) {
@@ -122,11 +116,8 @@ void RunControlGUI::update_run_identifier(const QString& text, int number) {
     }
     current_run_ += QString::number(number);
 
-    QSettings settings("Constellation", "MissionControl");
-    settings.beginGroup("runcontrol");
-    settings.setValue("runidentifier", text);
-    settings.setValue("runsequence", number);
-    settings.endGroup();
+    gui_settings_.setValue("run/identifier", text);
+    gui_settings_.setValue("run/sequence", number);
 
     LOG(logger_, DEBUG) << "Updated run identifier to " << current_run_.toStdString();
 }
@@ -276,14 +267,10 @@ CSCP::State RunControlGUI::updateInfos() {
 }
 
 void RunControlGUI::closeEvent(QCloseEvent* event) {
-    QSettings settings("Constellation", "MissionControl");
-    settings.beginGroup("runcontrol");
-
-    settings.setValue("size", size());
-    settings.setValue("pos", pos());
-    settings.setValue("lastConfigFile", txtConfigFileName->text());
-    settings.setValue("successexit", 1);
-    settings.endGroup();
+    gui_settings_.setValue("window/size", size());
+    gui_settings_.setValue("window/pos", pos());
+    gui_settings_.setValue("run/configfile", txtConfigFileName->text());
+    gui_settings_.setValue("successexit", 1);
 
     // Terminate the application
     event->accept();
@@ -553,6 +540,10 @@ std::string get_arg(argparse::ArgumentParser& parser, std::string_view arg) noex
 
 int main(int argc, char** argv) {
     QCoreApplication* qapp = new QApplication(argc, argv);
+
+    QCoreApplication::setOrganizationName("Constellation");
+    QCoreApplication::setOrganizationDomain("constellation.pages.desy.de");
+    QCoreApplication::setApplicationName("MissionControl");
 
     // Get the default logger
     auto& logger = Logger::getDefault();

@@ -75,5 +75,5 @@ private:
     QMenu* contextMenu;
     bool m_lastexit_success;
 
-    std::string m_config_at_run_path;
+    QSettings gui_settings_;
 };
