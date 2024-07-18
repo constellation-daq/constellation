@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
-qt5 = import('qt5')
-qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets'])
+qt5 = import('qt6')
+qt5_dep = dependency('qt6', modules: ['Core', 'Gui', 'Widgets'])
 
 inc = include_directories('.')
 

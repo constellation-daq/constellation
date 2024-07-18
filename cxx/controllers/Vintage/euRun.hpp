@@ -11,7 +11,7 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QPainter>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QString>
 #include <QTimer>

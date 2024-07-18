@@ -217,8 +217,9 @@ CSCP::State RunControlGUI::updateInfos() {
 
     auto state = runcontrol_.getLowestState();
 
-    QRegExp rx_conf(".+(\\.conf$|\\.ini$|\\.toml$)");
-    bool confLoaded = rx_conf.exactMatch(txtConfigFileName->text());
+    QRegularExpression rx_conf(".+(\\.conf$|\\.ini$|\\.toml$)");
+    auto m = rx_conf.match(txtConfigFileName->text());
+    bool confLoaded = m.hasMatch();
 
     btnInit->setEnabled((state == CSCP::State::NEW || state == CSCP::State::INIT || state == CSCP::State::ERROR ||
                          state == CSCP::State::SAFE) &&
