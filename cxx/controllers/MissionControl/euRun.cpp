@@ -31,14 +31,11 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
 
+    // Set initial values for header bar
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
-    labelState->setText(state_str_.at(CSCP::State::NEW));
-
-    for(const auto& lvl : {Level::TRACE, Level::DEBUG, Level::INFO, Level::WARNING, Level::STATUS, Level::CRITICAL}) {
-        comboBoxLogLevel->addItem(QString::fromStdString(utils::to_string(lvl)));
-    }
-    // Default to INFO
-    comboBoxLogLevel->setCurrentIndex(2);
+    labelState->setText(state_str_.at(runcontrol_.getLowestState()));
+    labelNrSatellites->setText("<font color='gray'><b>" + QString::number(runcontrol_.getConnections().size()) +
+                               "</b></font>");
 
     for(auto& label_str : m_map_label_str) {
         QLabel* lblname = new QLabel(grpStatus);
