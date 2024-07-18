@@ -17,7 +17,7 @@
    <string>Constellation Run Control</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="euRun.qrc">
+   <iconset resource="MissionControl.qrc">
     <normaloff>:/logo.png</normaloff>:/logo.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -82,7 +82,7 @@
           <string/>
          </property>
          <property name="pixmap">
-          <pixmap resource="euRun.qrc">:/logo.png</pixmap>
+          <pixmap resource="MissionControl.qrc">:/logo.png</pixmap>
          </property>
          <property name="scaledContents">
           <bool>true</bool>
@@ -1119,7 +1119,7 @@
   <tabstop>viewConn</tabstop>
  </tabstops>
  <resources>
-  <include location="euRun.qrc"/>
+  <include location="MissionControl.qrc"/>
  </resources>
  <connections>
   <connection>

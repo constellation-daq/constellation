@@ -1,6 +1,3 @@
-#include "QRunControl.hpp"
-#include "ui_euRun.h"
-
 #include <QCloseEvent>
 #include <QDir>
 #include <QElapsedTimer>
@@ -15,6 +12,9 @@
 #include <QSettings>
 #include <QString>
 #include <QTimer>
+
+#include "QRunControl.hpp"
+#include "ui_MissionControl.h"
 
 class RunControlGUI : public QMainWindow, public Ui::wndRun {
 

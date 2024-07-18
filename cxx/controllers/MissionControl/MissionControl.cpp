@@ -1,4 +1,4 @@
-#include "euRun.hpp"
+#include "MissionControl.hpp"
 
 #include <chrono>
 #include <format>
@@ -568,7 +568,7 @@ int main(int argc, char** argv) {
     auto& logger = Logger::getDefault();
 
     // CLI parsing
-    argparse::ArgumentParser parser {"euRun", CNSTLN_VERSION};
+    argparse::ArgumentParser parser {"MissionControl", CNSTLN_VERSION};
     try {
         parse_args(argc, argv, parser);
     } catch(const std::exception& error) {
