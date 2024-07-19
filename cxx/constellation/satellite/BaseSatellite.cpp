@@ -211,6 +211,11 @@ BaseSatellite::handle_standard_command(std::string_view command) {
         return_verb = {CSCP1Message::Type::SUCCESS, run_identifier_};
         break;
     }
+    case get_run_time: {
+        return_verb = {CSCP1Message::Type::SUCCESS, "Returning time since last run started"};
+        return_payload = Value(run_start_time_).assemble();
+        break;
+    }
     case shutdown: {
         if(CSCP::is_shutdown_allowed(fsm_.getState())) {
             return_verb = {CSCP1Message::Type::SUCCESS, "Shutting down satellite"};
@@ -410,6 +415,9 @@ void BaseSatellite::stopping_wrapper() {
 }
 
 void BaseSatellite::running_wrapper(const std::stop_token& stop_token) {
+    // Set start time:
+    run_start_time_ = std::chrono::system_clock::now();
+
     running(stop_token);
 }
 
