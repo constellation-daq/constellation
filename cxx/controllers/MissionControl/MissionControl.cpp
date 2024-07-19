@@ -7,6 +7,7 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QSpinBox>
+#include <QTimeZone>
 #include <string>
 
 #include <argparse/argparse.hpp>
@@ -82,8 +83,13 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     // Pick up the current run timer from the constellation of available:
     auto run_time = runcontrol_.getRunStartTime();
     if(run_time.time_since_epoch() > std::chrono::seconds::zero()) {
-        // FIXME use time!
-        if(!runcontrol_.isInState(CSCP::State::RUN)) {
+        if(runcontrol_.isInState(CSCP::State::RUN)) {
+            LOG(logger_, DEBUG) << "Fetched time from satellites, setting run timer to " << run_time;
+
+            // FIXME somehow fromStdTimePoint is not found
+            run_start_time_ =
+                QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0), QTimeZone::utc())
+                    .addMSecs(std::chrono::duration_cast<std::chrono::milliseconds>(run_time.time_since_epoch()).count());
         }
     }
 
@@ -193,12 +199,13 @@ void RunControlGUI::on_btnLand_clicked() {
 void RunControlGUI::on_btnStart_clicked() {
     auto responses = runcontrol_.sendCommands("start", current_run_.toStdString());
 
-    // Start timer for this run
-    run_timer_.start();
-
+    // FIXME check that all started
     for(auto& response : responses) {
         LOG(logger_, DEBUG) << "Start: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
+
+    // Set start time for this run
+    run_start_time_ = QDateTime::currentDateTimeUtc();
 }
 
 void RunControlGUI::on_btnStop_clicked() {
@@ -206,9 +213,6 @@ void RunControlGUI::on_btnStop_clicked() {
     for(auto& response : responses) {
         LOG(logger_, DEBUG) << "Stop: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
-
-    // Invalidate run timer:
-    run_timer_.invalidate();
 
     // Increment run sequence:
     runSequence->setValue(runSequence->value() + 1);
@@ -272,10 +276,9 @@ CSCP::State RunControlGUI::updateInfos() {
     labelState->setText(state_str_.at(state));
 
     // Update run timer:
-    if(run_timer_.isValid()) {
+    if(state == CSCP::State::RUN) {
         auto duration =
-            std::format("{:%H:%M:%S}",
-                        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::milliseconds(run_timer_.elapsed())));
+            std::format("{:%H:%M:%S}", std::chrono::seconds(run_start_time_.secsTo(QDateTime::currentDateTime())));
         runDuration->setText("<b>" + QString::fromStdString(duration) + "</b>");
     } else {
         runDuration->setText("<font color=gray>" + runDuration->text() + "</font>");

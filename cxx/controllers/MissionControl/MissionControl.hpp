@@ -1,6 +1,5 @@
 #include <QCloseEvent>
 #include <QDir>
-#include <QElapsedTimer>
 #include <QFileDialog>
 #include <QGridLayout>
 #include <QInputDialog>
@@ -63,7 +62,7 @@ private:
 
     /* Run identifier */
     QString current_run_;
-    QElapsedTimer run_timer_;
+    QDateTime run_start_time_;
 
     static std::map<constellation::protocol::CSCP::State, QString> state_str_;
     std::map<QString, QString> m_map_label_str;
