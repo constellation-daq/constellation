@@ -1,9 +1,8 @@
-#include <QAbstractListModel>
-#include <QSortFilterProxyModel>
-
 #include <array>
 #include <memory>
 #include <optional>
+#include <QAbstractListModel>
+#include <QSortFilterProxyModel>
 
 #include "constellation/controller/Controller.hpp"
 
@@ -34,11 +33,13 @@ signals:
     void connectionsChanged(std::size_t connections);
 
 protected:
-    void propagate_update(std::size_t connections) override;
+    void propagate_update(std::size_t position) override;
+    void prepare_update(bool added) override;
+    void finalize_update(bool added, std::size_t connections) override;
 
 private:
     static constexpr std::array<const char*, 6> headers_ {
-        "type", "name", "state", "connection", "last response", " last message"};
+        "Type", "Name", "State", "Connection", "Last response", "Last message"};
 
     std::size_t current_rows_ {0};
 };

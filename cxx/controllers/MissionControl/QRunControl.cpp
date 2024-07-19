@@ -3,10 +3,10 @@
 #include <string>
 #include <vector>
 
+#include <qmetatype.h>
+
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/utils/string.hpp"
-
-#include <qmetatype.h>
 
 using namespace constellation::config;
 using namespace constellation::controller;
@@ -72,17 +72,29 @@ QVariant QRunControl::headerData(int section, Qt::Orientation orientation, int r
     return QVariant();
 }
 
-void QRunControl::propagate_update(std::size_t connections) {
-    if(current_rows_ < connections) {
-        beginInsertRows(QModelIndex(), 0, 0);
-        endInsertRows();
-    } else if(current_rows_ > connections) {
-        emit dataChanged(createIndex(0, 0), createIndex(connections, headers_.size() - 1));
-    } else {
-        emit dataChanged(createIndex(0, 0), createIndex(connections - 1, headers_.size() - 1));
-    }
-    current_rows_ = connections;
+void QRunControl::propagate_update(std::size_t position) {
+    emit dataChanged(createIndex(0, 0), createIndex(position, headers_.size() - 1));
+}
 
+void QRunControl::prepare_update(bool added) {
+    if(added) {
+        beginInsertRows(QModelIndex(), 0, 0);
+    } else {
+        beginRemoveRows(QModelIndex(), 0, 0);
+    }
+}
+
+void QRunControl::finalize_update(bool added, std::size_t connections) {
+    if(added) {
+        endInsertRows();
+    } else {
+        endRemoveRows();
+    }
+
+    // Mark entire data as changed:
+    emit dataChanged(createIndex(0, 0), createIndex(connections - 1, headers_.size() - 1));
+
+    // Emit signal for changed connections
     emit connectionsChanged(connections);
 }
 
