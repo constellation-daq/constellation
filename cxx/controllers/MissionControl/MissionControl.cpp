@@ -211,6 +211,10 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     connect(comboBoxType, &QComboBox::currentIndexChanged, stackedWidgetType, &QStackedWidget::setCurrentIndex);
     connect(btnClearParams, &QPushButton::clicked, &scanparams_, &QScanParameter::clear);
 
+
+    // Connect queue type and stack:
+    connect(comboBoxQueue, &QComboBox::currentIndexChanged, stackedWidgetQueue, &QStackedWidget::setCurrentIndex);
+
     // Connect connection update signal:
     connect(&runcontrol_, &QController::connectionsChanged, this, [&](std::size_t num) {
         labelNrSatellites->setText("<font color='gray'><b>" + QString::number(num) + "</b></font>");
