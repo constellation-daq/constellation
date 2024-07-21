@@ -68,7 +68,7 @@ QVariant QRunControl::headerData(int section, Qt::Orientation orientation, int r
     if(role != Qt::DisplayRole)
         return QVariant();
 
-    if(orientation == Qt::Horizontal && section < static_cast<int>(headers_.size())) {
+    if(orientation == Qt::Horizontal && section >= 0 && section < static_cast<int>(headers_.size())) {
         return QString::fromStdString(headers_[section]);
     }
     return QVariant();

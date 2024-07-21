@@ -40,7 +40,7 @@ protected:
     void finalize_update(bool added, std::size_t connections) override;
 
 private:
-    static constexpr std::array<const char*, 6> headers_ {
+    static constexpr std::array<std::string, 6> headers_ {
         "Type", "Name", "State", "Connection", "Last response", "Last message"};
 
     std::size_t current_rows_ {0};
