@@ -515,15 +515,6 @@ Controller::CommandPayload RunControlGUI::parseConfigFile(QString file, const QM
     return payloads[name];
 }
 
-/**
- * @brief RunControlGUI::allConnectionsInState
- * @param state to be checked
- * @return true if all connections are in state, false otherwise
- */
-bool RunControlGUI::allConnectionsInState(CSCP::State state) {
-    return runcontrol_.isInState(state);
-}
-
 // NOLINTNEXTLINE(*-avoid-c-arrays)
 void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser) {
     // Controller name (-n)

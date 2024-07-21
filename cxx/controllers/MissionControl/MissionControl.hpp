@@ -53,8 +53,6 @@ private:
     std::map<std::string, constellation::controller::Controller::CommandPayload> parseConfigFile(QString file);
     constellation::controller::Controller::CommandPayload parseConfigFile(QString file, const QModelIndex& index);
 
-    bool allConnectionsInState(constellation::protocol::CSCP::State state);
-
     QRunControl runcontrol_;
     QRunControlSortProxy sorting_proxy_;
     constellation::log::Logger logger_;
