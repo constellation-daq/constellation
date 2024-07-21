@@ -82,11 +82,11 @@ void QRunControl::propagate_update(std::size_t position) {
     emit dataChanged(createIndex(0, 0), createIndex(position, headers_.size() - 1));
 }
 
-void QRunControl::prepare_update(bool added) {
+void QRunControl::prepare_update(bool added, std::size_t position) {
     if(added) {
-        beginInsertRows(QModelIndex(), 0, 0);
+        beginInsertRows(QModelIndex(), position, position);
     } else {
-        beginRemoveRows(QModelIndex(), 0, 0);
+        beginRemoveRows(QModelIndex(), position, position);
     }
 }
 
