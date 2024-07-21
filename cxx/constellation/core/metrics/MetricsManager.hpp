@@ -49,7 +49,7 @@ namespace constellation::metrics {
          * \param topic Unique topic of the metric
          * \param value New value of the metric
          */
-        void setMetric(std::string_view topic, const config::Value& value);
+        void setMetric(std::string_view topic, config::Value&& value);
 
         /**
          * Unregister a previously registered metric from the manager

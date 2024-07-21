@@ -37,11 +37,11 @@ MetricsManager::~MetricsManager() noexcept {
     }
 }
 
-void MetricsManager::setMetric(std::string_view topic, const config::Value& value) {
+void MetricsManager::setMetric(std::string_view topic, config::Value&& value) {
     const std::lock_guard lock {mt_};
     auto it = metrics_.find(topic);
     if(it != metrics_.end()) {
-        it->second->update(value);
+        it->second->update(std::move(value));
 
         // Notify if this is a triggered metric:
         if(std::dynamic_pointer_cast<TriggeredMetric>(it->second)) {

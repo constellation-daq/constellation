@@ -60,8 +60,8 @@ Metric Metric::disassemble(const message::PayloadBuffer& message) {
     return {unit, type.value(), std::move(value)};
 }
 
-void MetricTimer::update(const config::Value& value) {
-    set(value);
+void MetricTimer::update(config::Value&& value) {
+    set(std::move(value));
     changed_ = true;
 }
 
@@ -127,8 +127,8 @@ bool TimedAutoMetric::condition() {
     return expired;
 }
 
-void TriggeredMetric::update(const config::Value& value) {
-    MetricTimer::update(value);
+void TriggeredMetric::update(config::Value&& value) {
+    MetricTimer::update(std::move(value));
     current_triggers_++;
 }
 

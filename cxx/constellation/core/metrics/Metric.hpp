@@ -150,7 +150,7 @@ namespace constellation::metrics {
          *
          * @param value Metric value
          */
-        virtual void update(const config::Value& value);
+        virtual void update(config::Value&& value);
 
     protected:
         /**
@@ -226,7 +226,7 @@ namespace constellation::metrics {
                         std::initializer_list<protocol::CSCP::State> states,
                         config::Value&& initial_value);
 
-        void update(const config::Value& value) override;
+        void update(config::Value&& value) override;
 
         bool condition() override;
 
