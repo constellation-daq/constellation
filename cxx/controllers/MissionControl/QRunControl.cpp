@@ -6,10 +6,12 @@
 #include <qmetatype.h>
 
 #include "constellation/core/config/Dictionary.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
 using namespace constellation::controller;
+using namespace constellation::protocol;
 
 QRunControl::QRunControl(std::string_view controller_name, QObject* parent)
     : QAbstractListModel(parent), Controller(controller_name) {}
@@ -70,6 +72,10 @@ QVariant QRunControl::headerData(int section, Qt::Orientation orientation, int r
         return QString::fromStdString(headers_[section]);
     }
     return QVariant();
+}
+
+void QRunControl::reached_state(CSCP::State state) {
+    emit reachedGlobalState(state);
 }
 
 void QRunControl::propagate_update(std::size_t position) {
