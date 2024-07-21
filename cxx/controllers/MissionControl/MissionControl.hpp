@@ -27,7 +27,7 @@ private:
     void closeEvent(QCloseEvent* event) override;
 
 private slots:
-    void DisplayTimer();
+    void updateInfos();
 
     void update_run_identifier(const QString& text, int number);
 
@@ -43,13 +43,6 @@ private slots:
     void onCustomContextMenu(const QPoint& point);
 
 private:
-    constellation::protocol::CSCP::State updateInfos();
-
-    bool addStatusDisplay(std::string satellite_name, std::string metric);
-    bool removeStatusDisplay(std::string satellite_name, std::string metric);
-    bool updateStatusDisplay();
-    bool addToGrid(const QString& objectName, QString displayedName = "");
-    bool addAdditionalStatus(std::string info);
     std::map<std::string, constellation::controller::Controller::CommandPayload> parseConfigFile(QString file);
     constellation::controller::Controller::CommandPayload parseConfigFile(QString file, const QModelIndex& index);
 
@@ -63,12 +56,9 @@ private:
     QDateTime run_start_time_;
 
     static std::map<constellation::protocol::CSCP::State, QString> state_str_;
-    std::map<QString, QString> m_map_label_str;
 
     QTimer m_timer_display;
-    std::map<QString, QLabel*> m_str_label;
 
-    int m_display_col, m_display_row;
     QMenu* contextMenu;
     bool m_lastexit_success;
 

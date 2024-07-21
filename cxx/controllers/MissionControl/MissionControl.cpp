@@ -27,7 +27,7 @@ using namespace constellation::protocol;
 using namespace constellation::utils;
 
 RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view group_name)
-    : QMainWindow(), runcontrol_(controller_name), logger_("GUI"), user_logger_("OP"), m_display_col(0), m_display_row(0) {
+    : QMainWindow(), runcontrol_(controller_name), logger_("GUI"), user_logger_("OP") {
 
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
@@ -37,21 +37,6 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     labelState->setText(state_str_.at(runcontrol_.getLowestState()));
     labelNrSatellites->setText("<font color='gray'><b>" + QString::number(runcontrol_.getConnections().size()) +
                                "</b></font>");
-
-    for(auto& label_str : m_map_label_str) {
-        QLabel* lblname = new QLabel(grpStatus);
-        lblname->setObjectName("lbl_st_" + label_str.first);
-        lblname->setText(label_str.second + ": ");
-        QLabel* lblvalue = new QLabel(grpStatus);
-        lblvalue->setObjectName("txt_st_" + label_str.first);
-        grpGrid->addWidget(lblname, m_display_row, m_display_col * 2);
-        grpGrid->addWidget(lblvalue, m_display_row, m_display_col * 2 + 1);
-        m_str_label[label_str.first] = lblvalue;
-        if(++m_display_col > 1) {
-            ++m_display_row;
-            m_display_col = 0;
-        }
-    }
 
     sorting_proxy_.setSourceModel(&runcontrol_);
     viewConn->setModel(&sorting_proxy_);
@@ -118,7 +103,9 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     }
 
     setWindowTitle("Constellation MissionControl " CNSTLN_VERSION);
-    connect(&m_timer_display, SIGNAL(timeout()), this, SLOT(DisplayTimer()));
+
+    // Connect timer to gui update method
+    connect(&m_timer_display, &QTimer::timeout, this, &RunControlGUI::updateInfos);
     m_timer_display.start(300); // internal update time of GUI
 
     // Connect run identifier edit boxes:
@@ -241,12 +228,7 @@ void RunControlGUI::on_btnLoadConf_clicked() {
     }
 }
 
-void RunControlGUI::DisplayTimer() {
-    auto state = updateInfos();
-    updateStatusDisplay();
-}
-
-CSCP::State RunControlGUI::updateInfos() {
+void RunControlGUI::updateInfos() {
 
     // FIXME revisit what needs to be done here. Most infos are updated in the background by the controller via heartbeats!
     // We might need to handle metrics here and call addStatusDisoplay and removeStatusDisplay.
@@ -290,8 +272,6 @@ CSCP::State RunControlGUI::updateInfos() {
     } else {
         runID->setText("<font color=gray><b>" + current_run_ + "</b> (next)</font>");
     }
-
-    return state;
 }
 
 void RunControlGUI::closeEvent(QCloseEvent* event) {
@@ -386,103 +366,6 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     }
 
     contextMenu->exec(viewConn->viewport()->mapToGlobal(point));
-}
-
-bool RunControlGUI::addStatusDisplay(std::string satellite_name, std::string metric) {
-    QString name = QString::fromStdString(satellite_name + ":" + metric);
-    QString displayName = QString::fromStdString(satellite_name + ":" + metric);
-    addToGrid(displayName, name);
-    return true;
-}
-
-bool RunControlGUI::removeStatusDisplay(std::string satellite_name, std::string metric) {
-    // remove obsolete information from disconnected Connections
-    for(auto idx = 0; idx < grpGrid->count(); idx++) {
-        QLabel* l = dynamic_cast<QLabel*>(grpGrid->itemAt(idx)->widget());
-        if(l->objectName() == QString::fromStdString(satellite_name + ":" + metric)) {
-            // Status updates are always pairs
-            m_map_label_str.erase(l->objectName());
-            m_str_label.erase(l->objectName());
-            grpGrid->removeWidget(l);
-            delete l;
-            l = dynamic_cast<QLabel*>(grpGrid->itemAt(idx)->widget());
-            grpGrid->removeWidget(l);
-            delete l;
-        }
-    }
-    return true;
-}
-bool RunControlGUI::addToGrid(const QString& objectName, QString displayedName) {
-
-    if(m_str_label.count(objectName) == 1) {
-        // QMessageBox::warning(NULL,"ERROR - Status display","Duplicating display entry request: "+objectName);
-        return false;
-    }
-    if(displayedName == "")
-        displayedName = objectName;
-    QLabel* lblname = new QLabel(grpStatus);
-    lblname->setObjectName(objectName);
-    lblname->setText(displayedName + ": ");
-    QLabel* lblvalue = new QLabel(grpStatus);
-    lblvalue->setObjectName("val_" + objectName);
-    lblvalue->setText("val_" + objectName);
-
-    int colPos = 0, rowPos = 0;
-    if(2 * (m_str_label.size() + 1) < static_cast<size_t>(grpGrid->rowCount() * grpGrid->columnCount())) {
-        colPos = m_display_col;
-        rowPos = m_display_row;
-        if(++m_display_col > 1) {
-            ++m_display_row;
-            m_display_col = 0;
-        }
-    } else {
-        colPos = m_display_col;
-        rowPos = m_display_row;
-        if(++m_display_col > 1) {
-            ++m_display_row;
-            m_display_col = 0;
-        }
-    }
-    m_map_label_str.insert(std::pair<QString, QString>(objectName, objectName + ": "));
-    m_str_label.insert(std::pair<QString, QLabel*>(objectName, lblvalue));
-    grpGrid->addWidget(lblname, rowPos, colPos * 2);
-    grpGrid->addWidget(lblvalue, rowPos, colPos * 2 + 1);
-    return true;
-}
-/**
- * @brief RunControlGUI::updateStatusDisplay
- * @return true if success, false otherwise (cannot happen currently)
- */
-bool RunControlGUI::updateStatusDisplay() {
-    // FIXME update status display with tags
-    return true;
-}
-
-bool RunControlGUI::addAdditionalStatus(std::string info) {
-    std::vector<std::string> results;
-    std::stringstream sts(info);
-    std::string token;
-    while(std::getline(sts, token, ',')) {
-        results.push_back(token);
-    }
-
-    if(results.size() % 2 != 0) {
-        QMessageBox::warning(NULL, "ERROR", "Additional Status Display inputs are not correctly formatted - please check");
-        return false;
-    } else {
-        for(std::size_t c = 0; c < results.size(); c += 2) {
-            // check if the connection exists, otherwise do not display
-
-            // addToGrid(QString::fromStdString(results.at(c) + ":" + results.at(c + 1)));
-
-            // if(!found) {
-            // QMessageBox::warning(
-            // NULL, "ERROR", QString::fromStdString("Element \"" + results.at(c) + "\" is not connected"));
-            // return false;
-            // }
-        }
-    }
-    return true;
 }
 
 std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile(QString file) {
