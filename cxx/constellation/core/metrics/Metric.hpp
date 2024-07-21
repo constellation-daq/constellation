@@ -93,6 +93,6 @@ namespace constellation::metrics {
     private:
         std::string unit_;
         Type type_;
-        config::Value value_;
+        config::Value value_ {};
     };
 } // namespace constellation::metrics
