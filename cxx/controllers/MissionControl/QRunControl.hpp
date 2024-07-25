@@ -35,12 +35,10 @@ signals:
 
 protected:
     void reached_state(constellation::protocol::CSCP::State state) override;
-    void propagate_update(std::size_t position) override;
-    void prepare_update(bool added, std::size_t position) override;
-    void finalize_update(bool added, std::size_t connections) override;
+    void propagate_update(Controller::UpdateType type, std::size_t position, std::size_t total) override;
 
 private:
-    static constexpr std::array<std::string, 6> headers_ {
+    static constexpr std::array<const char*, 6> headers_ {
         "Type", "Name", "State", "Connection", "Last response", "Last message"};
 
     std::size_t current_rows_ {0};

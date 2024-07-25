@@ -44,7 +44,7 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     connect(viewConn, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(onCustomContextMenu(const QPoint&)));
 
     // Pick up latest run identifier information - either from running Constellation or from settings
-    auto run_id = runcontrol_.getRunIdentifier();
+    auto run_id = std::string(runcontrol_.getRunIdentifier());
     if(run_id.empty()) {
         update_run_identifier(gui_settings_.value("run/identifier", "run").toString(),
                               gui_settings_.value("run/sequence", 0).toInt());
@@ -67,14 +67,15 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
 
     // Pick up the current run timer from the constellation of available:
     auto run_time = runcontrol_.getRunStartTime();
-    if(run_time.time_since_epoch() > std::chrono::seconds::zero()) {
+    if(run_time.has_value()) {
         if(runcontrol_.isInState(CSCP::State::RUN)) {
-            LOG(logger_, DEBUG) << "Fetched time from satellites, setting run timer to " << run_time;
+            LOG(logger_, DEBUG) << "Fetched time from satellites, setting run timer to " << run_time.value();
 
             // FIXME somehow fromStdTimePoint is not found
             run_start_time_ =
                 QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0), QTimeZone::utc())
-                    .addMSecs(std::chrono::duration_cast<std::chrono::milliseconds>(run_time.time_since_epoch()).count());
+                    .addMSecs(
+                        std::chrono::duration_cast<std::chrono::milliseconds>(run_time.value().time_since_epoch()).count());
         }
     }
 

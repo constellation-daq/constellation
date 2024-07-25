@@ -78,30 +78,21 @@ void QRunControl::reached_state(CSCP::State state) {
     emit reachedGlobalState(state);
 }
 
-void QRunControl::propagate_update(std::size_t position) {
-    emit dataChanged(createIndex(0, 0), createIndex(position, headers_.size() - 1));
-}
-
-void QRunControl::prepare_update(bool added, std::size_t position) {
-    if(added) {
+void QRunControl::propagate_update(UpdateType type, std::size_t position, std::size_t total) {
+    if(type == UpdateType::ADDED) {
         beginInsertRows(QModelIndex(), position, position);
-    } else {
-        beginRemoveRows(QModelIndex(), position, position);
-    }
-}
-
-void QRunControl::finalize_update(bool added, std::size_t connections) {
-    if(added) {
         endInsertRows();
-    } else {
+        // Emit signal for changed connections
+        emit connectionsChanged(total);
+    } else if(type == UpdateType::REMOVED) {
+        beginRemoveRows(QModelIndex(), position, position);
         endRemoveRows();
+
+        // Emit signal for changed connections
+        emit connectionsChanged(total);
     }
 
-    // Mark entire data as changed:
-    emit dataChanged(createIndex(0, 0), createIndex(connections - 1, headers_.size() - 1));
-
-    // Emit signal for changed connections
-    emit connectionsChanged(connections);
+    emit dataChanged(createIndex(0, 0), createIndex(position, headers_.size() - 1));
 }
 
 Dictionary QRunControl::getQCommands(const QModelIndex& index) {
