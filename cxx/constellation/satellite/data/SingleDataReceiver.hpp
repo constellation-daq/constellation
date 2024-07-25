@@ -20,7 +20,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
-#include "constellation/core/logging/Logger.hpp"
+#include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
 
 namespace constellation::data {

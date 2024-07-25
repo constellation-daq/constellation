@@ -21,10 +21,10 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/Value.hpp"
-#include "constellation/core/logging/Logger.hpp"
+#include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
-#include "constellation/core/utils/ports.hpp"
+#include "constellation/core/utils/networking.hpp"
 
 namespace constellation::data {
     class DataSender {

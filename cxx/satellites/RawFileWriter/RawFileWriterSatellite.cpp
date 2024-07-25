@@ -20,7 +20,7 @@
 #include <string_view>
 
 #include "constellation/core/config/Configuration.hpp"
-#include "constellation/core/logging/log.hpp"
+#include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/string.hpp"
