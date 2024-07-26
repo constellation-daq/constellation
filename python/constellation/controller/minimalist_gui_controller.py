@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""This module provides a minimalist graphical user interface to control a Constellation.
+"""
+SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+SPDX-License-Identifier: CC-BY-4.0
+
+This module provides a minimalist graphical user interface to control a Constellation.
 
 FIXME: In its current state, this has to be considered a proof-of-concept.
 """
