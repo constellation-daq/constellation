@@ -22,7 +22,7 @@
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/BaseHeader.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
-#include "constellation/core/message/Protocol.hpp"
+#include "constellation/core/protocol/Protocol.hpp"
 
 namespace constellation::message {
 
@@ -41,7 +41,7 @@ namespace constellation::message {
                    std::uint64_t seq,
                    Type type,
                    std::chrono::system_clock::time_point time = std::chrono::system_clock::now())
-                : BaseHeader(CDTP1, std::move(sender), time), seq_(seq), type_(type) {}
+                : BaseHeader(protocol::CDTP1, std::move(sender), time), seq_(seq), type_(type) {}
 
             constexpr std::uint64_t getSequenceNumber() const { return seq_; }
 
@@ -59,7 +59,7 @@ namespace constellation::message {
                    config::Dictionary tags,
                    std::uint64_t seq,
                    Type type)
-                : BaseHeader(CDTP1, std::move(sender), time, std::move(tags)), seq_(seq), type_(type) {}
+                : BaseHeader(protocol::CDTP1, std::move(sender), time, std::move(tags)), seq_(seq), type_(type) {}
 
         private:
             std::uint64_t seq_;

@@ -17,7 +17,7 @@
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
-namespace constellation::message {
+namespace constellation::protocol {
 
     /** Protocol Enum (excluding CHIRP) */
     enum class Protocol {
@@ -27,7 +27,7 @@ namespace constellation::message {
         CMDP1,
         /** Constellation Data Transmission Protocol v1 */
         CDTP1,
-        /** Constellation Heartbeat  Protocol v1 */
+        /** Constellation Heartbeat Protocol v1 */
         CHP1,
     };
     using enum Protocol;
@@ -95,4 +95,4 @@ namespace constellation::message {
         return get_readable_protocol(protocol_identifier);
     }
 
-} // namespace constellation::message
+} // namespace constellation::protocol

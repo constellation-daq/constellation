@@ -23,13 +23,14 @@
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
-#include "constellation/core/message/Protocol.hpp"
+#include "constellation/core/protocol/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
 using namespace constellation::message;
+using namespace constellation::protocol;
 using namespace constellation::utils;
 using namespace std::literals::string_view_literals;
 

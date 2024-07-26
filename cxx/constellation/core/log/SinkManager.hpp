@@ -12,7 +12,7 @@
 #include <ctime>
 #include <map>
 #include <memory>
-#include <optional>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -24,13 +24,13 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "constellation/build.hpp"
-#include "constellation/core/logging/CMDPSink.hpp"
-#include "constellation/core/logging/Level.hpp"
+#include "constellation/core/log/CMDPSink.hpp"
+#include "constellation/core/log/Level.hpp"
 #include "constellation/core/utils/networking.hpp"
 
 namespace constellation::log {
     /**
-     * Global sink manager
+     * @brief Global sink manager
      *
      * This class manager the console and CMDP sinks and can creates new spdlog loggers.
      */
@@ -68,43 +68,44 @@ namespace constellation::log {
         /// @endcond
 
         /**
-         * Set the global (default) console log level
-         *
-         * @param level Log level for console output
-         */
-        CNSTLN_API void setGlobalConsoleLevel(Level level);
-
-        /**
-         * Get the ephemeral port to which the CMDP sink is bound to
+         * @brief Get the ephemeral port to which the CMDP sink is bound to
          *
          * @return Port number
          */
         utils::Port getCMDPPort() const { return cmdp_sink_->getPort(); }
 
         /**
-         * Enable sending via CMDP
+         * @brief Enable sending via CMDP
          *
          * @param sender_name Canonical name of the satellite
          */
         CNSTLN_API void enableCMDPSending(std::string sender_name);
 
         /**
-         * Create a new asynchronous spdlog logger
+         * @brief Get an asynchronous spdlog logger with a given topic
          *
-         * @param topic Topic of the new logger
-         * @param console_level Optional log level for console output to overwrite global level
-         * @return Shared pointer to the new logger
+         * This creates a new logger if no logger with the given topic exists
+         *
+         * @param topic Topic of the logger
+         * @return Shared pointer to the logger
          */
-        CNSTLN_API std::shared_ptr<spdlog::async_logger> createLogger(std::string topic,
-                                                                      std::optional<Level> console_level = std::nullopt);
+        CNSTLN_API std::shared_ptr<spdlog::async_logger> getLogger(std::string_view topic);
 
         /**
-         * Return the default logger (no topic)
+         * @brief Return the default logger
          */
         std::shared_ptr<spdlog::async_logger> getDefaultLogger() const { return default_logger_; }
 
         /**
-         * Update individual logger levels from CMDP subscriptions
+         * @brief Set the console log levels
+         *
+         * @param global_level Global log level for console output
+         * @param topic_levels Log level overwrites for specific topics
+         */
+        CNSTLN_API void setConsoleLevels(Level global_level, std::map<std::string, Level> topic_levels = {});
+
+        /**
+         * @brief Update individual logger levels from CMDP subscriptions
          *
          * @param cmdp_global_level Global subscription level
          * @param cmdp_sub_topic_levels Map of individual logger subscription levels
@@ -116,22 +117,35 @@ namespace constellation::log {
         SinkManager();
 
         /**
-         * Set the CMDP log level for a particular logger given the current subscriptions
+         * @brief Create a new asynchronous spdlog logger
+         *
+         * @param topic Topic of the logger
+         * @return Shared pointer to the new logger
+         */
+        std::shared_ptr<spdlog::async_logger> create_logger(std::string_view topic);
+
+        /**
+         * @brief Calculate the CMDP and console log level for a particular logger given the current subscriptions
          *
          * @param logger Logger for which to set the log level
          */
-        void set_cmdp_level(std::shared_ptr<spdlog::async_logger>& logger);
+        void calculate_log_level(std::shared_ptr<spdlog::async_logger>& logger);
 
     private:
+        std::shared_ptr<zmq::context_t> zmq_context_;
+
         std::shared_ptr<spdlog::sinks::stdout_color_sink_mt> console_sink_;
         std::shared_ptr<CMDPSink> cmdp_sink_;
 
         std::shared_ptr<spdlog::async_logger> default_logger_;
-        std::shared_ptr<spdlog::async_logger> cmdp_console_logger_;
 
         std::vector<std::shared_ptr<spdlog::async_logger>> loggers_;
+        std::mutex loggers_mutex_;
 
+        Level console_global_level_;
+        std::map<std::string, Level> console_topic_levels_;
         Level cmdp_global_level_;
         std::map<std::string_view, Level> cmdp_sub_topic_levels_;
+        std::mutex levels_mutex_;
     };
 } // namespace constellation::log

@@ -11,7 +11,7 @@
 
 #include <string_view>
 
-#include "constellation/core/logging/log.hpp"
+#include "constellation/core/log/log.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 using namespace constellation::satellite;

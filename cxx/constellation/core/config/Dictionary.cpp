@@ -9,11 +9,11 @@
 
 #include "Dictionary.hpp"
 
-#include <msgpack.hpp>
-
 #include <span>
 #include <string>
 #include <utility>
+
+#include <msgpack.hpp>
 
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/casts.hpp"

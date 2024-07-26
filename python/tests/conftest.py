@@ -46,29 +46,56 @@ SNDMORE_MARK = (
 CHIRP_OFFER_CTRL = b"\x96\xa9CHIRP%x01\x02\xc4\x10\xc3\x941\xda'\x96_K\xa6JU\xac\xbb\xfe\xf1\xac\xc4\x10:\xb9W2E\x01R\xa2\x93|\xddA\x9a%\xb6\x90\x01\xcda\xa9"  # noqa: E501
 
 
-# SIDE EFFECTS
-def mock_chirp_sock_sendto(buf, addr):
-    """Append buf to queue."""
-    mock_chirp_packet_queue.append(buf)
+class mock_socket(MagicMock):
+    """Mock socket.socket."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.seen = 0
 
-def mock_chirp_sock_recvfrom(bufsize):
-    """Pop entry from queue."""
-    try:
-        return mock_chirp_packet_queue.pop(0), ["localhost", CHIRP_PORT]
-    except IndexError:
-        raise BlockingIOError("no mock data")
+    def connected(self):
+        return True
+
+    def sendto(self, buf, addr):
+        """Append buf to queue."""
+        mock_chirp_packet_queue.append(buf)
+
+    def recvfrom(self, bufsize):
+        """Get next entry from queue."""
+        time.sleep(0.05)
+        try:
+            data = mock_chirp_packet_queue[self.seen]
+            self.seen += 1
+            return data, ["localhost", CHIRP_PORT]
+        except IndexError:
+            raise BlockingIOError("no mock data")
+
+    def recvmsg(self, bufsize, ancsize):
+        """Get next entry from queue."""
+        time.sleep(0.05)
+        try:
+            # ancillary data for localhost:
+            data = mock_chirp_packet_queue[self.seen]
+            self.seen += 1
+            ancdata = [
+                (
+                    0,
+                    20,
+                    b"\x02\x00\x1b\xd3\x7f\x00\x00\xff\x00\x00\x00\x00\x00\x00\x00\x00",
+                )
+            ]
+            return data, ancdata, 0, ["localhost", CHIRP_PORT]
+        except IndexError:
+            raise TimeoutError("no mock data")
 
 
 @pytest.fixture
 def mock_chirp_socket():
     """Mock CHIRP socket calls."""
-    with patch("constellation.core.chirp.socket.socket") as mock:
-        mock = mock.return_value
-        mock.connected = MagicMock(return_value=True)
-        mock.sendto = MagicMock(side_effect=mock_chirp_sock_sendto)
-        mock.recvfrom = MagicMock(side_effect=mock_chirp_sock_recvfrom)
-        yield mock
+    with patch("constellation.core.chirp.get_broadcast_socket") as mock:
+        sock = mock_socket()
+        mock.return_value = sock
+        yield sock
 
 
 @pytest.fixture
@@ -76,13 +103,9 @@ def mock_chirp_transmitter():
     def mock_init(self, *args, **kwargs):
         self._host_uuid = get_uuid(args[0])
         self._group_uuid = get_uuid("mockstellation")
-        self._broadcasts = ["localhost"]
+        self._broadcast_addrs = ["localhost"]
         self._filter_group = True
-        mock = MagicMock()
-        mock = mock.return_value
-        mock.connected = MagicMock(return_value=True)
-        mock.sendto = MagicMock(side_effect=mock_chirp_sock_sendto)
-        mock.recvfrom = MagicMock(side_effect=mock_chirp_sock_recvfrom)
+        mock = mock_socket()
         self._sock = mock
 
     with patch.object(CHIRPBeaconTransmitter, "__init__", mock_init):
@@ -91,7 +114,7 @@ def mock_chirp_transmitter():
 
 
 class mocket(MagicMock):
-    """Mock socket for a receiver."""
+    """Mock ZMQ socket for a receiver."""
 
     def __init__(self, *args, **kwargs):
         super().__init__()

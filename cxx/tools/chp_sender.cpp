@@ -16,14 +16,16 @@
 
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/heartbeat/HeartbeatSend.hpp"
-#include "constellation/core/logging/Level.hpp"
-#include "constellation/core/logging/SinkManager.hpp"
+#include "constellation/core/log/Level.hpp"
+#include "constellation/core/log/SinkManager.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation;
 using namespace constellation::heartbeat;
 using namespace constellation::log;
 using namespace constellation::message;
+using namespace constellation::protocol;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 using namespace std::literals::string_literals;
@@ -46,13 +48,13 @@ void cli_loop(std::span<char*> args) {
         interval = std::chrono::milliseconds(std::stoi(args[3]));
     }
 
-    SinkManager::getInstance().setGlobalConsoleLevel(WARNING);
+    SinkManager::getInstance().setConsoleLevels(WARNING);
 
     auto chirp_manager = chirp::Manager("255.255.255.255", "0.0.0.0", group, name);
     chirp_manager.setAsDefaultInstance();
     chirp_manager.start();
 
-    auto state = State::NEW;
+    auto state = CSCP::State::NEW;
 
     HeartbeatSend sender {std::move(name), [&]() { return state; }, interval};
 
@@ -62,7 +64,7 @@ void cli_loop(std::span<char*> args) {
         std::string state_s {};
         std::cout << "State:    [" << to_string(state) << "] ";
         std::getline(std::cin, state_s);
-        state = magic_enum::enum_cast<State>(state_s, magic_enum::case_insensitive).value_or(state);
+        state = magic_enum::enum_cast<CSCP::State>(state_s, magic_enum::case_insensitive).value_or(state);
         sender.sendExtrasystole();
     }
 }

@@ -8,7 +8,8 @@ SPDX-License-Identifier: CC-BY-4.0
 import threading
 import time
 from queue import Empty
-from typing import Dict, Callable, Any, Tuple
+from typing import Dict, Callable, Any, Tuple, Optional
+from enum import Enum
 
 import zmq
 
@@ -22,6 +23,27 @@ from .base import EPILOG, ConstellationArgumentParser, setup_cli_logging
 from .commandmanager import get_cscp_commands
 from .configuration import load_config, flatten_config
 from .heartbeatchecker import HeartbeatChecker
+from . import __version__
+
+
+class ControllerState(Enum):
+    """Global Controller state."""
+
+    NEW = 0x10, "😀"
+    INIT = 0x20, "👌"
+    ORBIT = 0x30, "🛰"
+    RUN = 0x40, "🏃"
+    ERROR = 0xF0, "🤯"
+    TRANSITIONING = 0x55, "👷"
+
+    def __new__(cls: Any, value: str, name: str) -> Any:
+        member = object.__new__(cls)
+        member._value_ = value
+        member.emoji = name
+        return member
+
+    def __int__(self) -> int:
+        return int(self.value)
 
 
 class SatelliteClassCommLink:
@@ -47,6 +69,15 @@ class SatelliteCommLink(SatelliteClassCommLink):
         """Convert to canonical name."""
         return f"{self._class_name}.{self._name}"
 
+    def _repr_pretty_(
+        self, p: Any, cycle: bool
+    ) -> None:  # p is a pretty printer from IPython
+        if cycle:
+            # this is not a container, so this should not happen!
+            pass
+        else:
+            p.text(f"SatelliteCommLink(name={self._name}, class={self._class_name})")
+
 
 class SatelliteArray:
     """Provide object-oriented control of connected Satellites."""
@@ -54,7 +85,9 @@ class SatelliteArray:
     def __init__(
         self,
         group: str,
-        handler: Callable[[str, str, str, Any], Tuple[str, Any, dict[str, Any] | None]],
+        handler: Callable[
+            [str, str, str, Any], Tuple[str, Any, Optional[dict[str, Any]]]
+        ],
     ):
         self.group = group
         self._handler = handler
@@ -117,7 +150,9 @@ class SatelliteArray:
     def _add_cmds(
         self,
         obj: Any,
-        handler: Callable[[str, str, str, Any], Tuple[str, Any, dict[str, Any] | None]],
+        handler: Callable[
+            [str, str, str, Any], Tuple[str, Any, Optional[dict[str, Any]]]
+        ],
         cmds: dict[str, str],
     ) -> None:
         try:
@@ -138,6 +173,18 @@ class SatelliteArray:
         """Remove characters not suited for Python methods from names."""
         return name.replace("-", "_")
 
+    def _repr_pretty_(self, p: Any, cycle: bool) -> None:
+        if cycle:
+            # not a container, so this should never be true
+            pass
+        else:
+            with p.group(len(self.group) + 2, f"{self.group.capitalize()}([", "])"):
+                for idx, item in enumerate(self.satellites.keys()):
+                    if idx:
+                        p.text(",")
+                        p.breakable()
+                    p.pretty(item)
+
 
 class CommandWrapper:
     """Class to wrap command calls.
@@ -147,7 +194,9 @@ class CommandWrapper:
 
     def __init__(
         self,
-        handler: Callable[[str, str, str, Any], Tuple[str, Any, dict[str, Any] | None]],
+        handler: Callable[
+            [str, str, str, Any], Tuple[str, Any, Optional[dict[str, Any]]]
+        ],
         sat: str,
         satcls: str,
         cmd: str,
@@ -158,9 +207,65 @@ class CommandWrapper:
         self.satcls = satcls
         self.cmd = cmd
 
-    def call(self, payload: Any = None) -> Tuple[str, Any, dict[str, Any] | None]:
+    def call(self, payload: Any = None) -> Tuple[str, Any, Optional[dict[str, Any]]]:
         """Perform call. This doc string will be overwritten."""
         return self.fcn(sat=self.sat, satcls=self.satcls, cmd=self.cmd, payload=payload)  # type: ignore[call-arg]
+
+
+class SatelliteResponse:
+    """Class to hold the response of a Satellite to a CSCP command."""
+
+    def __init__(self) -> None:
+        self.success: bool = True
+        self.meta: Optional[dict[str, Any]] = None
+        self.payload: Any = None
+        self.errmsg: str = ""
+        self.msg: str = ""
+
+    def __str__(self) -> str:
+        """Pretty-print request."""
+        if not self.success:
+            return f"Failed: {self.errmsg}"
+        s = "'{}'{}{}"
+        return s.format(
+            self.msg,
+            f" with a payload {self.payload}" if self.payload else "",
+            f" with a meta header {self.meta}" if self.meta else "",
+        )
+
+    def _repr_pretty_(self, p: Any, cycle: bool) -> None:
+        if cycle:
+            # not a container, so this should never be true
+            return
+        if not self.success:
+            p.text(f"SatelliteResponse(success=False, errmsg='{self.errmsg}')")
+            return
+        with p.group(19, "SatelliteResponse(", ")"):
+            p.breakable()
+            p.text(f"msg='{self.msg}'")
+            if isinstance(self.payload, dict):
+                p.text(", ")
+                p.breakable()
+                with p.group(9, "payload={", "}"):
+                    for idx, (key, item) in enumerate(self.payload.items()):
+                        if idx:
+                            p.text(",")
+                            p.breakable()
+                        p.text(f'"{key}": ')
+                        p.pretty(item)
+            else:
+                if self.payload:
+                    p.text(f", payload={str(self.payload)}")
+            if self.meta:
+                p.text(", ")
+                p.breakable()
+                with p.group(4, "meta={", "}"):
+                    for idx, (key, item) in enumerate(self.meta.items()):
+                        if idx:
+                            p.text(",")
+                            p.breakable()
+                        p.text(f'"{key}": ')
+                        p.pretty(item)
 
 
 class BaseController(CHIRPBroadcaster):
@@ -198,16 +303,89 @@ class BaseController(CHIRPBroadcaster):
         # wait for threads to be ready
         time.sleep(0.2)
         self.request(CHIRPServiceIdentifier.CONTROL)
+        time.sleep(0.2)
+        while self._beacon.busy:
+            # still receiving chirp packets from last request
+            time.sleep(0.05)
         self.request(CHIRPServiceIdentifier.HEARTBEAT)
 
     @property
     def states(self) -> dict[str, SatelliteState]:
-        """Return an up-to-date dictionary of connected Satellite's status.
+        """Return an up-to-date dictionary of connected Satellite's state.
 
         Based on heartbeat information.
 
         """
         return self._hb_checker.states
+
+    @property
+    def state(self) -> ControllerState:
+        """Return the global state of all connected Satellite's state.
+
+        Based on heartbeat information.
+
+        """
+        if len(self.states) == 0:
+            return ControllerState.NEW
+        # if any Satellite is in ERROR, the global state will be in ERROR as well
+        if any(
+            state in self.states.values()
+            for state in [
+                SatelliteState.ERROR,
+                SatelliteState.DEAD,
+                SatelliteState.SAFE,
+            ]
+        ):
+            return ControllerState.ERROR
+        # any transitional states?
+        if any(
+            state in self.states.values()
+            for state in [
+                SatelliteState.initializing,
+                SatelliteState.launching,
+                SatelliteState.landing,
+                SatelliteState.reconfiguring,
+                SatelliteState.starting,
+                SatelliteState.stopping,
+                SatelliteState.interrupting,
+            ]
+        ):
+            return ControllerState.TRANSITIONING
+        # now go by lowest steady state of any satellite:
+        for target in [
+            ControllerState.NEW,
+            ControllerState.INIT,
+            ControllerState.ORBIT,
+            ControllerState.RUN,
+        ]:
+            if any(state.value == target.value for state in self.states.values()):
+                return target
+        # something went wrong..?
+        return ControllerState.ERROR
+
+    @property
+    def status(self) -> str:
+        """Return the global status summary of the Constellation.
+
+        Based on heartbeat information.
+
+        """
+        res = []
+        for state in SatelliteState:
+            sats = [sat for sat, stat in self.states.items() if stat == state]
+            if sats:
+                res.append(
+                    f"{len(sats)} Satellite{'s are' if len(sats) > 1 else ' is'} in {state.name}"
+                )
+        if len(self.states) != len(self.constellation.satellites):
+            miss = len(self.constellation.satellites) - len(self.states)
+            res.append(
+                f"{miss} connected Satellite{'s are' if len(sats) > 1 else ' is'} missing heartbeat information"
+            )
+        prefix = f"{len(self.constellation.satellites)} connected: "
+        if len(res) == 1:
+            return prefix + "All " + res[0]
+        return prefix + ", ".join(res)
 
     @property
     def constellation(self) -> SatelliteArray:
@@ -250,7 +428,16 @@ class BaseController(CHIRPBroadcaster):
                 *self._uuid_lookup[str(service.host_uuid)],
             )
         # create socket
-        socket = self.context.socket(zmq.REQ)
+        try:
+            socket = self.context.socket(zmq.REQ)
+        except zmq.ZMQError as e:
+            if "Too many open files" in e.strerror:
+                self.log.error(
+                    "System reports too many open files: cannot open further connections.\n"
+                    "Please consider increasing the limit of your OS."
+                    "On Linux systems, use 'ulimit' to set a higher value."
+                )
+            raise e
         socket.connect("tcp://" + service.address + ":" + str(service.port))
         ct = CommandTransmitter(self.name, socket)
         self.log.debug(
@@ -314,7 +501,6 @@ class BaseController(CHIRPBroadcaster):
 
     def _hb_failure(self, name: str, state: SatelliteState) -> None:
         """Callback for Satellites failing to send heartbeats."""
-        # TODO add filter for only those Satellites that we control
         self.log.critical("%s has entered %s", name, state.name)
 
     def command(
@@ -324,17 +510,17 @@ class BaseController(CHIRPBroadcaster):
         targets = []
         # figure out whether to send command to Satellite, Class or whole Constellation
         if not sat and not satcls:
-            targets = [sat._uuid for sat in self._constellation.satellites.values()]
-            self.log.info(
+            targets = [sat for sat in self._constellation.satellites.values()]
+            self.log.debug(
                 "Sending %s to all %s connected Satellites.", cmd, len(targets)
             )
         elif not sat:
             targets = [
-                sat._uuid
+                sat
                 for sat in self._constellation.satellites.values()
                 if sat._class_name == satcls
             ]
-            self.log.info(
+            self.log.debug(
                 "Sending %s to all %s connected Satellites of class %s.",
                 cmd,
                 len(targets),
@@ -343,19 +529,21 @@ class BaseController(CHIRPBroadcaster):
         else:
             assert satcls  # for typing
             assert sat  # for typing
-            targets = [self._constellation.get_satellite(satcls, sat)._uuid]
-            self.log.info("Sending %s to Satellite %s.", cmd, targets[0])
+            targets = [self._constellation.get_satellite(satcls, sat)]
+            self.log.debug("Sending %s to Satellite %s.", cmd, targets[0])
 
-        res = {}
+        res: dict[str, SatelliteResponse] = {}
         for target in targets:
             self.log.debug("Host %s send command %s...", target, cmd)
             # The payload to set of (known) command can be pre-processed
             # allowing using more complex objects as arguments and a more
             # convenient CLI user experience without impacting the protocol
             # specs. Here, we translate to what the protocol requires.
-            p = self._preprocess_payload(payload, target, cmd)
+            p = self._preprocess_payload(payload, target._uuid, cmd)
+            sat_response = SatelliteResponse()
+            ret_msg = None
             try:
-                ret_msg = self._transmitters[target].request_get_response(
+                ret_msg = self._transmitters[target._uuid].request_get_response(
                     command=cmd,
                     payload=p,
                     meta=None,
@@ -368,7 +556,8 @@ class BaseController(CHIRPBroadcaster):
                     satcls,
                     sat,
                 )
-                continue
+                sat_response.success = False
+                sat_response.errmsg = "No transmitter available"
             except RuntimeError as e:
                 self.log.error(
                     "Command %s failed for %s (%s.%s): %s",
@@ -378,25 +567,27 @@ class BaseController(CHIRPBroadcaster):
                     sat,
                     repr(e),
                 )
-                continue
-            self.log.debug(
-                "%s responded: %s",
-                ret_msg.from_host,
-                ret_msg.msg,
-            )
-            if ret_msg.header_meta:
-                self.log.debug("    header: %s", ret_msg.header_meta)
-            if ret_msg.payload:
-                self.log.debug("    payload: %s", ret_msg.payload)
+                sat_response.success = False
+                sat_response.errmsg = repr(e)
+            if ret_msg:
+                self.log.debug(
+                    "%s responded: %s",
+                    ret_msg.from_host,
+                    ret_msg.msg,
+                )
+                if ret_msg.header_meta:
+                    self.log.debug("    header: %s", ret_msg.header_meta)
+                if ret_msg.payload:
+                    self.log.debug("    payload: %s", ret_msg.payload)
+                sat_response.msg = ret_msg.msg
+                sat_response.payload = ret_msg.payload
+                sat_response.meta = ret_msg.header_meta
             if sat:
                 # simplify return value for single satellite
-                res = {"msg": ret_msg.msg, "payload": ret_msg.payload}
+                return sat_response
             else:
                 # append
-                res[ret_msg.from_host] = {
-                    "msg": ret_msg.msg,
-                    "payload": ret_msg.payload,
-                }
+                res[str(target)] = sat_response
         return res
 
     def _preprocess_payload(self, payload: Any, uuid: str, cmd: str) -> Any:
@@ -432,7 +623,7 @@ class BaseController(CHIRPBroadcaster):
 
     def reentry(self) -> None:
         """Stop the controller."""
-        self.log.info("Stopping controller.")
+        self.log.debug("Stopping controller.")
         if getattr(self, "_task_handler_event", None):
             self._task_handler_event.set()
         try:
@@ -453,6 +644,12 @@ class BaseController(CHIRPBroadcaster):
             self._task_handler_thread.join()
         super().reentry()
 
+    def _repr_pretty_(self, p: Any, cycle: bool) -> None:
+        nsat = len(self.constellation.satellites)
+        p.text(
+            f"Controller(group='{self.group}') for {nsat} Satellites, current state is {self.state.name}"
+        )
+
 
 def main(args: Any = None) -> None:
     """Start a Constellation CSCP controller.
@@ -461,7 +658,9 @@ def main(args: Any = None) -> None:
     Constellation group via IPython terminal.
 
     """
-    from IPython import embed
+    from IPython.terminal.prompts import Prompts, Token
+    from traitlets.config.loader import Config
+    from IPython.terminal.embed import InteractiveShellEmbed
 
     parser = ConstellationArgumentParser(description=main.__doc__, epilog=EPILOG)
     parser.add_argument(
@@ -488,18 +687,71 @@ def main(args: Any = None) -> None:
     print(
         "You can interact with the discovered Satellites via the `constellation` array:"
     )
-    print("          constellation.get_state()\n")
+    print("         > constellation.get_state()\n")
     print("To get help for any of its methods, call it with a question mark:")
-    print("          constellation.get_state?\n")
+    print("         > constellation.get_state?\n")
 
     if cfg_file:
         cfg = load_config(cfg_file)  # noqa
         print(f"The configuration file '{cfg_file}' has been loaded into 'cfg'.\n")
 
-    print("Happy hacking! :)\n")
+    print("   Happy hacking! :)\n")
 
-    # start IPython console
-    embed()
+    #  ___ ____        _   _                            _
+    # |_ _|  _ \ _   _| |_| |__   ___  _ __    ___  ___| |_ _   _ _ __
+    #  | || |_) | | | | __| '_ \ / _ \| '_ \  / __|/ _ \ __| | | | '_ \
+    #  | ||  __/| |_| | |_| | | | (_) | | | | \__ \  __/ |_| |_| | |_) |
+    # |___|_|    \__, |\__|_| |_|\___/|_| |_| |___/\___|\__|\__,_| .__/
+    #            |___/                                           |_|
+
+    class ControllerPrompt(Prompts):
+        """Customized prompt."""
+
+        def in_prompt_tokens(self, cli=None):  # type: ignore[no-untyped-def]
+            return [
+                (Token, ""),
+                # show version
+                (Token.Generic.Subheading, "📡 v"),
+                (Token.Generic.Subheading, __version__),
+                (Token, " "),
+                # show number of satellites
+                (Token.Prompt, "🛰 "),
+                (Token.Prompt, str(len(constellation.satellites))),
+                # show current state
+                (Token, " "),
+                (Token.Name.Class, ctrl.state.emoji + " " + ctrl.state.name),  # type: ignore[attr-defined]
+                (Token, " "),
+                (Token.Name.Entity, "ipython"),
+                (Token, "\n"),
+                (
+                    (
+                        Token.Prompt
+                        if self.shell.last_execution_succeeded
+                        and ctrl.state not in [ControllerState.ERROR]
+                        else Token.Generic.Error
+                    ),
+                    f"{ctrl.group} ❯ ",
+                ),
+            ]
+
+        def out_prompt_tokens(self, cli=None):  # type: ignore[no-untyped-def]
+            return []
+
+    ipython_cfg = Config()
+    ipython_cfg.TerminalInteractiveShell.prompts_class = ControllerPrompt
+    # Now create an instance of the embeddable shell. The first argument is a
+    # string with options exactly as you would type them if you were starting
+    # IPython at the system command line. Any parameters you want to define for
+    # configuration can thus be specified here.
+    ipshell = InteractiveShellEmbed(
+        config=ipython_cfg,
+        banner1="Starting IPython Controller for Constellation",
+        exit_msg="Have a nice day!",
+    )
+
+    # You can then call ipshell() anywhere you need it (with an optional
+    # message):
+    ipshell()
 
 
 if __name__ == "__main__":

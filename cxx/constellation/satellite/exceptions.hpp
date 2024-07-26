@@ -13,7 +13,7 @@
 #include <string_view>
 
 #include "constellation/build.hpp"
-#include "constellation/core/message/satellite_definitions.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/type.hpp"
@@ -66,7 +66,7 @@ namespace constellation::satellite {
      */
     class CNSTLN_API InvalidFSMTransition : public FSMError {
     public:
-        explicit InvalidFSMTransition(const message::Transition transition, const message::State state) {
+        explicit InvalidFSMTransition(protocol::CSCP::Transition transition, protocol::CSCP::State state) {
             error_message_ = "Transition ";
             error_message_ += utils::to_string(transition);
             error_message_ += " not allowed from ";
@@ -106,7 +106,7 @@ namespace constellation::satellite {
      */
     class CNSTLN_API InvalidUserCommand : public UserCommandError {
     public:
-        explicit InvalidUserCommand(const std::string& command, const message::State state) {
+        explicit InvalidUserCommand(const std::string& command, protocol::CSCP::State state) {
             error_message_ = "Command ";
             error_message_ += command;
             error_message_ += " cannot be called in state ";

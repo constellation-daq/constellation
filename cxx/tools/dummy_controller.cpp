@@ -19,9 +19,9 @@
 
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Dictionary.hpp"
-#include "constellation/core/logging/SinkManager.hpp"
+#include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
-#include "constellation/core/message/satellite_definitions.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/string.hpp"
 
@@ -43,7 +43,7 @@ void cli_loop(std::span<char*> args) {
     }
     std::cout << "Using constellation group " << std::quoted(group) << std::endl;
 
-    SinkManager::getInstance().setGlobalConsoleLevel(OFF);
+    SinkManager::getInstance().setConsoleLevels(OFF);
     auto chirp_manager = chirp::Manager("255.255.255.255", "0.0.0.0", group, "dummy_controller");
     chirp_manager.start();
     chirp_manager.sendRequest(chirp::ServiceIdentifier::CONTROL);
@@ -58,8 +58,7 @@ void cli_loop(std::span<char*> args) {
     auto uri = "tcp://" + discovered_services[0].address.to_string() + ":" + to_string(discovered_services[0].port);
     std::cout << "Connecting to " << uri << std::endl;
 
-    zmq::context_t context {};
-    zmq::socket_t req_socket {context, zmq::socket_type::req};
+    zmq::socket_t req_socket {*global_zmq_context(), zmq::socket_type::req};
 
     req_socket.connect(uri);
 

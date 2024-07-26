@@ -37,6 +37,11 @@ The following transitional state actions are optional:
 
 For the steady state action for the `RUN` state, see below.
 
+```{note}
+Reading information from the satellite configuration is only possible in the `initializing` function.
+All parameters the satellite requires should be read and validated in this function, the `launching` function should only be used to apply this configuration to hardware.
+```
+
 ## Running and the Stop Token
 
 The satellite's `RUN` state is governed by the `running` action, which - just as the transitional state actions above - is overridden from the `Satellite` base class.

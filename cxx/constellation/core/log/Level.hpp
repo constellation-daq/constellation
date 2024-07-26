@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include "constellation/core/utils/std_future.hpp"
-
 #include <spdlog/common.h>
+
+#include "constellation/core/utils/std_future.hpp"
 
 namespace constellation::log {
     /** Log levels for the Constellation framework

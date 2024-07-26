@@ -13,7 +13,7 @@
 #include <string_view>
 
 #include "constellation/build.hpp"
-#include "constellation/core/message/Protocol.hpp"
+#include "constellation/core/protocol/Protocol.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 
 namespace constellation::message {
@@ -57,7 +57,7 @@ namespace constellation::message {
      */
     class CNSTLN_API UnexpectedProtocolError : public MessageDecodingError {
     public:
-        explicit UnexpectedProtocolError(const Protocol& prot_recv, const Protocol& prot_exp) {
+        explicit UnexpectedProtocolError(protocol::Protocol prot_recv, protocol::Protocol prot_exp) {
             error_message_ = "Received protocol \"";
             error_message_ += get_readable_protocol(prot_recv);
             error_message_ += "\" does not match expected identifier \"";

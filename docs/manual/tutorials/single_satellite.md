@@ -19,7 +19,7 @@ The `satellite` executable starts a new Constellation satellite and requires thr
 A call with all three parameters provided could e.g. look like follows:
 
 ```sh
-./build/cxx/constellation/exec/satellite -t Prototype -n TheFirstSatellite -g MyLabPlanet
+./build/cxx/constellation/exec/satellite -t Sputnik -n TheFirstSatellite -g MyLabPlanet
 ```
 
 :::
@@ -62,7 +62,7 @@ TODO
 
 The Python implementation of Constellation provides a powerful command line interface controller using IPython. This can be installed with the `cli` component (see [Installing from Source](../install.md#installing-the-constellation-package)).
 
-The controller is started via its Python module, and it is possible to pass it some (optional) arguments, for example:
+The controller can be started via its Python module via `python -m constellation.core.controller`, but an entry point is also created on installation which allows starting directly via the command `Controller`. It is possible to pass the controller some (optional) arguments, for example:
 
 - `--name`. A name for the controller (default: cli_controller)
 - `--group`. The constellation group to which the controller should belong (default: constellation)
@@ -71,36 +71,37 @@ The controller is started via its Python module, and it is possible to pass it s
 To control the satellite created in the first part of this tutorial, the controller needs to be in the same group.
 
 ```sh
-python -m constellation.core.controller --group myLabPlanet
+Controller --group myLabPlanet
 ```
 
 The interactive command line provides the `constellation` object which holds all information about connected satellites and
-allows their control. Getting a list containing the satellites could e.g. be performed by running:
+allows their control. Getting a dictionary containing the satellites could e.g. be performed by running:
 
 ```python
 In [1]: constellation.satellites
-Out[1]:
-[<__main__.SatelliteCommLink at 0x78d5bba4fcd0>]
+Out[1]: {'Sputnik.TheFirstSatellite': <constellation.core.controller.SatelliteCommLink at 0x700590f015b0>}
 ```
 
-In order to obtain more - and less cryptic - information on a specific satellite, it can be directly addressed in the list
+In order to obtain more information on a specific satellite, it can be directly addressed via its type and name
 and a command can be sent. The response is then printed on the terminal:
 
 ```python
-In [2]: print(constellation.satellites[0].get_name())
-Out[2]:
-{'msg': 'prototype.thefirstsatellite', 'payload': None}
+In [2]: constellation.Sputnik.TheFirstSatellite.get_name()
+Out[2]: {'msg': 'sputnik.thefirstsatellite', 'payload': None}
 ```
+
+The controller supports tab completion, and suggestions for possible commands are displayed typing e.g.
+`constellation.Sputnik.TheFirstSatellite.` and hitting the tab key.
 
 Since this is an interactive IPython console, of course also loops are possible and could look like this with two satellites
 connected:
 
 ```python
-In [3]: for sat in constellation.satellites:
+In [3]: for sat in constellation.satellites.values():
    ...:     print(sat.get_name())
    ...:
-{'msg': 'prototype.thefirstsatellite', 'payload': None}
-{'msg': 'prototype.thesecondsatellite', 'payload': None}
+{'msg': 'sputnik.thefirstsatellite', 'payload': None}
+{'msg': 'sputnik.thesecondsatellite', 'payload': None}
 ```
 
 :::
@@ -125,17 +126,31 @@ To initialize the satellite, it needs to be sent an initialize command, with a d
 In the following example, this dictionary is empty (`{}`) and directly passed to the command.
 
 ```python
-In [1]: constellation.satellites[0].initialize({})
+In [1]: constellation.Sputnik.TheFirstSatellite.initialize({})
 Out[1]:
 {'msg': 'transition initialize is being initiated', 'payload': None}
 ```
 
-Whether the satellite has actually changed its state can be checked by retrieving the current state via:
+All satellites can be initialized together by sending the command to the entire constellation:
 
 ```python
-In [2]: constellation.satellites[0].get_state()
+In [1]: constellation.initialize({})
+Out[1]:
+{'Sputnik.TheFirstSatellite': {'msg': 'transition initialize is being initiated', 'payload': None},
+ 'Sputnik.TheSecondSatellite': {'msg': 'transition initialize is being initiated', 'payload': None}}
+```
+
+Whether the satellites have actually changed their state can be checked by retrieving the current state of an individual
+satellite or the entire constellation via:
+
+```python
+In [2]: constellation.Sputnik.TheFirstSatellite.get_state()
 Out[2]:
 {'msg': 'init', 'payload': None}
+In [3]: constellation.get_state()
+Out[3]:
+{'Sputnik.TheFirstSatellite': {'msg': 'init', 'payload': None},
+ 'Sputnik.TheSecondSatellite': {'msg': 'init', 'payload': None}}
 ```
 
 Similarly, all satellite states can be called. A full list of available commands, along with a description of the finite
@@ -144,9 +159,73 @@ state machine can be found in the [concepts chapter on satellites](../concepts/s
 :::
 ::::
 
+### Loading a Configuration File
+
+Constellation configuration files are TOML files with the configuration key-value pairs for all satellites. The individual
+satellite configurations are sent to their satellites together with the `initialize` command as dictionary. Their basic
+structure and syntax is the following:
+
+```toml
+[satellites]
+# General settings which apply to all satellites
+confidentiality = "TOPSECRET"
+
+[satellites.Example_Satellite]
+# Settings which apply to all satellites of type "Example_Satellite"
+sample_period = 3.0
+
+[satellites.Example_Satellite.Device1]
+# Settings which only apply to the satellite with name "Example_Satellite.Device1"
+voltage = 5
+current = 0.1
+```
+
+
+::::{tab-set}
+:::{tab-item} C++
+:sync: cxx
+
+TODO
+
+:::
+:::{tab-item} Python
+:sync: python
+
+When starting the controller, a configuration file can be passed as optional command line argument:
+
+```sh
+Controller --group myLabPlanet --config myconfiguration.toml
+```
+
+The configuration is then available as `cfg` object on the interactive command line and can be passed to the `initialize`
+function:
+
+```python
+In [1]: constellation.initialize(cfg)
+Out[1]:
+{'Sputnik.TheSecondSatellite': {'msg': 'transition initialize is being initiated', 'payload': None},
+ 'Sputnik.TheFirstSatellite': {'msg': 'transition initialize is being initiated', 'payload': None}}
+```
+
+Alternatively, the configuration can be read and parsed in an already running interactive command line session using the
+`load_config` function. The resulting dictionary can be directly passed to the `initialize` method, the distribution of
+dictionaries to the individual satellites is taken care of by the controller.
+
+```python
+In [1]: cfg = load_config("myconfiguration.toml")
+In [2]: constellation.initialize(cfg)
+Out[2]:
+{'Sputnik.TheSecondSatellite': {'msg': 'transition initialize is being initiated', 'payload': None},
+ 'Sputnik.TheFirstSatellite': {'msg': 'transition initialize is being initiated', 'payload': None}}
+```
+
+:::
+::::
+
+
 ### Closing the Controller
 
-Controllers in Constellation do not posses state and can be closed and restarted at the discretion of the user without
+Controllers in Constellation do not possess state and can be closed and restarted at the discretion of the user without
 affecting the state of the satellites.
 
 ::::{tab-set}
@@ -159,7 +238,7 @@ TODO.
 :::{tab-item} Python
 :sync: python
 
-The IPython CLI controller can be disconnected from the constellation using the command `exit()`.
+The IPython CLI controller can be disconnected from the constellation using the command `quit` or by pressing Ctrl+D.
 
 :::
 ::::

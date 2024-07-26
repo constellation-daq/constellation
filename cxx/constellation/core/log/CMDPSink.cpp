@@ -15,6 +15,7 @@
 #include <filesystem>
 #include <functional>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <stop_token>
@@ -30,8 +31,10 @@
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
-#include "constellation/core/logging/Level.hpp"
-#include "constellation/core/logging/SinkManager.hpp"
+#include "constellation/core/log/Level.hpp"
+#include "constellation/core/log/log.hpp"
+#include "constellation/core/log/Logger.hpp"
+#include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/string.hpp"
@@ -62,9 +65,7 @@ std::string get_rel_file_path(std::string file_path_char) {
     return to_std_string(std::move(file_path));
 }
 
-CMDPSink::CMDPSink(std::shared_ptr<spdlog::async_logger> cmdp_console_logger)
-    : cmdp_console_logger_(std::move(cmdp_console_logger)), pub_socket_(context_, zmq::socket_type::xpub),
-      port_(bind_ephemeral_port(pub_socket_)) {
+CMDPSink::CMDPSink() : pub_socket_(context_, zmq::socket_type::xpub), port_(bind_ephemeral_port(pub_socket_)) {
     // Set reception timeout for subscription messages on XPUB socket to zero because we need to mutex-lock the socket
     // while reading and cannot log at the same time.
     pub_socket_.set(zmq::sockopt::rcvtimeo, 0);
@@ -154,6 +155,9 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
 void CMDPSink::enableSending(std::string sender_name) {
     sender_name_ = std::move(sender_name);
 
+    // Get CMDP logger
+    logger_ = std::make_unique<Logger>("CMDP");
+
     // Start thread monitoring the socket for subscription messages
     subscription_thread_ = std::jthread(std::bind_front(&CMDPSink::subscription_loop, this));
 
@@ -162,10 +166,9 @@ void CMDPSink::enableSending(std::string sender_name) {
     if(chirp_manager != nullptr) {
         chirp_manager->registerService(chirp::MONITORING, port_);
     } else {
-        cmdp_console_logger_->log(to_spdlog_level(WARNING),
-                                  "Failed to advertise logging on the network, satellite might not be discovered");
+        LOG(*logger_, WARNING) << "Failed to advertise logging on the network, satellite might not be discovered";
     }
-    cmdp_console_logger_->log(to_spdlog_level(INFO), "Starting to log on port " + to_string(port_));
+    LOG(*logger_, INFO) << "Starting to log on port " << port_;
 }
 
 void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {

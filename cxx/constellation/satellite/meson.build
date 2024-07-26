@@ -30,7 +30,6 @@ install_headers(
   'CommandRegistry.ipp',
   'exceptions.hpp',
   'FSM.hpp',
-  'fsm_definitions.hpp',
   'Satellite.hpp',
   subdir: 'constellation/satellite',
 )

@@ -18,10 +18,11 @@
 #include <zmq_addon.hpp>
 
 #include "constellation/build.hpp"
-#include "constellation/core/logging/Level.hpp"
+#include "constellation/core/log/Level.hpp"
 #include "constellation/core/message/BaseHeader.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
-#include "constellation/core/message/Protocol.hpp"
+#include "constellation/core/metrics/Metric.hpp"
+#include "constellation/core/protocol/Protocol.hpp"
 
 namespace constellation::message {
 
@@ -32,9 +33,11 @@ namespace constellation::message {
         class CNSTLN_API Header final : public BaseHeader {
         public:
             Header(std::string sender, std::chrono::system_clock::time_point time = std::chrono::system_clock::now())
-                : BaseHeader(CMDP1, std::move(sender), time) {}
+                : BaseHeader(protocol::CMDP1, std::move(sender), time) {}
 
-            static Header disassemble(std::span<const std::byte> data) { return {BaseHeader::disassemble(CMDP1, data)}; }
+            static Header disassemble(std::span<const std::byte> data) {
+                return {BaseHeader::disassemble(protocol::CMDP1, data)};
+            }
 
         private:
             Header(BaseHeader&& base_header) : BaseHeader(std::move(base_header)) {}
@@ -62,6 +65,11 @@ namespace constellation::message {
         CNSTLN_API bool isLogMessage() const;
 
         /**
+         * @return If the message is a stat message
+         */
+        CNSTLN_API bool isStatMessage() const;
+
+        /**
          * Assemble full message to frames for ZeroMQ
          *
          * This function moves the payload.
@@ -82,7 +90,7 @@ namespace constellation::message {
 
     protected:
         /**
-         * Construct a new CMDP1 message
+         * Construct a new CMDP1 message with payload
          *
          * @param topic Topic of the message
          * @param header Header of the message
@@ -157,6 +165,47 @@ namespace constellation::message {
     private:
         log::Level level_;
         std::string log_topic_;
+    };
+
+    class CMDP1StatMessage : public CMDP1Message {
+    public:
+        /**
+         * Construct a new CMDP1 message for metrics
+         *
+         * @note The message payload will be create immediately from the current value
+         *
+         * @param topic Topic of the statistics metric message
+         * @param header CMDP1 header of the message
+         * @param metric The metric to be sent
+         */
+        CNSTLN_API CMDP1StatMessage(std::string topic, Header header, std::shared_ptr<metrics::Metric> metric);
+
+        /**
+         * Construct a CMDP1StatMessage from a decoded CMDP1Message
+         *
+         * @throw IncorrectMessageType If the message is not a (valid) metrics message
+         */
+        CNSTLN_API CMDP1StatMessage(CMDP1Message&& message);
+
+        /**
+         * @return Metric value and type
+         */
+        CNSTLN_API std::shared_ptr<metrics::Metric> getMetric() const { return metric_; }
+
+        /**
+         * Disassemble stats message from ZeroMQ frames
+         *
+         * This function moves the payload.
+         *
+         * @return New CMDP1StatMessage assembled from ZeroMQ frames
+         * @throw MessageDecodingError If the message is not a valid CMDP1 message
+         * @throw IncorrectMessageType If the message is a valid CMDP1 message but not a (valid) stat message
+         */
+        CNSTLN_API static CMDP1StatMessage disassemble(zmq::multipart_t& frames);
+
+    private:
+        std::string stat_topic_;
+        std::shared_ptr<metrics::Metric> metric_;
     };
 
 } // namespace constellation::message

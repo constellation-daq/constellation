@@ -15,6 +15,7 @@
 #include <chrono>
 #include <concepts>
 #include <cstdint>
+#include <iterator>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -27,7 +28,6 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
-#include <time.h>
 #endif
 
 #include <magic_enum.hpp>

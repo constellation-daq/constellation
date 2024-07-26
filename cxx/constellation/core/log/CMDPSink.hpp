@@ -20,7 +20,8 @@
 #include <spdlog/sinks/base_sink.h>
 #include <zmq.hpp>
 
-#include "constellation/core/logging/Level.hpp"
+#include "constellation/core/log/Level.hpp"
+#include "constellation/core/log/Logger.hpp"
 #include "constellation/core/utils/networking.hpp"
 
 namespace constellation::log {
@@ -32,16 +33,12 @@ namespace constellation::log {
     class CMDPSink : public spdlog::sinks::base_sink<std::mutex> {
     public:
         /**
-         * Construct a new CMDPSink
-         *
-         * The console logger is used to log the progress of setting up CMDP as well as its operation to the local console.
-         *
-         * @param cmdp_console_logger Console logger for CMDP
+         * @brief Construct a new CMDPSink
          */
-        CMDPSink(std::shared_ptr<spdlog::async_logger> cmdp_console_logger);
+        CMDPSink();
 
         /**
-         * Deconstruct the CMDPSink
+         * @brief Deconstruct the CMDPSink
          */
         ~CMDPSink() override;
 
@@ -54,14 +51,14 @@ namespace constellation::log {
         /// @endcond
 
         /**
-         * Get ephemeral port this logger sink is bound to
+         * @brief Get ephemeral port this logger sink is bound to
          *
          * @return Port number
          */
         constexpr utils::Port getPort() const { return port_; }
 
         /**
-         * Set sender name and enable sending by starting the subscription thread
+         * @brief Set sender name and enable sending by starting the subscription thread
          *
          * @param sender_name Canonical name of the sender
          */
@@ -75,7 +72,7 @@ namespace constellation::log {
         void subscription_loop(const std::stop_token& stop_token);
 
     private:
-        std::shared_ptr<spdlog::async_logger> cmdp_console_logger_;
+        std::unique_ptr<Logger> logger_;
 
         zmq::context_t context_;
         zmq::socket_t pub_socket_;

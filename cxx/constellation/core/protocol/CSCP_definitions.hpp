@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Protocol definitions for the satellite
+ * @brief Additional definitions for the CSCP protocol
  *
  * @copyright Copyright (c) 2024 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <regex>
+#include <string>
 #include <type_traits>
 #include <utility>
 
@@ -18,7 +19,7 @@
 
 #include "constellation/core/utils/std_future.hpp"
 
-namespace constellation::message {
+namespace constellation::protocol::CSCP {
 
     /** Possible Satellite FSM states */
     enum class State : std::uint8_t {
@@ -66,7 +67,7 @@ namespace constellation::message {
         stop = std::to_underlying(Transition::stop),
     };
 
-    /** Possible get_* commands via CSCP */
+    /** Possible standard (non-transition) commands via CSCP */
     enum class StandardCommand : std::underlying_type_t<TransitionCommand> {
         get_name,
         get_version,
@@ -78,22 +79,56 @@ namespace constellation::message {
         shutdown,
     };
 
-    inline bool is_valid_name(const std::string& name) {
-        // Alphanumeric characters and dashes
-        return (!name.empty() && std::regex_match(name, std::regex("[\\w\\d-]+")));
+    /**
+     * @brief Check if a state is steady
+     */
+    inline constexpr bool is_steady(State state) {
+        // In steady states the lower four bytes are 0
+        return (static_cast<unsigned int>(std::to_underlying(state)) & 0x0FU) == 0x00U;
     }
 
-    inline bool is_valid_command_name(const std::string& name) {
-        // Alphanumeric characters, do not start with a digit
-        return (!name.empty() && std::regex_match(name, std::regex("[\\w\\d]+")) &&
-                !static_cast<bool>(std::isdigit(static_cast<unsigned char>(name[0]))));
+    /**
+     * @brief Check if the CSCP shutdown command is allowed from a given state
+     *
+     * Shutdown is only allowed from NEW, INIT, SAFE and ERROR.
+     */
+    inline constexpr bool is_shutdown_allowed(State state) {
+        using enum State;
+        return (state == NEW || state == INIT || state == SAFE || state == ERROR);
     }
 
-} // namespace constellation::message
+    /**
+     * @brief Checks if a satellite name is valid
+     *
+     * A satellite name may contain alphanumeric characters and underscores and may not be empty.
+     */
+    inline bool is_valid_satellite_name(const std::string& satellite_name) {
+        return std::regex_match(satellite_name, std::regex("^\\w+$"));
+    }
+
+    /**
+     * @brief Checks if a run ID is valid
+     *
+     * A run ID may contain alphanumeric characters, underscores or dashes and may not be empty.
+     */
+    inline bool is_valid_run_id(const std::string& run_id) {
+        return std::regex_match(run_id, std::regex("^[\\w-]+$"));
+    }
+
+    /**
+     * @brief Checks if a command name is valid
+     *
+     * A command may contain alphanumeric characters or underscores, and may not be empty or start with a digit.
+     */
+    inline bool is_valid_command_name(const std::string& command_name) {
+        return std::regex_match(command_name, std::regex("^\\D\\w*$"));
+    }
+
+} // namespace constellation::protocol::CSCP
 
 // State enum exceeds default enum value limits of magic_enum (-128, 127)
 namespace magic_enum::customize {
-    template <> struct enum_range<constellation::message::State> {
+    template <> struct enum_range<constellation::protocol::CSCP::State> {
         static constexpr int min = 0;
         static constexpr int max = 255;
     };

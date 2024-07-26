@@ -53,14 +53,6 @@ variables:
   key: meson-wrap-cache
   paths:
     - subprojects/packagecache/
-    - subprojects/argparse-*/
-    - subprojects/asio-*/
-    - subprojects/Catch2-*/
-    - subprojects/cppzmq-*/
-    - subprojects/libzmq-*/
-    - subprojects/magic_enum-*/
-    - subprojects/msgpack-cxx-*/
-    - subprojects/spdlog-*/
   policy: pull
 
 .ccache: &ccache

@@ -19,11 +19,10 @@
 #include <vector>
 
 #include "constellation/core/config/Value.hpp"
-#include "constellation/core/message/satellite_definitions.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/type.hpp"
 #include "constellation/satellite/exceptions.hpp"
-#include "constellation/satellite/fsm_definitions.hpp"
 
 namespace constellation::satellite {
 
@@ -46,18 +45,18 @@ namespace constellation::satellite {
     template <typename R, typename... Args>
     inline void CommandRegistry::add(const std::string& name,
                                      std::string description,
-                                     std::initializer_list<State> states,
+                                     std::initializer_list<protocol::CSCP::State> states,
                                      std::function<R(Args...)> func) {
         const auto name_lc = utils::transform(name, ::tolower);
-        if(!message::is_valid_command_name(name_lc)) {
+        if(!protocol::CSCP::is_valid_command_name(name_lc)) {
             throw utils::LogicError("Command name is invalid");
         }
 
-        if(magic_enum::enum_cast<message::StandardCommand>(name_lc).has_value()) {
+        if(magic_enum::enum_cast<protocol::CSCP::StandardCommand>(name_lc).has_value()) {
             throw utils::LogicError("Standard satellite command with this name exists");
         }
 
-        if(magic_enum::enum_cast<message::TransitionCommand>(name_lc).has_value()) {
+        if(magic_enum::enum_cast<protocol::CSCP::TransitionCommand>(name_lc).has_value()) {
             throw utils::LogicError("Satellite transition command with this name exists");
         }
 
@@ -70,8 +69,11 @@ namespace constellation::satellite {
     }
 
     template <typename T, typename R, typename... Args>
-    inline void CommandRegistry::add(
-        const std::string& name, std::string description, std::initializer_list<State> states, R (T::*func)(Args...), T* t) {
+    inline void CommandRegistry::add(const std::string& name,
+                                     std::string description,
+                                     std::initializer_list<protocol::CSCP::State> states,
+                                     R (T::*func)(Args...),
+                                     T* t) {
         if(!func || !t) {
             throw utils::LogicError("Object and member function pointers must not be nullptr");
         }

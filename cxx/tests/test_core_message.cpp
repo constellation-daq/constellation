@@ -15,7 +15,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <msgpack.hpp>
 
-#include "constellation/core/logging/Level.hpp"
+#include "constellation/core/log/Level.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"

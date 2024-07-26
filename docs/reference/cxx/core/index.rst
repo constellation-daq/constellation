@@ -10,5 +10,7 @@ Core Library
    config
    message
    utils
+   protocol
    heartbeat
    chirp
+   pools

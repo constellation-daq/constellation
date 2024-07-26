@@ -23,7 +23,7 @@ from constellation.core.chirp import (
     CHIRPServiceIdentifier,
 )
 
-from conftest import mock_chirp_packet_queue, mocket, wait_for_state
+from conftest import mocket, wait_for_state
 
 
 @pytest.fixture
@@ -235,7 +235,7 @@ def test_satellite_chirp_offer(mock_chirp_transmitter, mock_device_satellite):
     )
     time.sleep(0.5)
     # chirp message has been processed
-    assert len(mock_chirp_packet_queue) == 0
+    assert satellite._beacon._sock.seen >= 1
     assert satellite.callback_triggered
     assert isinstance(satellite.callback_triggered, DiscoveredService)
 

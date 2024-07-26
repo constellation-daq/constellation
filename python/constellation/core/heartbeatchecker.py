@@ -10,11 +10,13 @@ from datetime import datetime, timezone
 
 import zmq
 
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Any, cast
 from .fsm import SatelliteState
 from .chp import CHPDecodeMessage
+from .base import ConstellationLogger
 
-logger = logging.getLogger(__name__)
+logging.setLoggerClass(ConstellationLogger)
+logger = cast(ConstellationLogger, logging.getLogger(__name__))
 
 
 class HeartbeatState:
@@ -73,7 +75,16 @@ class HeartbeatChecker:
 
         """
         ctx = context or zmq.Context()
-        socket = ctx.socket(zmq.SUB)
+        try:
+            socket = ctx.socket(zmq.SUB)
+        except zmq.ZMQError as e:
+            if "Too many open files" in e.strerror:
+                logger.error(
+                    "System reports too many open files: cannot open further connections.\n"
+                    "Please consider increasing the limit of your OS."
+                    "On Linux systems, use 'ulimit' to set a higher value."
+                )
+            raise e
         socket.connect(address)
         socket.setsockopt_string(zmq.SUBSCRIBE, "")
         evt = threading.Event()

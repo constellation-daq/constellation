@@ -14,11 +14,11 @@
 #include <thread>
 
 #include "constellation/core/config/Configuration.hpp"
-#include "constellation/core/logging/log.hpp"
+#include "constellation/core/log/log.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/FSM.hpp"
-#include "constellation/satellite/fsm_definitions.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
@@ -32,7 +32,7 @@ public:
         register_command("my_cmd_void", "Command without arguments & return", {}, &DummySatellite::usr_cmd_void, this);
         register_command("my_cmd_state",
                          "Command for RUN state only",
-                         {constellation::satellite::State::RUN},
+                         {constellation::protocol::CSCP::State::RUN},
                          &DummySatellite::usr_cmd_void,
                          this);
     }
@@ -80,14 +80,14 @@ public:
         Satellite::running(stop_token);
         transitional_state();
     }
-    void interrupting(constellation::satellite::State previous_state) override {
+    void interrupting(constellation::protocol::CSCP::State previous_state) override {
         // Note: the default implementation calls `stopping()` and `landing()`, both of which call `transitional_state()`
         progress_fsm_ = true;
         Satellite::interrupting(previous_state);
         progress_fsm_ = false;
         transitional_state();
     }
-    void failure(constellation::satellite::State previous_state) override { Satellite::failure(previous_state); }
+    void failure(constellation::protocol::CSCP::State previous_state) override { Satellite::failure(previous_state); }
 
 private:
     void transitional_state() {

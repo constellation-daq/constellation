@@ -28,13 +28,13 @@ def test_satellite_access_via_array(mock_controller, mock_satellite):
         time.sleep(0.05)
         timeout -= 0.05
     res = mock_controller.constellation.Satellite.mock_satellite.get_state()
-    assert res["msg"] == "new"
+    assert res.msg == "new"
 
 
 @pytest.mark.forked
 def test_satellite_hb_state(mock_controller, mock_satellite):
     """Test heartbeat state check."""
-    timeout = 2
+    timeout = 4
     while timeout > 0 and len(mock_controller.states) < 1:
         time.sleep(0.05)
         timeout -= 0.05
@@ -52,7 +52,7 @@ def test_satellite_init_w_fullcfg(mock_controller, mock_example_satellite, rawco
     res = mock_controller.constellation.MockExampleSatellite.mock_satellite.initialize(
         rawconfig
     )
-    assert res["msg"] == "transitioning"
+    assert res.msg == "transitioning"
     time.sleep(0.1)
     assert satellite.config._config == flatten_config(
         rawconfig, "MockExampleSatellite", "mock_satellite"

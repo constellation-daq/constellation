@@ -20,7 +20,7 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Dictionary.hpp"
-#include "constellation/core/message/Protocol.hpp"
+#include "constellation/core/protocol/Protocol.hpp"
 
 namespace constellation::message {
 
@@ -38,7 +38,7 @@ namespace constellation::message {
         /// @endcond
 
         /** Return message protocol */
-        constexpr Protocol getProtocol() const { return protocol_; }
+        constexpr protocol::Protocol getProtocol() const { return protocol_; }
 
         /** Return message sender */
         std::string_view getSender() const { return sender_; }
@@ -70,7 +70,7 @@ namespace constellation::message {
          * @param time Message time
          * @param tags Message tags (defaults to empty dictionary)
          */
-        BaseHeader(Protocol protocol,
+        BaseHeader(protocol::Protocol protocol,
                    std::string sender,
                    std::chrono::system_clock::time_point time,
                    config::Dictionary tags = {})
@@ -82,10 +82,10 @@ namespace constellation::message {
          * @param protocol Protocol
          * @param data View to byte data
          */
-        CNSTLN_API static BaseHeader disassemble(Protocol protocol, std::span<const std::byte> data);
+        CNSTLN_API static BaseHeader disassemble(protocol::Protocol protocol, std::span<const std::byte> data);
 
     private:
-        Protocol protocol_;
+        protocol::Protocol protocol_;
         std::string sender_;
         std::chrono::system_clock::time_point time_;
         config::Dictionary tags_;

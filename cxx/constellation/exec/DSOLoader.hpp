@@ -13,7 +13,7 @@
 #include <string>
 
 #include "constellation/build.hpp"
-#include "constellation/core/logging/Logger.hpp"
+#include "constellation/core/log/Logger.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 namespace constellation::exec {

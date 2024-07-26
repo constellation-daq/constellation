@@ -18,14 +18,16 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/satellite/FSM.hpp"
-#include "constellation/satellite/fsm_definitions.hpp"
 
 #include "dummy_satellite.hpp"
 
 using namespace Catch::Matchers;
 using namespace constellation::config;
+using namespace constellation::protocol::CSCP;
 using namespace constellation::satellite;
+using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)

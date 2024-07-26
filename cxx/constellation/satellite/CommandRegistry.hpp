@@ -20,10 +20,10 @@
 #include "constellation/build.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/Value.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/type.hpp"
 #include "constellation/satellite/exceptions.hpp"
-#include "constellation/satellite/fsm_definitions.hpp"
 
 namespace constellation::satellite {
 
@@ -50,7 +50,7 @@ namespace constellation::satellite {
         template <typename R, typename... Args>
         void add(const std::string& name,
                  std::string description,
-                 std::initializer_list<State> states,
+                 std::initializer_list<protocol::CSCP::State> states,
                  std::function<R(Args...)> func);
 
         /**
@@ -68,7 +68,7 @@ namespace constellation::satellite {
         template <typename T, typename R, typename... Args>
         void add(const std::string& name,
                  std::string description,
-                 std::initializer_list<State> states,
+                 std::initializer_list<protocol::CSCP::State> states,
                  R (T::*func)(Args...),
                  T* t);
 
@@ -86,7 +86,7 @@ namespace constellation::satellite {
          * @throws MissingUserCommandArguments if the number of arguments does not match
          * @throws std::invalid_argument if an argument or the return value could not be decoded or encoded to std::string
          */
-        CNSTLN_API config::Value call(State state, const std::string& name, const config::List& args);
+        CNSTLN_API config::Value call(protocol::CSCP::State state, const std::string& name, const config::List& args);
 
         /**
          * @brief Generate map of commands with comprehensive description
@@ -112,7 +112,7 @@ namespace constellation::satellite {
             Call func;
             std::size_t nargs;
             std::string description;
-            std::set<State> valid_states;
+            std::set<protocol::CSCP::State> valid_states;
         };
 
         template <typename T> static inline T to_argument(const config::Value& value);

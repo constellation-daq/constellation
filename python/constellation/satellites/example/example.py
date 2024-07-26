@@ -47,7 +47,7 @@ class Example_Satellite(Satellite):
             Example work to be done while satellite is running
             """
             time.sleep(self.device.sample_period)
-            print(f"New sample at {self.device.voltage}")
+            print(f"New sample at {self.device.voltage} V")
         return "Finished acquisition."
 
 

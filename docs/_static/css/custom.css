@@ -4,11 +4,13 @@
 html[data-theme="light"] {
     --pst-color-primary: #2da8d8ff;
     --pst-color-secondary: #d9514eff;
+    --pst-color-table-row-hover-bg: #2da8d829;
 }
 
 html[data-theme="dark"] {
     --pst-color-primary: #2da8d8ff;
     --pst-color-secondary: #d9514eff;
+    --pst-color-table-row-hover-bg: #2da8d829;
 }
 
 /* -------------------- HOMEPAGE -------------------- */
@@ -67,4 +69,20 @@ html[data-theme="dark"] {
 #key-features .sd-card-body .key-features-text {
   min-width: 70%;
   padding: 20px 30px;
+}
+
+/* ----------------- Sphinx Design --------------------- */
+
+.bd-content .sd-tab-set {
+  > input {
+    &:checked + label {
+      border-style: solid solid none;
+      border-color: var(--pst-color-border) var(--pst-color-border) transparent;
+      border-width: 1px 1px 0;
+      border-radius: 1px 1px 0;
+    }
+  }
+  .sd-tab-content {
+    border: 1px solid var(--pst-color-border);
+  }
 }

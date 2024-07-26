@@ -21,8 +21,8 @@
 #endif
 
 #include "constellation/build.hpp"
-#include "constellation/core/logging/log.hpp"
-#include "constellation/core/logging/Logger.hpp"
+#include "constellation/core/log/log.hpp"
+#include "constellation/core/log/Logger.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/exec/exceptions.hpp"
 #include "constellation/satellite/Satellite.hpp"

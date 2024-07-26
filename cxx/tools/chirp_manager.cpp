@@ -22,8 +22,8 @@
 #include <magic_enum.hpp>
 
 #include "constellation/core/chirp/Manager.hpp"
-#include "constellation/core/logging/Level.hpp"
-#include "constellation/core/logging/SinkManager.hpp"
+#include "constellation/core/log/Level.hpp"
+#include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/utils/networking.hpp"
 
@@ -98,7 +98,7 @@ void cli_loop(std::span<char*> args) {
     }
 
     // Turn off console logging
-    SinkManager::getInstance().setGlobalConsoleLevel(OFF);
+    SinkManager::getInstance().setConsoleLevels(OFF);
 
     Manager manager {brd_address, any_address, group, name};
 

@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Subscriber pool implementation
+ * @brief Base pool implementation
  *
  * @copyright Copyright (c) 2024 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "SubscriberPool.hpp"
+#include "BasePool.hpp"
 
 #include <any>
 #include <functional>
@@ -23,91 +23,81 @@
 #include <zmq_addon.hpp>
 
 #include "constellation/core/chirp/Manager.hpp"
-#include "constellation/core/logging/log.hpp"
+#include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/message/exceptions.hpp"
+#include "constellation/core/utils/networking.hpp"
 
-namespace constellation::utils {
+namespace constellation::pools {
 
     template <typename MESSAGE>
-    SubscriberPool<MESSAGE>::SubscriberPool(chirp::ServiceIdentifier service,
-                                            const log::Logger& logger,
-                                            std::function<void(const MESSAGE&)> callback,
-                                            std::initializer_list<std::string> default_topics)
-        : service_(service), logger_(logger), message_callback_(std::move(callback)), default_topics_(default_topics) {
+    BasePool<MESSAGE>::BasePool(chirp::ServiceIdentifier service,
+                                std::string_view log_topic,
+                                std::function<void(const MESSAGE&)> callback,
+                                zmq::socket_type socket_type)
+        : logger_(log_topic), service_(service), message_callback_(std::move(callback)), socket_type_(socket_type) {}
+
+    template <typename MESSAGE> void BasePool<MESSAGE>::start() {
+
+        // Start the pool thread
+        pool_thread_ = std::jthread(std::bind_front(&BasePool::loop, this));
 
         auto* chirp_manager = chirp::Manager::getDefaultInstance();
         if(chirp_manager != nullptr) {
             // Register CHIRP callback
-            chirp_manager->registerDiscoverCallback(&SubscriberPool::callback, service_, this);
+            chirp_manager->registerDiscoverCallback(&BasePool::callback, service_, this);
             // Request currently active services
             chirp_manager->sendRequest(service_);
         }
-
-        // Start the subscriber thread
-        subscriber_thread_ = std::jthread(std::bind_front(&SubscriberPool::loop, this));
     }
 
-    template <typename MESSAGE> SubscriberPool<MESSAGE>::~SubscriberPool() {
+    template <typename MESSAGE> BasePool<MESSAGE>::~BasePool() {
         auto* chirp_manager = chirp::Manager::getDefaultInstance();
         if(chirp_manager != nullptr) {
             // Unregister CHIRP discovery callback:
-            chirp_manager->unregisterDiscoverCallback(&SubscriberPool::callback, service_);
+            chirp_manager->unregisterDiscoverCallback(&BasePool::callback, service_);
         }
 
-        // Stop the subscriber thread
-        subscriber_thread_.request_stop();
+        // Stop the pool thread
+        pool_thread_.request_stop();
         af_.test_and_set();
         af_.notify_one();
 
-        if(subscriber_thread_.joinable()) {
-            subscriber_thread_.join();
+        if(pool_thread_.joinable()) {
+            pool_thread_.join();
         }
 
         // Disconnect from all remote sockets
         disconnect_all();
     }
 
-    template <typename MESSAGE>
-    void SubscriberPool<MESSAGE>::scribe(std::string_view host, std::string_view topic, bool subscribe) {
-        // Get host ID from name:
-        const auto host_id = message::MD5Hash(host);
+    template <typename MESSAGE> bool BasePool<MESSAGE>::should_connect(const chirp::DiscoveredService& /*service*/) {
+        return true;
+    }
 
-        const std::lock_guard sockets_lock {sockets_mutex_};
+    template <typename MESSAGE> void BasePool<MESSAGE>::socket_connected(zmq::socket_t& /*socket*/) {}
+    template <typename MESSAGE> void BasePool<MESSAGE>::socket_disconnected(zmq::socket_t& /*socket*/) {}
 
-        const auto socket_it =
-            std::ranges::find_if(sockets_, host_id, [&](const auto& s) { return s.first.host_id == host_id; });
-        if(socket_it != sockets_.end()) {
-            if(subscribe) {
-                socket_it->second.subscribe(topic);
-            } else {
-                socket_it->second.unsubscribe(topic);
-            }
+    template <typename MESSAGE> void BasePool<MESSAGE>::checkException() {
+        // If exception has been thrown, disconnect from all remote sockets and propagate it
+        if(exception_ptr_) {
+            disconnect_all();
+            std::rethrow_exception(exception_ptr_);
         }
     }
 
-    template <typename MESSAGE> void SubscriberPool<MESSAGE>::subscribe(std::string_view host, std::string_view topic) {
-        scribe(host, topic, true);
-    }
-
-    template <typename MESSAGE> void SubscriberPool<MESSAGE>::unsubscribe(std::string_view host, std::string_view topic) {
-        scribe(host, topic, false);
-    }
-
-    template <typename MESSAGE> void SubscriberPool<MESSAGE>::connect(const chirp::DiscoveredService& service) {
+    template <typename MESSAGE> void BasePool<MESSAGE>::connect(const chirp::DiscoveredService& service) {
         const std::lock_guard sockets_lock {sockets_mutex_};
 
         // Connect
         LOG(logger_, TRACE) << "Connecting to " << service.to_uri() << "...";
         try {
 
-            zmq::socket_t socket {context_, zmq::socket_type::sub};
+            zmq::socket_t socket {*utils::global_zmq_context(), socket_type_};
             socket.connect(service.to_uri());
 
-            // Directly subscribe to default topic list
-            for(const auto& topic : default_topics_) {
-                socket.set(zmq::sockopt::subscribe, topic);
-            }
+            // Perform connection actions:
+            socket_connected(socket);
 
             /**
              * This lambda is passed to the ZMQ active_poller_t to be called when a socket has a incoming message pending.
@@ -143,13 +133,19 @@ namespace constellation::utils {
         }
     }
 
-    template <typename MESSAGE> void SubscriberPool<MESSAGE>::disconnect_all() {
+    template <typename MESSAGE> void BasePool<MESSAGE>::disconnect_all() {
         const std::lock_guard sockets_lock {sockets_mutex_};
 
         // Unregister all sockets from the poller, then disconnect and close them.
         for(auto& [service, socket] : sockets_) {
             try {
+                // Remove from poller
                 poller_.remove(zmq::socket_ref(socket));
+
+                // Perform disconnect actions:
+                socket_disconnected(socket);
+
+                // Disconnect and close socket
                 socket.disconnect(service.to_uri());
                 socket.close();
             } catch(const zmq::error_t& error) {
@@ -159,7 +155,7 @@ namespace constellation::utils {
         sockets_.clear();
     }
 
-    template <typename MESSAGE> void SubscriberPool<MESSAGE>::disconnect(const chirp::DiscoveredService& service) {
+    template <typename MESSAGE> void BasePool<MESSAGE>::disconnect(const chirp::DiscoveredService& service) {
         const std::lock_guard sockets_lock {sockets_mutex_};
 
         // Disconnect the socket
@@ -169,6 +165,11 @@ namespace constellation::utils {
             try {
                 // Remove from poller
                 poller_.remove(zmq::socket_ref(socket_it->second));
+
+                // Perform disconnect actions:
+                socket_disconnected(socket_it->second);
+
+                // Disconnect the socket and close it
                 socket_it->second.disconnect(service.to_uri());
                 socket_it->second.close();
             } catch(const zmq::error_t& error) {
@@ -181,13 +182,12 @@ namespace constellation::utils {
         }
     }
 
-    template <typename MESSAGE>
-    void SubscriberPool<MESSAGE>::callback_impl(const chirp::DiscoveredService& service, bool depart) {
+    template <typename MESSAGE> void BasePool<MESSAGE>::callback_impl(const chirp::DiscoveredService& service, bool depart) {
         LOG(logger_, TRACE) << "Callback for " << service.to_uri() << (depart ? ", departing" : "");
 
         if(depart) {
             disconnect(service);
-        } else {
+        } else if(should_connect(service)) {
             connect(service);
         }
 
@@ -198,39 +198,49 @@ namespace constellation::utils {
 
     // NOLINTNEXTLINE(performance-unnecessary-value-param)
     template <typename MESSAGE>
-    void SubscriberPool<MESSAGE>::callback(chirp::DiscoveredService service, bool depart, std::any user_data) {
-        auto* instance = std::any_cast<SubscriberPool*>(user_data);
+    void BasePool<MESSAGE>::callback(chirp::DiscoveredService service, bool depart, std::any user_data) {
+        auto* instance = std::any_cast<BasePool*>(user_data);
         instance->callback_impl(service, depart);
     }
 
-    template <typename MESSAGE> void SubscriberPool<MESSAGE>::loop(const std::stop_token& stop_token) {
-        while(!stop_token.stop_requested()) {
-            using namespace std::literals::chrono_literals;
-            std::unique_lock lock {sockets_mutex_, std::defer_lock};
+    template <typename MESSAGE> void BasePool<MESSAGE>::loop(const std::stop_token& stop_token) {
+        try {
+            while(!stop_token.stop_requested()) {
+                using namespace std::literals::chrono_literals;
+                std::unique_lock lock {sockets_mutex_, std::defer_lock};
 
-            // FIXME something here gets optimized away which leads to a deadlock. Adding even a 1ns wait fixes it:
-            std::this_thread::sleep_for(1ns);
+                // FIXME something here gets optimized away which leads to a deadlock. Adding even a 1ns wait fixes it:
+                std::this_thread::sleep_for(1ns);
 
-            // Try to get the lock, if fails just continue
-            const auto locked = lock.try_lock_for(50ms);
-            if(!locked) {
-                continue;
+                // Try to get the lock, if fails just continue
+                const auto locked = lock.try_lock_for(50ms);
+                if(!locked) {
+                    continue;
+                }
+
+                // Poller crashes if called with no sockets attached, thus check
+                if(sockets_.empty()) {
+                    // Unlock so that other threads can modify sockets_
+                    lock.unlock();
+
+                    // Wait to get notified that either sockets_ was modified or a stop was requested
+                    af_.wait(false);
+                    af_.clear();
+                    // Go to next loop iteration in case a stop was requested
+                    continue;
+                }
+
+                // The poller returns immediately when a socket received something, but will time out after the set period:
+                poller_.wait(50ms);
             }
+        } catch(...) {
+            LOG(logger_, DEBUG) << "Caught exception in pool thread";
 
-            // Poller crashes if called with no sockets attached, thus check
-            if(sockets_.empty()) {
-                // Unlock so that other threads can modify sockets_
-                lock.unlock();
+            // Save exception
+            exception_ptr_ = std::current_exception();
 
-                // Wait to get notified that either sockets_ was modified or a stop was requested
-                af_.wait(false);
-                af_.clear();
-                // Go to next loop iteration in case a stop was requested
-                continue;
-            }
-
-            // The poller returns immediately when a socket received something, but will time out after the set period:
-            poller_.wait(50ms);
+            // Propagate that the worker terminated
+            af_.notify_one();
         }
     }
-} // namespace constellation::utils
+} // namespace constellation::pools

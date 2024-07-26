@@ -39,7 +39,7 @@ using namespace std::literals::string_literals;
 
 class CSCPSender {
 public:
-    CSCPSender(Port port) : req_socket_(context_, zmq::socket_type::req) {
+    CSCPSender(Port port) : req_socket_(*global_zmq_context(), zmq::socket_type::req) {
         req_socket_.connect("tcp://127.0.0.1:" + to_string(port));
     }
     void send(std::span<const std::byte> message, zmq::send_flags send_flags = zmq::send_flags::none) {
@@ -58,7 +58,6 @@ public:
     }
 
 private:
-    zmq::context_t context_;
     zmq::socket_t req_socket_;
 };
 

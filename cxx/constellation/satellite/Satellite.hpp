@@ -19,8 +19,8 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Configuration.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
-#include "constellation/satellite/fsm_definitions.hpp"
 
 namespace constellation::satellite {
 
@@ -118,7 +118,7 @@ namespace constellation::satellite {
          *
          * @param previous_state State in which the satellite was being interrupted
          */
-        void interrupting(State previous_state) override;
+        void interrupting(protocol::CSCP::State previous_state) override;
 
         /**
          * @brief Failure function
@@ -127,7 +127,7 @@ namespace constellation::satellite {
          *
          * @param previous_state State in which the satellite was before experiencing a failure
          */
-        void failure(State previous_state) override;
+        void failure(protocol::CSCP::State previous_state) override;
 
     protected:
         /**
@@ -159,7 +159,7 @@ namespace constellation::satellite {
         template <typename T, typename R, typename... Args>
         void register_command(const std::string& name,
                               std::string description,
-                              std::initializer_list<State> states,
+                              std::initializer_list<protocol::CSCP::State> states,
                               R (T::*func)(Args...),
                               T* t) {
             user_commands_.add(name, std::move(description), states, func, t);
@@ -176,7 +176,7 @@ namespace constellation::satellite {
         template <typename R, typename... Args>
         void register_command(const std::string& name,
                               std::string description,
-                              std::initializer_list<State> states,
+                              std::initializer_list<protocol::CSCP::State> states,
                               std::function<R(Args...)> func) {
             user_commands_.add(name, std::move(description), states, func);
         }

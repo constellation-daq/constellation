@@ -20,7 +20,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/message/BaseHeader.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
-#include "constellation/core/message/Protocol.hpp"
+#include "constellation/core/protocol/Protocol.hpp"
 
 namespace constellation::message {
 
@@ -55,9 +55,11 @@ namespace constellation::message {
         class CNSTLN_API Header final : public BaseHeader {
         public:
             Header(std::string sender, std::chrono::system_clock::time_point time = std::chrono::system_clock::now())
-                : BaseHeader(CSCP1, std::move(sender), time) {}
+                : BaseHeader(protocol::CSCP1, std::move(sender), time) {}
 
-            static Header disassemble(std::span<const std::byte> data) { return {BaseHeader::disassemble(CSCP1, data)}; }
+            static Header disassemble(std::span<const std::byte> data) {
+                return {BaseHeader::disassemble(protocol::CSCP1, data)};
+            }
 
         private:
             Header(BaseHeader&& base_header) : BaseHeader(std::move(base_header)) {}

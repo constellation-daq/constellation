@@ -11,15 +11,16 @@ core_src = files(
   'config/exceptions.cpp',
   'heartbeat/HeartbeatSend.cpp',
   'heartbeat/HeartbeatManager.cpp',
-  'logging/CMDPSink.cpp',
-  'logging/Logger.cpp',
-  'logging/SinkManager.cpp',
+  'log/CMDPSink.cpp',
+  'log/Logger.cpp',
+  'log/SinkManager.cpp',
   'message/CDTP1Message.cpp',
   'message/CHIRPMessage.cpp',
   'message/CHP1Message.cpp',
   'message/CMDP1Message.cpp',
   'message/CSCP1Message.cpp',
   'message/BaseHeader.cpp',
+  'metrics/Metric.cpp',
 )
 
 core_lib = library('ConstellationCore',
@@ -62,13 +63,13 @@ install_headers(
 )
 
 install_headers(
-  'logging/CMDPSink.hpp',
-  'logging/Level.hpp',
-  'logging/log.hpp',
-  'logging/Logger.hpp',
-  'logging/ProxySink.hpp',
-  'logging/SinkManager.hpp',
-  subdir: 'constellation/core/logging',
+  'log/CMDPSink.hpp',
+  'log/Level.hpp',
+  'log/log.hpp',
+  'log/Logger.hpp',
+  'log/ProxySink.hpp',
+  'log/SinkManager.hpp',
+  subdir: 'constellation/core/log',
 )
 
 install_headers(
@@ -80,15 +81,27 @@ install_headers(
   'message/CSCP1Message.hpp',
   'message/exceptions.hpp',
   'message/PayloadBuffer.hpp',
-  'message/Protocol.hpp',
-  'message/satellite_definitions.hpp',
   subdir: 'constellation/core/message',
 )
 
 install_headers(
-  'subscriber/SubscriberPool.hpp',
-  'subscriber/SubscriberPool.ipp',
-  subdir: 'constellation/core/subscriber',
+  'metrics/Metric.hpp',
+  subdir: 'constellation/core/metrics',
+)
+
+install_headers(
+  'protocol/CHP_definitions.hpp',
+  'protocol/CSCP_definitions.hpp',
+  'protocol/Protocol.hpp',
+  subdir: 'constellation/core/protocol',
+)
+
+install_headers(
+  'pools/BasePool.hpp',
+  'pools/BasePool.ipp',
+  'pools/SubscriberPool.hpp',
+  'pools/SubscriberPool.ipp',
+  subdir: 'constellation/core/pools',
 )
 
 install_headers(

@@ -28,10 +28,10 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/chirp/Manager.hpp"
-#include "constellation/core/logging/Level.hpp"
-#include "constellation/core/logging/log.hpp"
-#include "constellation/core/logging/Logger.hpp"
-#include "constellation/core/logging/SinkManager.hpp"
+#include "constellation/core/log/Level.hpp"
+#include "constellation/core/log/log.hpp"
+#include "constellation/core/log/Logger.hpp"
+#include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/exec/DSOLoader.hpp"
@@ -141,7 +141,7 @@ int constellation::exec::satellite_main(int argc,
                               << ", possible values are: " << utils::list_enum_names<Level>();
         return 1;
     }
-    SinkManager::getInstance().setGlobalConsoleLevel(default_level.value());
+    SinkManager::getInstance().setConsoleLevels(default_level.value());
 
     // Check broadcast and any address
     asio::ip::address_v4 brd_addr {};

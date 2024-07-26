@@ -17,8 +17,8 @@
 #include <zmq_addon.hpp>
 
 #include "constellation/build.hpp"
-#include "constellation/core/message/Protocol.hpp"
-#include "constellation/core/message/satellite_definitions.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/protocol/Protocol.hpp"
 
 namespace constellation::message {
 
@@ -32,13 +32,13 @@ namespace constellation::message {
          * @param interval Time interval until next message is expected
          */
         CHP1Message(std::string sender,
-                    State state,
+                    protocol::CSCP::State state,
                     std::chrono::milliseconds interval,
                     std::chrono::system_clock::time_point time = std::chrono::system_clock::now())
             : sender_(std::move(sender)), time_(time), state_(state), interval_(interval) {}
 
         /** Return message protocol */
-        constexpr Protocol getProtocol() const { return protocol_; }
+        constexpr protocol::Protocol getProtocol() const { return protocol_; }
 
         /** Return message sender */
         std::string_view getSender() const { return sender_; }
@@ -47,7 +47,7 @@ namespace constellation::message {
         constexpr std::chrono::system_clock::time_point getTime() const { return time_; }
 
         /** Return state of the message */
-        constexpr State getState() const { return state_; }
+        constexpr protocol::CSCP::State getState() const { return state_; }
 
         /** Return maxima time interval until next message is expected */
         constexpr std::chrono::milliseconds getInterval() const { return interval_; }
@@ -65,10 +65,10 @@ namespace constellation::message {
         CNSTLN_API static CHP1Message disassemble(zmq::multipart_t& frames);
 
     private:
-        Protocol protocol_ {CHP1};
+        protocol::Protocol protocol_ {protocol::CHP1};
         std::string sender_;
         std::chrono::system_clock::time_point time_;
-        State state_;
+        protocol::CSCP::State state_;
         std::chrono::milliseconds interval_;
     };
 

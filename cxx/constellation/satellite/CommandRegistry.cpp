@@ -16,10 +16,11 @@
 
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/Value.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
-#include "constellation/satellite/fsm_definitions.hpp"
 
 using namespace constellation;
+using namespace constellation::protocol::CSCP;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 

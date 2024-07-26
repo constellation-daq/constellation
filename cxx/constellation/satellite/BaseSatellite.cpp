@@ -33,33 +33,36 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/heartbeat/HeartbeatManager.hpp"
-#include "constellation/core/logging/log.hpp"
+#include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
-#include "constellation/core/message/satellite_definitions.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/exceptions.hpp"
-#include "constellation/satellite/fsm_definitions.hpp"
 
 using namespace constellation;
 using namespace constellation::config;
 using namespace constellation::heartbeat;
 using namespace constellation::message;
+using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 
 BaseSatellite::BaseSatellite(std::string_view type, std::string_view name)
-    : logger_("SATELLITE"), rep_socket_(context_, zmq::socket_type::rep), port_(bind_ephemeral_port(rep_socket_)),
-      satellite_type_(type), satellite_name_(name), fsm_(this), cscp_logger_("CSCP"),
-      heartbeat_manager_(getCanonicalName(), [&]() { return fsm_.getState(); }) {
+    : logger_("SATELLITE"), rep_socket_(*global_zmq_context(), zmq::socket_type::rep),
+      port_(bind_ephemeral_port(rep_socket_)), satellite_type_(type), satellite_name_(name), fsm_(this),
+      cscp_logger_("CSCP"), heartbeat_manager_(
+                                getCanonicalName(),
+                                [&]() { return fsm_.getState(); },
+                                [&](std::string_view reason) { fsm_.requestInterrupt(reason); }) {
 
     // Check name
-    if(!is_valid_name(to_string(name))) {
+    if(!CSCP::is_valid_satellite_name(to_string(name))) {
         throw RuntimeError("Satellite name is invalid");
     }
 
@@ -79,9 +82,8 @@ BaseSatellite::BaseSatellite(std::string_view type, std::string_view name)
     // Start receiving CSCP commands
     cscp_thread_ = std::jthread(std::bind_front(&BaseSatellite::cscp_loop, this));
 
-    // Start sending heartbeats
-    heartbeat_manager_.setInterruptCallback([ptr = &fsm_]() { ptr->interrupt(); });
-    fsm_.registerStateCallback([&](State) { heartbeat_manager_.sendExtrasystole(); });
+    // Register state callback for extrasystoles
+    fsm_.registerStateCallback([&](CSCP::State) { heartbeat_manager_.sendExtrasystole(); });
 }
 
 BaseSatellite::~BaseSatellite() {
@@ -105,8 +107,8 @@ void BaseSatellite::terminate() {
 
     // We cannot join the CSCP thread here since this method might be called from there and would result in a race condition
 
-    // Tell the FSM to interrupt, which will go to SAFE in case of ORBIT or RUN state:
-    fsm_.interrupt();
+    // Tell the FSM to interrupt as soon as possible, which will go to SAFE in case of ORBIT or RUN state:
+    fsm_.requestInterrupt("Shutting down satellite");
 }
 
 std::optional<CSCP1Message> BaseSatellite::get_next_command() {
@@ -140,12 +142,12 @@ BaseSatellite::handle_standard_command(std::string_view command) {
     std::pair<message::CSCP1Message::Type, std::string> return_verb {};
     message::PayloadBuffer return_payload {};
 
-    auto command_enum = magic_enum::enum_cast<StandardCommand>(command, magic_enum::case_insensitive);
+    auto command_enum = magic_enum::enum_cast<CSCP::StandardCommand>(command, magic_enum::case_insensitive);
     if(!command_enum.has_value()) {
         return std::nullopt;
     }
 
-    using enum StandardCommand;
+    using enum CSCP::StandardCommand;
     switch(command_enum.value()) {
     case get_name: {
         return_verb = {CSCP1Message::Type::SUCCESS, getCanonicalName()};
@@ -178,6 +180,7 @@ BaseSatellite::handle_standard_command(std::string_view command) {
         command_dict["get_status"] = "Get status of satellite";
         command_dict["get_config"] =
             "Get config of satellite (returned in payload as flat MessagePack dict with strings as keys)";
+        command_dict["get_run_id"] = "Current or last run identifier";
 
         // Append user commands
         const auto user_commands = user_commands_.describeCommands();
@@ -207,7 +210,7 @@ BaseSatellite::handle_standard_command(std::string_view command) {
         break;
     }
     case shutdown: {
-        if(is_shutdown_allowed(fsm_.getState())) {
+        if(CSCP::is_shutdown_allowed(fsm_.getState())) {
             return_verb = {CSCP1Message::Type::SUCCESS, "Shutting down satellite"};
             terminate();
         } else {
@@ -290,7 +293,8 @@ void BaseSatellite::cscp_loop(const std::stop_token& stop_token) {
             const std::string command_string = transform(message.getVerb().second, ::tolower);
 
             // Try to decode as transition
-            auto transition_command = magic_enum::enum_cast<TransitionCommand>(command_string, magic_enum::case_insensitive);
+            auto transition_command =
+                magic_enum::enum_cast<CSCP::TransitionCommand>(command_string, magic_enum::case_insensitive);
             if(transition_command.has_value()) {
                 send_reply(fsm_.reactCommand(transition_command.value(), message.getPayload()));
                 continue;
@@ -407,10 +411,10 @@ void BaseSatellite::running_wrapper(const std::stop_token& stop_token) {
     running(stop_token);
 }
 
-void BaseSatellite::interrupting_wrapper(State previous_state) {
+void BaseSatellite::interrupting_wrapper(CSCP::State previous_state) {
     interrupting(previous_state);
 }
 
-void BaseSatellite::failure_wrapper(State previous_state) {
+void BaseSatellite::failure_wrapper(CSCP::State previous_state) {
     failure(previous_state);
 }

@@ -4,6 +4,16 @@ The central components of a Constellation network are satellites. A satellite is
 is built around a finite state machine. It is the only component in a Constellation which partakes in all Constellation
 protocols. In the following, the main features of the Constellation Satellite are described.
 
+## Type and Name
+
+The so-called canonical name of a satellite consists of two parts - its type and its name, separated by a dot. The type
+represents the type (or class) of the satellite. The name can be chosen freely and unambiguously identifies a specific
+satellite instance.
+
+For example the satellite with the canonical name `Sputnik.Device1` represents a satellite of type
+[Sputnik](../../satellites/Sputnik) with the name `Device1`. The satellite `Sputnik.Device2` is of the same type but has a
+different name.
+
 ## State and Status
 
 The **state** of a Constellation satellite is governed by its [finite state machine](#the-finite-state-machine). By referring to the

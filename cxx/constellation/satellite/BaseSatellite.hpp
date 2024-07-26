@@ -21,13 +21,13 @@
 #include "constellation/build.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/heartbeat/HeartbeatManager.hpp"
-#include "constellation/core/logging/Logger.hpp"
+#include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/networking.hpp"
 #include "constellation/satellite/CommandRegistry.hpp"
 #include "constellation/satellite/FSM.hpp"
-#include "constellation/satellite/fsm_definitions.hpp"
 
 namespace constellation::satellite {
 
@@ -79,17 +79,12 @@ namespace constellation::satellite {
         /**
          * @brief Return current state of the satellite
          */
-        State getState() const { return fsm_.getState(); }
+        protocol::CSCP::State getState() const { return fsm_.getState(); }
 
         /**
          * @brief Return the current status of the satellite
          */
         std::string_view getStatus() const { return status_; }
-
-        /**
-         * @brief Return a const reference to the satellite configuration
-         */
-        const config::Configuration& getConfig() const { return config_; }
 
         /**
          * @brief Return the current or last used run identifier
@@ -172,6 +167,11 @@ namespace constellation::satellite {
          */
         void update_config(const config::Configuration& partial_config);
 
+        /**
+         * @brief Set a new status message
+         */
+        void set_status(std::string status) { status_ = std::move(status); }
+
     public:
         /// @cond doxygen_suppress
         virtual void initializing(config::Configuration& config) = 0;
@@ -181,8 +181,8 @@ namespace constellation::satellite {
         virtual void starting(std::string_view run_identifier) = 0;
         virtual void stopping() = 0;
         virtual void running(const std::stop_token& stop_token) = 0;
-        virtual void interrupting(State previous_state) = 0;
-        virtual void failure(State previous_state) = 0;
+        virtual void interrupting(protocol::CSCP::State previous_state) = 0;
+        virtual void failure(protocol::CSCP::State previous_state) = 0;
         /// @endcond
 
     private:
@@ -193,14 +193,13 @@ namespace constellation::satellite {
         void starting_wrapper(std::string run_identifier);
         void stopping_wrapper();
         void running_wrapper(const std::stop_token& stop_token);
-        void interrupting_wrapper(State previous_state);
-        void failure_wrapper(State previous_state);
+        void interrupting_wrapper(protocol::CSCP::State previous_state);
+        void failure_wrapper(protocol::CSCP::State previous_state);
 
     protected:
         log::Logger logger_; // NOLINT(misc-non-private-member-variables-in-classes)
 
     private:
-        zmq::context_t context_;
         zmq::socket_t rep_socket_;
         utils::Port port_;
 

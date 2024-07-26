@@ -9,6 +9,7 @@
 
 #include "CMDP1Message.hpp"
 
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -18,15 +19,18 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
-#include "constellation/core/logging/Level.hpp"
+#include "constellation/core/log/Level.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/core/metrics/Metric.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
+using namespace constellation::config;
 using namespace constellation::log;
 using namespace constellation::message;
+using namespace constellation::metrics;
 using namespace constellation::utils;
 using namespace std::literals::string_literals;
 
@@ -35,6 +39,10 @@ CMDP1Message::CMDP1Message(std::string topic, CMDP1Message::Header header, messa
 
 bool CMDP1Message::isLogMessage() const {
     return topic_.starts_with("LOG/");
+}
+
+bool CMDP1Message::isStatMessage() const {
+    return topic_.starts_with("STAT/");
 }
 
 zmq::multipart_t CMDP1Message::assemble() {
@@ -124,6 +132,30 @@ std::string_view CMDP1LogMessage::getLogMessage() const {
 }
 
 CMDP1LogMessage CMDP1LogMessage::disassemble(zmq::multipart_t& frames) {
+    // Use disassemble from base class and cast via constructor
+    return {CMDP1Message::disassemble(frames)};
+}
+
+CMDP1StatMessage::CMDP1StatMessage(std::string topic, CMDP1Message::Header header, std::shared_ptr<metrics::Metric> metric)
+    : CMDP1Message("STAT/" + transform(topic, ::toupper), std::move(header), metric->assemble()),
+      stat_topic_(std::move(topic)), metric_(std::move(metric)) {}
+
+CMDP1StatMessage::CMDP1StatMessage(CMDP1Message&& message) : CMDP1Message(std::move(message)) {
+    if(!isStatMessage()) {
+        throw MessageDecodingError("Not a statistics message");
+    }
+
+    // Assign topic after prefix "STAT/"
+    stat_topic_ = getTopic().substr(5);
+
+    try {
+        metric_ = std::make_shared<Metric>(Metric::disassemble(get_payload()));
+    } catch(const std::invalid_argument& e) {
+        throw MessageDecodingError(e.what());
+    }
+}
+
+CMDP1StatMessage CMDP1StatMessage::disassemble(zmq::multipart_t& frames) {
     // Use disassemble from base class and cast via constructor
     return {CMDP1Message::disassemble(frames)};
 }

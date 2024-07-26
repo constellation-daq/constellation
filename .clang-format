@@ -5,35 +5,26 @@
 Language: Cpp
 Standard: c++20
 BasedOnStyle: LLVM
-SortIncludes: CaseInsensitive
 AccessModifierOffset: -4
-AlignConsecutiveAssignments: false
-AlignConsecutiveDeclarations: false
-AllowShortIfStatementsOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Inline
 BinPackParameters: false
 BinPackArguments: false
 ColumnLimit: 125
-ConstructorInitializerAllOnOneLineOrOnePerLine: false
-DerivePointerAlignment: false
-ExperimentalAutoDetectBinPacking: false
+IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex:           '^<.*>'
-    Priority:        1
-  - Regex:           '^<.*\.h*>'
-    Priority:        2
-  - Regex:           '.*'
-    Priority:        3
-IndentCaseLabels: false
-NamespaceIndentation: All
-PointerAlignment: Left
-SpaceBeforeParens: Never
-Cpp11BracedListStyle: true
-SpaceBeforeCpp11BracedList: true
+  - Regex:    '^<[^/\.]+>$'
+    Priority: 1
+  - Regex:    '^<.+\.h.*>$'
+    Priority: 2
+  - Regex:    '^"constellation/.+"$'
+    Priority: 3
+IncludeIsMainSourceRegex: '\.ipp$'
 IndentWidth: 4
-TabWidth: 4
-UseTab: Never
-ContinuationIndentWidth: 4
+NamespaceIndentation: All
 PenaltyReturnTypeOnItsOwnLine: 100
+PointerAlignment: Left
+SortIncludes: CaseInsensitive
+SpaceBeforeParens: Never
+SpaceBeforeCpp11BracedList: true
 ...

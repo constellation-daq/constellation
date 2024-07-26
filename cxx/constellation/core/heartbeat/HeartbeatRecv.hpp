@@ -22,7 +22,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
-#include "constellation/core/subscriber/SubscriberPool.hpp"
+#include "constellation/core/pools/SubscriberPool.hpp"
 
 namespace constellation::heartbeat {
 
@@ -33,7 +33,7 @@ namespace constellation::heartbeat {
      * services in the constellation and listens for heartbeat and extrasystole messages from remote satellites and forwards
      * them to a callback registered upon creation of the receiver
      */
-    class HeartbeatRecv : public utils::SubscriberPool<message::CHP1Message> {
+    class HeartbeatRecv : public pools::SubscriberPool<message::CHP1Message> {
     public:
         /**
          * @brief Construct heartbeat receiver
@@ -41,9 +41,9 @@ namespace constellation::heartbeat {
          * @param callback Callback function pointer for received heartbeat messages
          */
         HeartbeatRecv(std::function<void(const message::CHP1Message&)> callback)
-            : SubscriberPool<message::CHP1Message>(chirp::HEARTBEAT, logger_, std::move(callback), {""}), logger_("CHP") {}
-
-    private:
-        log::Logger logger_;
+            : SubscriberPool<message::CHP1Message>(chirp::HEARTBEAT, "CHP", std::move(callback), {""}) {
+            // Start the receiver thread
+            start();
+        }
     };
 } // namespace constellation::heartbeat

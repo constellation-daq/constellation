@@ -20,12 +20,14 @@
 
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
-#include "constellation/core/message/Protocol.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/protocol/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std_future.hpp"
 
 using namespace constellation::message;
 using namespace constellation::utils;
+using namespace constellation::protocol;
 using namespace std::literals::string_view_literals;
 
 CHP1Message CHP1Message::disassemble(zmq::multipart_t& frames) {
@@ -65,7 +67,7 @@ CHP1Message CHP1Message::disassemble(zmq::multipart_t& frames) {
 
         // Unpack remote state
         const auto msgpack_state = msgpack::unpack(to_char_ptr(frame.data()), frame.size(), offset);
-        const auto state = static_cast<State>(msgpack_state->as<std::uint8_t>());
+        const auto state = static_cast<CSCP::State>(msgpack_state->as<std::uint8_t>());
 
         // Unpack time interval
         const auto msgpack_interval = msgpack::unpack(to_char_ptr(frame.data()), frame.size(), offset);

@@ -8,9 +8,9 @@
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
-#include "constellation/core/logging/log.hpp"
-#include "constellation/core/logging/Logger.hpp"
-#include "constellation/core/logging/SinkManager.hpp"
+#include "constellation/core/log/log.hpp"
+#include "constellation/core/log/Logger.hpp"
+#include "constellation/core/log/SinkManager.hpp"
 
 using namespace constellation::log;
 
@@ -19,14 +19,14 @@ using namespace constellation::log;
 TEST_CASE("Delayed first message", "[logging]") {
     // First message is delayed by 500ms, so call this here for better timing analysis
     SinkManager::getInstance().updateCMDPLevels(TRACE);
-    SinkManager::getInstance().setGlobalConsoleLevel(OFF);
+    SinkManager::getInstance().setConsoleLevels(OFF);
     auto logger = Logger("DelayedFirstMessage");
     LOG(logger, TRACE) << "";
     SinkManager::getInstance().updateCMDPLevels(OFF);
 }
 
 TEST_CASE("Default logger", "[logging]") {
-    SinkManager::getInstance().setGlobalConsoleLevel(TRACE);
+    SinkManager::getInstance().setConsoleLevels(TRACE);
     LOG(Logger::getDefault(), STATUS) << "Message from default logger";
     // Default logger is not destructed and thus requires manual flushing
     Logger::getDefault().flush();
@@ -35,7 +35,7 @@ TEST_CASE("Default logger", "[logging]") {
 TEST_CASE("Basic logging", "[logging]") {
     auto logger = Logger("BasicLogging");
 
-    SinkManager::getInstance().setGlobalConsoleLevel(TRACE);
+    SinkManager::getInstance().setConsoleLevels(TRACE);
     REQUIRE(logger.shouldLog(TRACE));
 
     LOG(logger, TRACE) << "trace"sv;
@@ -48,7 +48,7 @@ TEST_CASE("Basic logging", "[logging]") {
 
 TEST_CASE("Logging with default logger", "[logging]") {
 
-    SinkManager::getInstance().setGlobalConsoleLevel(TRACE);
+    SinkManager::getInstance().setConsoleLevels(TRACE);
 
     LOG(TRACE) << "trace"sv;
     LOG(DEBUG) << "debug"sv;
@@ -68,7 +68,7 @@ TEST_CASE("Logging from const function", "[logging]") {
         Logger logger_ {"ConstLogging"};
     };
 
-    SinkManager::getInstance().setGlobalConsoleLevel(TRACE);
+    SinkManager::getInstance().setConsoleLevels(TRACE);
     const LogTest log_test {};
     log_test.log();
 }
@@ -76,7 +76,7 @@ TEST_CASE("Logging from const function", "[logging]") {
 TEST_CASE("Logging macros", "[logging]") {
     auto logger = Logger("LoggingMacros");
 
-    SinkManager::getInstance().setGlobalConsoleLevel(TRACE);
+    SinkManager::getInstance().setConsoleLevels(TRACE);
 
     int count_once {0};
     int count_n {0};
@@ -95,7 +95,7 @@ TEST_CASE("Logging macros", "[logging]") {
 
 TEST_CASE("Logging macros with default logger", "[logging]") {
 
-    SinkManager::getInstance().setGlobalConsoleLevel(TRACE);
+    SinkManager::getInstance().setConsoleLevels(TRACE);
 
     int count_once {0};
     int count_n {0};
@@ -113,29 +113,44 @@ TEST_CASE("Logging macros with default logger", "[logging]") {
 }
 
 TEST_CASE("Log levels", "[logging]") {
-    auto logger = Logger("LogLevels", INFO);
+    auto logger = Logger("LogLevels");
 
-    SinkManager::getInstance().setGlobalConsoleLevel(STATUS);
+    SinkManager::getInstance().setConsoleLevels(STATUS);
     SinkManager::getInstance().updateCMDPLevels(STATUS);
-
-    REQUIRE_FALSE(logger.shouldLog(DEBUG));
-    REQUIRE(logger.shouldLog(INFO));
+    REQUIRE(logger.getLogLevel() == STATUS);
 
     // Test global CMDP subscription
     SinkManager::getInstance().updateCMDPLevels(DEBUG);
-    REQUIRE(logger.shouldLog(DEBUG));
+    REQUIRE(logger.getLogLevel() == DEBUG);
 
     // Test global CMDP unsubscription
     SinkManager::getInstance().updateCMDPLevels(OFF);
-    REQUIRE_FALSE(logger.shouldLog(DEBUG));
+    REQUIRE(logger.getLogLevel() == STATUS);
 
     // Test topic CMDP subscription - topics are uppercase
     SinkManager::getInstance().updateCMDPLevels(STATUS, {{"LOGLEVELS", DEBUG}});
-    REQUIRE(logger.shouldLog(DEBUG));
+    REQUIRE(logger.getLogLevel() == DEBUG);
 
     // Test topic CMDP subscription via matching - topics are uppercase
     SinkManager::getInstance().updateCMDPLevels(STATUS, {{"LOGLEVELS", DEBUG}, {"LOGLE", TRACE}});
-    REQUIRE(logger.shouldLog(TRACE));
+    REQUIRE(logger.getLogLevel() == TRACE);
+
+    // Test higher CMDP topic level higher than global does not lower logger level
+    SinkManager::getInstance().updateCMDPLevels(DEBUG, {{"LOGLEVELS", INFO}});
+    REQUIRE(logger.getLogLevel() == DEBUG);
+
+    // Test higher console level than CMDP level does not lower global level
+    SinkManager::getInstance().setConsoleLevels(WARNING, {{"LOGLEVELS", CRITICAL}});
+    REQUIRE(logger.getLogLevel() == DEBUG);
+
+    // Test global console level
+    SinkManager::getInstance().updateCMDPLevels(OFF, {{"LOGLEVELS", CRITICAL}});
+    SinkManager::getInstance().setConsoleLevels(TRACE);
+    REQUIRE(logger.getLogLevel() == TRACE);
+
+    // Test topic console level overwrites global console level
+    SinkManager::getInstance().setConsoleLevels(TRACE, {{"LOGLEVELS", WARNING}});
+    REQUIRE(logger.getLogLevel() == WARNING);
 }
 
 TEST_CASE("Ephemeral CMDP port", "[logging]") {

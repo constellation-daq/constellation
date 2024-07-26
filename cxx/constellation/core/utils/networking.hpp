@@ -15,6 +15,8 @@
 
 #include <zmq.hpp>
 
+#include "constellation/build.hpp"
+
 namespace constellation::utils {
 
     /**
@@ -33,7 +35,7 @@ namespace constellation::utils {
      * @param socket Reference to socket which should be bound
      * @return Ephemeral port assigned by operating system
      */
-    static inline Port bind_ephemeral_port(zmq::socket_t& socket) {
+    CNSTLN_API inline Port bind_ephemeral_port(zmq::socket_t& socket) {
         Port port {};
 
         // Bind to wildcard address and port to let operating system assign an ephemeral port
@@ -47,6 +49,18 @@ namespace constellation::utils {
         std::from_chars(port_substr.cbegin(), port_substr.cend(), port);
 
         return port;
+    }
+
+    /**
+     * @brief Return the global ZeroMQ context
+     *
+     * @note Since the global ZeroMQ context is static, static classes need to store an instance of the shared pointer.
+     *
+     * @return Shared pointer to the global ZeroMQ context
+     */
+    CNSTLN_API inline std::shared_ptr<zmq::context_t>& global_zmq_context() {
+        static auto context = std::make_shared<zmq::context_t>();
+        return context;
     }
 
 } // namespace constellation::utils

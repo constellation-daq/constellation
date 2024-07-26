@@ -10,15 +10,14 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <source_location>
 #include <sstream>
-#include <string>
+#include <string_view>
 
 #include <spdlog/async_logger.h>
 
 #include "constellation/build.hpp"
-#include "constellation/core/logging/Level.hpp"
+#include "constellation/core/log/Level.hpp"
 
 namespace constellation::log {
     /**
@@ -54,15 +53,14 @@ namespace constellation::log {
 
     public:
         /**
-         * Constructor a new logger
+         * @brief Constructor a new logger
          *
-         * @param topic Name (topic) of the logger
-         * @param console_level Optional log level for console output to overwrite global level
+         * @param topic Topic of the logger (which is the name of the spdlog logger)
          */
-        CNSTLN_API Logger(std::string topic, std::optional<Level> console_level = std::nullopt);
+        CNSTLN_API Logger(std::string_view topic);
 
         /**
-         * Return the default logger
+         * @brief Return the default logger
          */
         CNSTLN_API static Logger& getDefault();
 
@@ -77,7 +75,7 @@ namespace constellation::log {
         /// @endcond
 
         /**
-         * Check if a message should be logged given the currently configured log level
+         * @brief Check if a message should be logged given the currently configured log level
          *
          * @param level Log level to be tested against the logger configuration
          * @return Boolean indicating if the message should be logged
@@ -85,18 +83,27 @@ namespace constellation::log {
         inline bool shouldLog(Level level) const { return spdlog_logger_->should_log(to_spdlog_level(level)); }
 
         /**
-         * Log a message using a stream
+         * @brief Return the current log level of the logger
+         *
+         * @note This should not be used to determine if logging should take place, instead `shouldLog()` should be used
+         *
+         * @return Current log level
+         */
+        inline Level getLogLevel() const { return from_spdlog_level(spdlog_logger_->level()); }
+
+        /**
+         * @brief Log a message using a stream
          *
          * @param level Log level of the log message
          * @param src_loc Source code location from which the log message emitted
-         * @return a LogStream object
+         * @return `LogStream` to which the log message can be streamed
          */
         inline LogStream log(Level level, std::source_location src_loc = std::source_location::current()) const {
             return {*this, level, src_loc};
         }
 
         /**
-         * Log a message
+         * @brief Log a message
          *
          * @param level Level of the log message
          * @param message Log message
@@ -111,7 +118,7 @@ namespace constellation::log {
         }
 
         /**
-         * Flush each spdlog sink (synchronously)
+         * @brief Flush each spdlog sink (synchronously)
          */
         CNSTLN_API void flush();
 

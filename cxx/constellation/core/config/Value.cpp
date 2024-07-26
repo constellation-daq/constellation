@@ -20,9 +20,11 @@
 
 #include <msgpack.hpp>
 
+#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
+using namespace constellation::message;
 using namespace constellation::utils;
 
 std::string Value::str() const {
@@ -139,4 +141,15 @@ void Value::msgpack_unpack(const msgpack::object& msgpack_object) {
         }
         }
     }
+}
+
+PayloadBuffer Value::assemble() const {
+    msgpack::sbuffer sbuf {};
+    msgpack::pack(sbuf, *this);
+    return {std::move(sbuf)};
+}
+
+Value Value::disassemble(const PayloadBuffer& message) {
+    const auto msgpack_dict = msgpack::unpack(to_char_ptr(message.span().data()), message.span().size());
+    return msgpack_dict->as<Value>();
 }

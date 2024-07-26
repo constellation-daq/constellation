@@ -9,8 +9,10 @@
 
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <utility>
@@ -19,16 +21,20 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Configuration.hpp"
-#include "constellation/core/logging/Logger.hpp"
+#include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
-#include "constellation/satellite/fsm_definitions.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 
 namespace constellation::satellite {
     class BaseSatellite;
 
     class FSM {
     public:
+        using State = protocol::CSCP::State;
+        using Transition = protocol::CSCP::Transition;
+        using TransitionCommand = protocol::CSCP::TransitionCommand;
+
         /** Payload of a transition function: variant with config, partial_config or run identifier */
         using TransitionPayload = std::variant<std::monostate, config::Configuration, std::string>;
 
@@ -62,7 +68,7 @@ namespace constellation::satellite {
         /**
          * @brief Returns the current state of the FSM
          */
-        constexpr State getState() const { return state_; }
+        State getState() const { return state_.load(); }
 
         /**
          * @brief Check if a FSM transition is allowed in current state
@@ -106,9 +112,11 @@ namespace constellation::satellite {
          * This function waits for the next steady state and performs an interrupt if in ORBIT or RUN state, otherwise
          * nothing is done. It guarantees that the FSM is in a state where the satellite can be safely shut down.
          *
+         * @param reason Reason for the requested interrupt
+         *
          * @warning This function is not thread safe, meaning that no other react command should be called during execution.
          */
-        CNSTLN_API void interrupt();
+        CNSTLN_API void requestInterrupt(std::string_view reason);
 
         /**
          * @brief Registering a callback to be executed when a new state was entered
@@ -118,9 +126,7 @@ namespace constellation::satellite {
          *
          * @param callback Callback taking the new state as argument
          */
-        void registerStateCallback(std::function<void(State)> callback) {
-            state_callbacks_.emplace_back(std::move(callback));
-        }
+        CNSTLN_API void registerStateCallback(std::function<void(State)> callback);
 
     private:
         /**
@@ -231,15 +237,17 @@ namespace constellation::satellite {
         // clang-format on
 
     private:
-        State state_ {State::NEW};
+        std::atomic<State> state_ {State::NEW};
         BaseSatellite* satellite_;
         log::Logger logger_;
+        std::mutex transition_mutex_;
         std::thread transitional_thread_;
         std::jthread run_thread_;
         std::thread failure_thread_;
 
         /** State update callback */
         std::vector<std::function<void(State)>> state_callbacks_;
+        std::mutex state_callbacks_mutex_;
     };
 
 } // namespace constellation::satellite

@@ -22,13 +22,14 @@
 
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/exceptions.hpp"
-#include "constellation/core/message/Protocol.hpp"
+#include "constellation/core/protocol/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
 using namespace constellation::message;
 using namespace constellation::utils;
+using namespace constellation::protocol;
 using namespace std::literals::string_view_literals;
 
 // Similar to CDTP1Header::disassemble in CDTP1Header.cpp, check when modifying

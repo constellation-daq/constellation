@@ -34,6 +34,7 @@ CheckOptions:
   modernize-use-override.IgnoreDestructors: 'true'
   cppcoreguidelines-avoid-do-while.IgnoreMacros: 'true'
   readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.NamespaceIgnoredRegexp: '^CHIRP$|^CHP$|^CSCP$|^CMDP$|^CDTP$'
   readability-identifier-naming.ClassCase: CamelCase
   readability-identifier-naming.ClassIgnoredRegexp: '^is_.+$'
   readability-identifier-naming.PublicMethodCase: camelBack

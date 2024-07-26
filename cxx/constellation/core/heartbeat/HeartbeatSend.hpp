@@ -21,7 +21,7 @@
 #include <zmq.hpp>
 
 #include "constellation/build.hpp"
-#include "constellation/core/message/satellite_definitions.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/networking.hpp"
 
 namespace constellation::heartbeat {
@@ -40,7 +40,7 @@ namespace constellation::heartbeat {
          * @param interval Interval at which the heartbeats are sent
          */
         CNSTLN_API HeartbeatSend(std::string sender,
-                                 std::function<message::State()> state_callback,
+                                 std::function<protocol::CSCP::State()> state_callback,
                                  std::chrono::milliseconds interval);
 
         /** Destructor which unregisters the CHIRP heartbeat service and stops the heartbeat thread */
@@ -85,8 +85,6 @@ namespace constellation::heartbeat {
         void loop(const std::stop_token& stop_token);
 
     private:
-        /** ZMQ context for the emitting socket */
-        zmq::context_t context_;
         /** Publisher socket for emitting heartbeats */
         zmq::socket_t pub_socket_;
         /** Ephemeral port selected for the heartbeat emission */
@@ -95,11 +93,11 @@ namespace constellation::heartbeat {
         /** Canonical sender name */
         std::string sender_;
         /** Function returning the current state */
-        std::function<message::State()> state_callback_;
+        std::function<protocol::CSCP::State()> state_callback_;
         /** Maximum heartbeat broadcasting interval */
         std::atomic<std::chrono::milliseconds> interval_;
 
-        std::condition_variable cv_;
+        std::condition_variable_any cv_;
         std::mutex mutex_;
         std::jthread sender_thread_;
     };

@@ -21,6 +21,7 @@
 #include <msgpack/sbuffer_decl.hpp>
 
 #include "constellation/build.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/type.hpp"
 
 namespace constellation::config {
@@ -104,6 +105,12 @@ namespace constellation::config {
 
         /** Unpack value with msgpack */
         CNSTLN_API void msgpack_unpack(const msgpack::object& msgpack_object);
+
+        /** Assemble list via msgpack to message payload */
+        CNSTLN_API message::PayloadBuffer assemble() const;
+
+        /** Disassemble list from message payload */
+        CNSTLN_API static Value disassemble(const message::PayloadBuffer& message);
     };
 } // namespace constellation::config
 

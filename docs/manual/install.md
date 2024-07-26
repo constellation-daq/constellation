@@ -74,7 +74,7 @@ Assuming `${HOMEBREW_PREFIX}` is set (likely `/opt/homebrew`, can otherwise be f
 export CXX="${HOMEBREW_PREFIX}/opt/llvm/bin/clang++"
 export CC="${HOMEBREW_PREFIX}/opt/llvm/bin/clang"
 export LDFLAGS="-L${HOMEBREW_PREFIX}/opt/llvm/lib/c++ -Wl,-rpath,${HOMEBREW_PREFIX}/opt/llvm/lib/c++"
-export CXXFLAGS="-fexperimental-library"
+export CXXFLAGS="-fexperimental-library -DASIO_HAS_SNPRINTF"
 ```
 
 :::
