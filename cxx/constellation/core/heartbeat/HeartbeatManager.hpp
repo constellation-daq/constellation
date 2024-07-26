@@ -123,7 +123,7 @@ namespace constellation::heartbeat {
         /** Map of remotes this manager tracks */
         std::map<std::string, Remote> remotes_;
         std::mutex mutex_;
-        std::condition_variable_any cv_;
+        std::condition_variable cv_;
 
         log::Logger logger_;
 

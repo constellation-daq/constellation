@@ -228,6 +228,7 @@ class CaenNDT1470Manager:
         """Disconnect the module."""
         if self.connected:
             self._handle.close()
+            self._handle = None
             self.connected = False
 
     def command(self, bd: int, ch: int, par: str, val: Any = None) -> Any:
@@ -314,6 +315,8 @@ class CaenNDT1470Manager:
         elif isinstance(self._handle, serial.Serial):
             # serial
             buffer = self._handle.read(1024).decode()
+        else:
+            raise RuntimeError("No device connected!")
         return buffer
 
     def __enter__(self):

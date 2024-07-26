@@ -33,7 +33,11 @@ class CaenHvSatellite(Satellite):
         )
         if getattr(self, "caen", None):
             # old connection
-            self.caen.disconnect()
+            self.log.info("Disconnecting from previously connected CAEN module")
+            # avoid that metric thread tries to access object
+            self.reset_scheduled_metrics()
+            with self.caen as crate:
+                crate.disconnect()
         # SY5527 and similar: pycaenhv
         system = configuration["system"]
         link = configuration["link"]

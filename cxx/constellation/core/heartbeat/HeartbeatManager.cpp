@@ -15,6 +15,7 @@
 #include <iterator>
 #include <mutex>
 #include <optional>
+#include <stop_token>
 #include <string>
 #include <utility>
 
@@ -87,11 +88,15 @@ void HeartbeatManager::process_heartbeat(const CHP1Message& msg) {
 }
 
 void HeartbeatManager::run(const std::stop_token& stop_token) {
-    std::unique_lock<std::mutex> lock {mutex_};
+    // Notify condition variable when stop is requested
+    const std::stop_callback stop_callback {stop_token, [&]() { cv_.notify_all(); }};
+
     auto wakeup = std::chrono::system_clock::now() + 3s;
 
-    // Wait until cv is notified, timeout is reached or stop is requested, returns true if stop requested
-    while(!cv_.wait_until(lock, stop_token, wakeup, [&]() { return stop_token.stop_requested(); })) {
+    while(!stop_token.stop_requested()) {
+        std::unique_lock<std::mutex> lock {mutex_};
+        // Wait until condition variable is notified or timeout is reached
+        cv_.wait_until(lock, wakeup);
 
         // Calculate the next wake-up by checking when the next heartbeat times out, but time out after 3s anyway:
         wakeup = std::chrono::system_clock::now() + 3s;

@@ -64,10 +64,13 @@ void HeartbeatSend::sendExtrasystole() {
 }
 
 void HeartbeatSend::loop(const std::stop_token& stop_token) {
-    std::unique_lock<std::mutex> lock {mutex_};
+    // Notify condition variable when stop is requested
+    const std::stop_callback stop_callback {stop_token, [&]() { cv_.notify_all(); }};
 
-    // Wait until cv is notified, timeout is reached or stop is requested, returns true if stop requested
-    while(!cv_.wait_for(lock, stop_token, interval_.load() / 2, [&]() { return stop_token.stop_requested(); })) {
+    while(!stop_token.stop_requested()) {
+        std::unique_lock<std::mutex> lock {mutex_};
+        // Wait until condition variable is notified or timeout is reached
+        cv_.wait_for(lock, interval_.load() / 2);
 
         // Publish CHP message with current state
         CHP1Message(sender_, state_callback_(), interval_.load()).assemble().send(pub_socket_);
