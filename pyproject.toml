@@ -43,6 +43,8 @@ DemoSatellite = "constellation.core.satellite:main"
 DemoDataSender = "constellation.core.datasender:main"
 DemoHeartbeatChecker = "constellation.core.heartbeatchecker:main"
 DemoHeartbeatSender = "constellation.core.heartbeater:main"
+# GUI
+MinimalistGUI = "constellation.controller.minimalist_gui_controller:main"
 # tools
 ConstellationListInterfaces = "constellation.tools.list_interfaces:main"
 # 3rd-party Satellites
@@ -80,6 +82,7 @@ docs = [
 ]
 # Feature components
 cli = ["ipython"]
+gui = ["pyqt5"]
 hdf5 = ["h5py"]
 caenhv = ["pycaenhv>=0.03", "pyserial"]
 
