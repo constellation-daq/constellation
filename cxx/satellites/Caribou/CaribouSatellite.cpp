@@ -184,19 +184,18 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
     if(!config_file.is_open()) {
         throw SatelliteError("Could not open configuration file \"" + config_file_path.string() + "\"");
     }
-    auto caribou_config = caribou::Configuration(config_file);
+    auto caribou_configs = caribou::ConfigParser(config_file);
 
     // Select section from the configuration file relevant for this device
-    const auto sections = caribou_config.GetSections();
-    if(std::find(sections.cbegin(), sections.cend(), device_class_) == sections.cend()) {
+    if(!caribou_configs.Has(device_class_)) {
         throw SatelliteError("Could not find section for device \"" + device_class_ + "\" in config file \"" +
                              config_file_path.string() + "\"");
     }
-    caribou_config.SetSection(device_class_);
+    const auto device_config = caribou_configs.GetConfig(device_class_);
 
     std::lock_guard<std::mutex> lock {device_mutex_};
     try {
-        const auto device_id = manager_->addDevice(device_class_, caribou_config);
+        const auto device_id = manager_->addDevice(device_class_, device_config);
         LOG(INFO) << "Manager returned device ID " << device_id << ", fetching device...";
         device_ = manager_->getDevice(device_id);
     } catch(const caribou::DeviceException& error) {
@@ -206,11 +205,10 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
     // Add secondary device if it is configured
     if(config.has("secondary_device")) {
         const auto secondary = config.get<std::string>("secondary_device");
-        if(std::find(sections.begin(), sections.end(), secondary) != sections.end()) {
-            caribou_config.SetSection(secondary);
-        }
+        const auto secondary_config =
+            (caribou_configs.Has(secondary) ? caribou_configs.GetConfig(secondary) : caribou::Configuration {});
         try {
-            const auto device_id2 = manager_->addDevice(secondary, caribou_config);
+            const auto device_id2 = manager_->addDevice(secondary, secondary_config);
             LOG(INFO) << "Manager returned device ID " << device_id2 << ", fetching secondary device...";
             secondary_device_ = manager_->getDevice(device_id2);
         } catch(const caribou::DeviceException& error) {
