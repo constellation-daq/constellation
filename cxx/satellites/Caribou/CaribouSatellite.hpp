@@ -22,7 +22,7 @@
 
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/Logger.hpp"
-#include "constellation/satellite/Satellite.hpp"
+#include "constellation/satellite/TransmitterSatellite.hpp"
 
 class PearyLogger final : public std::stringbuf {
 public:
@@ -35,7 +35,7 @@ private:
     constellation::log::Logger logger_;
 };
 
-class CaribouSatellite : public constellation::satellite::Satellite {
+class CaribouSatellite : public constellation::satellite::TransmitterSatellite {
 public:
     CaribouSatellite(std::string_view type, std::string_view name);
 
