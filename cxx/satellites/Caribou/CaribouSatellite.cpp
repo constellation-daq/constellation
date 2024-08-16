@@ -342,7 +342,8 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
                 current_frames++;
             }
 
-            if(current_frames % number_of_frames_ == 0) {
+            // If this message has all its frames, send it:
+            if(msg.countFrames() == number_of_frames_) {
 
                 const auto success = sendDataMessage(msg);
                 if(!success) {
