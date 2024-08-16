@@ -54,7 +54,7 @@ private:
     QString current_run_;
     QDateTime run_start_time_;
 
-    static std::map<constellation::protocol::CSCP::State, QString> state_str_;
+    QString get_state_str(constellation::protocol::CSCP::State state, bool global_) const;
 
     QTimer m_timer_display;
 

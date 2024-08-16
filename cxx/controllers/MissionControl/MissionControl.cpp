@@ -34,7 +34,7 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
 
     // Set initial values for header bar
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
-    labelState->setText(state_str_.at(runcontrol_.getLowestState()));
+    labelState->setText(get_state_str(runcontrol_.getLowestState(), runcontrol_.isInGlobalState()));
     labelNrSatellites->setText("<font color='gray'><b>" + QString::number(runcontrol_.getConnections().size()) +
                                "</b></font>");
 
@@ -248,7 +248,7 @@ void RunControlGUI::updateInfos() {
     runSequence->setEnabled(state != CSCP::State::RUN && state != CSCP::State::starting && state != CSCP::State::stopping);
 
     // Update state display
-    labelState->setText(state_str_.at(state));
+    labelState->setText(get_state_str(state, runcontrol_.isInGlobalState()));
 
     // Update run timer:
     if(state == CSCP::State::RUN) {
@@ -285,20 +285,53 @@ void RunControlGUI::Exec() {
         LOG(logger_, CRITICAL) << "ERROR: RUNControlGUI::EXEC\n";
 }
 
-std::map<CSCP::State, QString> RunControlGUI::state_str_ = {
-    {CSCP::State::NEW, "<font color='gray'><b>New</b></font>"},
-    {CSCP::State::initializing, "<font color='gray'><b>Initializing...</b></font>"},
-    {CSCP::State::INIT, "<font color='gray'><b>Initialized</b></font>"},
-    {CSCP::State::launching, "<font color='orange'><b>Launching...</b></font>"},
-    {CSCP::State::landing, "<font color='orange'><b>Landing...</b></font>"},
-    {CSCP::State::reconfiguring, "<font color='orange'><b>Reconfiguring...</b></font>"},
-    {CSCP::State::ORBIT, "<font color='orange'><b>Orbiting</b></font>"},
-    {CSCP::State::starting, "<font color='green'><b>Starting...</b></font>"},
-    {CSCP::State::stopping, "<font color='green'><b>Stopping...</b></font>"},
-    {CSCP::State::RUN, "<font color='green'><b>Running</b></font>"},
-    {CSCP::State::SAFE, "<font color='red'><b>Safe Mode</b></font>"},
-    {CSCP::State::interrupting, "<font color='red'><b>Interrupting...</b></font>"},
-    {CSCP::State::ERROR, "<font color='darkred'><b>Error</b></font>"}};
+QString RunControlGUI::get_state_str(CSCP::State state, bool global) const {
+
+    QString global_indicatior = (global ? "" : " ≊");
+
+    switch(state) {
+    case CSCP::State::NEW: {
+        return "<font color='gray'><b>New</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::initializing: {
+        return "<font color='gray'><b>Initializing...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::INIT: {
+        return "<font color='gray'><b>Initialized</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::launching: {
+        return "<font color='orange'><b>Launching...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::landing: {
+        return "<font color='orange'><b>Landing...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::reconfiguring: {
+        return "<font color='orange'><b>Reconfiguring...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::ORBIT: {
+        return "<font color='orange'><b>Orbiting</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::starting: {
+        return "<font color='green'><b>Starting...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::stopping: {
+        return "<font color='green'><b>Stopping...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::RUN: {
+        return "<font color='green'><b>Running</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::SAFE: {
+        return "<font color='red'><b>Safe Mode</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::interrupting: {
+        return "<font color='red'><b>Interrupting...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::ERROR: {
+        return "<font color='darkred'><b>Error</b>" + global_indicatior + "</font>";
+    }
+    default: std::unreachable();
+    }
+}
 
 void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     QModelIndex index = viewConn->indexAt(point);
