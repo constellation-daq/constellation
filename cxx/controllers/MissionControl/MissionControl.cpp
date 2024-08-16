@@ -206,13 +206,6 @@ void RunControlGUI::on_btnStop_clicked() {
     runSequence->setValue(runSequence->value() + 1);
 }
 
-void RunControlGUI::on_btnReset_clicked() {
-    auto responses = runcontrol_.sendCommands("recover");
-    for(auto& response : responses) {
-        LOG(logger_, DEBUG) << "Recover: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
-    }
-}
-
 void RunControlGUI::on_btnLog_clicked() {
     const auto msg = txtLogmsg->text().toStdString();
     const auto level = static_cast<Level>(comboBoxLogLevel->currentIndex());
@@ -242,7 +235,6 @@ void RunControlGUI::updateInfos() {
     btnInit->setEnabled((state == CSCP::State::NEW || state == CSCP::State::INIT || state == CSCP::State::ERROR ||
                          state == CSCP::State::SAFE) &&
                         m.hasMatch());
-    btnReset->setEnabled(state == CSCP::State::SAFE && m.hasMatch());
 
     btnLand->setEnabled(state == CSCP::State::ORBIT);
     btnConfig->setEnabled(state == CSCP::State::INIT);

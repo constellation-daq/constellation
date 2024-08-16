@@ -36,7 +36,6 @@ private slots:
     void on_btnConfig_clicked();
     void on_btnStart_clicked();
     void on_btnStop_clicked();
-    void on_btnReset_clicked();
     void on_btnShutdown_clicked();
     void on_btnLog_clicked();
     void on_btnLoadConf_clicked();

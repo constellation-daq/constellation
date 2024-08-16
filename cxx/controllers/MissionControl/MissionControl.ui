@@ -262,7 +262,7 @@
           <property name="spacing">
            <number>8</number>
           </property>
-          <item row="4" column="4">
+          <item row="1" column="4">
            <widget class="QPushButton" name="btnLog">
             <property name="enabled">
              <bool>true</bool>
@@ -275,15 +275,12 @@
             </property>
            </widget>
           </item>
-          <item row="4" column="0">
+          <item row="1" column="0">
            <widget class="QLabel" name="labelLog">
             <property name="text">
              <string>Log: </string>
             </property>
            </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QWidget" name="spacer" native="true"/>
           </item>
           <item row="0" column="0">
            <widget class="QLabel" name="labelConfig">
@@ -302,7 +299,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="4">
+          <item row="2" column="4">
            <widget class="QSpinBox" name="runSequence">
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Run sequence&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -312,7 +309,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="3">
+          <item row="2" column="3">
            <widget class="QLabel" name="labelRunSeq">
             <property name="text">
              <string>Sequence:</string>
@@ -326,24 +323,24 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="2" column="0">
            <widget class="QLabel" name="labelRunIdent">
             <property name="text">
              <string>Run Identifier: </string>
             </property>
            </widget>
           </item>
-          <item row="3" column="2">
+          <item row="2" column="2">
            <widget class="QLineEdit" name="runIdentifier"/>
           </item>
-          <item row="4" column="2">
+          <item row="1" column="2">
            <widget class="QLineEdit" name="txtLogmsg">
             <property name="toolTip">
              <string>Send a log message</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="3">
+          <item row="1" column="3">
            <widget class="QComboBox" name="comboBoxLogLevel">
             <property name="currentIndex">
              <number>2</number>
@@ -408,19 +405,6 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="btnReset">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>Recover satellites from safe mode</string>
-            </property>
-            <property name="text">
-             <string>Recover</string>
-            </property>
-           </widget>
-          </item>
           <item row="2" column="0">
            <widget class="QPushButton" name="btnStart">
             <property name="enabled">
@@ -479,7 +463,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="0" column="1">
            <widget class="QPushButton" name="btnShutdown">
             <property name="enabled">
              <bool>false</bool>
@@ -499,54 +483,6 @@
      </widget>
     </item>
     <item row="2" column="0">
-     <widget class="QWidget" name="statusWidget" native="true">
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <widget class="QGroupBox" name="grpStatus">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>192</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="title">
-          <string>Status</string>
-         </property>
-         <layout class="QGridLayout">
-          <property name="leftMargin">
-           <number>9</number>
-          </property>
-          <property name="topMargin">
-           <number>9</number>
-          </property>
-          <property name="rightMargin">
-           <number>9</number>
-          </property>
-          <property name="bottomMargin">
-           <number>9</number>
-          </property>
-          <property name="horizontalSpacing">
-           <number>8</number>
-          </property>
-          <property name="verticalSpacing">
-           <number>4</number>
-          </property>
-          <item row="1" column="0">
-           <layout class="QGridLayout" name="grpGrid"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
-    <item row="3" column="0">
      <widget class="QWidget" name="connectionWidget" native="true">
       <layout class="QHBoxLayout" name="horizontalLayout_4">
        <item>
@@ -605,18 +541,17 @@
  <tabstops>
   <tabstop>txtConfigFileName</tabstop>
   <tabstop>btnLoadConf</tabstop>
-  <tabstop>runIdentifier</tabstop>
-  <tabstop>runSequence</tabstop>
   <tabstop>txtLogmsg</tabstop>
   <tabstop>comboBoxLogLevel</tabstop>
   <tabstop>btnLog</tabstop>
+  <tabstop>runIdentifier</tabstop>
+  <tabstop>runSequence</tabstop>
   <tabstop>btnInit</tabstop>
+  <tabstop>btnShutdown</tabstop>
   <tabstop>btnConfig</tabstop>
   <tabstop>btnLand</tabstop>
   <tabstop>btnStart</tabstop>
   <tabstop>btnStop</tabstop>
-  <tabstop>btnReset</tabstop>
-  <tabstop>btnShutdown</tabstop>
   <tabstop>viewConn</tabstop>
  </tabstops>
  <resources>
