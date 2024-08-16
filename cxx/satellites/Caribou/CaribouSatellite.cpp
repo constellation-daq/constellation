@@ -85,7 +85,7 @@ int PearyLogger::sync() {
 }
 
 CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
-    : Satellite(type, name), manager_(std::make_shared<caribou::DeviceManager>()) {
+    : TransmitterSatellite(type, name), manager_(std::make_shared<caribou::DeviceManager>()) {
 
     // This satellite supports reconfiguration:
     support_reconfigure();
@@ -311,6 +311,12 @@ void CaribouSatellite::stopping() {
 
 void CaribouSatellite::running(const std::stop_token& stop_token) {
 
+    // Keep track of current number of frames:
+    std::size_t current_frames = 0;
+
+    // Prepare data message
+    auto msg = newDataMessage(number_of_frames_);
+
     while(!stop_token.stop_requested()) {
         try {
             std::lock_guard<std::mutex> lock {device_mutex_};
@@ -320,16 +326,11 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
             const auto data = device_->getRawData();
 
             if(!data.empty()) {
-                // Create new data message for data sender
-                /*DataSender::Message msg {};
-
-                // Add data
-                msg.addDataFrame(std::move(data));
-
-                // FIXME we need to add number_of_frames_ to the message before sending!
+                // Add data to message
+                // msg.addFrame(std::move(data));
 
                 // Query ADC if wanted:
-                if(frame_nr_ % adc_freq_ == 0) {
+                if(current_frames % adc_freq_ == 0) {
                     if(!adc_signal_.empty()) {
                         auto adc_value = device_->getADC(adc_signal_);
                         LOG(DEBUG) << "ADC reading: " << adc_signal_ << " =  " << std::to_string(adc_value);
@@ -337,8 +338,19 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
                     }
                 }
 
-                // Send data (async)
-                data_sender_.sendData(std::move(msg));*/
+                // Increment frame counter
+                current_frames++;
+            }
+
+            if(current_frames % number_of_frames_ == 0) {
+
+                const auto success = sendDataMessage(msg);
+                if(!success) {
+                    LOG_N(WARNING, 5) << "Could not send message, skipping...";
+                }
+
+                // Create new data message
+                msg = newDataMessage(number_of_frames_);
             }
 
         } catch(caribou::NoDataAvailable&) {
