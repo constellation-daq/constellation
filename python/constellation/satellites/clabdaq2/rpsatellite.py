@@ -135,11 +135,12 @@ class RedPitayaSatellite(DataSender):
         self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
         rp.rp_Init()
 
-    def do_reconfiguring(self, payload: any) -> str:
+    def do_reconfigure(self, payload: any) -> str:
         # Writes FPGA configurations to register
         names = [field[0] for field in self.axi_regset_config.descr]
         for name, value in zip(names, self.config_axi_array_contents):
             setattr(self.config_axi_array_contents, name, self.config[name])
+        return "Reconfigured"
 
     def do_initializing(self, payload: any) -> str:
         try:
@@ -404,7 +405,7 @@ class RedPitayaSatellite(DataSender):
         else:
             if (
                 self._writepos < (self._readpos + 10000)
-                and -time.time() - self.sample_time < 2
+                and time.time() - self.sample_time < 2
             ):
                 time.sleep(0.01)
                 return None
