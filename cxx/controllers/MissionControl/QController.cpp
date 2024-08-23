@@ -1,4 +1,4 @@
-#include "QRunControl.hpp"
+#include "QController.hpp"
 
 #include <string>
 #include <vector>
@@ -13,10 +13,10 @@ using namespace constellation::config;
 using namespace constellation::controller;
 using namespace constellation::protocol;
 
-QRunControl::QRunControl(std::string_view controller_name, QObject* parent)
-    : QAbstractListModel(parent), Controller(controller_name) {}
+QController::QController(std::string controller_name, QObject* parent)
+    : QAbstractListModel(parent), Controller(std::move(controller_name)) {}
 
-QVariant QRunControl::data(const QModelIndex& index, int role) const {
+QVariant QController::data(const QModelIndex& index, int role) const {
 
     if(role != Qt::DisplayRole || !index.isValid()) {
         return QVariant();
@@ -64,7 +64,7 @@ QVariant QRunControl::data(const QModelIndex& index, int role) const {
     }
 }
 
-QVariant QRunControl::headerData(int section, Qt::Orientation orientation, int role) const {
+QVariant QController::headerData(int section, Qt::Orientation orientation, int role) const {
     if(role != Qt::DisplayRole)
         return QVariant();
 
@@ -74,11 +74,11 @@ QVariant QRunControl::headerData(int section, Qt::Orientation orientation, int r
     return QVariant();
 }
 
-void QRunControl::reached_state(CSCP::State state) {
+void QController::reached_state(CSCP::State state) {
     emit reachedGlobalState(state);
 }
 
-void QRunControl::propagate_update(UpdateType type, std::size_t position, std::size_t total) {
+void QController::propagate_update(UpdateType type, std::size_t position, std::size_t total) {
     if(type == UpdateType::ADDED) {
         beginInsertRows(QModelIndex(), position, position);
         endInsertRows();
@@ -95,7 +95,7 @@ void QRunControl::propagate_update(UpdateType type, std::size_t position, std::s
     emit dataChanged(createIndex(0, 0), createIndex(position, headers_.size() - 1));
 }
 
-Dictionary QRunControl::getQCommands(const QModelIndex& index) {
+Dictionary QController::getQCommands(const QModelIndex& index) {
     std::unique_lock<std::mutex> lock(connection_mutex_);
 
     // Select connection by index:
@@ -110,7 +110,7 @@ Dictionary QRunControl::getQCommands(const QModelIndex& index) {
     return Dictionary::disassemble(msg.getPayload());
 }
 
-std::string QRunControl::getQName(const QModelIndex& index) const {
+std::string QController::getQName(const QModelIndex& index) const {
     std::unique_lock<std::mutex> lock(connection_mutex_);
 
     // Select connection by index:
@@ -120,7 +120,7 @@ std::string QRunControl::getQName(const QModelIndex& index) const {
     return it->first;
 }
 
-std::optional<std::string> QRunControl::sendQCommand(const QModelIndex& index,
+std::optional<std::string> QController::sendQCommand(const QModelIndex& index,
                                                      const std::string& verb,
                                                      const CommandPayload& payload) {
     std::unique_lock<std::mutex> lock(connection_mutex_);
@@ -146,7 +146,7 @@ std::optional<std::string> QRunControl::sendQCommand(const QModelIndex& index,
     return {};
 }
 
-bool QRunControlSortProxy::lessThan(const QModelIndex& left, const QModelIndex& right) const {
+bool QControllerSortProxy::lessThan(const QModelIndex& left, const QModelIndex& right) const {
 
     QVariant leftData = sourceModel()->data(left);
     QVariant rightData = sourceModel()->data(right);

@@ -6,12 +6,12 @@
 
 #include "constellation/controller/Controller.hpp"
 
-class QRunControl : public QAbstractListModel, public constellation::controller::Controller {
+class QController : public QAbstractListModel, public constellation::controller::Controller {
 
     Q_OBJECT
 
 public:
-    QRunControl(std::string_view controller_name, QObject* parent = 0);
+    QController(std::string controller_name, QObject* parent = 0);
 
     int rowCount(const QModelIndex& /*unused*/) const override { return connections_.size(); }
 
@@ -44,7 +44,7 @@ private:
     std::size_t current_rows_ {0};
 };
 
-class QRunControlSortProxy : public QSortFilterProxyModel {
+class QControllerSortProxy : public QSortFilterProxyModel {
 
     bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
 };

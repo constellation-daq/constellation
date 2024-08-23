@@ -12,14 +12,14 @@
 #include <QString>
 #include <QTimer>
 
-#include "QRunControl.hpp"
+#include "QController.hpp"
 #include "ui_MissionControl.h"
 
 class RunControlGUI : public QMainWindow, public Ui::wndRun {
 
     Q_OBJECT
 public:
-    RunControlGUI(std::string_view controller_name, std::string_view group_name);
+    RunControlGUI(std::string controller_name, std::string_view group_name);
 
     void Exec();
 
@@ -45,8 +45,8 @@ private:
     std::map<std::string, constellation::controller::Controller::CommandPayload> parseConfigFile(QString file);
     constellation::controller::Controller::CommandPayload parseConfigFile(QString file, const QModelIndex& index);
 
-    QRunControl runcontrol_;
-    QRunControlSortProxy sorting_proxy_;
+    QController runcontrol_;
+    QControllerSortProxy sorting_proxy_;
     constellation::log::Logger logger_;
     constellation::log::Logger user_logger_;
 

@@ -26,8 +26,8 @@ using namespace constellation::log;
 using namespace constellation::protocol;
 using namespace constellation::utils;
 
-RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view group_name)
-    : QMainWindow(), runcontrol_(controller_name), logger_("GUI"), user_logger_("OP") {
+RunControlGUI::RunControlGUI(std::string controller_name, std::string_view group_name)
+    : QMainWindow(), runcontrol_(std::move(controller_name)), logger_("GUI"), user_logger_("OP") {
 
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
@@ -116,7 +116,7 @@ RunControlGUI::RunControlGUI(std::string_view controller_name, std::string_view 
     connect(runSequence, &QSpinBox::valueChanged, this, [&](int i) { update_run_identifier(runIdentifier->text(), i); });
 
     // Connect connection update signal:
-    connect(&runcontrol_, &QRunControl::connectionsChanged, this, [&](std::size_t num) {
+    connect(&runcontrol_, &QController::connectionsChanged, this, [&](std::size_t num) {
         labelNrSatellites->setText("<font color='gray'><b>" + QString::number(num) + "</b></font>");
     });
 
