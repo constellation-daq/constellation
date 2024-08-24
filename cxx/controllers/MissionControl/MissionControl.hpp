@@ -9,15 +9,8 @@
 
 #pragma once
 
-#include <QCloseEvent>
-#include <QDir>
-#include <QFileDialog>
-#include <QGridLayout>
-#include <QInputDialog>
-#include <QItemDelegate>
+#include <QDateTime>
 #include <QMainWindow>
-#include <QMessageBox>
-#include <QPainter>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QString>

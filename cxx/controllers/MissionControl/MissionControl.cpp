@@ -14,7 +14,12 @@
 #include <fstream>
 #include <iostream>
 #include <QApplication>
+#include <QCloseEvent>
 #include <QDateTime>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QInputDialog>
+#include <QMessageBox>
 #include <QSpinBox>
 #include <QTimeZone>
 #include <string>
