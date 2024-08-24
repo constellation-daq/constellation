@@ -27,7 +27,7 @@ using namespace constellation::log;
 using namespace constellation::protocol;
 using namespace constellation::utils;
 
-RunControlGUI::RunControlGUI(std::string controller_name, std::string_view group_name)
+MissionControl::MissionControl(std::string controller_name, std::string_view group_name)
     : QMainWindow(), runcontrol_(std::move(controller_name)), logger_("GUI"), user_logger_("OP") {
 
     qRegisterMetaType<QModelIndex>("QModelIndex");
@@ -107,7 +107,7 @@ RunControlGUI::RunControlGUI(std::string controller_name, std::string_view group
     setWindowTitle("Constellation MissionControl " CNSTLN_VERSION);
 
     // Connect timer to gui update method
-    connect(&m_timer_display, &QTimer::timeout, this, &RunControlGUI::updateInfos);
+    connect(&m_timer_display, &QTimer::timeout, this, &MissionControl::updateInfos);
     m_timer_display.start(300); // internal update time of GUI
 
     // Connect run identifier edit boxes:
@@ -124,7 +124,7 @@ RunControlGUI::RunControlGUI(std::string controller_name, std::string_view group
     gui_settings_.setValue("successexit", 0);
 }
 
-void RunControlGUI::update_run_identifier(const QString& text, int number) {
+void MissionControl::update_run_identifier(const QString& text, int number) {
 
     runIdentifier->setText(text);
     runSequence->setValue(number);
@@ -142,7 +142,7 @@ void RunControlGUI::update_run_identifier(const QString& text, int number) {
     LOG(logger_, DEBUG) << "Updated run identifier to " << current_run_.toStdString();
 }
 
-void RunControlGUI::on_btnInit_clicked() {
+void MissionControl::on_btnInit_clicked() {
     // Read config file from UI
     auto configs = parseConfigFile(txtConfigFileName->text());
 
@@ -157,7 +157,7 @@ void RunControlGUI::on_btnInit_clicked() {
     }
 }
 
-void RunControlGUI::on_btnShutdown_clicked() {
+void MissionControl::on_btnShutdown_clicked() {
     // We don't close the GUI but shutdown satellites instead:
     if(QMessageBox::question(this, "Quitting", "Shutdown all satellites?", QMessageBox::Ok | QMessageBox::Cancel) ==
        QMessageBox::Cancel) {
@@ -171,21 +171,21 @@ void RunControlGUI::on_btnShutdown_clicked() {
     }
 }
 
-void RunControlGUI::on_btnConfig_clicked() {
+void MissionControl::on_btnConfig_clicked() {
     auto responses = runcontrol_.sendCommands("launch");
     for(auto& response : responses) {
         LOG(logger_, DEBUG) << "Launch: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
-void RunControlGUI::on_btnLand_clicked() {
+void MissionControl::on_btnLand_clicked() {
     auto responses = runcontrol_.sendCommands("land");
     for(auto& response : responses) {
         LOG(logger_, DEBUG) << "Land: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
-void RunControlGUI::on_btnStart_clicked() {
+void MissionControl::on_btnStart_clicked() {
     auto responses = runcontrol_.sendCommands("start", current_run_.toStdString());
 
     // FIXME check that all started
@@ -197,7 +197,7 @@ void RunControlGUI::on_btnStart_clicked() {
     run_start_time_ = QDateTime::currentDateTimeUtc();
 }
 
-void RunControlGUI::on_btnStop_clicked() {
+void MissionControl::on_btnStop_clicked() {
     auto responses = runcontrol_.sendCommands("stop");
     for(auto& response : responses) {
         LOG(logger_, DEBUG) << "Stop: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
@@ -207,14 +207,14 @@ void RunControlGUI::on_btnStop_clicked() {
     runSequence->setValue(runSequence->value() + 1);
 }
 
-void RunControlGUI::on_btnLog_clicked() {
+void MissionControl::on_btnLog_clicked() {
     const auto msg = txtLogmsg->text().toStdString();
     const auto level = static_cast<Level>(comboBoxLogLevel->currentIndex());
     LOG(user_logger_, level) << msg;
     txtLogmsg->clear();
 }
 
-void RunControlGUI::on_btnLoadConf_clicked() {
+void MissionControl::on_btnLoadConf_clicked() {
     QString usedpath = QFileInfo(txtConfigFileName->text()).path();
     QString filename =
         QFileDialog::getOpenFileName(this, tr("Open File"), usedpath, tr("Configurations (*.conf *.toml *.ini)"));
@@ -223,7 +223,7 @@ void RunControlGUI::on_btnLoadConf_clicked() {
     }
 }
 
-void RunControlGUI::updateInfos() {
+void MissionControl::updateInfos() {
 
     // FIXME revisit what needs to be done here. Most infos are updated in the background by the controller via heartbeats!
     // We might need to handle metrics here and call addStatusDisoplay and removeStatusDisplay.
@@ -268,7 +268,7 @@ void RunControlGUI::updateInfos() {
     }
 }
 
-void RunControlGUI::closeEvent(QCloseEvent* event) {
+void MissionControl::closeEvent(QCloseEvent* event) {
     gui_settings_.setValue("window/size", size());
     gui_settings_.setValue("window/pos", pos());
     gui_settings_.setValue("run/configfile", txtConfigFileName->text());
@@ -278,15 +278,16 @@ void RunControlGUI::closeEvent(QCloseEvent* event) {
     event->accept();
 }
 
-void RunControlGUI::Exec() {
+void MissionControl::Exec() {
     show();
-    if(QApplication::instance())
+    if(QApplication::instance()) {
         QApplication::instance()->exec();
-    else
-        LOG(logger_, CRITICAL) << "ERROR: RUNControlGUI::EXEC\n";
+    } else {
+        LOG(logger_, CRITICAL) << "Error executing the MissionControl GUI";
+    }
 }
 
-QString RunControlGUI::get_state_str(CSCP::State state, bool global) const {
+QString MissionControl::get_state_str(CSCP::State state, bool global) const {
 
     QString global_indicatior = (global ? "" : " ≊");
 
@@ -334,7 +335,7 @@ QString RunControlGUI::get_state_str(CSCP::State state, bool global) const {
     }
 }
 
-void RunControlGUI::onCustomContextMenu(const QPoint& point) {
+void MissionControl::onCustomContextMenu(const QPoint& point) {
     QModelIndex index = viewConn->indexAt(point);
     if(!index.isValid()) {
         return;
@@ -395,7 +396,7 @@ void RunControlGUI::onCustomContextMenu(const QPoint& point) {
     contextMenu->exec(viewConn->viewport()->mapToGlobal(point));
 }
 
-std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile(QString file) {
+std::map<std::string, Controller::CommandPayload> MissionControl::parseConfigFile(QString file) {
     try {
         auto dictionaries = ConfigParser::getDictionariesFromFile(runcontrol_.getConnections(), file.toStdString());
         // Convert to CommandPayloads:
@@ -410,7 +411,7 @@ std::map<std::string, Controller::CommandPayload> RunControlGUI::parseConfigFile
     }
 }
 
-Controller::CommandPayload RunControlGUI::parseConfigFile(QString file, const QModelIndex& index) {
+Controller::CommandPayload MissionControl::parseConfigFile(QString file, const QModelIndex& index) {
     auto name = runcontrol_.getQName(index);
     try {
         auto dictionary = ConfigParser::getDictionaryFromFile(name, file.toStdString());
@@ -482,7 +483,7 @@ int main(int argc, char** argv) {
     } catch(const std::exception& error) {
         LOG(logger, CRITICAL) << "Argument parsing failed: " << error.what();
         LOG(logger, CRITICAL) << "Run \""
-                              << "euRun"
+                              << "MissionControl"
                               << " --help\" for help";
         return 1;
     }
@@ -545,7 +546,7 @@ int main(int argc, char** argv) {
     // Register CMDP in CHIRP and set sender name for CMDP
     SinkManager::getInstance().enableCMDPSending(controller_name);
 
-    RunControlGUI gui(controller_name, group_name);
+    MissionControl gui(controller_name, group_name);
     gui.Exec();
     return 0;
 }

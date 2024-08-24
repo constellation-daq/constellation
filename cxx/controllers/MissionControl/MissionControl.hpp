@@ -15,11 +15,11 @@
 #include "QController.hpp"
 #include "ui_MissionControl.h"
 
-class RunControlGUI : public QMainWindow, public Ui::wndRun {
+class MissionControl : public QMainWindow, public Ui::wndRun {
 
     Q_OBJECT
 public:
-    RunControlGUI(std::string controller_name, std::string_view group_name);
+    MissionControl(std::string controller_name, std::string_view group_name);
 
     void Exec();
 
