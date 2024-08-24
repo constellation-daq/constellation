@@ -27,7 +27,7 @@ private:
     void closeEvent(QCloseEvent* event) override;
 
 private slots:
-    void updateInfos();
+    void update_run_infos();
 
     void update_run_identifier(const QString& text, int number);
 
@@ -55,6 +55,7 @@ private:
     QDateTime run_start_time_;
 
     QString get_state_str(constellation::protocol::CSCP::State state, bool global_) const;
+    void update_button_states(constellation::protocol::CSCP::State state);
 
     QTimer m_timer_display;
 

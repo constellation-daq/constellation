@@ -34,8 +34,10 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     setupUi(this);
 
     // Set initial values for header bar
+    const auto state = runcontrol_.getLowestState();
+    update_button_states(state);
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
-    labelState->setText(get_state_str(runcontrol_.getLowestState(), runcontrol_.isInGlobalState()));
+    labelState->setText(get_state_str(state, runcontrol_.isInGlobalState()));
     labelNrSatellites->setText("<font color='gray'><b>" + QString::number(runcontrol_.getConnections().size()) +
                                "</b></font>");
 
@@ -106,8 +108,8 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
 
     setWindowTitle("Constellation MissionControl " CNSTLN_VERSION);
 
-    // Connect timer to gui update method
-    connect(&m_timer_display, &QTimer::timeout, this, &MissionControl::updateInfos);
+    // Connect timer to method for run timer update
+    connect(&m_timer_display, &QTimer::timeout, this, &MissionControl::update_run_infos);
     m_timer_display.start(300); // internal update time of GUI
 
     // Connect run identifier edit boxes:
@@ -123,9 +125,11 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
 
     // Connect state update signal:
     connect(&runcontrol_, &QController::reachedGlobalState, this, [&](CSCP::State state) {
+        update_button_states(state);
         labelState->setText(get_state_str(state, true));
     });
     connect(&runcontrol_, &QController::reachedLowestState, this, [&](CSCP::State state) {
+        update_button_states(state);
         labelState->setText(get_state_str(state, false));
     });
 
@@ -231,12 +235,7 @@ void MissionControl::on_btnLoadConf_clicked() {
     }
 }
 
-void MissionControl::updateInfos() {
-
-    // FIXME revisit what needs to be done here. Most infos are updated in the background by the controller via heartbeats!
-    // We might need to handle metrics here and call addStatusDisoplay and removeStatusDisplay.
-
-    auto state = runcontrol_.getLowestState();
+void MissionControl::update_button_states(CSCP::State state) {
 
     QRegularExpression rx_conf(".+(\\.conf$|\\.ini$|\\.toml$)");
     auto m = rx_conf.match(txtConfigFileName->text());
@@ -255,20 +254,18 @@ void MissionControl::updateInfos() {
     // Deactivate run identifier fields during run:
     runIdentifier->setEnabled(state != CSCP::State::RUN && state != CSCP::State::starting && state != CSCP::State::stopping);
     runSequence->setEnabled(state != CSCP::State::RUN && state != CSCP::State::starting && state != CSCP::State::stopping);
+}
+
+void MissionControl::update_run_infos() {
 
     // Update run timer:
-    if(state == CSCP::State::RUN) {
+    if(runcontrol_.getLowestState() == CSCP::State::RUN) {
         auto duration =
             std::format("{:%H:%M:%S}", std::chrono::seconds(run_start_time_.secsTo(QDateTime::currentDateTime())));
         runDuration->setText("<b>" + QString::fromStdString(duration) + "</b>");
-    } else {
-        runDuration->setText("<font color=gray>" + runDuration->text() + "</font>");
-    }
-
-    // Update run identifier:
-    if(state == CSCP::State::RUN) {
         runID->setText("<b>" + current_run_ + "</b>");
     } else {
+        runDuration->setText("<font color=gray>" + runDuration->text() + "</font>");
         runID->setText("<font color=gray><b>" + current_run_ + "</b> (next)</font>");
     }
 }
