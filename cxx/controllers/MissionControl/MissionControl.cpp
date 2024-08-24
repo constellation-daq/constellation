@@ -294,15 +294,6 @@ void MissionControl::closeEvent(QCloseEvent* event) {
     event->accept();
 }
 
-void MissionControl::Exec() {
-    show();
-    if(QApplication::instance()) {
-        QApplication::instance()->exec();
-    } else {
-        LOG(logger_, CRITICAL) << "Error executing the MissionControl GUI";
-    }
-}
-
 QString MissionControl::get_state_str(CSCP::State state, bool global) const {
 
     QString global_indicatior = (global ? "" : " ≊");
@@ -563,6 +554,7 @@ int main(int argc, char** argv) {
     SinkManager::getInstance().enableCMDPSending(controller_name);
 
     MissionControl gui(controller_name, group_name);
-    gui.Exec();
-    return 0;
+    gui.show();
+
+    return qapp->exec();
 }

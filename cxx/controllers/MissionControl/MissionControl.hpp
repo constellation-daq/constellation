@@ -25,8 +25,6 @@ class MissionControl : public QMainWindow, public Ui::wndRun {
 public:
     MissionControl(std::string controller_name, std::string_view group_name);
 
-    void Exec();
-
 private:
     void closeEvent(QCloseEvent* event) override;
 
