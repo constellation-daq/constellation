@@ -17,6 +17,14 @@ using namespace constellation::utils;
 QController::QController(std::string controller_name, QObject* parent)
     : QAbstractListModel(parent), Controller(std::move(controller_name)) {}
 
+int QController::rowCount(const QModelIndex& /*unused*/) const {
+    std::unique_lock<std::mutex> lock(connection_mutex_);
+    return connections_.size();
+}
+int QController::columnCount(const QModelIndex& /*unused*/) const {
+    return headers_.size();
+}
+
 QVariant QController::data(const QModelIndex& index, int role) const {
 
     if(role != Qt::DisplayRole || !index.isValid()) {
@@ -65,12 +73,12 @@ QVariant QController::data(const QModelIndex& index, int role) const {
     }
 }
 
-QVariant QController::headerData(int section, Qt::Orientation orientation, int role) const {
+QVariant QController::headerData(int column, Qt::Orientation orientation, int role) const {
     if(role != Qt::DisplayRole)
         return QVariant();
 
-    if(orientation == Qt::Horizontal && section >= 0 && section < static_cast<int>(headers_.size())) {
-        return QString::fromStdString(headers_[section]);
+    if(orientation == Qt::Horizontal && column >= 0 && column < static_cast<int>(headers_.size())) {
+        return QString::fromStdString(headers_[column]);
     }
     return QVariant();
 }
