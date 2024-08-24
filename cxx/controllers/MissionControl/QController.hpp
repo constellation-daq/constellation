@@ -45,6 +45,10 @@ private:
 };
 
 class QControllerSortProxy : public QSortFilterProxyModel {
+    Q_OBJECT
+
+public:
+    QControllerSortProxy(QObject* parent = nullptr);
 
     bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
 };

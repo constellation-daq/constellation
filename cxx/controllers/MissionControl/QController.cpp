@@ -146,6 +146,8 @@ std::optional<std::string> QController::sendQCommand(const QModelIndex& index,
     return {};
 }
 
+QControllerSortProxy::QControllerSortProxy(QObject* parent) : QSortFilterProxyModel(parent) {}
+
 bool QControllerSortProxy::lessThan(const QModelIndex& left, const QModelIndex& right) const {
 
     QVariant leftData = sourceModel()->data(left);
