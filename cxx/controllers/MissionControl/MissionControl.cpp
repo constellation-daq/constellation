@@ -121,6 +121,14 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
         labelNrSatellites->setText("<font color='gray'><b>" + QString::number(num) + "</b></font>");
     });
 
+    // Connect state update signal:
+    connect(&runcontrol_, &QController::reachedGlobalState, this, [&](CSCP::State state) {
+        labelState->setText(get_state_str(state, true));
+    });
+    connect(&runcontrol_, &QController::reachedLowestState, this, [&](CSCP::State state) {
+        labelState->setText(get_state_str(state, false));
+    });
+
     gui_settings_.setValue("successexit", 0);
 }
 
@@ -247,9 +255,6 @@ void MissionControl::updateInfos() {
     // Deactivate run identifier fields during run:
     runIdentifier->setEnabled(state != CSCP::State::RUN && state != CSCP::State::starting && state != CSCP::State::stopping);
     runSequence->setEnabled(state != CSCP::State::RUN && state != CSCP::State::starting && state != CSCP::State::stopping);
-
-    // Update state display
-    labelState->setText(get_state_str(state, runcontrol_.isInGlobalState()));
 
     // Update run timer:
     if(state == CSCP::State::RUN) {

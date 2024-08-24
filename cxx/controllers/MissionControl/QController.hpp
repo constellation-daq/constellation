@@ -32,9 +32,11 @@ public:
 signals:
     void connectionsChanged(std::size_t connections);
     void reachedGlobalState(constellation::protocol::CSCP::State state);
+    void reachedLowestState(constellation::protocol::CSCP::State state);
 
 protected:
-    void reached_state(constellation::protocol::CSCP::State state) override;
+    void reached_global_state(constellation::protocol::CSCP::State state) override;
+    void reached_lowest_state(constellation::protocol::CSCP::State state) override;
     void propagate_update(Controller::UpdateType type, std::size_t position, std::size_t total) override;
 
 private:

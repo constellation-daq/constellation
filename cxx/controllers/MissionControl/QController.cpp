@@ -12,6 +12,7 @@
 using namespace constellation::config;
 using namespace constellation::controller;
 using namespace constellation::protocol;
+using namespace constellation::utils;
 
 QController::QController(std::string controller_name, QObject* parent)
     : QAbstractListModel(parent), Controller(std::move(controller_name)) {}
@@ -74,8 +75,14 @@ QVariant QController::headerData(int section, Qt::Orientation orientation, int r
     return QVariant();
 }
 
-void QController::reached_state(CSCP::State state) {
+void QController::reached_global_state(CSCP::State state) {
+    LOG(logger_, DEBUG) << "Reached new global state " << to_string(state);
     emit reachedGlobalState(state);
+}
+
+void QController::reached_lowest_state(CSCP::State state) {
+    LOG(logger_, DEBUG) << "Reached new lowest state " << to_string(state);
+    emit reachedLowestState(state);
 }
 
 void QController::propagate_update(UpdateType type, std::size_t position, std::size_t total) {
