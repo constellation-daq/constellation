@@ -166,7 +166,7 @@ void MissionControl::update_run_identifier(const QString& text, int number) {
 
 void MissionControl::on_btnInit_clicked() {
     // Read config file from UI
-    auto configs = parseConfigFile(txtConfigFileName->text());
+    auto configs = parse_config_file(txtConfigFileName->text());
 
     // Nothing read - nothing to do
     if(configs.empty()) {
@@ -348,7 +348,7 @@ void MissionControl::onCustomContextMenu(const QPoint& point) {
 
     QAction* initialiseAction = new QAction("Initialize", this);
     connect(initialiseAction, &QAction::triggered, this, [this, index]() {
-        auto config = parseConfigFile(txtConfigFileName->text(), index);
+        auto config = parse_config_file(txtConfigFileName->text(), index);
         runcontrol_.sendQCommand(index, "initialize", config);
     });
     contextMenu->addAction(initialiseAction);
@@ -399,7 +399,7 @@ void MissionControl::onCustomContextMenu(const QPoint& point) {
     contextMenu->exec(viewConn->viewport()->mapToGlobal(point));
 }
 
-std::map<std::string, Controller::CommandPayload> MissionControl::parseConfigFile(QString file) {
+std::map<std::string, Controller::CommandPayload> MissionControl::parse_config_file(QString file) {
     try {
         auto dictionaries = ConfigParser::getDictionariesFromFile(runcontrol_.getConnections(), file.toStdString());
         // Convert to CommandPayloads:
@@ -414,7 +414,7 @@ std::map<std::string, Controller::CommandPayload> MissionControl::parseConfigFil
     }
 }
 
-Controller::CommandPayload MissionControl::parseConfigFile(QString file, const QModelIndex& index) {
+Controller::CommandPayload MissionControl::parse_config_file(QString file, const QModelIndex& index) {
     auto name = runcontrol_.getQName(index);
     try {
         auto dictionary = ConfigParser::getDictionaryFromFile(name, file.toStdString());
