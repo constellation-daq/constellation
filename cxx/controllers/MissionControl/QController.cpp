@@ -27,9 +27,9 @@ QController::QController(std::string controller_name, QObject* parent)
     : QAbstractListModel(parent), Controller(std::move(controller_name)) {}
 
 int QController::rowCount(const QModelIndex& /*unused*/) const {
-    std::unique_lock<std::mutex> lock(connection_mutex_);
-    return connections_.size();
+    return getConnectionCount();
 }
+
 int QController::columnCount(const QModelIndex& /*unused*/) const {
     return headers_.size();
 }
