@@ -2,14 +2,14 @@
 # SPDX-License-Identifier: CC0-1.0
 
 # Build satellite only if feature is enabled:
-if not get_option('satellite_eudaq_receiver').enabled()
+if not get_option('satellite_eudaq_native_writer').enabled()
   subdir_done()
 endif
 
-satellite_type = 'EudaqReceiver'
+satellite_type = 'EudaqNativeWriter'
 
 satellite_sources = files(
-  'EudaqReceiverSatellite.cpp',
+  'EudaqNativeWriterSatellite.cpp',
   'FileSerializer.cpp',
 )
 

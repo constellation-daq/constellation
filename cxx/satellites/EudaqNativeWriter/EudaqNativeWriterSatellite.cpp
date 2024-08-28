@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include "EudaqReceiverSatellite.hpp"
+#include "EudaqNativeWriterSatellite.hpp"
 
 #include <chrono>
 #include <string_view>
@@ -22,12 +22,12 @@ using namespace constellation::config;
 using namespace constellation::message;
 using namespace constellation::satellite;
 
-EudaqReceiverSatellite::EudaqReceiverSatellite(std::string_view type, std::string_view name)
+EudaqNativeWriterSatellite::EudaqNativeWriterSatellite(std::string_view type, std::string_view name)
     : ReceiverSatellite(type, name) {
     support_reconfigure();
 }
 
-void EudaqReceiverSatellite::starting(std::string_view run_identifier) {
+void EudaqNativeWriterSatellite::starting(std::string_view run_identifier) {
 
     // Fetch sequence from run id:
     const auto pos = run_identifier.find_last_of("_");
@@ -43,20 +43,20 @@ void EudaqReceiverSatellite::starting(std::string_view run_identifier) {
     serializer_ = std::make_unique<FileSerializer>(file_path, descriptor_, sequence);
 }
 
-void EudaqReceiverSatellite::stopping() {
+void EudaqNativeWriterSatellite::stopping() {
     serializer_.reset();
 }
 
-void EudaqReceiverSatellite::receive_bor(const CDTP1Message::Header& header, Configuration config) {
+void EudaqNativeWriterSatellite::receive_bor(const CDTP1Message::Header& header, Configuration config) {
     LOG(INFO) << "Received BOR from " << header.getSender() << " with config" << config.getDictionary().to_string();
     serializer_->serialize_bor_eor(header, config.getDictionary());
 }
 
-void EudaqReceiverSatellite::receive_data(CDTP1Message&& data_message) {
+void EudaqNativeWriterSatellite::receive_data(CDTP1Message&& data_message) {
     serializer_->serialize(std::move(data_message));
 }
 
-void EudaqReceiverSatellite::receive_eor(const CDTP1Message::Header& header, Dictionary run_metadata) {
+void EudaqNativeWriterSatellite::receive_eor(const CDTP1Message::Header& header, Dictionary run_metadata) {
     LOG(INFO) << "Received EOR from " << header.getSender() << " with metadata" << run_metadata.to_string();
     serializer_->serialize_bor_eor(header, std::move(run_metadata));
 }

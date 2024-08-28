@@ -19,7 +19,7 @@
 #include "constellation/core/utils/timers.hpp"
 #include "constellation/satellite/ReceiverSatellite.hpp"
 
-class EudaqReceiverSatellite final : public constellation::satellite::ReceiverSatellite {
+class EudaqNativeWriterSatellite final : public constellation::satellite::ReceiverSatellite {
 
     class FileSerializer {
     public:
@@ -69,7 +69,7 @@ class EudaqReceiverSatellite final : public constellation::satellite::ReceiverSa
     };
 
 public:
-    EudaqReceiverSatellite(std::string_view type, std::string_view name);
+    EudaqNativeWriterSatellite(std::string_view type, std::string_view name);
 
     void starting(std::string_view run_identifier) final;
     void stopping() final;

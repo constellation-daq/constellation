@@ -1,10 +1,10 @@
-#include "EudaqReceiverSatellite.hpp"
+#include "EudaqNativeWriterSatellite.hpp"
 
 using namespace constellation::config;
 using namespace constellation::message;
 using namespace constellation::satellite;
 
-EudaqReceiverSatellite::FileSerializer::FileSerializer(
+EudaqNativeWriterSatellite::FileSerializer::FileSerializer(
     const std::filesystem::path& path, std::string desc, std::uint32_t run_sequence, bool frames_as_blocks, bool overwrite)
     : file_(path, std::ios::binary), descriptor_(std::move(desc)), run_sequence_(run_sequence),
       frames_as_blocks_(frames_as_blocks) {
@@ -17,13 +17,13 @@ EudaqReceiverSatellite::FileSerializer::FileSerializer(
     }
 }
 
-EudaqReceiverSatellite::FileSerializer::~FileSerializer() {
+EudaqNativeWriterSatellite::FileSerializer::~FileSerializer() {
     if(file_.is_open()) {
         file_.close();
     }
 }
 
-void EudaqReceiverSatellite::FileSerializer::write(const uint8_t* data, size_t len) {
+void EudaqNativeWriterSatellite::FileSerializer::write(const uint8_t* data, size_t len) {
     file_.write(reinterpret_cast<const char*>(data), len);
     if(!file_.good()) {
         throw SatelliteError("Error writing to file");
@@ -31,12 +31,12 @@ void EudaqReceiverSatellite::FileSerializer::write(const uint8_t* data, size_t l
     bytes_written_ += len;
 }
 
-void EudaqReceiverSatellite::FileSerializer::write_str(const std::string& t) {
+void EudaqNativeWriterSatellite::FileSerializer::write_str(const std::string& t) {
     write_int(static_cast<std::uint32_t>(t.length()));
     write(reinterpret_cast<const uint8_t*>(&t[0]), t.length());
 }
 
-void EudaqReceiverSatellite::FileSerializer::write_tags(const Dictionary& dict) {
+void EudaqNativeWriterSatellite::FileSerializer::write_tags(const Dictionary& dict) {
     write_int(static_cast<std::uint32_t>(dict.size()));
     for(auto i = dict.begin(); i != dict.end(); ++i) {
         write_str(i->first);
@@ -44,7 +44,7 @@ void EudaqReceiverSatellite::FileSerializer::write_tags(const Dictionary& dict) 
     }
 }
 
-void EudaqReceiverSatellite::FileSerializer::write_blocks(const std::vector<PayloadBuffer>& payload) {
+void EudaqNativeWriterSatellite::FileSerializer::write_blocks(const std::vector<PayloadBuffer>& payload) {
     // EUDAQ expects a map with frame number as key and vector of uint8_t as value:
     write_int(static_cast<std::uint32_t>(payload.size()));
     for(std::uint32_t key = 0; key < static_cast<uint32_t>(payload.size()); key++) {
@@ -54,7 +54,7 @@ void EudaqReceiverSatellite::FileSerializer::write_blocks(const std::vector<Payl
     }
 }
 
-void EudaqReceiverSatellite::FileSerializer::serialize_bor_eor(const CDTP1Message::Header& header, Dictionary config) {
+void EudaqNativeWriterSatellite::FileSerializer::serialize_bor_eor(const CDTP1Message::Header& header, Dictionary config) {
 
     const auto& tags = header.getTags();
 
@@ -89,7 +89,7 @@ void EudaqReceiverSatellite::FileSerializer::serialize_bor_eor(const CDTP1Messag
     write_int(0u);
 }
 
-void EudaqReceiverSatellite::FileSerializer::serialize(CDTP1Message&& data_message) {
+void EudaqNativeWriterSatellite::FileSerializer::serialize(CDTP1Message&& data_message) {
 
     // Header
     const auto& header = data_message.getHeader();
@@ -148,6 +148,6 @@ void EudaqReceiverSatellite::FileSerializer::serialize(CDTP1Message&& data_messa
     }
 }
 
-void EudaqReceiverSatellite::FileSerializer::flush() {
+void EudaqNativeWriterSatellite::FileSerializer::flush() {
     file_.flush();
 }
