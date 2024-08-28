@@ -323,11 +323,16 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
 
             // Retrieve data from the device
             LOG(TRACE) << "Trying to receive data from device";
-            const auto data = device_->getRawData();
+            const auto words = device_->getRawData();
 
-            if(!data.empty()) {
+            if(!words.empty()) {
                 // Add data to message
-                // msg.addFrame(std::move(data));
+                std::vector<std::uintptr_t> data;
+                data.reserve(words.size());
+                std::transform(words.begin(), words.end(), std::back_inserter(data), [](const auto& word) {
+                    return static_cast<uintptr_t>(word);
+                });
+                msg.addFrame(std::move(data));
 
                 // Query ADC if wanted:
                 if(current_frames % adc_freq_ == 0) {
