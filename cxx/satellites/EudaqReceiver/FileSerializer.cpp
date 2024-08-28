@@ -54,6 +54,41 @@ void EudaqReceiverSatellite::FileSerializer::write_blocks(const std::vector<Payl
     }
 }
 
+void EudaqReceiverSatellite::FileSerializer::serialize_bor_eor(const CDTP1Message::Header& header, Dictionary config) {
+
+    const auto& tags = header.getTags();
+
+    // Type, version and flags
+    write_int(cstr2hash("RawEvent"));
+    write_int(0u);
+    write_int(0u);
+    write_int(0u);
+
+    // Run sequence
+    write_int(run_sequence_);
+
+    // Downcast event sequence for message header, use the same for trigger number
+    write_int(static_cast<std::uint32_t>(header.getSequenceNumber()));
+    write_int(static_cast<std::uint32_t>(header.getSequenceNumber()));
+
+    // Writing ExtendWord (event description, used to identify decoder later on)
+    write_int(cstr2hash(descriptor_.c_str()));
+
+    // Timestamps from header tags if available - we get them in ps and write them in ns
+    write_int(tags.contains("timestamp_begin") ? tags.at("timestamp_begin").get<std::uint64_t>() : 0ul);
+    write_int(tags.contains("timestamp_end") ? tags.at("timestamp_end").get<std::uint64_t>() : 0ul);
+
+    // Event description string
+    write_str(descriptor_);
+
+    // Write dictionary or metadata - event tags are ignored
+    write_tags(config);
+
+    // BOR does not contain data - write empty map indicator and empty subevent count:
+    write_int(0u);
+    write_int(0u);
+}
+
 void EudaqReceiverSatellite::FileSerializer::serialize(CDTP1Message&& data_message) {
 
     // Header

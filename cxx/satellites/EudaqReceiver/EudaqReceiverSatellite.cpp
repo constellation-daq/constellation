@@ -30,18 +30,17 @@ EudaqReceiverSatellite::EudaqReceiverSatellite(std::string_view type, std::strin
 void EudaqReceiverSatellite::starting(std::string_view run_identifier) {
 
     // Fetch sequence from run id:
-    auto pos = run_identifier.find_last_of("_");
-    const auto identifier = (pos != std::string::npos ? run_identifier.substr(0, pos) : run_identifier);
+    const auto pos = run_identifier.find_last_of("_");
     std::uint32_t sequence = 0;
     try {
-        sequence = (pos != std::string::npos ? std::stoi(run_identifier.substr(pos + 1)) : 0);
+        sequence = (pos != std::string::npos ? std::stoi(std::string(run_identifier).substr(pos + 1)) : 0);
     } catch(std::invalid_argument&) {
     }
 
     // Build target file path:
-    const auto file_path = std::filesystem::path("data_file_") file_path += run_identifier;
+    const auto file_path = std::filesystem::path("data_file_" + std::string(run_identifier));
 
-    serializer_ = std::make_unique(file_path, descriptor_, sequence);
+    serializer_ = std::make_unique<FileSerializer>(file_path, descriptor_, sequence);
 }
 
 void EudaqReceiverSatellite::stopping() {
@@ -50,6 +49,7 @@ void EudaqReceiverSatellite::stopping() {
 
 void EudaqReceiverSatellite::receive_bor(const CDTP1Message::Header& header, Configuration config) {
     LOG(INFO) << "Received BOR from " << header.getSender() << " with config" << config.getDictionary().to_string();
+    serializer_->serialize_bor_eor(header, config.getDictionary());
 }
 
 void EudaqReceiverSatellite::receive_data(CDTP1Message&& data_message) {
@@ -58,4 +58,5 @@ void EudaqReceiverSatellite::receive_data(CDTP1Message&& data_message) {
 
 void EudaqReceiverSatellite::receive_eor(const CDTP1Message::Header& header, Dictionary run_metadata) {
     LOG(INFO) << "Received EOR from " << header.getSender() << " with metadata" << run_metadata.to_string();
+    serializer_->serialize_bor_eor(header, std::move(run_metadata));
 }
