@@ -16,6 +16,9 @@ import re
 import numpy as np
 import rp
 
+from .lib_mikroe_expand11 import Expand11
+from .lib_mikroe_rtd import RTD
+
 from constellation.core.commandmanager import cscp_requestable
 from constellation.core.cscp import CSCPMessage
 from constellation.core.datasender import DataSender
@@ -86,7 +89,7 @@ class RedPitayaSatellite(DataSender):
                 "/sys/class/net/eth0/statistics/rx_bytes", "r"
             )
         except FileNotFoundError:
-            self.log.warning("Failed to find path")
+            self.log.warning("Failed to find path of monitoring files")
 
         self._prev_cpu_idle, self._prev_cpu_time = self._get_cpu_times()
 
@@ -150,7 +153,7 @@ class RedPitayaSatellite(DataSender):
             if os.system(command) != 0:  # OS 2.00 and above
                 msg = "System command failed."
                 raise ConfigError(msg)
-            time.sleep(2)
+            time.sleep(3)
 
             # Define axi array for custom registers
             axi_mmap_custom_registers = mmap.mmap(
@@ -176,7 +179,7 @@ class RedPitayaSatellite(DataSender):
                 1, self.regset_readout, buf=axi_mmap_custom_registers
             )
             self.axi_array_contents_param = axi_numpy_array_param[0]
-
+            time.sleep(0.1)
             # Writes FPGA configurations to register
             names = [field[0] for field in self.axi_regset_config.descr]
             for name, value in zip(names, self.config_axi_array_contents):
@@ -230,7 +233,7 @@ class RedPitayaSatellite(DataSender):
             axi_writer_numpy_array0 = np.recarray(
                 1, self.axi_writer_register_names, buf=axi_writer_mmap0
             )
-
+            time.sleep(0.1)
             self.axi_writer_contents0 = axi_writer_numpy_array0[0]
             self.axi_writer_contents0.lower_address_0 = 0x1000000
             self.axi_writer_contents0.upper_address_0 = 0x107FFF8
@@ -267,11 +270,34 @@ class RedPitayaSatellite(DataSender):
                 mmap.PROT_READ | mmap.PROT_WRITE,
                 offset=0x1000000,
             )
-
+            time.sleep(0.1)
             # Resetting ADC
             self.reset()
 
             # Setup metrics
+            if self.config["read_water_sensors"]:
+                self.expand11 = Expand11(i2c_bus=0, i2c_address=0x41)
+
+                if self.expand11.default_cfg() != -1:
+                    self.schedule_metric(
+                        self.get_water_sensor_state.__name__,
+                        self.get_water_sensor_state,
+                        self.config["water_sensors_poll_rate"],
+                    )
+                else:
+                    self.log.warning("Could not connect to Expand11 card")
+
+            if self.config["read_temperature_sensors"]:
+                self.rtd = RTD(microbus=1)
+                if self.rtd.default_cfg() != -1:
+                    self.schedule_metric(
+                        self.rtd.get_rtd_temperature.__name__,
+                        self.rtd.get_rtd_temperature,
+                        self.config["temperature_sensors_poll_rate"],
+                    )
+                else:
+                    self.log.warning("Could not connect to RTD card")
+
             if self.config["read_gpio"]:
                 self.schedule_metric(
                     self.get_analog_gpio_pins.__name__,
@@ -317,6 +343,10 @@ class RedPitayaSatellite(DataSender):
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
         return "Initialized."
+
+    def get_water_sensor_state(self):
+
+        return self.expand11.read_port_value()
 
     def do_starting(self, payload):
         """Starting the acquisition and Wrote BOR"""
@@ -461,7 +491,7 @@ class RedPitayaSatellite(DataSender):
         raw = int(self.cpu_temperature_raw_file_reader.read())
         self.cpu_temperature_scale_file_reader.seek(0)
         scale = float(self.cpu_temperature_scale_file_reader.read())
-        return (round(((float)(offset + raw)) * scale / 1000.0, 1)), "C"
+        return (round(((float)(offset + raw)) * scale / 1000.0, 1)), "°C"
 
     def get_cpu_load(self):
         """Estimate current CPU load and update previously saved CPU times."""

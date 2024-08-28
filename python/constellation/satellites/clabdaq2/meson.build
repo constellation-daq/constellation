@@ -5,6 +5,8 @@ clabdaq2_files = files(
   'rpgamma.py',
   'rpneutron.py',
   'rpsatellite.py',
+  'lib_mikroe_expand11.py',
+  'lib_mikroe_rtd.py',
 )
 
 py.install_sources(clabdaq2_files,
