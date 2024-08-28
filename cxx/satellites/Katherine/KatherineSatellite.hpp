@@ -16,9 +16,9 @@
 #include <katherinexx/katherinexx.hpp>
 
 #include "constellation/core/log/log.hpp"
-#include "constellation/satellite/Satellite.hpp"
+#include "constellation/satellite/TransmitterSatellite.hpp"
 
-class KatherineSatellite final : public constellation::satellite::Satellite {
+class KatherineSatellite final : public constellation::satellite::TransmitterSatellite {
     /**
      * @brief Shutter trigger modes
      */
@@ -61,11 +61,37 @@ private:
     void frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info);
 
     template <typename T> void pixels_received(const T* px, size_t count) {
+        auto msg = newDataMessage();
         for(size_t i = 0; i < count; ++i) {
-            if constexpr(std::is_same_v<T, katherine::acq::f_toa_tot::pixel_type>) {
-                LOG(TRACE) << (int)px[i].coord.x << " " << (int)px[i].coord.y;
-            }
+            msg.addFrame(to_bytes(px[i]));
         }
+        // Try to send and retry if it failed:
+        while(!sendDataMessage(msg)) {
+            LOG(TRACE) << "Failed to send message, retrying...";
+            using namespace std::literals::chrono_literals;
+            std::this_thread::sleep_for(100ms);
+
+            // FIXME there should be some abort condition
+        }
+    }
+
+    template <typename T> std::vector<std::uint8_t> to_bytes(const T& pixel) {
+        std::vector<std::uint8_t> data;
+
+        if constexpr(std::is_same_v<T, katherine::acq::f_toa_tot::pixel_type>) {
+            LOG(TRACE) << (int)pixel.coord.x << " " << (int)pixel.coord.y;
+            // 2x8b coors, 8b ftoa, 64b toa, 16b tot = 13
+            data.resize(13);
+            data.push_back(pixel.coord.x);
+            data.push_back(pixel.coord.y);
+            data.push_back(pixel.ftoa);
+            for(std::size_t i = 0; i < 8; i++) {
+                data.push_back((pixel.toa >> (i * 8)) & 0xff);
+            }
+            data.push_back(pixel.tot & 0xff);
+            data.push_back((pixel.tot >> 8) & 0xff);
+        }
+        return data;
     }
 
 private:

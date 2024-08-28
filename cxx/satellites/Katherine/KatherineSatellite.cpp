@@ -14,14 +14,14 @@
 #include <string_view>
 
 #include "constellation/core/log/log.hpp"
-#include "constellation/satellite/Satellite.hpp"
+#include "constellation/satellite/TransmitterSatellite.hpp"
 
 using namespace constellation::config;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 
-KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view name) : Satellite(type, name) {}
+KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view name) : TransmitterSatellite(type, name) {}
 
 void KatherineSatellite::initializing(constellation::config::Configuration& config) {
 
