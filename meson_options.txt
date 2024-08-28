@@ -15,5 +15,6 @@ option('controller_missioncontrol', type: 'boolean', value: true, description: '
 
 # Satellites
 option('satellite_dev_null_receiver', type: 'boolean', value: false, description: 'Build DevNullReceiver satellite')
+option('satellite_eudaq_receiver', type: 'boolean', value: true, description: 'Build EudaqReceiver satellite')
 option('satellite_random_transmitter', type: 'boolean', value: false, description: 'Build RandomTransmitter satellite')
 option('satellite_sputnik', type: 'boolean', value: true, description: 'Build Sputnik satellite')
