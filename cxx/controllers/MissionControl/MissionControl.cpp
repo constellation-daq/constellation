@@ -168,6 +168,9 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     viewConn->header()->setSectionResizeMode(7, QHeaderView::Fixed);
     viewConn->header()->resizeSection(7, 40);
 
+    // Scan features:
+    viewParameters->setModel(&scanparams_);
+
     const auto cfg_file = gui_settings_.value("run/configfile", "").toString();
     if(QFile::exists(cfg_file)) {
         txtConfigFileName->setText(cfg_file);
@@ -200,27 +203,17 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
         update_run_identifier(runIdentifier->text(), i);
     });
 
-    // Scan features:
-    viewParameters->setModel(&scanparams_);
-
-    // Connect connection update signal and call it once:
-    connect(&runcontrol_, &QController::connectionsChanged, this, &MissionControl::update_satellite_dropdown);
-    update_satellite_dropdown();
-
-    // Connect comboBox and stack:
+    // Connect comboBox, queue type and stack:
     connect(comboBoxType, &QComboBox::currentIndexChanged, stackedWidgetType, &QStackedWidget::setCurrentIndex);
     connect(btnClearParams, &QPushButton::clicked, &scanparams_, &QScanParameter::clear);
-
-
-    // Connect queue type and stack:
     connect(comboBoxQueue, &QComboBox::currentIndexChanged, stackedWidgetQueue, &QStackedWidget::setCurrentIndex);
 
     // Connect connection update signal:
-    connect(&runcontrol_, &QController::connectionsChanged, this, &RunControlGUI::update_satellite_dropdown);
     connect(&runcontrol_, &QController::connectionsChanged, this, [&](std::size_t num) {
         labelNrSatellites->setText("<font color='gray'><b>" + QString::number(num) + "</b></font>");
     });
 
+    connect(&runcontrol_, &QController::connectionsChanged, this, &MissionControl::update_satellite_dropdown);
     connect(&runcontrol_, &QController::connectionsChanged, this, &MissionControl::startup);
 
     // Connect state update signal:
