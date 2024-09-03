@@ -49,7 +49,6 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
 
     // Set initial values for header bar
     const auto state = runcontrol_.getLowestState();
-    update_button_states(state);
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
     labelState->setText(get_state_str(state, runcontrol_.isInGlobalState()));
     labelNrSatellites->setText("<font color='gray'><b>" + QString::number(runcontrol_.getConnections().size()) +
@@ -142,6 +141,8 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
         update_button_states(state);
         labelState->setText(get_state_str(state, false));
     });
+    // Update button state once manually
+    update_button_states(state);
 
     gui_settings_.setValue("successexit", 0);
 }
