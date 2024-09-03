@@ -86,8 +86,12 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     if(run_time.has_value()) {
         if(runcontrol_.isInState(CSCP::State::RUN)) {
             LOG(logger_, DEBUG) << "Fetched time from satellites, setting run timer to " << run_time.value();
+
+            // FIXME somehow fromStdTimePoint is not found
             run_start_time_ =
-                QDateTime::fromStdTimePoint(std::chrono::time_point_cast<std::chrono::milliseconds>(run_time.value()));
+                QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0), QTimeZone::utc())
+                    .addMSecs(
+                        std::chrono::duration_cast<std::chrono::milliseconds>(run_time.value().time_since_epoch()).count());
         }
     }
 
