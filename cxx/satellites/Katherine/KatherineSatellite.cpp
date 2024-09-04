@@ -17,6 +17,7 @@
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
 using namespace constellation::config;
+using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
@@ -142,6 +143,22 @@ void KatherineSatellite::launching() {
 
 void KatherineSatellite::landing() {
     if(acquisition_) {
+        acquisition_.reset();
+    }
+}
+
+void KatherineSatellite::interrupting(CSCP::State) {
+    if(acquisition_) {
+        // End the acquisition:
+        acquisition_->abort();
+        acquisition_.reset();
+    }
+}
+
+void KatherineSatellite::failure(CSCP::State) {
+    if(acquisition_) {
+        // End the acquisition:
+        acquisition_->abort();
         acquisition_.reset();
     }
 }
