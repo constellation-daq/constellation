@@ -37,6 +37,8 @@ void EudaqNativeWriterSatellite::FileSerializer::write_str(const std::string& t)
 }
 
 void EudaqNativeWriterSatellite::FileSerializer::write_tags(const Dictionary& dict) {
+    LOG(DEBUG) << "Writing " << dict.size() << " event tags";
+
     write_int(static_cast<std::uint32_t>(dict.size()));
     for(auto i = dict.begin(); i != dict.end(); ++i) {
         write_str(i->first);
@@ -45,6 +47,8 @@ void EudaqNativeWriterSatellite::FileSerializer::write_tags(const Dictionary& di
 }
 
 void EudaqNativeWriterSatellite::FileSerializer::write_blocks(const std::vector<PayloadBuffer>& payload) {
+    LOG(DEBUG) << "Writing " << payload.size() << " data blocks";
+
     // EUDAQ expects a map with frame number as key and vector of uint8_t as value:
     write_int(static_cast<std::uint32_t>(payload.size()));
     for(std::uint32_t key = 0; key < static_cast<uint32_t>(payload.size()); key++) {
@@ -84,12 +88,14 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_bor_eor(const CDTP1Me
     // Write dictionary or metadata - event tags are ignored
     write_tags(config);
 
-    // BOR does not contain data - write empty map indicator and empty subevent count:
-    write_int(0u);
-    write_int(0u);
+    // BOR does not contain data - write empty blocks and empty subevent count:
+    write_blocks({});
+    write_int(std::uint32_t());
 }
 
 void EudaqNativeWriterSatellite::FileSerializer::serialize(CDTP1Message&& data_message) {
+
+    LOG(DEBUG) << "Writing data event";
 
     // Header
     const auto& header = data_message.getHeader();

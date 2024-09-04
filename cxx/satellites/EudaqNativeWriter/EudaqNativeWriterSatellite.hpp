@@ -71,6 +71,7 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
 public:
     EudaqNativeWriterSatellite(std::string_view type, std::string_view name);
 
+    void initializing(constellation::config::Configuration& config) final;
     void starting(std::string_view run_identifier) final;
     void stopping() final;
 

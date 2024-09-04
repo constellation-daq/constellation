@@ -27,6 +27,11 @@ EudaqNativeWriterSatellite::EudaqNativeWriterSatellite(std::string_view type, st
     support_reconfigure();
 }
 
+void EudaqNativeWriterSatellite::initializing(Configuration& config) {
+    descriptor_ = config.get<std::string>("descriptor");
+    LOG(STATUS) << "Initialized for file descriptor " << descriptor_;
+}
+
 void EudaqNativeWriterSatellite::starting(std::string_view run_identifier) {
 
     // Fetch sequence from run id:
@@ -38,9 +43,10 @@ void EudaqNativeWriterSatellite::starting(std::string_view run_identifier) {
     }
 
     // Build target file path:
-    const auto file_path = std::filesystem::path("data_file_" + std::string(run_identifier));
+    const auto file_path = std::filesystem::path("data_file_" + std::string(run_identifier) + ".raw");
 
-    serializer_ = std::make_unique<FileSerializer>(file_path, descriptor_, sequence);
+    LOG(STATUS) << "Starting run with identifier " << run_identifier << ", sequence " << sequence;
+    serializer_ = std::make_unique<FileSerializer>(file_path, descriptor_, sequence, true, true);
 }
 
 void EudaqNativeWriterSatellite::stopping() {
@@ -53,6 +59,8 @@ void EudaqNativeWriterSatellite::receive_bor(const CDTP1Message::Header& header,
 }
 
 void EudaqNativeWriterSatellite::receive_data(CDTP1Message&& data_message) {
+    const auto& header = data_message.getHeader();
+    LOG(DEBUG) << "Received data message from " << header.getSender();
     serializer_->serialize(std::move(data_message));
 }
 
