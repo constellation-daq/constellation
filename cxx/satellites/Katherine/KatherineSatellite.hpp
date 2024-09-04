@@ -16,6 +16,7 @@
 #include <katherinexx/katherinexx.hpp>
 
 #include "constellation/core/log/log.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
 class KatherineSatellite final : public constellation::satellite::TransmitterSatellite {
@@ -50,6 +51,9 @@ public:
     void starting(std::string_view run_identifier) override;
     void stopping() override;
     void running(const std::stop_token& stop_token) override;
+
+    void interrupting(constellation::protocol::CSCP::State previous_state) override;
+    void failure(constellation::protocol::CSCP::State previous_state) override;
 
 private:
     katherine::dacs parse_dacs_file(std::filesystem::path file_path);
