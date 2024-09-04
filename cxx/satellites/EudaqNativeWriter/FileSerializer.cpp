@@ -54,6 +54,7 @@ void EudaqNativeWriterSatellite::FileSerializer::write_blocks(const std::vector<
     for(std::uint32_t key = 0; key < static_cast<uint32_t>(payload.size()); key++) {
         write_int(key);
         const auto frame = payload.at(key).span();
+        write_int(static_cast<uint32_t>(frame.size_bytes()));
         write(reinterpret_cast<const std::uint8_t*>(frame.data()), frame.size_bytes());
     }
 }
@@ -62,11 +63,13 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_bor_eor(const CDTP1Me
 
     const auto& tags = header.getTags();
 
+    LOG(DEBUG) << "Writing delimiter event";
+
     // Type, version and flags
     write_int(cstr2hash("RawEvent"));
-    write_int(0u);
-    write_int(0u);
-    write_int(0u);
+    write_int(std::uint32_t());
+    write_int(std::uint32_t());
+    write_int(std::uint32_t());
 
     // Run sequence
     write_int(run_sequence_);
@@ -105,11 +108,11 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize(CDTP1Message&& data_m
 
     // Type, version and flags
     write_int(cstr2hash("RawEvent"));
-    write_int(0u);
-    write_int(0u);
+    write_int(std::uint32_t());
+    write_int(std::uint32_t());
 
     // Number of devices/streams/planes - seems rarely used
-    write_int(0u);
+    write_int(std::uint32_t());
 
     // Run sequence
     write_int(run_sequence_);
@@ -138,8 +141,12 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize(CDTP1Message&& data_m
         write_blocks(data_message.getPayload());
 
         // Zero sub-events:
-        write_int(0u);
+        write_int(std::uint32_t());
     } else {
+        LOG_ONCE(WARNING) << "Writing sub-events currently not implemented - discarding data";
+        write_int(std::uint32_t());
+        write_int(std::uint32_t());
+
         // Interpret multiple frames as EUDAQ sub-events:
 
         // FIXME
