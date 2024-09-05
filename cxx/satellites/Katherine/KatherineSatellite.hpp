@@ -17,6 +17,7 @@
 
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
 class KatherineSatellite final : public constellation::satellite::TransmitterSatellite {
@@ -70,12 +71,20 @@ private:
             msg.addFrame(to_bytes(px[i]));
         }
         // Try to send and retry if it failed:
+	LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
+
+	std::chrono::milliseconds timeout {};
         while(!sendDataMessage(msg)) {
-            LOG(TRACE) << "Failed to send message, retrying...";
+            LOG(DEBUG) << "Failed to send message, retrying...";
             using namespace std::literals::chrono_literals;
             std::this_thread::sleep_for(100ms);
 
-            // FIXME there should be some abort condition
+	    timeout += 100ms;
+	    
+	    // Abort if we could not send the message after 10s:
+	    if(timeout > 10s) {
+	      throw constellation::satellite::SendTimeoutError("pixel data", std::chrono::duration_cast<std::chrono::seconds>(timeout));
+	    }
         }
     }
 
@@ -83,7 +92,7 @@ private:
         std::vector<std::uint8_t> data;
 
         if constexpr(std::is_same_v<T, katherine::acq::f_toa_tot::pixel_type>) {
-            LOG(TRACE) << (int)pixel.coord.x << " " << (int)pixel.coord.y;
+            LOG(TRACE) << "Pixel " << (int)pixel.coord.x << " " << (int)pixel.coord.y;
             // 2x8b coors, 8b ftoa, 64b toa, 16b tot = 13
             data.resize(13);
             data.push_back(pixel.coord.x);
