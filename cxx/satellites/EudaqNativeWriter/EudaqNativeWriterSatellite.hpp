@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <string_view>
@@ -45,12 +46,12 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
         template <typename T> void write_int(const T& v) {
             static_assert(sizeof(v) > 1, "Only supports integers of size > 1 byte");
             T t = v;
-            uint8_t buf[sizeof v];
+            std::array<uint8_t, sizeof v> buf;
             for(size_t i = 0; i < sizeof v; ++i) {
                 buf[i] = static_cast<uint8_t>(t & 0xff);
                 t >>= 8;
             }
-            write(buf, sizeof v);
+            write(buf.data(), buf.size());
         }
 
         void write_str(const std::string& t);
@@ -58,7 +59,7 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
         void write_tags(const constellation::config::Dictionary& dict);
 
         constexpr uint32_t cstr2hash(const char* str, uint32_t h = 0) {
-            return !str[h] ? 5381 : (cstr2hash(str, h + 1) * 33ULL) ^ str[h];
+            return !str[h] ? 5381 : (cstr2hash(str, h + 1) * 33ULL) ^ str[h]; // NOLINT
         }
 
         std::ofstream file_;
