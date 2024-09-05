@@ -105,4 +105,5 @@ private:
     std::thread runthread_;
     katherine::readout_type ro_type_ {};
     OperationMode opmode_ {};
+    int pixel_buffer_depth_ {};
 };

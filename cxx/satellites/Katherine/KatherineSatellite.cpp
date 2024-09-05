@@ -31,6 +31,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     config.setDefault("sequential_mode", false);
     config.setDefault("op_mode", OperationMode::TOA_TOT);
     config.setDefault("shutter_mode", ShutterMode::AUTO);
+    config.setDefault("pixel_buffer", 65536);
 
     auto ip_address = config.get<std::string>("ip_address");
     LOG(DEBUG) << "Attempting to connect to Katherine system at " << ip_address;
@@ -90,7 +91,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     katherine_config_.set_bias(0);
 
     // FIXME set number of frames to acquire?
-    katherine_config_.set_no_frames(config.get<int>("no_frames"));
+    katherine_config_.set_no_frames(config.get<int>("no_frames", 1));
     if(ro_type_ == katherine::readout_type::data_driven && katherine_config_.no_frames() > 1) {
         throw InvalidValueError("FIXME", "no_frames", "Data-driven mode requires a single frame");
     }
@@ -106,6 +107,8 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
 
     auto px_config = parse_px_config_file(config.getPath("px_config_file"));
     katherine_config_.set_pixel_config(std::move(px_config));
+
+    pixel_buffer_depth_ = config.get<int>("pixel_buffer");
 }
 
 void KatherineSatellite::launching() {
@@ -115,13 +118,13 @@ void KatherineSatellite::launching() {
     // Select acquisition mode and create acquisition object
     if(opmode_ == OperationMode::TOA_TOT) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_tot>>(
-            *device_, katherine::md_size * 34952533, sizeof(katherine::acq::f_toa_tot::pixel_type) * 65536, 500ms, timeout);
+            *device_, katherine::md_size * 34952533, sizeof(katherine::acq::f_toa_tot::pixel_type) * pixel_buffer_depth_, 500ms, timeout);
         acq->set_pixels_received_handler(
             std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_toa_tot::pixel_type>, this));
         acquisition_ = acq;
     } else if(opmode_ == OperationMode::TOA) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_only>>(
-            *device_, katherine::md_size * 34952533, sizeof(katherine::acq::f_toa_only::pixel_type) * 65536, 500ms, timeout);
+            *device_, katherine::md_size * 34952533, sizeof(katherine::acq::f_toa_only::pixel_type) * pixel_buffer_depth_, 500ms, timeout);
         acq->set_pixels_received_handler(
             std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_toa_only::pixel_type>, this));
         acquisition_ = acq;
@@ -129,7 +132,7 @@ void KatherineSatellite::launching() {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_event_itot>>(
             *device_,
             katherine::md_size * 34952533,
-            sizeof(katherine::acq::f_event_itot::pixel_type) * 65536,
+            sizeof(katherine::acq::f_event_itot::pixel_type) * pixel_buffer_depth_,
             500ms,
             timeout);
         acq->set_pixels_received_handler(
