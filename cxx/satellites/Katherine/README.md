@@ -7,13 +7,8 @@ subtitle: "Satellite to control the Timepix3 readout system Katherine"
 
 ## Description
 
-This satellite does very little, just as its [namesake](https://en.wikipedia.org/wiki/Sputnik_1). It mostly serves as demonstrator for the different functionalities of satellites. New satellites may be created by copying and modifying the Sputnik satellite.
+This satellite controls the Katherine readout system for Timepix3 detectors.
 
-This section describes the functions of the satellite and all relevant information about the connected hardware as well as its requirements or external software dependencies.
-
-## Building
-
-The Sputnik satellite has no additional dependencies and is build by default.
 
 ## Parameters
 
@@ -21,8 +16,17 @@ The following parameters are read and interpreted by this satellite. Parameters 
 
 | Parameter     | Description | Type | Default Value |
 |---------------|-------------|------|---------------|
-| `my_param`    | Number of channels to be used | Unsigned 8-bit integer | `1024` |
-| `other_param` | Name of the communication module | String | `"antenna"` |
+
+| `ip_address`        | IP address of the Katherine system | String | |
+| `dacs_file`         | Path to file with DAC settings     | Path | |
+| `px_config_file`    | Path to file with individual pixel trim settings | Path | |
+| `positive_polarity` | Threshold polarity switch | Bool | `true`    |
+| `sequential_mode`   | Switch to enable/disable sequential mode | Bool | `false`   |
+| `op_mode`           | Operation mode, can be `TOA_TOT`, `TOA`, `EVT_ITOT` or `MASK` | | `TOA_TOT` |
+| `shutter_mode`      | Shutter operation mode, can be `POS_EXT`, `NEG_EXT`, `POS_EXT_TIMER`, `NEG_EXT_TIMER` or `AUTO` | | `AUTO` |
+| `shutter_width`     | Width of the shutter window, only relevant for shutter modes `POS_EXT_TIMER` and `NEG_EXT_TIMER` | Int | |
+| `pixel_buffer`      | Depth of the pixel buffer. This many pixel hits are accumulate before sending | Int  | 65536     |
+| `no_frames`         | Number of frames to acquire. Needs to be set to 1 for data-driven mode (`sequential_mode = false`) | Int | 1 |
 
 ### Configuration Example
 
