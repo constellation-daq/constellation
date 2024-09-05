@@ -51,7 +51,6 @@ public:
     void landing() override;
     void starting(std::string_view run_identifier) override;
     void stopping() override;
-    void running(const std::stop_token& stop_token) override;
 
     void interrupting(constellation::protocol::CSCP::State previous_state) override;
     void failure(constellation::protocol::CSCP::State previous_state) override;
@@ -71,20 +70,21 @@ private:
             msg.addFrame(to_bytes(px[i]));
         }
         // Try to send and retry if it failed:
-	LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
+        LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
 
-	std::chrono::milliseconds timeout {};
+        std::chrono::milliseconds timeout {};
         while(!sendDataMessage(msg)) {
             LOG(DEBUG) << "Failed to send message, retrying...";
             using namespace std::literals::chrono_literals;
             std::this_thread::sleep_for(100ms);
 
-	    timeout += 100ms;
-	    
-	    // Abort if we could not send the message after 10s:
-	    if(timeout > 10s) {
-	      throw constellation::satellite::SendTimeoutError("pixel data", std::chrono::duration_cast<std::chrono::seconds>(timeout));
-	    }
+            timeout += 100ms;
+
+            // Abort if we could not send the message after 10s:
+            if(timeout > 10s) {
+                throw constellation::satellite::SendTimeoutError("pixel data",
+                                                                 std::chrono::duration_cast<std::chrono::seconds>(timeout));
+            }
         }
     }
 
