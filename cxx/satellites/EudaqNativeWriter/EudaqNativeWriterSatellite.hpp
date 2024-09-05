@@ -29,9 +29,18 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
                        std::uint32_t run_sequence,
                        bool frames_as_blocks = true,
                        bool overwrite = false);
+        virtual ~FileSerializer();
+
+        /// @cond doxygen_suppress
+        // No copy/move constructor/assignment
+        FileSerializer(const FileSerializer& other) = delete;
+        FileSerializer& operator=(const FileSerializer& other) = delete;
+        FileSerializer(FileSerializer&& other) = delete;
+        FileSerializer& operator=(FileSerializer&& other) = delete;
+        /// @endcond
+
         void flush();
         uint64_t bytesWritten() const { return bytes_written_; }
-        ~FileSerializer();
 
         void serializeDataMsg(constellation::message::CDTP1Message&& data_message);
 
