@@ -39,9 +39,13 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
                                    const constellation::config::Dictionary& config);
 
     private:
+        void serialize_header(const constellation::message::CDTP1Message::Header& header,
+                              const constellation::config::Dictionary& tags);
+
         void write(const uint8_t* data, size_t len);
 
         void write_blocks(const std::vector<constellation::message::PayloadBuffer>& payload);
+        void write_block(std::uint32_t key, const constellation::message::PayloadBuffer& payload);
 
         template <typename T> void write_int(const T& v) {
             static_assert(sizeof(v) > 1, "Only supports integers of size > 1 byte");

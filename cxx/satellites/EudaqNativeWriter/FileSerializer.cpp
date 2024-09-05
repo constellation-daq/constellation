@@ -63,23 +63,28 @@ void EudaqNativeWriterSatellite::FileSerializer::write_blocks(const std::vector<
     // EUDAQ expects a map with frame number as key and vector of uint8_t as value:
     write_int(static_cast<std::uint32_t>(payload.size()));
     for(std::uint32_t key = 0; key < static_cast<uint32_t>(payload.size()); key++) {
-        write_int(key);
-        const auto frame = payload.at(key).span();
-        write_int(static_cast<uint32_t>(frame.size_bytes()));
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        write(reinterpret_cast<const std::uint8_t*>(frame.data()), frame.size_bytes());
+        write_block(key, payload.at(key));
     }
 }
 
-void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDTP1Message::Header& header,
-                                                                       const Dictionary& config) {
+void EudaqNativeWriterSatellite::FileSerializer::write_block(std::uint32_t key, const PayloadBuffer& payload) {
+    write_int(key);
+    const auto frame = payload.span();
+    write_int(static_cast<uint32_t>(frame.size_bytes()));
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    write(reinterpret_cast<const std::uint8_t*>(frame.data()), frame.size_bytes());
+}
 
-    LOG(DEBUG) << "Writing delimiter event";
+void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constellation::message::CDTP1Message::Header& header,
+                                                                  const constellation::config::Dictionary& tags) {
+    LOG(DEBUG) << "Writing event header";
 
     // Type, version and flags
     write_int(cstr2hash("RawEvent"));
     write_int<std::uint32_t>(0);
     write_int<std::uint32_t>(0);
+
+    // Number of devices/streams/planes - seems rarely used
     write_int<std::uint32_t>(0);
 
     // Run sequence
@@ -93,9 +98,20 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDT
     write_int(cstr2hash(descriptor_.c_str()));
 
     // Timestamps from header tags if available - we get them in ps and write them in ns
-    const auto& tags = header.getTags();
     write_int(tags.contains("timestamp_begin") ? tags.at("timestamp_begin").get<std::uint64_t>() : std::uint64_t());
     write_int(tags.contains("timestamp_end") ? tags.at("timestamp_end").get<std::uint64_t>() : std::uint64_t());
+
+    // Event description string
+    write_str(descriptor_);
+
+    // Header tags
+    write_tags(tags);
+}
+
+void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDTP1Message::Header& header,
+                                                                       const Dictionary& config) {
+    LOG(DEBUG) << "Writing delimiter event";
+    serialize_header(header, config);
 
     // Event description string
     write_str(descriptor_);
@@ -112,35 +128,8 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDataMsg(CDTP1Message&&
 
     LOG(DEBUG) << "Writing data event";
 
-    // Type, version and flags
-    write_int(cstr2hash("RawEvent"));
-    write_int<std::uint32_t>(0);
-    write_int<std::uint32_t>(0);
-
-    // Number of devices/streams/planes - seems rarely used
-    write_int<std::uint32_t>(0);
-
-    // Run sequence
-    write_int(run_sequence_);
-
-    // Downcast event sequence for message header, use the same for trigger number
     const auto& header = data_message.getHeader();
-    write_int(static_cast<std::uint32_t>(header.getSequenceNumber()));
-    write_int(static_cast<std::uint32_t>(header.getSequenceNumber()));
-
-    // Writing ExtendWord (event description, used to identify decoder later on)
-    write_int(cstr2hash(descriptor_.c_str()));
-
-    // Timestamps from header tags if available - we get them in ps and write them in ns
-    const auto& tags = header.getTags();
-    write_int(tags.contains("timestamp_begin") ? tags.at("timestamp_begin").get<std::uint64_t>() : std::uint64_t());
-    write_int(tags.contains("timestamp_end") ? tags.at("timestamp_end").get<std::uint64_t>() : std::uint64_t());
-
-    // Event description string
-    write_str(descriptor_);
-
-    // Header tags
-    write_tags(tags);
+    serialize_header(header, header.getTags());
 
     if(frames_as_blocks_) {
         // Interpret multiple frames as individual blocks of EUDAQ data:
@@ -151,21 +140,24 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDataMsg(CDTP1Message&&
         // Zero sub-events:
         write_int<std::uint32_t>(0);
     } else {
+        // Interpret each payload frame as a EUDAQ sub-event:
+
+        // Write zero blocks:
+        write_int<std::uint32_t>(0);
         LOG_ONCE(WARNING) << "Writing sub-events currently not implemented - discarding data";
-        write_int<std::uint32_t>(0);
-        write_int<std::uint32_t>(0);
 
-        // Interpret multiple frames as EUDAQ sub-events:
+        // Write subevents:
+        const auto& payload = data_message.getPayload();
+        write_int(static_cast<std::uint32_t>(payload.size()));
 
-        // FIXME
-        // Write empty block data:
-        // write(...);
+        for(const auto& frame : payload) {
+            // Repeat the event header of this event - FIXME adjust event number!
+            serialize_header(header, header.getTags());
 
-        // Write sub-events:
-        // write((uint32_t)m_sub_events.size());
-        // for(auto &ev: m_sub_events){
-        // write(*ev);
-        // }
+            // Write number of blocks and the block itself
+            write_int<std::uint32_t>(1);
+            write_block(0, frame);
+        }
     }
 }
 
