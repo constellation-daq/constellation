@@ -32,10 +32,10 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
         uint64_t bytesWritten() const { return bytes_written_; }
         ~FileSerializer();
 
-        void serialize(constellation::message::CDTP1Message&& data_message);
+        void serializeDataMsg(constellation::message::CDTP1Message&& data_message);
 
-        void serialize_bor_eor(const constellation::message::CDTP1Message::Header& header,
-                               constellation::config::Dictionary config);
+        void serializeDelimiterMsg(const constellation::message::CDTP1Message::Header& header,
+                                   const constellation::config::Dictionary& config);
 
     private:
         void write(const uint8_t* data, size_t len);
