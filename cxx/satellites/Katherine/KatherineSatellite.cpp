@@ -46,8 +46,9 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
         device_ = std::make_shared<katherine::device>(ip_address);
 
         // Read back information
-        LOG(STATUS) << "Katherine's current temperature: " << device_->readout_temperature() << "C";
-        LOG(STATUS) << "Katherine reports chip ID: " << device_->chip_id();
+        LOG(STATUS) << "Connected to Katherine at " << ip_address;
+        LOG(STATUS) << "    Current board temperature: " << device_->readout_temperature() << "C";
+        LOG(STATUS) << "    Reported chip ID: " << device_->chip_id();
     } catch(katherine::system_error& error) {
         throw CommunicationError("Katherine error: " + std::string(error.what()));
     }
@@ -118,13 +119,21 @@ void KatherineSatellite::launching() {
     // Select acquisition mode and create acquisition object
     if(opmode_ == OperationMode::TOA_TOT) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_tot>>(
-            *device_, katherine::md_size * 34952533, sizeof(katherine::acq::f_toa_tot::pixel_type) * pixel_buffer_depth_, 500ms, timeout);
+            *device_,
+            katherine::md_size * 34952533,
+            sizeof(katherine::acq::f_toa_tot::pixel_type) * pixel_buffer_depth_,
+            500ms,
+            timeout);
         acq->set_pixels_received_handler(
             std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_toa_tot::pixel_type>, this));
         acquisition_ = acq;
     } else if(opmode_ == OperationMode::TOA) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_only>>(
-            *device_, katherine::md_size * 34952533, sizeof(katherine::acq::f_toa_only::pixel_type) * pixel_buffer_depth_, 500ms, timeout);
+            *device_,
+            katherine::md_size * 34952533,
+            sizeof(katherine::acq::f_toa_only::pixel_type) * pixel_buffer_depth_,
+            500ms,
+            timeout);
         acq->set_pixels_received_handler(
             std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_toa_only::pixel_type>, this));
         acquisition_ = acq;
@@ -153,7 +162,10 @@ void KatherineSatellite::landing() {
 void KatherineSatellite::interrupting(CSCP::State) {
     if(acquisition_) {
         // End the acquisition:
-        acquisition_->abort();
+        if(!acquisition_->aborted()) {
+            acquisition_->abort();
+        }
+
         acquisition_.reset();
     }
 }
@@ -161,25 +173,27 @@ void KatherineSatellite::interrupting(CSCP::State) {
 void KatherineSatellite::failure(CSCP::State) {
     if(acquisition_) {
         // End the acquisition:
-        acquisition_->abort();
+        if(!acquisition_->aborted()) {
+            acquisition_->abort();
+        }
         acquisition_.reset();
     }
 }
 
 void KatherineSatellite::frame_started(int frame_idx) {
-    LOG(DEBUG) << "Started frame " << frame_idx << std::endl;
+    LOG(INFO) << "Started frame " << frame_idx << std::endl;
 }
 
 void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
     const double recv_perc = 100. * info.received_pixels / info.sent_pixels;
 
-    LOG(DEBUG) << "Ended frame " << frame_idx << "." << std::endl;
-    LOG(DEBUG) << " - tpx3->katherine lost " << info.lost_pixels << " pixels" << std::endl
-               << " - katherine->pc sent " << info.sent_pixels << " pixels" << std::endl
-               << " - katherine->pc received " << info.received_pixels << " pixels (" << recv_perc << " %)" << std::endl
-               << " - state: " << (completed ? "completed" : "not completed") << std::endl
-               << " - start time: " << info.start_time.d << std::endl
-               << " - end time: " << info.end_time.d << std::endl;
+    LOG(INFO) << "Ended frame " << frame_idx << "." << std::endl;
+    LOG(INFO) << " - TPX3->Katherine lost " << info.lost_pixels << " pixels" << std::endl
+              << " - Katherine->PC sent " << info.sent_pixels << " pixels" << std::endl
+              << " - Katherine->PC received " << info.received_pixels << " pixels (" << recv_perc << " %)" << std::endl
+              << " - state: " << (completed ? "completed" : "not completed") << std::endl
+              << " - start time: " << info.start_time.d << std::endl
+              << " - end time: " << info.end_time.d << std::endl;
 }
 
 void KatherineSatellite::starting(std::string_view) {
@@ -198,20 +212,10 @@ void KatherineSatellite::starting(std::string_view) {
                 LOG(STATUS) << "Aborting Katherine run...";
                 acquisition_->abort();
             }
+            // FIXME throw CommunicationError and catch exception in the run method?
         }
     });
     runthread_.detach();
-}
-
-void KatherineSatellite::running(const std::stop_token& stop_token) {
-
-    // Start the data acquisition:
-    while(!stop_token.stop_requested()) {
-        std::this_thread::sleep_for(2s);
-
-        LOG(INFO) << "State:   " << katherine::str_acq_state(acquisition_->state());
-        LOG(INFO) << "dropped: " << acquisition_->dropped_measurement_data();
-    }
 }
 
 void KatherineSatellite::stopping() {
@@ -332,7 +336,7 @@ std::string KatherineSatellite::trim(const std::string& str, const std::string& 
     auto b = str.find_first_not_of(delims);
     auto e = str.find_last_not_of(delims);
     if(b == std::string::npos || e == std::string::npos) {
-        return "";
+        return {};
     }
     return {str, b, e - b + 1};
 }
