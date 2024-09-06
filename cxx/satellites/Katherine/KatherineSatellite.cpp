@@ -79,6 +79,12 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
         // Read back information
         LOG(STATUS) << "Connected to Katherine at " << ip_address;
         LOG(STATUS) << "    Current board temperature: " << device_->readout_temperature() << "C";
+
+        // Cross-check Chip ID if provided
+        const auto chip_id = device_->chip_id();
+        if(config.has("chip_id") && config.get<std::string>("chip_id") != chip_id) {
+            throw InvalidValueError(config, "chip_id", "Invalid chip ID, system reports " + chip_id);
+        }
         LOG(STATUS) << "    Reported chip ID: " << device_->chip_id();
     } catch(katherine::system_error& error) {
         throw CommunicationError("Katherine error: " + std::string(error.what()));
@@ -125,7 +131,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     // FIXME set number of frames to acquire?
     katherine_config_.set_no_frames(config.get<int>("no_frames", 1));
     if(ro_type_ == katherine::readout_type::data_driven && katherine_config_.no_frames() > 1) {
-        throw InvalidValueError("FIXME", "no_frames", "Data-driven mode requires a single frame");
+        throw InvalidValueError(config, "no_frames", "Data-driven mode requires a single frame");
     }
 
     katherine_config_.set_gray_disable(false);

@@ -12,12 +12,13 @@ This satellite controls the Katherine readout system for Timepix3 detectors.
 
 ## Parameters
 
-The following parameters are read and interpreted by this satellite. Parameters without a default value are required.
+The following parameters are read and interpreted by this satellite. Parameters without a default value are required unless
+noted otherwise.
 
 | Parameter     | Description | Type | Default Value |
 |---------------|-------------|------|---------------|
-
 | `ip_address`        | IP address of the Katherine system | String | |
+| `chip_id`           | ID of the chip to be operated. Optional setting, this will only be checked when provided. If it does not match, an error is reported. | String | |
 | `dacs_file`         | Path to file with DAC settings     | Path | |
 | `px_config_file`    | Path to file with individual pixel trim settings | Path | |
 | `positive_polarity` | Threshold polarity switch | Bool | `true`    |
@@ -30,12 +31,16 @@ The following parameters are read and interpreted by this satellite. Parameters 
 
 ### Configuration Example
 
-An example configuration for this satellite which could be dropped into a Constellation configuration as a starting point
+The following example configuration could be used to control a Katherine readout system satellite with a Timepix3 detector.
+The satellite is configured to connect to the system at `192.168.1.182` and to use the provided local files for DAC settings
+and pixel matrix configuration. The pixel buffer is set to 300 pixel hits, all other settings are left at their defaults:
 
 ```ini
-[Sputnik.1]
-my_param = 7
-other_param = "antenna"
+[Satellites.Katherine.TPX3]
+ip_address = "192.168.1.182"
+dacs_file = "E2-W0005_dacs.txt"
+px_config_file = "E2-W0005_trimdacs.txt"
+pixel_buffer = 300
 ```
 
 ## Custom Commands
@@ -48,14 +53,3 @@ command as well as all of its arguments, the return value and the allowed states
 |-------------|-------------|-----------|--------------|----------------|
 | `get_channel_reading` | This command returns the reading from the given channel number | channel number, `int` | channel reading, `double` | `INIT`, `ORBIT` |
 | `get_module_name` | Reads the name of the communication module | - | module name, `string` | all |
-
-
-## Metrics
-
-The following metrics are distributed by this satellite and can be subscribed to. Timed metrics provide an interval in units of time, triggered metrics in number of calls.
-
-| Metric         | Description | Interval | Type |
-|----------------|-------------|----------|------|
-| `STAT/CPULOAD` | Current CPU load of the satellite host machine | 3s | AVERAGE |
-| `STAT/TEMP`    | Highest reported system temperature of the satellite | 5s | AVERAGE |
-| `STAT/EVENTS`  | Currently processed event number | 100 | LAST_VALUE |
