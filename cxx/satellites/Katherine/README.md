@@ -45,11 +45,11 @@ pixel_buffer = 300
 
 ## Custom Commands
 
-This section describes all custom commands the satellite exposes to the command interface. The description should contain the name and the description of the
-command as well as all of its arguments, the return value and the allowed states:
-
+The following custom commands are exposed to the command interface by this satellite:
 
 | Command     | Description | Arguments | Return Value | Allowed States |
 |-------------|-------------|-----------|--------------|----------------|
-| `get_channel_reading` | This command returns the reading from the given channel number | channel number, `int` | channel reading, `double` | `INIT`, `ORBIT` |
-| `get_module_name` | Reads the name of the communication module | - | module name, `string` | all |
+| `get_temperature_readout` | Read the current temperature from the Katherine readout board | - | Temperature in degree Celsius, `double` | `INIT`, `ORBIT`, `RUN` |
+| `get_temperature_sensor` | Read the current temperature from the temperature sensor | - | Temperature in degree Celsius, `double` | `INIT`, `ORBIT`, `RUN` |
+| `get_adc_voltage` | Read the voltage from the ADC channel provided as parameter | channel number, `int` | channel reading, `double` | `INIT`, `ORBIT`, `RUN` |
+| `get_chip_id` | Read the chip ID of the attached sensor | - | Chip ID, `string` | `INIT`, `ORBIT`, `RUN` |
