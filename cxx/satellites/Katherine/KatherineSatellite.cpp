@@ -23,7 +23,36 @@ using namespace constellation::satellite;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 
-KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view name) : TransmitterSatellite(type, name) {}
+KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view name) : TransmitterSatellite(type, name) {
+    register_command("get_temperature_readout",
+                     "Read the current temperature from the Katherine readout board.",
+                     {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
+                     std::function<double()>([&]() {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->readout_temperature();
+                     }));
+    register_command("get_temperature_sensor",
+                     "Read the current temperature from the temperature sensor.",
+                     {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
+                     std::function<double()>([&]() {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->sensor_temperature();
+                     }));
+    register_command("get_adc_voltage",
+                     "Read the voltage from the ADC channel provided as parameter.",
+                     {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
+                     std::function<double(std::uint8_t)>([&](auto channel) {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->adc_voltage(channel);
+                     }));
+    register_command("get_chip_id",
+                     "Read the chip ID of the attached sensor.",
+                     {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
+                     std::function<std::string()>([&]() {
+                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         return device_->chip_id();
+                     }));
+}
 
 void KatherineSatellite::initializing(constellation::config::Configuration& config) {
 
