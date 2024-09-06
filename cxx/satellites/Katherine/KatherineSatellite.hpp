@@ -10,6 +10,7 @@
 #pragma once
 
 #include <filesystem>
+#include <mutex>
 #include <string_view>
 #include <thread>
 
@@ -109,6 +110,8 @@ private:
 
 private:
     std::shared_ptr<katherine::device> device_;
+    std::mutex device_mutex_;
+
     std::shared_ptr<katherine::base_acquisition> acquisition_;
     katherine::config katherine_config_ {};
     std::thread runthread_;
