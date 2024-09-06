@@ -11,6 +11,7 @@
 
 #include <condition_variable>
 #include <fstream>
+#include <mutex>
 #include <string_view>
 
 #include "constellation/core/log/log.hpp"
@@ -38,6 +39,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
 
     try {
         // If we already have a device connected, remove it - we might be calling initialize multiple times!
+        const std::lock_guard device_lock {device_mutex_};
         if(device_) {
             device_.reset();
         }
@@ -117,6 +119,7 @@ void KatherineSatellite::launching() {
     auto timeout = (ro_type_ == katherine::readout_type::data_driven) ? -1s : 10s;
 
     // Select acquisition mode and create acquisition object
+    const std::lock_guard device_lock {device_mutex_};
     if(opmode_ == OperationMode::TOA_TOT) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_tot>>(
             *device_,
@@ -154,12 +157,14 @@ void KatherineSatellite::launching() {
 }
 
 void KatherineSatellite::landing() {
+    const std::lock_guard device_lock {device_mutex_};
     if(acquisition_) {
         acquisition_.reset();
     }
 }
 
 void KatherineSatellite::interrupting(CSCP::State) {
+    const std::lock_guard device_lock {device_mutex_};
     if(acquisition_) {
         // End the acquisition:
         if(!acquisition_->aborted()) {
@@ -171,6 +176,7 @@ void KatherineSatellite::interrupting(CSCP::State) {
 }
 
 void KatherineSatellite::failure(CSCP::State) {
+    const std::lock_guard device_lock {device_mutex_};
     if(acquisition_) {
         // End the acquisition:
         if(!acquisition_->aborted()) {
@@ -219,6 +225,8 @@ void KatherineSatellite::starting(std::string_view) {
 }
 
 void KatherineSatellite::stopping() {
+    const std::lock_guard device_lock {device_mutex_};
+
     // End the acquisition:
     acquisition_->abort();
 
