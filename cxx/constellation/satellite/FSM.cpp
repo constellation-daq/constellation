@@ -193,6 +193,24 @@ void FSM::requestInterrupt(std::string_view reason) {
     }
 }
 
+void FSM::requestStop(std::string_view reason) {
+    LOG(logger_, DEBUG) << "Attempting to stop run...";
+
+    //  Wait until we are in a steady state
+    while(!is_steady(state_.load())) {
+        LOG_ONCE(logger_, DEBUG) << "Waiting for a steady state...";
+    }
+    // In a steady state, try to react to stopping
+    const auto stopping = reactIfAllowed(Transition::stop);
+
+    LOG_IF(logger_, INFO, stopping) << "Stopping current run: " << reason;
+
+    // We could be in stopping, so wait for steady state
+    while(!is_steady(state_.load())) {
+        LOG_ONCE(logger_, DEBUG) << "Waiting for a steady state...";
+    }
+}
+
 void FSM::registerStateCallback(const std::string& identifier, std::function<void(State)> callback) {
     const std::lock_guard state_callbacks_lock {state_callbacks_mutex_};
     state_callbacks_.emplace(identifier, std::move(callback));

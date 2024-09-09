@@ -125,6 +125,18 @@ namespace constellation::satellite {
         CNSTLN_API void requestInterrupt(std::string_view reason);
 
         /**
+         * @brief Try to perform a run stop operation as soon as possible
+         *
+         * This function waits for the next steady state and performs a run stop if in RUN state, otherwise
+         * nothing is done.
+         *
+         * @param reason Reason for the requested stop
+         *
+         * @warning This function is not thread safe, meaning that no other react command should be called during execution.
+         */
+        CNSTLN_API void requestStop(std::string_view reason);
+
+        /**
          * @brief Registering a callback to be executed when a new state was entered
          *
          * This function adds a new state update callback. Registered callbacks are used to distribute the state of the FSM
