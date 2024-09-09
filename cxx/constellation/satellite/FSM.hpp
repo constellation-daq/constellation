@@ -322,6 +322,7 @@ namespace constellation::satellite {
         /** Remote state callback */
         std::function<std::optional<State>(std::string_view)> remote_callback_;
         std::set<Condition> remote_conditions_;
+        std::chrono::seconds remote_condition_timeout_ {60};
     };
 
 } // namespace constellation::satellite
