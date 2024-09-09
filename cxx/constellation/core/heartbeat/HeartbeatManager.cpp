@@ -62,6 +62,11 @@ std::optional<CSCP::State> HeartbeatManager::getRemoteState(std::string_view rem
     const std::lock_guard lock {mutex_};
     const auto remote_it = remotes_.find(remote);
     if(remote_it != remotes_.end()) {
+        // If the remote has vanished, return ERROR state
+        if(remote_it->second.lives == 0) {
+            return CSCP::State::ERROR;
+        }
+
         return remote_it->second.last_state;
     }
 
