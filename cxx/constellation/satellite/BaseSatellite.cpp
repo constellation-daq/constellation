@@ -401,6 +401,22 @@ void BaseSatellite::apply_internal_config(const config::Configuration& config) {
         LOG(logger_, INFO) << "Updating heartbeat interval to " + to_string(interval);
         heartbeat_manager_.updateInterval(interval);
     }
+
+    // Clear previously stored conditions
+    fsm_.clearRemoteCondition();
+
+    // Parse all transition condition parameters
+    for(const auto& state : {CSCP::State::initializing,
+                             CSCP::State::launching,
+                             CSCP::State::landing,
+                             CSCP::State::starting,
+                             CSCP::State::stopping}) {
+        const auto key = "_require_" + to_string(state) + "_after";
+        if(config.has(key)) {
+            LOG(logger_, INFO) << "Registering condition for transitional state " + to_string(state);
+            fsm_.registerRemoteCondition(config.get<std::string>(key), state);
+        }
+    }
 }
 
 void BaseSatellite::initializing_wrapper(config::Configuration&& config) {
