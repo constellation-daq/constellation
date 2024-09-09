@@ -20,7 +20,13 @@
 
 namespace constellation::protocol::CSCP {
 
-    /** Possible Satellite FSM states */
+    /** Possible Satellite FSM states
+     *
+     * The following statements can be made about states:
+     * - States with lower four bits equal to zero are steady states, e.g. INIT.
+     * - The other states are transition, and their lower four bits indicate the steady state the enter into, e.g. the lower
+     *   four bits of state landing are 0x2, so this transitional state enters into steady state 0x20, INIT.
+     * */
     enum class State : std::uint8_t {
         NEW = 0x10,
         initializing = 0x12,
@@ -87,7 +93,7 @@ namespace constellation::protocol::CSCP {
      * @brief Check if a state is steady
      */
     constexpr bool is_steady(State state) {
-        // In steady states the lower four bytes are 0
+        // In steady states the lower four bits are 0
         return (static_cast<unsigned int>(std::to_underlying(state)) & 0x0FU) == 0x00U;
     }
 
@@ -99,6 +105,22 @@ namespace constellation::protocol::CSCP {
     constexpr bool is_shutdown_allowed(State state) {
         using enum State;
         return (state == NEW || state == INIT || state == SAFE || state == ERROR);
+    }
+
+    /**
+     * @brief Check if state1 is a transitional state from steady state2 to a new steady state
+     */
+    constexpr bool transitions_from(State state1, State state2) {
+        // Origin steady states indicated by the upper four bits
+        return (std::to_underlying(state1) & 0xF0) == (std::to_underlying(state2) & 0xF0);
+    }
+
+    /**
+     * @brief Check if state1 is a transitional state from a former state into steady state2
+     */
+    constexpr bool transitions_to(State state1, State state2) {
+        // Target steady state indicated by the lower four bits
+        return (std::to_underlying(state1) & 0x0F) == ((std::to_underlying(state2) & 0xF0) >> 4);
     }
 
     /**
