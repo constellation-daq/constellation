@@ -38,10 +38,12 @@ using namespace std::chrono_literals;
 
 HeartbeatManager::HeartbeatManager(std::string sender,
                                    std::function<CSCP::State()> state_callback,
-                                   std::function<void(std::string_view)> interrupt_callback)
+                                   std::function<void(std::string_view)> interrupt_callback,
+                                   std::function<void(std::string_view)> stopping_callback)
     : HeartbeatRecv([this](auto&& arg) { process_heartbeat(std::forward<decltype(arg)>(arg)); }),
       sender_(std::move(sender), std::move(state_callback), 5000ms), interrupt_callback_(std::move(interrupt_callback)),
-      logger_("CHP"), watchdog_thread_(std::bind_front(&HeartbeatManager::run, this)) {
+      stopping_callback_(std::move(stopping_callback)), logger_("CHP"),
+      watchdog_thread_(std::bind_front(&HeartbeatManager::run, this)) {
     startPool();
 }
 
@@ -103,12 +105,24 @@ void HeartbeatManager::process_heartbeat(const CHP1Message& msg) {
         }
 
         // Take immediate action on remote state changes:
-        // Check for ERROR and SAFE states:
-        if(remote_it->second.lives > 0 && (msg.getState() == CSCP::State::ERROR || msg.getState() == CSCP::State::SAFE)) {
-            remote_it->second.lives = 0;
-            if(interrupt_callback_) {
-                LOG(logger_, DEBUG) << "Detected state " << msg.getState() << " at " << remote_it->first << ", interrupting";
-                interrupt_callback_(remote_it->first + " reports state " + to_string(msg.getState()));
+        if(remote_it->second.lives > 0) {
+            // Check for ERROR and SAFE states:
+            if(msg.getState() == CSCP::State::ERROR || msg.getState() == CSCP::State::SAFE) {
+                remote_it->second.lives = 0;
+                if(interrupt_callback_) {
+                    LOG(logger_, DEBUG) << "Detected state " << msg.getState() << " at " << remote_it->first
+                                        << ", interrupting";
+                    interrupt_callback_(remote_it->first + " reports state " + to_string(msg.getState()));
+                }
+            }
+
+            // Check for run-stop condition:
+            if((msg.getState() == CSCP::State::stopping || msg.getState() == CSCP::State::ORBIT) &&
+               (remote_it->second.last_state == CSCP::State::RUN)) {
+                if(stopping_callback_) {
+                    LOG(logger_, INFO) << "Detected stopped run at " << remote_it->first << ", stopping too";
+                    stopping_callback_(remote_it->first + " has stopped a run, following");
+                }
             }
         }
 
