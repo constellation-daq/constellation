@@ -204,6 +204,29 @@ void FSM::unregisterStateCallback(const std::string& identifier) {
     state_callbacks_.erase(identifier);
 }
 
+void FSM::registerRemoteCallback(std::function<std::optional<State>(std::string_view)> callback) {
+    remote_callback_ = std::move(callback);
+}
+
+void FSM::registerRemoteCondition(std::string remote, State transitional) {
+
+    // Check that the requested remote is not this satellite:
+    if(utils::transform(remote, ::tolower) == utils::transform(satellite_->getCanonicalName(), ::tolower)) {
+        throw std::invalid_argument("Conditions cannot be applied to same satellite");
+    }
+
+    // Check that the state is not a steady state but a transitional state:
+    if(is_steady(transitional)) {
+        throw std::invalid_argument("Conditions cannot be applied to steady state " + to_string(transitional));
+    }
+
+    remote_conditions_.emplace(remote, transitional);
+}
+
+void FSM::clearRemoteCondition() {
+    remote_conditions_.clear();
+}
+
 void FSM::call_state_callbacks() {
     const std::lock_guard state_callbacks_lock {state_callbacks_mutex_};
     std::vector<std::future<void>> futures {};
