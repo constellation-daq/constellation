@@ -28,7 +28,7 @@ from constellation.core.base import setup_cli_logging
 
 axi_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 
-axi_regset_reset = np.dtype([("data_type", "uint32")])
+axi_regset_data_type = np.dtype([("data_type", "uint32")])
 
 axi_gpio_regset_pins = np.dtype(
     [
@@ -63,6 +63,7 @@ class RedPitayaSatellite(DataSender):
         self._readpos = 0
         self._writepos = 0
         self.sample_time = 0
+        self.data_type = 0
 
         # Define file readers for monitoring from file
         try:
@@ -164,9 +165,9 @@ class RedPitayaSatellite(DataSender):
                 offset=0x40600000,
             )
             axi_numpy_array_reset = np.recarray(
-                1, axi_regset_reset, buf=axi_mmap_custom_registers
+                1, axi_regset_data_type, buf=axi_mmap_custom_registers
             )
-            self.reset_axi_array_contents = axi_numpy_array_reset[0]
+            self.data_type_axi_array_contents = axi_numpy_array_reset[0]
 
             # Setting configuration values to FPGA registers
             axi_numpy_array_config = np.recarray(
@@ -350,6 +351,7 @@ class RedPitayaSatellite(DataSender):
 
     def do_starting(self, payload):
         """Starting the acquisition and Wrote BOR"""
+        self.data_type = self.config["data_type"]
         tmp_BOR = self.config._config
         tmp_BOR["start time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
         self.BOR = tmp_BOR
@@ -378,9 +380,11 @@ class RedPitayaSatellite(DataSender):
 
     def reset(self):
         """Reset DAQ."""
-        self.reset_axi_array_contents.data_type = 16
+        self.data_type_axi_array_contents.data_type = self.config["data_type"] | (
+            1 << 4
+        )
         time.sleep(0.1)
-        self.reset_axi_array_contents.data_type = self.config["data_type"]
+        self.data_type_axi_array_contents.data_type = self.config["data_type"]
         self._readpos = 0
 
     def do_stopping(self, payload: any):
@@ -412,6 +416,12 @@ class RedPitayaSatellite(DataSender):
         BUFFER_SIZE = 131072
         """Sample every buffer channel and return raw data in numpy array."""
 
+        if (self.data_type >> 0) & 1 == 1:
+            if (self.data_type_axi_array_contents.data_type >> 7) & 1 == 0:
+                time.sleep(0.01)
+                return None
+            else:
+                time.sleep(0.01)
         self._writepos = self._get_axi_write_pointer()
 
         # Skip sampling if we haven't moved
@@ -467,6 +477,13 @@ class RedPitayaSatellite(DataSender):
                 )
 
             data[i] = buffer
+
+        if (self.data_type >> 0) & 1 == 1:
+            self.data_type_axi_array_contents.data_type = (
+                self.data_type | (1 << 5) | (1 << 6)
+            )
+            time.sleep(0.01)
+            self.data_type_axi_array_contents.data_type = self.data_type | (1 << 5)
 
         # Update read pointer and sample time
         self._readpos = self._writepos

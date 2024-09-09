@@ -89,12 +89,11 @@ class RPGamma(RedPitayaSatellite):
 
     def do_starting(self, payload: any) -> str:
         """Start acquisition by writing to address."""
-        self.reset()
-        self.axi_array_contents0.Externaltrigger = self.config["data_type"] + 32
+        self.axi_array_contents0.Externaltrigger = self.config["data_type"] | (1 << 5)
         return super().do_starting(payload)
 
     def do_stopping(self, payload: any):
-        self.axi_array_contents0.Externaltrigger = 0
+        self.axi_array_contents0.Externaltrigger = self.config["data_type"] & ~(1 << 5)
         return super().do_stopping(payload)
 
 
