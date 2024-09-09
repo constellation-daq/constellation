@@ -112,7 +112,8 @@ namespace constellation::protocol::CSCP {
      */
     constexpr bool transitions_from(State state1, State state2) {
         // Origin steady states indicated by the upper four bits
-        return (std::to_underlying(state1) & 0xF0) == (std::to_underlying(state2) & 0xF0);
+        return (static_cast<unsigned int>(std::to_underlying(state1)) & 0xF0U) ==
+               (static_cast<unsigned int>(std::to_underlying(state2)) & 0xF0U);
     }
 
     /**
@@ -120,7 +121,8 @@ namespace constellation::protocol::CSCP {
      */
     constexpr bool transitions_to(State state1, State state2) {
         // Target steady state indicated by the lower four bits
-        return (std::to_underlying(state1) & 0x0F) == ((std::to_underlying(state2) & 0xF0) >> 4);
+        return (static_cast<unsigned int>(std::to_underlying(state1)) & 0x0FU) ==
+               ((static_cast<unsigned int>(std::to_underlying(state2)) & 0xF0U) >> 4U);
     }
 
     /**

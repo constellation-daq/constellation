@@ -56,7 +56,7 @@ namespace constellation::satellite {
 
             bool applies(const State state) const { return protocol::CSCP::transitions_from(transitional, state); }
 
-            bool is_satisfied(const State state) const { return protocol::CSCP::transitions_to(transitional, state); }
+            bool isSatisfied(const State state) const { return protocol::CSCP::transitions_to(transitional, state); }
         };
 
     public:
@@ -179,7 +179,7 @@ namespace constellation::satellite {
          * @param remote Remote satellite to which this condition applies
          * @param transitional The transitional state the remote satellite has to successfully conclude
          */
-        CNSTLN_API void registerRemoteCondition(std::string remote, State transitional);
+        CNSTLN_API void registerRemoteCondition(const std::string& remote, State transitional);
 
         /**
          * @brief Clears all remote conditions for this satellite

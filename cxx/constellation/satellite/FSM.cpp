@@ -209,7 +209,7 @@ void FSM::registerRemoteCallback(std::function<std::optional<State>(std::string_
     remote_callback_ = std::move(callback);
 }
 
-void FSM::registerRemoteCondition(std::string remote, State transitional) {
+void FSM::registerRemoteCondition(const std::string& remote, State transitional) {
 
     // Check that the requested remote is not this satellite:
     if(utils::transform(remote, ::tolower) == utils::transform(satellite_->getCanonicalName(), ::tolower)) {
@@ -296,7 +296,7 @@ FSM::Transition FSM::call_satellite_function(Func func, Transition success_trans
                     }
 
                     // Check if condition is fulfilled:
-                    if(!condition.is_satisfied(remote_state.value())) {
+                    if(!condition.isSatisfied(remote_state.value())) {
                         LOG(logger_, STATUS) << "Awaiting state from " << condition.remote
                                              << ", currently: " << to_string(remote_state.value());
                         satisfied = false;
