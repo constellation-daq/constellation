@@ -60,10 +60,12 @@ public:
     void failure(constellation::protocol::CSCP::State previous_state) override;
 
 private:
-    katherine::dacs parse_dacs_file(std::filesystem::path file_path);
-    katherine::px_config parse_px_config_file(std::filesystem::path file_path);
+    katherine::dacs parse_dacs_file(std::filesystem::path file_path) const;
+    katherine::px_config parse_px_config_file(std::filesystem::path file_path) const;
 
-    std::string trim(const std::string& str, const std::string& delims = " \t\n\r\v");
+    std::vector<std::string> get_hw_info();
+
+    std::string trim(const std::string& str, const std::string& delims = " \t\n\r\v") const;
 
     void frame_started(int frame_idx);
     void frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info);

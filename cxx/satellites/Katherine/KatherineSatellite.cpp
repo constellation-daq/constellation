@@ -27,14 +27,8 @@ KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view n
     register_command("get_hw_info",
                      "Read hardware revision and other information from the device.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
-                     std::function<std::vector<std::string>()>([&]() -> std::vector<std::string> {
-                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
-                         auto state = device_->readout_status();
-                         return {"Type " + to_string(state.hw_type),
-                                 "Revision " + to_string(state.hw_revision),
-                                 "Serial " + to_string(state.hw_serial_number),
-                                 "Firmware " + to_string(state.fw_version)};
-                     }));
+                     &KatherineSatellite::get_hw_info,
+                     this);
     register_command("get_link_status",
                      "Read chip communication link status from the device.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
@@ -349,6 +343,9 @@ void KatherineSatellite::stopping() {
         acq_future_.get();
     }
 
+    // Add run metadata for end-of-run event:
+    setRunMetadataTag("hw_info", get_hw_info());
+
     // Read status information from acquisition object
     LOG(STATUS) << "Acquisition completed:" << std::endl
                 << "state: " << katherine::str_acq_state(acquisition_->state()) << std::endl
@@ -356,7 +353,16 @@ void KatherineSatellite::stopping() {
                 << "dropped " << acquisition_->dropped_measurement_data() << " measurement data items";
 }
 
-katherine::dacs KatherineSatellite::parse_dacs_file(std::filesystem::path file_path) {
+std::vector<std::string> KatherineSatellite::get_hw_info() {
+    std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+    auto state = device_->readout_status();
+    return {"Type " + to_string(state.hw_type),
+            "Revision " + to_string(state.hw_revision),
+            "Serial " + to_string(state.hw_serial_number),
+            "Firmware " + to_string(state.fw_version)};
+}
+
+katherine::dacs KatherineSatellite::parse_dacs_file(std::filesystem::path file_path) const {
 
     LOG(DEBUG) << "Attempting to read DAC file at " << file_path;
     std::ifstream dacfile(file_path);
@@ -393,7 +399,7 @@ katherine::dacs KatherineSatellite::parse_dacs_file(std::filesystem::path file_p
     return dacs;
 }
 
-katherine::px_config KatherineSatellite::parse_px_config_file(std::filesystem::path file_path) {
+katherine::px_config KatherineSatellite::parse_px_config_file(std::filesystem::path file_path) const {
 
     LOG(INFO) << "Attempting to read pixel configuration file at " << file_path;
 
@@ -455,7 +461,7 @@ katherine::px_config KatherineSatellite::parse_px_config_file(std::filesystem::p
     return px_config;
 }
 
-std::string KatherineSatellite::trim(const std::string& str, const std::string& delims) {
+std::string KatherineSatellite::trim(const std::string& str, const std::string& delims) const {
     auto b = str.find_first_not_of(delims);
     auto e = str.find_last_not_of(delims);
     if(b == std::string::npos || e == std::string::npos) {
