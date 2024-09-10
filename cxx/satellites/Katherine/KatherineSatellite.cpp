@@ -24,6 +24,27 @@ using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 
 KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view name) : TransmitterSatellite(type, name) {
+    register_command("get_hw_info",
+                     "Read hardware revision and other information from the device.",
+                     {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
+                     std::function<std::vector<std::string>()>([&]() -> std::vector<std::string> {
+                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+                         auto state = device_->readout_status();
+                         return {"Type " + to_string(state.hw_type),
+                                 "Revision " + to_string(state.hw_revision),
+                                 "Serial " + to_string(state.hw_serial_number),
+                                 "Firmware " + to_string(state.fw_version)};
+                     }));
+    register_command("get_link_status",
+                     "Read chip communication link status from the device.",
+                     {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
+                     std::function<std::vector<std::string>()>([&]() -> std::vector<std::string> {
+                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+                         auto state = device_->comm_status();
+                         return {"Line mask " + char_to_hex_string(state.comm_lines_mask),
+                                 "Data rate " + to_string(state.data_rate),
+                                 (state.chip_detected ? "Chip present" : "Chip absent")};
+                     }));
     register_command("get_temperature_readout",
                      "Read the current temperature from the Katherine readout board.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
