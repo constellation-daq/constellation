@@ -68,7 +68,8 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
 
     try {
         const std::lock_guard device_lock {katherine_cmd_mutex_};
-        const std::lock_guard acquisition_lock {katherine_data_mutex_};
+        const std::lock_guard acquisition_lock {katherine_acq_mutex_};
+        const std::lock_guard data_lock {katherine_data_mutex_};
 
         // If we already have a device connected, remove it - we might be calling initialize multiple times!
         if(device_) {
@@ -160,7 +161,7 @@ void KatherineSatellite::launching() {
     auto timeout = (ro_type_ == katherine::readout_type::data_driven) ? -1s : 10s;
 
     // Lock the data/acquisition mutex
-    const std::lock_guard acquisition_lock {katherine_data_mutex_};
+    const std::lock_guard acquisition_lock {katherine_acq_mutex_};
 
     // Select acquisition mode and create acquisition object
     // The acquisition object constructor calls katherine_acq_init which
@@ -206,7 +207,7 @@ void KatherineSatellite::launching() {
 
 void KatherineSatellite::landing() {
     if(acquisition_) {
-        const std::lock_guard acquisition_lock {katherine_data_mutex_};
+        const std::lock_guard acquisition_lock {katherine_acq_mutex_};
         // Calls katherine_acq_fini which frees data buffers
         acquisition_.reset();
     }
@@ -214,7 +215,7 @@ void KatherineSatellite::landing() {
 
 void KatherineSatellite::interrupting(CSCP::State) {
     if(acquisition_) {
-        const std::lock_guard acquisition_lock {katherine_data_mutex_};
+        const std::lock_guard acquisition_lock {katherine_acq_mutex_};
 
         // Read the current acquisition state:
         if(!acquisition_->aborted()) {
@@ -251,7 +252,7 @@ void KatherineSatellite::frame_ended(int frame_idx, bool completed, const kather
 
 void KatherineSatellite::starting(std::string_view) {
 
-    const std::lock_guard acquisition_lock {katherine_data_mutex_};
+    const std::lock_guard acquisition_lock {katherine_acq_mutex_};
     const std::lock_guard device_lock {katherine_cmd_mutex_};
 
     // This needs to be called *before* we start the run thread with acquitions->read
@@ -265,6 +266,10 @@ void KatherineSatellite::starting(std::string_view) {
     // Start Katherine run thread:
     runthread_ = std::thread([this]() {
         try {
+            // This is a blocking call while the acquisition state is RUNNING which receives and
+            // decodes data from the measurement data buffer to the pixel buffer, and flushes
+            // the pixel buffer to the user code
+            const std::lock_guard data_lock {katherine_data_mutex_};
             acquisition_->read();
         } catch(katherine::system_error& e) {
             LOG(CRITICAL) << "Katherine error: " << e.what();
@@ -280,7 +285,7 @@ void KatherineSatellite::starting(std::string_view) {
 
 void KatherineSatellite::stopping() {
 
-    const std::lock_guard acquisition_lock {katherine_data_mutex_};
+    const std::lock_guard acquisition_lock {katherine_acq_mutex_};
 
     // Read the current acquisition state:
     if(!acquisition_->aborted()) {
