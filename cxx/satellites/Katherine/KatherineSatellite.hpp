@@ -110,7 +110,8 @@ private:
 
 private:
     std::shared_ptr<katherine::device> device_;
-    std::mutex device_mutex_;
+    std::mutex katherine_cmd_mutex_;
+    std::mutex katherine_data_mutex_;
 
     std::shared_ptr<katherine::base_acquisition> acquisition_;
     katherine::config katherine_config_ {};

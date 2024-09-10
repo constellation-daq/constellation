@@ -28,28 +28,28 @@ KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view n
                      "Read the current temperature from the Katherine readout board.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
                      std::function<double()>([&]() {
-                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                          return device_->readout_temperature();
                      }));
     register_command("get_temperature_sensor",
                      "Read the current temperature from the temperature sensor.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
                      std::function<double()>([&]() {
-                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                          return device_->sensor_temperature();
                      }));
     register_command("get_adc_voltage",
                      "Read the voltage from the ADC channel provided as parameter.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
                      std::function<double(std::uint8_t)>([&](auto channel) {
-                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                          return device_->adc_voltage(channel);
                      }));
     register_command("get_chip_id",
                      "Read the chip ID of the attached sensor.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
                      std::function<std::string()>([&]() {
-                         std::lock_guard<std::mutex> lock {device_mutex_};
+                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                          return device_->chip_id();
                      }));
 }
@@ -67,21 +67,26 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     LOG(DEBUG) << "Attempting to connect to Katherine system at " << ip_address;
 
     try {
+        const std::lock_guard device_lock {katherine_cmd_mutex_};
+        const std::lock_guard acquisition_lock {katherine_data_mutex_};
+
         // If we already have a device connected, remove it - we might be calling initialize multiple times!
-        const std::lock_guard device_lock {device_mutex_};
         if(device_) {
+            // Calls katherine_device_fini which closes CTRL & DATA UDP sockets
             device_.reset();
         }
 
         // Connect to Katherine system, print device ID
+        // Calls katherine_device_init which sets up UDP sockets for CTRL & DATA
         device_ = std::make_shared<katherine::device>(ip_address);
 
         // Read back information
         LOG(STATUS) << "Connected to Katherine at " << ip_address;
-        LOG(STATUS) << "    Current board temperature: " << device_->readout_temperature() << "C";
+        LOG(STATUS) << "    Current board temperature: " << device_->readout_temperature() << "C"; // CTRL UDP socket
+        LOG(STATUS) << "    Current sensor temperature: " << device_->sensor_temperature() << "C"; // CTRL UDP socket
 
         // Cross-check Chip ID if provided
-        const auto chip_id = device_->chip_id();
+        const auto chip_id = device_->chip_id(); // CTRL UDP socket
         if(config.has("chip_id") && config.get<std::string>("chip_id") != chip_id) {
             throw InvalidValueError(config, "chip_id", "Invalid chip ID, system reports " + chip_id);
         }
@@ -128,7 +133,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     katherine_config_.set_bias_id(0);
     katherine_config_.set_bias(0);
 
-    // FIXME set number of frames to acquire?
+    // Set number of frames to acquire
     katherine_config_.set_no_frames(config.get<int>("no_frames", 1));
     if(ro_type_ == katherine::readout_type::data_driven && katherine_config_.no_frames() > 1) {
         throw InvalidValueError(config, "no_frames", "Data-driven mode requires a single frame");
@@ -146,6 +151,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     auto px_config = parse_px_config_file(config.getPath("px_config_file"));
     katherine_config_.set_pixel_config(std::move(px_config));
 
+    // Set how many pixels are buffered before returning and sending a message
     pixel_buffer_depth_ = config.get<int>("pixel_buffer");
 }
 
@@ -153,8 +159,15 @@ void KatherineSatellite::launching() {
     // If we are in data-driven mode, disable timeout:
     auto timeout = (ro_type_ == katherine::readout_type::data_driven) ? -1s : 10s;
 
+    // Lock the data/acquisition mutex
+    const std::lock_guard acquisition_lock {katherine_data_mutex_};
+
     // Select acquisition mode and create acquisition object
-    const std::lock_guard device_lock {device_mutex_};
+    // The acquisition object constructor calls katherine_acq_init which
+    // - allocates data buffers
+    // - stores device reference
+    // - set handlers
+    // There does not appear to be any UDP communication ongoing.
     if(opmode_ == OperationMode::TOA_TOT) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_tot>>(
             *device_,
@@ -192,33 +205,32 @@ void KatherineSatellite::launching() {
 }
 
 void KatherineSatellite::landing() {
-    const std::lock_guard device_lock {device_mutex_};
     if(acquisition_) {
+        const std::lock_guard acquisition_lock {katherine_data_mutex_};
+        // Calls katherine_acq_fini which frees data buffers
         acquisition_.reset();
     }
 }
 
 void KatherineSatellite::interrupting(CSCP::State) {
-    const std::lock_guard device_lock {device_mutex_};
     if(acquisition_) {
-        // End the acquisition:
+        const std::lock_guard acquisition_lock {katherine_data_mutex_};
+
+        // Read the current acquisition state:
         if(!acquisition_->aborted()) {
+            const std::lock_guard device_lock {katherine_cmd_mutex_};
+            // Calls katherine_acq_abort which sends the stop command via CTRL UDP
             acquisition_->abort();
         }
 
+        // Calls katherine_acq_fini which frees data buffers
         acquisition_.reset();
     }
 }
 
-void KatherineSatellite::failure(CSCP::State) {
-    const std::lock_guard device_lock {device_mutex_};
-    if(acquisition_) {
-        // End the acquisition:
-        if(!acquisition_->aborted()) {
-            acquisition_->abort();
-        }
-        acquisition_.reset();
-    }
+void KatherineSatellite::failure(CSCP::State state) {
+    // Currently same as interrupting - what happens if we lose comm with Katherine system?
+    interrupting(state);
 }
 
 void KatherineSatellite::frame_started(int frame_idx) {
@@ -239,8 +251,15 @@ void KatherineSatellite::frame_ended(int frame_idx, bool completed, const kather
 
 void KatherineSatellite::starting(std::string_view) {
 
+    const std::lock_guard acquisition_lock {katherine_data_mutex_};
+    const std::lock_guard device_lock {katherine_cmd_mutex_};
+
     // This needs to be called *before* we start the run thread with acquitions->read
     // otherwise the read function falls through directly with an error
+    // This calls katherine_acquisition_begin which:
+    // - calls katherine_configure where the hardware is configured via the CTRL UDP socket
+    // - changes state to RUNNING
+    // - calls katherine_cmd_start_acquisition CTRL UDP to send start cmd to hardware
     acquisition_->begin(katherine_config_, ro_type_);
 
     // Start Katherine run thread:
@@ -260,16 +279,22 @@ void KatherineSatellite::starting(std::string_view) {
 }
 
 void KatherineSatellite::stopping() {
-    const std::lock_guard device_lock {device_mutex_};
 
-    // End the acquisition:
-    acquisition_->abort();
+    const std::lock_guard acquisition_lock {katherine_data_mutex_};
+
+    // Read the current acquisition state:
+    if(!acquisition_->aborted()) {
+        const std::lock_guard device_lock {katherine_cmd_mutex_};
+        // Calls katherine_acq_abort which sends the stop command via CTRL UDP
+        acquisition_->abort();
+    }
 
     // Join thread once it is done
     if(runthread_.joinable()) {
         runthread_.join();
     }
 
+    // Rad status information from acquisition object
     LOG(STATUS) << "Acquisition completed:" << std::endl
                 << "state: " << katherine::str_acq_state(acquisition_->state()) << std::endl
                 << "received " << acquisition_->completed_frames() << " complete frames" << std::endl
