@@ -10,6 +10,7 @@
 #pragma once
 
 #include <filesystem>
+#include <future>
 #include <mutex>
 #include <string_view>
 #include <thread>
@@ -68,33 +69,25 @@ private:
     void frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info);
 
     template <typename T> void pixels_received(const T* px, size_t count) {
-        try {
-            auto msg = newDataMessage();
-            for(size_t i = 0; i < count; ++i) {
-                msg.addFrame(to_bytes(px[i]));
+        auto msg = newDataMessage();
+        for(size_t i = 0; i < count; ++i) {
+            msg.addFrame(to_bytes(px[i]));
+        }
+        // Try to send and retry if it failed:
+        LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
+
+        std::chrono::milliseconds timeout {};
+        while(!sendDataMessage(msg)) {
+            using namespace std::literals::chrono_literals;
+            std::this_thread::sleep_for(100ms);
+            timeout += 100ms;
+
+            // Abort if we could not send the message after 10s:
+            if(timeout > 2s) {
+                LOG(CRITICAL) << "Aborting data transmission - cannot send data";
+                throw constellation::satellite::SendTimeoutError("pixel data",
+                                                                 std::chrono::duration_cast<std::chrono::seconds>(timeout));
             }
-            // Try to send and retry if it failed:
-            LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
-
-            std::chrono::milliseconds timeout {};
-            while(!sendDataMessage(msg)) {
-                LOG(DEBUG) << "Failed to send message, retrying...";
-                using namespace std::literals::chrono_literals;
-                std::this_thread::sleep_for(100ms);
-
-                timeout += 100ms;
-
-                // Abort if we could not send the message after 10s:
-                if(timeout > 10s) {
-                    throw constellation::satellite::SendTimeoutError(
-                        "pixel data", std::chrono::duration_cast<std::chrono::seconds>(timeout));
-                }
-            }
-        } catch(...) {
-            LOG(DEBUG) << "Caught exception in acquisition thread";
-
-            // Save exception
-            exception_ptr_ = std::current_exception();
         }
     }
 
@@ -126,10 +119,8 @@ private:
     std::shared_ptr<katherine::base_acquisition> acquisition_;
     katherine::config katherine_config_ {};
 
-    /* Thread for the blocking Katherine acquisition call */
-    std::thread runthread_;
-    /* Exception pointer to be used for all exceptions emanating from the acquisition thread */
-    std::exception_ptr exception_ptr_ {nullptr};
+    /* Future to keep track of Katherine acquisition call state & exceptions */
+    std::future<void> acq_future_;
 
     katherine::readout_type ro_type_ {};
     OperationMode opmode_ {};
