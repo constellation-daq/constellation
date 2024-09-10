@@ -95,7 +95,7 @@ private:
         if constexpr(std::is_same_v<T, katherine::acq::f_toa_tot::pixel_type>) {
             LOG(TRACE) << "Pixel " << (int)pixel.coord.x << " " << (int)pixel.coord.y;
             // 2x8b coors, 8b ftoa, 64b toa, 16b tot = 13
-            data.resize(13);
+            data.reserve(13);
             data.push_back(pixel.coord.x);
             data.push_back(pixel.coord.y);
             data.push_back(pixel.ftoa);
