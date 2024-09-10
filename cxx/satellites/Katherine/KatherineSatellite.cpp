@@ -224,9 +224,10 @@ void KatherineSatellite::interrupting(CSCP::State) {
             acquisition_->abort();
         }
 
-        // Join the acquisition thread
-        if(runthread_.joinable()) {
-            runthread_.join();
+        // Wait for acquisition task to finish
+        if(acq_future_.valid()) {
+            acq_future_.wait();
+            acq_future_.get();
         }
 
         // Calls katherine_acq_fini which frees data buffers
@@ -240,33 +241,19 @@ void KatherineSatellite::failure(CSCP::State state) {
 }
 
 void KatherineSatellite::frame_started(int frame_idx) {
-    try {
-        LOG(INFO) << "Started frame " << frame_idx << std::endl;
-    } catch(...) {
-        LOG(DEBUG) << "Caught exception in acquisition thread";
-
-        // Save exception
-        exception_ptr_ = std::current_exception();
-    }
+    LOG(INFO) << "Started frame " << frame_idx << std::endl;
 }
 
 void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
-    try {
-        const double recv_perc = 100. * info.received_pixels / info.sent_pixels;
+    const double recv_perc = 100. * info.received_pixels / info.sent_pixels;
 
-        LOG(INFO) << "Ended frame " << frame_idx << "." << std::endl;
-        LOG(INFO) << " - TPX3->Katherine lost " << info.lost_pixels << " pixels" << std::endl
-                  << " - Katherine->PC sent " << info.sent_pixels << " pixels" << std::endl
-                  << " - Katherine->PC received " << info.received_pixels << " pixels (" << recv_perc << " %)" << std::endl
-                  << " - state: " << (completed ? "completed" : "not completed") << std::endl
-                  << " - start time: " << info.start_time.d << std::endl
-                  << " - end time: " << info.end_time.d << std::endl;
-    } catch(...) {
-        LOG(DEBUG) << "Caught exception in acquisition thread";
-
-        // Save exception
-        exception_ptr_ = std::current_exception();
-    }
+    LOG(INFO) << "Ended frame " << frame_idx << "." << std::endl;
+    LOG(INFO) << " - TPX3->Katherine lost " << info.lost_pixels << " pixels" << std::endl
+              << " - Katherine->PC sent " << info.sent_pixels << " pixels" << std::endl
+              << " - Katherine->PC received " << info.received_pixels << " pixels (" << recv_perc << " %)" << std::endl
+              << " - state: " << (completed ? "completed" : "not completed") << std::endl
+              << " - start time: " << info.start_time.d << std::endl
+              << " - end time: " << info.end_time.d << std::endl;
 }
 
 void KatherineSatellite::starting(std::string_view) {
@@ -282,8 +269,8 @@ void KatherineSatellite::starting(std::string_view) {
     // - calls katherine_cmd_start_acquisition CTRL UDP to send start cmd to hardware
     acquisition_->begin(katherine_config_, ro_type_);
 
-    // Start Katherine run thread:
-    runthread_ = std::thread([this]() {
+    // Start Katherine acquisition task:
+    acq_future_ = std::async(std::launch::async, [this]() {
         try {
             // This is a blocking call while the acquisition state is RUNNING which receives and
             // decodes data from the measurement data buffer to the pixel buffer, and flushes
@@ -291,25 +278,24 @@ void KatherineSatellite::starting(std::string_view) {
             const std::lock_guard data_lock {katherine_data_mutex_};
             acquisition_->read();
         } catch(katherine::system_error& e) {
-            LOG(CRITICAL) << "Katherine error: " << e.what();
-            if(!acquisition_->aborted()) {
-                LOG(STATUS) << "Aborting Katherine run...";
-                acquisition_->abort();
-            }
-            // FIXME throw CommunicationError and catch exception in the run method?
+            std::string error_msg {"Katherine error: "};
+            error_msg += e.what();
+            LOG(CRITICAL) << error_msg;
+            throw CommunicationError(error_msg);
         }
     });
-    runthread_.detach();
     LOG(INFO) << "Spawned acquisition thread";
 }
 
 void KatherineSatellite::running(const std::stop_token& stop_token) {
     while(!stop_token.stop_requested()) {
-        // Check if an exception has been thrown in the acquisition thread
-        if(exception_ptr_) {
-            std::rethrow_exception(exception_ptr_);
+        if(acq_future_.valid()) {
+            const auto state = acq_future_.wait_for(300ms);
+            if(state == std::future_status::ready) {
+                // Access to rethrow exceptions
+                acq_future_.get();
+            }
         }
-        std::this_thread::sleep_for(300ms);
     }
 }
 
@@ -322,13 +308,17 @@ void KatherineSatellite::stopping() {
         const std::lock_guard device_lock {katherine_cmd_mutex_};
         // Calls katherine_acq_abort which sends the stop command via CTRL UDP
         acquisition_->abort();
+        LOG(DEBUG) << "Aborted acquisition";
     }
 
-    // Join thread once it is done, i.e. after all current measurement data has been processed
-    // and the katherine_acquisition_read call has returned.
-    if(runthread_.joinable()) {
-        runthread_.join();
-        LOG(INFO) << "Joined acquisition thread";
+    // Wait for acquisition task to finish, i.e. after all current measurement data has been processed and the
+    // katherine_acquisition_read call has returned. Then its future is ready, accessing it rethrows any exception that
+    // occurred.
+    if(acq_future_.valid()) {
+        LOG(DEBUG) << "Awaiting future";
+        acq_future_.wait();
+        LOG(INFO) << "Joined acquisition task";
+        acq_future_.get();
     }
 
     // Read status information from acquisition object
