@@ -224,6 +224,11 @@ void KatherineSatellite::interrupting(CSCP::State) {
             acquisition_->abort();
         }
 
+        // Join the acquisition thread
+        if(runthread_.joinable()) {
+            runthread_.join();
+        }
+
         // Calls katherine_acq_fini which frees data buffers
         acquisition_.reset();
     }
@@ -295,6 +300,7 @@ void KatherineSatellite::starting(std::string_view) {
         }
     });
     runthread_.detach();
+    LOG(INFO) << "Spawned acquisition thread";
 }
 
 void KatherineSatellite::running(const std::stop_token& stop_token) {
@@ -318,12 +324,14 @@ void KatherineSatellite::stopping() {
         acquisition_->abort();
     }
 
-    // Join thread once it is done
+    // Join thread once it is done, i.e. after all current measurement data has been processed
+    // and the katherine_acquisition_read call has returned.
     if(runthread_.joinable()) {
         runthread_.join();
+        LOG(INFO) << "Joined acquisition thread";
     }
 
-    // Rad status information from acquisition object
+    // Read status information from acquisition object
     LOG(STATUS) << "Acquisition completed:" << std::endl
                 << "state: " << katherine::str_acq_state(acquisition_->state()) << std::endl
                 << "received " << acquisition_->completed_frames() << " complete frames" << std::endl
