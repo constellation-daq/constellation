@@ -235,19 +235,33 @@ void KatherineSatellite::failure(CSCP::State state) {
 }
 
 void KatherineSatellite::frame_started(int frame_idx) {
-    LOG(INFO) << "Started frame " << frame_idx << std::endl;
+    try {
+        LOG(INFO) << "Started frame " << frame_idx << std::endl;
+    } catch(...) {
+        LOG(DEBUG) << "Caught exception in acquisition thread";
+
+        // Save exception
+        exception_ptr_ = std::current_exception();
+    }
 }
 
 void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
-    const double recv_perc = 100. * info.received_pixels / info.sent_pixels;
+    try {
+        const double recv_perc = 100. * info.received_pixels / info.sent_pixels;
 
-    LOG(INFO) << "Ended frame " << frame_idx << "." << std::endl;
-    LOG(INFO) << " - TPX3->Katherine lost " << info.lost_pixels << " pixels" << std::endl
-              << " - Katherine->PC sent " << info.sent_pixels << " pixels" << std::endl
-              << " - Katherine->PC received " << info.received_pixels << " pixels (" << recv_perc << " %)" << std::endl
-              << " - state: " << (completed ? "completed" : "not completed") << std::endl
-              << " - start time: " << info.start_time.d << std::endl
-              << " - end time: " << info.end_time.d << std::endl;
+        LOG(INFO) << "Ended frame " << frame_idx << "." << std::endl;
+        LOG(INFO) << " - TPX3->Katherine lost " << info.lost_pixels << " pixels" << std::endl
+                  << " - Katherine->PC sent " << info.sent_pixels << " pixels" << std::endl
+                  << " - Katherine->PC received " << info.received_pixels << " pixels (" << recv_perc << " %)" << std::endl
+                  << " - state: " << (completed ? "completed" : "not completed") << std::endl
+                  << " - start time: " << info.start_time.d << std::endl
+                  << " - end time: " << info.end_time.d << std::endl;
+    } catch(...) {
+        LOG(DEBUG) << "Caught exception in acquisition thread";
+
+        // Save exception
+        exception_ptr_ = std::current_exception();
+    }
 }
 
 void KatherineSatellite::starting(std::string_view) {
@@ -281,6 +295,16 @@ void KatherineSatellite::starting(std::string_view) {
         }
     });
     runthread_.detach();
+}
+
+void KatherineSatellite::running(const std::stop_token& stop_token) {
+    while(!stop_token.stop_requested()) {
+        // Check if an exception has been thrown in the acquisition thread
+        if(exception_ptr_) {
+            std::rethrow_exception(exception_ptr_);
+        }
+        std::this_thread::sleep_for(300ms);
+    }
 }
 
 void KatherineSatellite::stopping() {

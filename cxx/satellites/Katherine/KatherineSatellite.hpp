@@ -53,6 +53,8 @@ public:
     void starting(std::string_view run_identifier) override;
     void stopping() override;
 
+    void running(const std::stop_token& stop_token) override;
+
     void interrupting(constellation::protocol::CSCP::State previous_state) override;
     void failure(constellation::protocol::CSCP::State previous_state) override;
 
@@ -66,26 +68,33 @@ private:
     void frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info);
 
     template <typename T> void pixels_received(const T* px, size_t count) {
-        auto msg = newDataMessage();
-        for(size_t i = 0; i < count; ++i) {
-            msg.addFrame(to_bytes(px[i]));
-        }
-        // Try to send and retry if it failed:
-        LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
-
-        std::chrono::milliseconds timeout {};
-        while(!sendDataMessage(msg)) {
-            LOG(DEBUG) << "Failed to send message, retrying...";
-            using namespace std::literals::chrono_literals;
-            std::this_thread::sleep_for(100ms);
-
-            timeout += 100ms;
-
-            // Abort if we could not send the message after 10s:
-            if(timeout > 10s) {
-                throw constellation::satellite::SendTimeoutError("pixel data",
-                                                                 std::chrono::duration_cast<std::chrono::seconds>(timeout));
+        try {
+            auto msg = newDataMessage();
+            for(size_t i = 0; i < count; ++i) {
+                msg.addFrame(to_bytes(px[i]));
             }
+            // Try to send and retry if it failed:
+            LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
+
+            std::chrono::milliseconds timeout {};
+            while(!sendDataMessage(msg)) {
+                LOG(DEBUG) << "Failed to send message, retrying...";
+                using namespace std::literals::chrono_literals;
+                std::this_thread::sleep_for(100ms);
+
+                timeout += 100ms;
+
+                // Abort if we could not send the message after 10s:
+                if(timeout > 10s) {
+                    throw constellation::satellite::SendTimeoutError(
+                        "pixel data", std::chrono::duration_cast<std::chrono::seconds>(timeout));
+                }
+            }
+        } catch(...) {
+            LOG(DEBUG) << "Caught exception in acquisition thread";
+
+            // Save exception
+            exception_ptr_ = std::current_exception();
         }
     }
 
@@ -116,7 +125,12 @@ private:
 
     std::shared_ptr<katherine::base_acquisition> acquisition_;
     katherine::config katherine_config_ {};
+
+    /* Thread for the blocking Katherine acquisition call */
     std::thread runthread_;
+    /* Exception pointer to be used for all exceptions emanating from the acquisition thread */
+    std::exception_ptr exception_ptr_ {nullptr};
+
     katherine::readout_type ro_type_ {};
     OperationMode opmode_ {};
     int pixel_buffer_depth_ {};
