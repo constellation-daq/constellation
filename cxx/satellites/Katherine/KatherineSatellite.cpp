@@ -107,6 +107,13 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
         LOG(STATUS) << "    Current board temperature: " << device_->readout_temperature() << "C"; // CTRL UDP socket
         LOG(STATUS) << "    Current sensor temperature: " << device_->sensor_temperature() << "C"; // CTRL UDP socket
 
+        // Check that chip is connected:
+        const auto link_status = device_->comm_status();
+        if(!link_status.chip_detected) {
+            throw CommunicationError("No chip detected at Katherine system");
+        }
+        LOG(STATUS) << "    Chip detected, link speed " << to_string(link_status.data_rate);
+
         // Cross-check Chip ID if provided
         const auto chip_id = device_->chip_id(); // CTRL UDP socket
         if(config.has("chip_id") && config.get<std::string>("chip_id") != chip_id) {
