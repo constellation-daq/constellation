@@ -20,7 +20,7 @@ from .heartbeatchecker import HeartbeatChecker
 
 from .cscp import CSCPMessage
 from .chirp import CHIRPServiceIdentifier
-from .broadcastmanager import CHIRPBroadcaster
+from .broadcastmanager import CHIRPBroadcaster, chirp_callback, DiscoveredService
 from .commandmanager import CommandReceiver, cscp_requestable
 from .configuration import ConfigError, Configuration, make_lowercase
 from .monitoring import MonitoringSender
@@ -33,6 +33,7 @@ class Satellite(
     CHIRPBroadcaster,
     MonitoringSender,
     HeartbeatSender,
+    HeartbeatChecker,
 ):
     """Base class for a Constellation Satellite."""
 
@@ -64,14 +65,12 @@ class Satellite(
         super()._add_com_thread()
         super()._start_com_threads()
 
-        # register heartbeat checker
-        self.hb_checker = HeartbeatChecker()
-
         # register broadcast manager
         self.register_offer(CHIRPServiceIdentifier.CONTROL, self.cmd_port)
         self.register_offer(CHIRPServiceIdentifier.HEARTBEAT, self.hb_port)
         self.register_offer(CHIRPServiceIdentifier.MONITORING, self.mon_port)
         self.broadcast_offers()
+        self.request(CHIRPServiceIdentifier.HEARTBEAT)
 
         # Add exception handling via threading.excepthook to allow the state
         # machine to reflect exceptions in the communication services threads.
@@ -86,14 +85,21 @@ class Satellite(
         self.log.info(f"Satellite {self.name}, version {__version__} ready to launch!")
 
     @debug_log
-    @cscp_requestable
-    def register(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
-        """Register a heartbeat via CSCP request."""
-        name, ip, port = request.payload.split()
-        callback = self.hb_checker.register
-        # add to the task queue
-        self.task_queue.put((callback, [name, f"tcp://{ip}:{port}", self.context]))
-        return "registering", name, {}
+    @chirp_callback(CHIRPServiceIdentifier.HEARTBEAT)
+    def _add_satellite_heatbeat(self, service: DiscoveredService) -> None:
+        """Callback method registering satellite's heartbeat."""
+        if service.alive:
+            self.log.debug(
+                f"Registering new host for heartbeats at {service.address}:{service.port}"
+            )
+            self.register_heartbeat_host(
+                service.host_uuid, "tcp://" + service.address + ":" + str(service.port)
+            )
+        else:
+            self.log.debug(
+                f"Unregistering host for heartbeats at {service.address}:{service.port}"
+            )
+            self.unregister_heartbeat_host(service.host_uuid)
 
     def run_satellite(self) -> None:
         """Main Satellite event loop with task handler-routine.
@@ -203,7 +209,6 @@ class Satellite(
         control to the device-specific public method.
 
         """
-        self.hb_checker.start_all()
         return str(self.do_launching(payload))
 
     @debug_log
@@ -247,7 +252,6 @@ class Satellite(
         control to the device-specific public method.
 
         """
-        self.hb_checker.stop()
         res: str = self.do_landing(payload)
         return res
 
@@ -340,8 +344,6 @@ class Satellite(
 
         """
         try:
-            # Stop heartbeat checking
-            self.hb_checker.stop()
             # stop state thread
             if self._state_thread_evt:
                 self._state_thread_evt.set()
@@ -351,8 +353,6 @@ class Satellite(
                     except TimeoutError:
                         self.log.error("Timeout while joining state thread, continuing.")
             res: str = self.fail_gracefully()
-            # close heartbeat checker
-            self.hb_checker.close()
             return res
         # NOTE: we cannot have a non-handled exception disallow the state
         # transition to failure state!
@@ -384,7 +384,6 @@ class Satellite(
             res_run = self._state_thread_fut.result(timeout=None)
             self._state_thread_evt = None
         self.log.debug("RUN thread finished, continue with INTERRUPTING.")
-        self.hb_checker.stop()
         res: str = self.do_interrupting()
         return f"{res_run}; {res}"
 
