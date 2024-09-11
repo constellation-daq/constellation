@@ -34,6 +34,8 @@ namespace constellation::utils {
         void start() { start_time_ = std::chrono::system_clock::now(); }
         bool timeoutReached() const { return start_time_ + timeout_ < std::chrono::system_clock::now(); }
 
+        template <typename T> T getTimeout() { return std::chrono::duration_cast<T>(timeout_); }
+
     private:
         std::chrono::system_clock::time_point start_time_;
         std::chrono::nanoseconds timeout_;
