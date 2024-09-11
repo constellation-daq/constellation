@@ -258,7 +258,7 @@ class SatelliteResponse:
                         p.pretty(item)
 
 
-class BaseController(CHIRPBroadcaster):
+class BaseController(CHIRPBroadcaster, HeartbeatChecker):
     """Simple controller class to send commands to a Constellation."""
 
     def __init__(self, group: str, **kwargs: Any) -> None:
@@ -280,8 +280,8 @@ class BaseController(CHIRPBroadcaster):
         super()._add_com_thread()
         super()._start_com_threads()
 
-        self._hb_checker = HeartbeatChecker(self._hb_failure)
-        self._hb_checker.auto_recover = True
+        # auto-recover for heartbeats
+        self.auto_recover = True
 
         # set up thread to handle incoming tasks (e.g. CHIRP discoveries)
         self._task_handler_event = threading.Event()
@@ -304,7 +304,7 @@ class BaseController(CHIRPBroadcaster):
         Based on heartbeat information.
 
         """
-        return self._hb_checker.states
+        return self.heartbeat_states
 
     @property
     def state(self) -> ControllerState:
@@ -394,14 +394,11 @@ class BaseController(CHIRPBroadcaster):
         uuid = str(service.host_uuid)
         if uuid in self._transmitters:
             # we are controlling this satellite
-            cls, name = self._uuid_lookup[uuid]
-            canonical_name = f"{cls}.{name}"
-            if not self._hb_checker.is_registered(canonical_name):
-                self._hb_checker.register(
-                    name=canonical_name,
+            if not self.heartbeat_host_is_registered(service.host_uuid):
+                self.register_heartbeat_host(
+                    name=service.host_uuid,
                     address=f"tcp://{service.address}:{service.port}",
                 )
-                self._hb_checker.start(canonical_name)
 
     def _add_satellite(self, service: DiscoveredService) -> None:
         self.log.debug("Adding Satellite %s", service)
@@ -448,14 +445,12 @@ class BaseController(CHIRPBroadcaster):
             # check if heartbeat service for satellite is known already
             for hbservice in self.get_discovered(CHIRPServiceIdentifier.HEARTBEAT):
                 if hbservice.host_uuid == service.host_uuid:
-                    canonical_name = f"{cls}.{name}"
-                    if self._hb_checker.is_registered(canonical_name):
-                        self._hb_checker.unregister(canonical_name)
-                    self._hb_checker.register(
-                        name=canonical_name,
+                    if self.heartbeat_host_is_registered(service.host_uuid):
+                        self.unregister_heartbeat_host(service.host_uuid)
+                    self.register_heartbeat_host(
+                        name=service.host_uuid,
                         address=f"tcp://{hbservice.address}:{hbservice.port}",
                     )
-                    self._hb_checker.start(canonical_name)
                     break
         except RuntimeError as e:
             self.log.error("Could not add Satellite %s: %s", service.host_uuid, repr(e))
@@ -607,11 +602,6 @@ class BaseController(CHIRPBroadcaster):
             # ignore errors; this avoids spurious error messages if e.g. the
             # initialization of the class fails
             pass
-        try:
-            self._hb_checker.stop()
-            self._hb_checker.close()
-        except Exception as e:
-            self.log.warning("Encountered problem shutting heartbeat checker down: %s", repr(e))
         if getattr(self, "_task_handler_event", None):
             self._task_handler_thread.join()
         super().reentry()
