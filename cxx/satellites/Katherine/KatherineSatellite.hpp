@@ -134,4 +134,5 @@ private:
     OperationMode opmode_ {};
     int data_buffer_depth_ {};
     int pixel_buffer_depth_ {};
+    bool decode_data_ {};
 };
