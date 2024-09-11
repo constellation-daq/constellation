@@ -176,6 +176,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
 
     // Set how many pixels are buffered before returning and sending a message
     pixel_buffer_depth_ = config.get<int>("pixel_buffer");
+    data_timeout_ = std::chrono::seconds(config.get<std::uint64_t>("_data_timeout", 10));
 }
 
 void KatherineSatellite::launching() {

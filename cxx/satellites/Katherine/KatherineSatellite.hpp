@@ -19,6 +19,7 @@
 
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/timers.hpp"
 #include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
@@ -70,25 +71,29 @@ private:
     void frame_started(int frame_idx);
     void frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info);
 
+    void data_received(const char* px, size_t count);
+
     template <typename T> void pixels_received(const T* px, size_t count) {
         auto msg = newDataMessage();
+        LOG(TRACE) << "Received buffer with " << count << " pixel hits";
+        LOG_IF(TRACE, count > 0) << "First pixel of buffer: " << static_cast<int>(px[0].coord.x) << " "
+                                 << static_cast<int>(px[0].coord.y);
+
         for(size_t i = 0; i < count; ++i) {
             msg.addFrame(to_bytes(px[i]));
         }
         // Try to send and retry if it failed:
         LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
 
-        std::chrono::milliseconds timeout {};
+        using namespace std::literals::chrono_literals;
+        const constellation::utils::TimeoutTimer timer {data_timeout_};
         while(!sendDataMessage(msg)) {
-            using namespace std::literals::chrono_literals;
             std::this_thread::sleep_for(100ms);
-            timeout += 100ms;
 
-            // Abort if we could not send the message after 10s:
-            if(timeout > 2s) {
+            // Abort if we could not send the message after timeout:
+            if(timer.timeoutReached()) {
                 LOG(CRITICAL) << "Aborting data transmission - cannot send data";
-                throw constellation::satellite::SendTimeoutError("pixel data",
-                                                                 std::chrono::duration_cast<std::chrono::seconds>(timeout));
+                throw constellation::satellite::SendTimeoutError("pixel data", data_timeout_);
             }
         }
     }
@@ -97,7 +102,6 @@ private:
         std::vector<std::uint8_t> data;
 
         if constexpr(std::is_same_v<T, katherine::acq::f_toa_tot::pixel_type>) {
-            LOG(TRACE) << "Pixel " << (int)pixel.coord.x << " " << (int)pixel.coord.y;
             // 2x8b coors, 8b ftoa, 64b toa, 16b tot = 13
             data.reserve(13);
             data.push_back(pixel.coord.x);
@@ -123,6 +127,8 @@ private:
 
     /* Future to keep track of Katherine acquisition call state & exceptions */
     std::future<void> acq_future_;
+
+    std::chrono::seconds data_timeout_ {};
 
     katherine::readout_type ro_type_ {};
     OperationMode opmode_ {};
