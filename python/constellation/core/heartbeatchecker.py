@@ -3,7 +3,6 @@ SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 """
 
-import logging
 import threading
 import time
 from datetime import datetime, timezone
@@ -11,13 +10,10 @@ from uuid import UUID
 
 import zmq
 
-from typing import Optional, Callable, Any, cast
+from typing import Optional, Callable, Any
 from .fsm import SatelliteState
 from .chp import CHPDecodeMessage
-from .base import ConstellationLogger, BaseSatelliteFrame
-
-logging.setLoggerClass(ConstellationLogger)
-logger = cast(ConstellationLogger, logging.getLogger(__name__))
+from .base import BaseSatelliteFrame, setup_cli_logging
 
 
 class HeartbeatState:
@@ -65,7 +61,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
         self._socket_lock = threading.Lock()
         self.auto_recover = False  # clear fail Event if Satellite reappears?
 
-    def register_callback(
+    def register_heartbeat_callback(
         self, callback: Optional[Callable[[str, SatelliteState], None]] = None
     ) -> None:
         self._callback = callback
@@ -91,7 +87,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
             socket = ctx.socket(zmq.SUB)
         except zmq.ZMQError as e:
             if "Too many open files" in e.strerror:
-                logger.error(
+                self.log.error(
                     "System reports too many open files: cannot open further connections.\n"
                     "Please consider increasing the limit of your OS."
                     "On Linux systems, use 'ulimit' to set a higher value."
@@ -107,7 +103,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
         with self._socket_lock:
             self._poller.register(socket, zmq.POLLIN)
 
-        logger.info(f"Registered heartbeating check for {address}")
+        self.log.info(f"Registered heartbeating check for {address}")
         return evt
 
     def unregister_heartbeat_host(self, name: UUID) -> None:
@@ -123,7 +119,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
             self._poller.unregister(s)
             self._states.pop(s)
             s.close()
-        logger.info("Removed heartbeat check for %s", name)
+        self.log.info("Removed heartbeat check for %s", name)
 
     def heartbeat_host_is_registered(self, name: UUID) -> bool:
         """Check whether a given Satellite is already registered."""
@@ -152,7 +148,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
         return res
 
     def _run_thread(self) -> None:
-        logger.info("Starting heartbeat check thread")
+        self.log.info("Starting heartbeat check thread")
         last_check = datetime.now(timezone.utc)
 
         # refresh all tokens
@@ -171,7 +167,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
                 for socket in sockets_ready.keys():
                     binmsg = socket.recv()
                     host, timestamp, state, interval = CHPDecodeMessage(binmsg)
-                    logger.debug(
+                    self.log.debug(
                         f"Received heartbeat from {host}, state {state}, next in {interval}"
                     )
                     hb = self._states[socket]
@@ -182,7 +178,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
                     hb.interval = interval
                     # refresh lives
                     if hb.lives != self.HB_INIT_LIVES:
-                        logger.log(
+                        self.log.log(
                             5,
                             "%s had %d lives left (interval %d), refreshing",
                             hb.name,
@@ -197,7 +193,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
                     ]:
                         # satellite in error state, interrupt
                         if not hb.failed.is_set():
-                            logger.info(
+                            self.log.info(
                                 f"{hb.name} state causing interrupt callback to be called"
                             )
                             hb.failed.set()
@@ -213,7 +209,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
                     if hb.seconds_since_refresh > (hb.interval / 1000) * 1.5:
                         # no message after 150% of the interval, subtract life
                         hb.lives -= 1
-                        logger.log(
+                        self.log.log(
                             5,
                             "%s unresponsive, removed life, now %d",
                             hb.name,
@@ -222,7 +218,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
                         if hb.lives <= 0:
                             # no lives left, interrupt
                             if not hb.failed.is_set():
-                                logger.info(
+                                self.log.info(
                                     f"{hb.name} unresponsive causing interrupt callback to be called"
                                 )
                                 hb.failed.set()
@@ -241,7 +237,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
 
     def _interrupt(self, name: str, state: SatelliteState) -> None:
         with self._callback_lock:
-            if self._callback:
+            if hasattr(self, "_callback") and self._callback:
                 try:
                     self._callback(name, state)
                 except Exception:
@@ -264,7 +260,6 @@ class HeartbeatChecker(BaseSatelliteFrame):
 def main(args: Any = None) -> None:
     """Receive heartbeats from a single host."""
     import argparse
-    import coloredlogs  # type: ignore[import-untyped]
 
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument("--log-level", default="debug")
@@ -273,14 +268,14 @@ def main(args: Any = None) -> None:
     args = parser.parse_args()
 
     # set up logging
-    coloredlogs.install(level=args.log_level.upper(), logger=logger)
-    logger.info("Starting up heartbeater!")
+    logger = setup_cli_logging(args["name"], args.pop("log_level"))
+    logger.info("Starting up heartbeat checker!")
 
     def callback(name: str, _state: SatelliteState) -> None:
         logger.error(f"Service {name} failed, callback was called!")
 
     hb_checker = HeartbeatChecker()
-    hb_checker.register_callback(callback)
+    hb_checker.register_heartbeat_callback(callback)
     evt = hb_checker.register_heartbeat_host(UUID(), f"tcp://{args.ip}:{args.port}")
 
     while True:
