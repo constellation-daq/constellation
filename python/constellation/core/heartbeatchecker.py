@@ -7,6 +7,7 @@ import logging
 import threading
 import time
 from datetime import datetime, timezone
+from uuid import UUID
 
 import zmq
 
@@ -20,7 +21,7 @@ logger = cast(ConstellationLogger, logging.getLogger(__name__))
 
 
 class HeartbeatState:
-    def __init__(self, name: str, evt: threading.Event, lives: int, interval: int):
+    def __init__(self, name: UUID, evt: threading.Event, lives: int, interval: int):
         self.host = name
         self.name = ""
         self.lives = lives
@@ -78,7 +79,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
         self.log.debug("Heartbeat receiver thread prepared and added to the pool.")
 
     def register_heartbeat_host(
-        self, name: str, address: str, context: Optional[zmq.Context] = None  # type: ignore[type-arg]
+        self, name: UUID, address: str, context: Optional[zmq.Context] = None  # type: ignore[type-arg]
     ) -> threading.Event:
         """Register a heartbeat check for a specific Satellite.
 
@@ -109,7 +110,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
         logger.info(f"Registered heartbeating check for {address}")
         return evt
 
-    def unregister_heartbeat_host(self, name: str) -> None:
+    def unregister_heartbeat_host(self, name: UUID) -> None:
         """Unregister a heartbeat check for a specific Satellite."""
         s: zmq.Socket | None = None  # type: ignore[type-arg]
         for socket, hb in self._states.items():
@@ -124,7 +125,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
             s.close()
         logger.info("Removed heartbeat check for %s", name)
 
-    def heartbeat_host_is_registered(self, name: str) -> bool:
+    def heartbeat_host_is_registered(self, name: UUID) -> bool:
         """Check whether a given Satellite is already registered."""
         registered = False
         for hb in self._states.values():
@@ -280,9 +281,7 @@ def main(args: Any = None) -> None:
 
     hb_checker = HeartbeatChecker()
     hb_checker.register_callback(callback)
-    evt = hb_checker.register_heartbeat_host(
-        "some_satellite", f"tcp://{args.ip}:{args.port}"
-    )
+    evt = hb_checker.register_heartbeat_host(UUID(), f"tcp://{args.ip}:{args.port}")
 
     while True:
         failed = ", ".join(hb_checker.get_failed())
