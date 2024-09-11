@@ -76,6 +76,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     config.setDefault("sequential_mode", false);
     config.setDefault("op_mode", OperationMode::TOA_TOT);
     config.setDefault("shutter_mode", ShutterMode::AUTO);
+    config.setDefault("data_buffer", 34952533);
     config.setDefault("pixel_buffer", 65536);
 
     auto ip_address = config.get<std::string>("ip_address");
@@ -175,6 +176,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     katherine_config_.set_pixel_config(std::move(px_config));
 
     // Set how many pixels are buffered before returning and sending a message
+    data_buffer_depth_ = config.get<int>("data_buffer");
     pixel_buffer_depth_ = config.get<int>("pixel_buffer");
     data_timeout_ = std::chrono::seconds(config.get<std::uint64_t>("_data_timeout", 10));
 }
@@ -195,7 +197,7 @@ void KatherineSatellite::launching() {
     if(opmode_ == OperationMode::TOA_TOT) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_tot>>(
             *device_,
-            katherine::md_size * 34952533,
+            katherine::md_size * data_buffer_depth_,
             sizeof(katherine::acq::f_toa_tot::pixel_type) * pixel_buffer_depth_,
             500ms,
             timeout);
@@ -205,7 +207,7 @@ void KatherineSatellite::launching() {
     } else if(opmode_ == OperationMode::TOA) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_toa_only>>(
             *device_,
-            katherine::md_size * 34952533,
+            katherine::md_size * data_buffer_depth_,
             sizeof(katherine::acq::f_toa_only::pixel_type) * pixel_buffer_depth_,
             500ms,
             timeout);
@@ -215,7 +217,7 @@ void KatherineSatellite::launching() {
     } else if(opmode_ == OperationMode::EVT_ITOT) {
         auto acq = std::make_shared<katherine::acquisition<katherine::acq::f_event_itot>>(
             *device_,
-            katherine::md_size * 34952533,
+            katherine::md_size * data_buffer_depth_,
             sizeof(katherine::acq::f_event_itot::pixel_type) * pixel_buffer_depth_,
             500ms,
             timeout);
