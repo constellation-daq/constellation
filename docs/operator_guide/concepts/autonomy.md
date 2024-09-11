@@ -17,12 +17,53 @@ Schematic drawing of heartbeats being exchanged between three satellites of a co
 In some cases it can be required to initialize, launch, start or stop satellites in a specific order - they might for example
 depend on receiving a hardware clock from another satellite that is only available after initializing.
 
-For this purpose, Constellation provides the `require_<transitional state>_after` keywords, available for each transition. The respective
-satellite will receive these as conditions from the controller and evaluate them upon entering transitional states.
-If, for example, Satellite `Sputnik.Second` receives the condition `require_starting_after Sputnik.First` it will enter
+For this purpose, Constellation provides the `require_<transitional state>_after` keywords, available for each transition.
+The respective satellite will receive these as conditions from the controller via the configuration passed in the
+`initialize` command and evaluate them upon entering transitional states.
+
+If, for example, Satellite `Sputnik.Second` receives the condition `require_starting_after = Sputnik.First` it will enter
 the `starting` transitional states but wait until satellite `Sputnik.First` has successfully completed the transition, and
-`Sputnik.Second` receives the state `RUN` from `Sputnik.First` via the [heartbeat protocol](../../reference/protocols.md#heartbeating) before progressing through its
-own `starting` state. This can be visualized as follows:
+`Sputnik.Second` receives the state `RUN` from `Sputnik.First` via the
+[heartbeat protocol](../../reference/protocols.md#heartbeating) before progressing through its own `starting` state. This can
+be visualized as follows:
+
+```plantuml
+@startuml
+hide time-axis
+concise "Sputnik.First - State" as S1
+concise "Sputnik.First - Type" as A1
+concise "Sputnik.Second - State" as S2
+concise "Sputnik.Second - Type" as A2
+
+S1 is ORBIT #line:Gray
+S2 is ORBIT #line:Gray
+A1 is steady #2DA8D8;line:2DA8D8
+A2 is steady #2DA8D8;line:2DA8D8
+
+@0
+
+@300
+S1 is starting #line:Gray
+S2 is starting #line:Gray
+A1 is transition #D9514E;line:D9514E : direct transition
+A2 is waiting... #line:transparent : transition blocked
+
+@800
+S1 is RUN #line:Gray
+A1 is steady #2DA8D8;line:2DA8D8
+A2 is transition #D9514E;line:D9514E
+
+@1000
+S2 is RUN #line:Gray
+A2 is steady #2DA8D8;line:2DA8D8
+
+@1200
+
+highlight 300 to 800 : Conditional Waiting
+@enduml
+```
+
+In state diagrams, this additional condition can be denoted as follows:
 
 ```plantuml
 @startuml
