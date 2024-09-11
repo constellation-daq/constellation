@@ -21,7 +21,8 @@ logger = cast(ConstellationLogger, logging.getLogger(__name__))
 
 class HeartbeatState:
     def __init__(self, name: str, evt: threading.Event, lives: int, interval: int):
-        self.name = name
+        self.host = name
+        self.name = ""
         self.lives = lives
         self.interval = interval
         self.last_refresh = datetime.now(timezone.utc)
@@ -63,7 +64,9 @@ class HeartbeatChecker(BaseSatelliteFrame):
         self._socket_lock = threading.Lock()
         self.auto_recover = False  # clear fail Event if Satellite reappears?
 
-    def register_callback(self, callback: Optional[Callable[[str, SatelliteState], None]] = None) -> None:
+    def register_callback(
+        self, callback: Optional[Callable[[str, SatelliteState], None]] = None
+    ) -> None:
         self._callback = callback
 
     def _add_com_thread(self) -> None:
@@ -125,7 +128,7 @@ class HeartbeatChecker(BaseSatelliteFrame):
         """Check whether a given Satellite is already registered."""
         registered = False
         for hb in self._states.values():
-            if hb.name == name:
+            if hb.host == name:
                 registered = True
                 break
         return registered
@@ -167,9 +170,12 @@ class HeartbeatChecker(BaseSatelliteFrame):
                 for socket in sockets_ready.keys():
                     binmsg = socket.recv()
                     host, timestamp, state, interval = CHPDecodeMessage(binmsg)
-                    logger.debug(f"Received heartbeat from {host}, state {state}, next in {interval}")
+                    logger.debug(
+                        f"Received heartbeat from {host}, state {state}, next in {interval}"
+                    )
                     hb = self._states[socket]
                     # update values
+                    hb.name = host
                     hb.refresh(timestamp.to_datetime())
                     hb.state = SatelliteState(state)
                     hb.interval = interval
@@ -274,7 +280,9 @@ def main(args: Any = None) -> None:
 
     hb_checker = HeartbeatChecker()
     hb_checker.register_callback(callback)
-    evt = hb_checker.register_heartbeat_host("some_satellite", f"tcp://{args.ip}:{args.port}")
+    evt = hb_checker.register_heartbeat_host(
+        "some_satellite", f"tcp://{args.ip}:{args.port}"
+    )
 
     while True:
         failed = ", ".join(hb_checker.get_failed())
