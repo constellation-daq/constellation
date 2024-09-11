@@ -132,5 +132,6 @@ private:
 
     katherine::readout_type ro_type_ {};
     OperationMode opmode_ {};
+    int data_buffer_depth_ {};
     int pixel_buffer_depth_ {};
 };

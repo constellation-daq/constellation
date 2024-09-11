@@ -26,7 +26,8 @@ noted otherwise.
 | `op_mode`           | Operation mode, can be `TOA_TOT`, `TOA`, `EVT_ITOT` or `MASK` | | `TOA_TOT` |
 | `shutter_mode`      | Shutter operation mode, can be `POS_EXT`, `NEG_EXT`, `POS_EXT_TIMER`, `NEG_EXT_TIMER` or `AUTO` | | `AUTO` |
 | `shutter_width`     | Width of the shutter window, only relevant for shutter modes `POS_EXT_TIMER` and `NEG_EXT_TIMER` | Int | |
-| `pixel_buffer`      | Depth of the pixel buffer. This many pixel hits are accumulate before sending | Int  | 65536     |
+| `pixel_buffer`      | Depth of the pixel buffer. This many pixel hits are accumulate before sending. The default corresponds to one full Timepix3 frame | Int  | 65536     |
+| `data_buffer`       | Depth of the data buffer in units of Timepix3 packets (6 bytes each). Data is either decoded or sent directly from this buffer. The default corresponds to 200 MB memory. | Int  | 34952533 |
 | `no_frames`         | Number of frames to acquire. Needs to be set to 1 for data-driven mode (`sequential_mode = false`) | Int | 1 |
 
 ### Configuration Example
