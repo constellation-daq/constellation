@@ -73,6 +73,9 @@ class Satellite(
         self.broadcast_offers()
         self.request(CHIRPServiceIdentifier.HEARTBEAT)
 
+        # register callback for heartbeat checker
+        self.register_heartbeat_callback(self._heartbeat_interrupt)
+
         # Add exception handling via threading.excepthook to allow the state
         # machine to reflect exceptions in the communication services threads.
         #
@@ -368,6 +371,12 @@ class Satellite(
 
     @handle_error
     @debug_log
+    def _heartbeat_interrupt(self, name: str, State: SatelliteState) -> None:
+        self.log.debug("Interrupting")
+        self.fsm.interrupt({})
+
+    @handle_error
+    @debug_log
     def _wrap_interrupt(self, payload: Any) -> str:
         """Wrapper for the 'interrupting' transitional state of the FSM.
 
@@ -385,17 +394,17 @@ class Satellite(
             res_run = self._state_thread_fut.result(timeout=None)
             self._state_thread_evt = None
         self.log.debug("RUN thread finished, continue with INTERRUPTING.")
-        res: str = self.do_interrupting()
+        res: str = self.do_interrupting(payload)
         return f"{res_run}; {res}"
 
     @debug_log
-    def do_interrupting(self) -> str:
+    def do_interrupting(self, payload: Any) -> str:
         """Interrupt data acquisition and move to Safe state.
 
         Defaults to calling the stop and land handlers.
         """
-        self.do_stopping()
-        self.do_landing()
+        self.do_stopping(payload)
+        self.do_landing(payload)
         return "Interrupted."
 
     @handle_error
