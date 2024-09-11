@@ -13,7 +13,7 @@ import zmq
 from typing import Optional, Callable, Any, cast
 from .fsm import SatelliteState
 from .chp import CHPDecodeMessage
-from .base import ConstellationLogger
+from .base import ConstellationLogger, BaseSatelliteFrame
 
 logging.setLoggerClass(ConstellationLogger)
 logger = cast(ConstellationLogger, logging.getLogger(__name__))
@@ -39,7 +39,7 @@ class HeartbeatState:
         return (datetime.now(timezone.utc) - self.last_refresh).total_seconds()
 
 
-class HeartbeatChecker:
+class HeartbeatChecker(BaseSatelliteFrame):
     """Checks periodically Satellites' state via subscription to its Heartbeat.
 
     Individual heartbeat checks run in separate threads. In case of a failure
@@ -53,20 +53,28 @@ class HeartbeatChecker:
     HB_INIT_LIVES = 3
     HB_INIT_PERIOD = 2000
 
-    def __init__(
-        self, callback: Optional[Callable[[str, SatelliteState], None]] = None
-    ) -> None:
-        self._callback = callback
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+
         self._callback_lock = threading.Lock()
-        self._threads: threading.Thread | None = None
-        self._stop_threads: threading.Event | None = None
         self._poller = zmq.Poller()
         # dict to keep states mapped to socket
         self._states = dict[zmq.Socket, HeartbeatState]()  # type: ignore[type-arg]
         self._socket_lock = threading.Lock()
         self.auto_recover = False  # clear fail Event if Satellite reappears?
 
-    def register(
+    def register_callback(self, callback: Optional[Callable[[str, SatelliteState], None]] = None) -> None:
+        self._callback = callback
+
+    def _add_com_thread(self) -> None:
+        """Add the heartbeat listener thread to the communication thread pool."""
+        super()._add_com_thread()
+        self._com_thread_pool["heartbeatrecv"] = threading.Thread(
+            target=self._run_thread, daemon=True
+        )
+        self.log.debug("Heartbeat receiver thread prepared and added to the pool.")
+
+    def register_heartbeat_host(
         self, name: str, address: str, context: Optional[zmq.Context] = None  # type: ignore[type-arg]
     ) -> threading.Event:
         """Register a heartbeat check for a specific Satellite.
@@ -91,10 +99,14 @@ class HeartbeatChecker:
         self._states[socket] = HeartbeatState(
             name, evt, self.HB_INIT_LIVES, self.HB_INIT_PERIOD
         )
+
+        with self._socket_lock:
+            self._poller.register(socket, zmq.POLLIN)
+
         logger.info(f"Registered heartbeating check for {address}")
         return evt
 
-    def unregister(self, name: str) -> None:
+    def unregister_heartbeat_host(self, name: str) -> None:
         """Unregister a heartbeat check for a specific Satellite."""
         s: zmq.Socket | None = None  # type: ignore[type-arg]
         for socket, hb in self._states.items():
@@ -109,7 +121,7 @@ class HeartbeatChecker:
             s.close()
         logger.info("Removed heartbeat check for %s", name)
 
-    def is_registered(self, name: str) -> bool:
+    def heartbeat_host_is_registered(self, name: str) -> bool:
         """Check whether a given Satellite is already registered."""
         registered = False
         for hb in self._states.values():
@@ -119,7 +131,7 @@ class HeartbeatChecker:
         return registered
 
     @property
-    def states(self) -> dict[str, SatelliteState]:
+    def heartbeat_states(self) -> dict[str, SatelliteState]:
         """Return a dictionary of the monitored Satellites' state."""
         res = {}
         for hb in self._states.values():
@@ -145,16 +157,17 @@ class HeartbeatChecker:
 
         # assert for mypy static type analysis
         assert isinstance(
-            self._stop_threads, threading.Event
+            self._com_thread_evt, threading.Event
         ), "Thread Event not set up correctly"
 
-        while not self._stop_threads.is_set():
+        while not self._com_thread_evt.is_set():
             # check for heartbeats ready to be received
             with self._socket_lock:
                 sockets_ready = dict(self._poller.poll(timeout=50))
                 for socket in sockets_ready.keys():
                     binmsg = socket.recv()
-                    _host, timestamp, state, interval = CHPDecodeMessage(binmsg)
+                    host, timestamp, state, interval = CHPDecodeMessage(binmsg)
+                    logger.debug(f"Received heartbeat from {host}, state {state}, next in {interval}")
                     hb = self._states[socket]
                     # update values
                     hb.refresh(timestamp.to_datetime())
@@ -177,7 +190,7 @@ class HeartbeatChecker:
                     ]:
                         # satellite in error state, interrupt
                         if not hb.failed.is_set():
-                            logger.debug(
+                            logger.info(
                                 f"{hb.name} state causing interrupt callback to be called"
                             )
                             hb.failed.set()
@@ -235,53 +248,6 @@ class HeartbeatChecker:
                 res.append(hb.name)
         return res
 
-    def _run(self) -> None:
-        """Run background thread performing the heartbeat checking."""
-        # prepare
-        if not self._stop_threads:
-            self._stop_threads = threading.Event()
-            # set up thread
-            self._threads = threading.Thread(
-                target=self._run_thread,
-                daemon=True,  # kill threads when main app closes
-            )
-            # start thread
-            self._threads.start()
-
-    def start(self, name: str) -> None:
-        """Start the heartbeat checking for a single Satellite."""
-        registered = False
-        for socket, hb in self._states.items():
-            if hb.name == name:
-                with self._socket_lock:
-                    self._poller.register(socket, zmq.POLLIN)
-                registered = True
-                break
-        if not registered:
-            logger.error(f"Could not find registered Satellite with name '{name}'")
-            raise RuntimeError(
-                f"Could not find registered Satellite with name '{name}'"
-            )
-        self._run()
-
-    def start_all(self) -> None:
-        """Start the heartbeat checking all registered Satellites."""
-        with self._socket_lock:
-            for socket in self._states.keys():
-                self._poller.register(socket, zmq.POLLIN)
-        self._run()
-
-    def stop(self) -> None:
-        """Stop heartbeat checking."""
-        if self._stop_threads:
-            self._stop_threads.set()
-            if self._threads:
-                self._threads.join(2)
-        for socket in self._states.keys():
-            self._poller.unregister(socket)
-        self._stop_threads = None
-        self._threads = None
-
     def close(self) -> None:
         for socket in self._states.keys():
             socket.close()
@@ -306,9 +272,9 @@ def main(args: Any = None) -> None:
     def callback(name: str, _state: SatelliteState) -> None:
         logger.error(f"Service {name} failed, callback was called!")
 
-    hb_checker = HeartbeatChecker(callback)
-    evt = hb_checker.register("some_satellite", f"tcp://{args.ip}:{args.port}")
-    hb_checker.start_all()
+    hb_checker = HeartbeatChecker()
+    hb_checker.register_callback(callback)
+    evt = hb_checker.register_heartbeat_host("some_satellite", f"tcp://{args.ip}:{args.port}")
 
     while True:
         failed = ", ".join(hb_checker.get_failed())
