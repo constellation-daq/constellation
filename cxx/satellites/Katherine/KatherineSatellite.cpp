@@ -15,6 +15,7 @@
 #include <string_view>
 
 #include "constellation/core/log/log.hpp"
+#include "constellation/core/utils/timers.hpp"
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
 using namespace constellation::config;
@@ -78,6 +79,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     config.setDefault("shutter_mode", ShutterMode::AUTO);
     config.setDefault("data_buffer", 34952533);
     config.setDefault("pixel_buffer", 65536);
+    config.setDefault("decode_data", true);
 
     auto ip_address = config.get<std::string>("ip_address");
     LOG(DEBUG) << "Attempting to connect to Katherine system at " << ip_address;
@@ -178,6 +180,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     // Set how many pixels are buffered before returning and sending a message
     data_buffer_depth_ = config.get<int>("data_buffer");
     pixel_buffer_depth_ = config.get<int>("pixel_buffer");
+    decode_data_ = config.get<bool>("decode_data");
     data_timeout_ = std::chrono::seconds(config.get<std::uint64_t>("_data_timeout", 10));
 }
 
@@ -200,7 +203,8 @@ void KatherineSatellite::launching() {
             katherine::md_size * data_buffer_depth_,
             sizeof(katherine::acq::f_toa_tot::pixel_type) * pixel_buffer_depth_,
             500ms,
-            timeout);
+            timeout,
+            decode_data_);
         acq->set_pixels_received_handler(
             std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_toa_tot::pixel_type>, this));
         acquisition_ = acq;
@@ -210,7 +214,8 @@ void KatherineSatellite::launching() {
             katherine::md_size * data_buffer_depth_,
             sizeof(katherine::acq::f_toa_only::pixel_type) * pixel_buffer_depth_,
             500ms,
-            timeout);
+            timeout,
+            decode_data_);
         acq->set_pixels_received_handler(
             std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_toa_only::pixel_type>, this));
         acquisition_ = acq;
@@ -220,7 +225,8 @@ void KatherineSatellite::launching() {
             katherine::md_size * data_buffer_depth_,
             sizeof(katherine::acq::f_event_itot::pixel_type) * pixel_buffer_depth_,
             500ms,
-            timeout);
+            timeout,
+            decode_data_);
         acq->set_pixels_received_handler(
             std::bind_front(&KatherineSatellite::pixels_received<katherine::acq::f_event_itot::pixel_type>, this));
         acquisition_ = acq;
@@ -228,6 +234,37 @@ void KatherineSatellite::launching() {
 
     acquisition_->set_frame_started_handler(std::bind_front(&KatherineSatellite::frame_started, this));
     acquisition_->set_frame_ended_handler(std::bind_front(&KatherineSatellite::frame_ended, this));
+    acquisition_->set_data_received_handler(std::bind_front(&KatherineSatellite::data_received, this));
+}
+
+void KatherineSatellite::data_received(const char* data, size_t count) {
+    auto msg = newDataMessage();
+    LOG(TRACE) << "Received buffer with " << count << " words";
+
+    if(count % 6 != 0) {
+        std::string msg = "Number of data words doesn't match measurement data granularity";
+        LOG(CRITICAL) << msg;
+        throw CommunicationError(msg);
+    }
+
+    // Measurement data us 6 bytes, pack each in a frame
+    for(size_t i = 0; i < count; i += 6) {
+        msg.addFrame(std::string(data + i, data + i + 6));
+    }
+    // Try to send and retry if it failed:
+    LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
+
+    using namespace std::literals::chrono_literals;
+    const TimeoutTimer timer {data_timeout_};
+    while(!sendDataMessage(msg)) {
+        std::this_thread::sleep_for(100ms);
+
+        // Abort if we could not send the message after timeout:
+        if(timer.timeoutReached()) {
+            LOG(CRITICAL) << "Aborting data transmission - cannot send data";
+            throw SendTimeoutError("pixel data", data_timeout_);
+        }
+    }
 }
 
 void KatherineSatellite::landing() {
