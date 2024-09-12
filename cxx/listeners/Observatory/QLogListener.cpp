@@ -1,7 +1,8 @@
 #include "QLogListener.hpp"
 
 #include <algorithm>
-#include <fstream>
+#include <chrono>
+#include <format>
 #include <iostream>
 #include <set>
 #include <string>
@@ -20,10 +21,10 @@ LogMessage::LogMessage(CMDP1LogMessage msg) : CMDP1LogMessage(std::move(msg)) {}
 
 int LogMessage::ColumnWidth(int i) {
     switch(i) {
-    case 0:
-    case 1: return 100;
-    case 2: return 60;
-    case 3: return 400;
+    case 0: return 150;
+    case 1: return 120;
+    case 2: return 90;
+    case 3: return 90;
     default: return -1;
     }
 }
@@ -34,13 +35,13 @@ QString LogMessage::operator[](int i) const {
 
 std::string LogMessage::Text(int i) const {
     switch(i) {
-    case 0: return to_string(getHeader().getTime());
+    case 0:
+        return std::format("{:%Y-%m-%d %H:%M:%S}",
+                           std::chrono::time_point_cast<std::chrono::seconds>(getHeader().getTime()));
     case 1: return std::string(getHeader().getSender());
     case 2: return to_string(getLogLevel());
     case 3: return std::string(getLogTopic());
     case 4: return std::string(getLogMessage());
-    case 5: return "";
-    case 6: return "";
     default: return "";
     }
 }
@@ -89,7 +90,7 @@ bool LogSorter::operator()(size_t lhs, size_t rhs) {
 QLogListener::QLogListener(QObject* parent)
     : QAbstractListModel(parent),
       SubscriberPool<CMDP1LogMessage, MONITORING>(
-          "LOGRECV", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }, {"LOG"}),
+          "LOGRECV", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }, {"LOG/"}),
       logger_("QLGRCV"), m_displaylevel(Level::WARNING), m_sorter(&m_all) {}
 
 bool QLogListener::IsDisplayed(size_t index) {
