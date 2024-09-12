@@ -31,7 +31,7 @@ public:
     static int ColumnWidth(int);
 
     // Column headers of the log details
-    static constexpr std::array<const char*, 7> headers_ {"Time", "Sender", "Level", "Topic", "Text", "From", "Function"};
+    static constexpr std::array<const char*, 5> headers_ {"Time", "Sender", "Level", "Topic", "Message"};
 };
 
 class LogSearcher {
