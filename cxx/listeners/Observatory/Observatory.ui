@@ -161,7 +161,7 @@
               <number>3</number>
              </property>
              <item>
-              <widget class="QLabel" name="groupName">
+              <widget class="QLabel" name="cnstlnName">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
                  <horstretch>2</horstretch>
