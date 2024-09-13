@@ -155,6 +155,17 @@ void Observatory::new_message_display(const QModelIndex& i) {
     }
 }
 
+void Observatory::on_clearFilters_clicked() {
+    // Reset all filters
+    filterLevel->setCurrentIndex(0);
+    filterSender->setCurrentIndex(0);
+    filterTopic->setCurrentIndex(0);
+
+    // Setting the text does not emit the editingFinished signal, do it manually
+    filterMessage->setText("");
+    m_model.setFilterMessage("");
+}
+
 // NOLINTNEXTLINE(*-avoid-c-arrays)
 void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser) {
     // Listener name (-n)
