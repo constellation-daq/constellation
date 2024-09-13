@@ -371,7 +371,7 @@
          <item row="0" column="0">
           <widget class="QLabel" name="label">
            <property name="text">
-            <string>Global Level</string>
+            <string>Global</string>
            </property>
           </widget>
          </item>
