@@ -70,16 +70,6 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), m_delegat
         }
     }
 
-    // Load last filter settings:
-    if(gui_settings_.contains("filters/level")) {
-        const auto qlevel = gui_settings_.value("filters/level").toString();
-        const auto level = magic_enum::enum_cast<Level>(qlevel.toStdString(), magic_enum::case_insensitive);
-        if(level.has_value()) {
-            m_model.setFilterLevel(level.value());
-            filterLevel->setCurrentIndex(std::to_underlying(level.value()));
-        }
-    }
-
     // Connect signals:
     connect(&m_model, &QLogListener::newMessage, this, &Observatory::new_message_display);
     connect(&m_model, &QLogListener::newSender, this, [&](QString sender) { filterSender->addItem(sender); });
@@ -87,6 +77,26 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), m_delegat
 
     // Start the log receiver
     m_model.startPool();
+
+    // Load last filter settings:
+    if(gui_settings_.contains("filters/level")) {
+        const auto qlevel = gui_settings_.value("filters/level").toString();
+        const auto level = magic_enum::enum_cast<Level>(qlevel.toStdString(), magic_enum::case_insensitive);
+        m_model.setFilterLevel(level.value_or(Level::TRACE));
+        filterLevel->setCurrentIndex(std::to_underlying(level.value_or(Level::TRACE)));
+    }
+    if(gui_settings_.contains("filters/sender")) {
+        const auto sender = gui_settings_.value("filters/sender").toString();
+        if(m_model.setFilterSender(sender.toStdString())) {
+            filterSender->setCurrentText(sender);
+        }
+    }
+    if(gui_settings_.contains("filters/topic")) {
+        const auto topic = gui_settings_.value("filters/topic").toString();
+        if(m_model.setFilterTopic(topic.toStdString())) {
+            filterTopic->setCurrentText(topic);
+        }
+    }
 
     // Load last subscription:
     const auto qslevel = gui_settings_.value("subscriptions/level").toString();
@@ -102,6 +112,8 @@ Observatory::~Observatory() {
     gui_settings_.setValue("window/size", size());
     gui_settings_.setValue("window/pos", pos());
     gui_settings_.setValue("filters/level", QString::fromStdString(to_string(m_model.getFilterLevel())));
+    gui_settings_.setValue("filters/sender", QString::fromStdString(m_model.getFilterSender()));
+    gui_settings_.setValue("filters/topic", QString::fromStdString(m_model.getFilterTopic()));
     gui_settings_.setValue("subscriptions/level", QString::fromStdString(to_string(m_model.getGlobalSubscriptionLevel())));
 }
 
