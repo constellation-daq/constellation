@@ -39,9 +39,6 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), m_delegat
     qRegisterMetaType<constellation::message::CMDP1LogMessage>("constellation::message::CMDP1LogMessage");
     setupUi(this);
 
-    // Start the log receiver
-    m_model.startPool();
-
     // Set up header bar:
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
 
@@ -73,12 +70,6 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), m_delegat
         }
     }
 
-    // Load last subscription:
-    const auto qslevel = gui_settings_.value("subscriptions/level").toString();
-    const auto slevel = magic_enum::enum_cast<Level>(qslevel.toStdString(), magic_enum::case_insensitive);
-    m_model.setGlobalSubscriptionLevel(slevel.value_or(Level::WARNING));
-    globalLevel->setCurrentIndex(std::to_underlying(slevel.value_or(Level::WARNING)));
-
     // Load last filter settings:
     if(gui_settings_.contains("filters/level")) {
         const auto qlevel = gui_settings_.value("filters/level").toString();
@@ -91,6 +82,16 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), m_delegat
 
     // Connect signals:
     connect(&m_model, &QLogListener::newMessage, this, &Observatory::new_message_display);
+    connect(&m_model, &QLogListener::newSender, this, [&](QString sender) { filterSender->addItem(sender); });
+
+    // Start the log receiver
+    m_model.startPool();
+
+    // Load last subscription:
+    const auto qslevel = gui_settings_.value("subscriptions/level").toString();
+    const auto slevel = magic_enum::enum_cast<Level>(qslevel.toStdString(), magic_enum::case_insensitive);
+    m_model.setGlobalSubscriptionLevel(slevel.value_or(Level::WARNING));
+    globalLevel->setCurrentIndex(std::to_underlying(slevel.value_or(Level::WARNING)));
 }
 
 Observatory::~Observatory() {
@@ -115,14 +116,8 @@ void Observatory::on_globalLevel_currentIndexChanged(int index) {
     m_model.subscribeToTopic(Level(index));
 }
 
-void Observatory::on_cmbFrom_currentIndexChanged(const QString& text) {
-    std::string type = text.toStdString(), name;
-    size_t dot = type.find('.');
-    if(dot != std::string::npos) {
-        name = type.substr(dot + 1);
-        type = type.substr(0, dot);
-    }
-    m_model.SetDisplayNames(type, name);
+void Observatory::on_filterSender_currentTextChanged(const QString& text) {
+    m_model.setFilterSender(text.toStdString());
 }
 
 void Observatory::on_txtSearch_editingFinished() {
