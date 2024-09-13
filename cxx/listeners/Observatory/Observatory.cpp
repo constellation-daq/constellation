@@ -71,6 +71,9 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), m_delegat
             resize(geom_from_last_program_run.size());
         }
     }
+
+    // Connect signals:
+    connect(&m_model, &QLogListener::newMessage, this, &Observatory::new_message_display);
 }
 
 Observatory::~Observatory() {
@@ -108,12 +111,11 @@ void Observatory::on_viewLog_activated(const QModelIndex& i) {
     new LogDialog(m_model.GetMessage(i.row()));
 }
 
-// void Observatory::AddMessage(const eudaq::LogMessage &msg) {
-// QModelIndex pos = m_model.AddMessage(msg);
-// if (pos.isValid())
-// viewLog->scrollTo(pos);
-// }
-// Emit when we added in loglistener, with pos, listen here and scroll
+void Observatory::new_message_display(const QModelIndex& i) {
+    if(i.isValid()) {
+        viewLog->scrollTo(i);
+    }
+}
 
 // NOLINTNEXTLINE(*-avoid-c-arrays)
 void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser) {

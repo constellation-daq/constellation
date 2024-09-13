@@ -65,8 +65,6 @@ class QLogListener : public QAbstractListModel,
 public:
     QLogListener(QObject* parent = 0);
 
-    void add_message(constellation::message::CMDP1LogMessage&& msg);
-
     constellation::log::Level GetLevel(const QModelIndex& index) const;
     bool IsDisplayed(size_t index);
     void SetDisplayLevel(constellation::log::Level level);
@@ -80,6 +78,16 @@ public:
     QVariant data(const QModelIndex& index, int role) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     void sort(int column, Qt::SortOrder order) override;
+
+signals:
+    /**
+     * @brief Signal emitted whenever a new message has been added
+     * @param index QModelIndex at which the message has been inserted
+     */
+    void newMessage(QModelIndex index);
+
+private:
+    void add_message(constellation::message::CMDP1LogMessage&& msg);
 
 private:
     /** Logger to use */
