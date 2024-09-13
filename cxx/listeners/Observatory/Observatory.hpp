@@ -20,18 +20,14 @@
 #include "QLogListener.hpp"
 #include "ui_Observatory.h"
 
-static const int alpha = 96;
 static QColor level_colours[] = {
-    QColor(224, 224, 224, alpha), // DEBUG
-    QColor(192, 255, 192, alpha), // OK
-    QColor(255, 224, 224, alpha), // THROW
-    QColor(192, 208, 255, alpha), // EXTRA
-    QColor(255, 255, 192, alpha), // INFO
-    QColor(255, 224, 96, alpha),  // WARN
-    QColor(255, 96, 96, alpha),   // ERROR
-    QColor(208, 96, 255, alpha),  // USER
-    QColor(192, 255, 192, alpha), // BUSY
-    QColor(192, 192, 255, alpha), // NONE
+    QColor(224, 224, 224, 128), // TRACE
+    QColor(200, 200, 200, 128), // DEBUG
+    QColor(191, 191, 191, 128), // INFO
+    QColor(255, 138, 0, 128),   // WARNING
+    QColor(0, 100, 0, 128),     // STATUS
+    QColor(255, 0, 0, 128),     // CRITICAL
+    QColor(0, 0, 0, 128),       // OFF
 };
 
 class LogItemDelegate : public QItemDelegate {
