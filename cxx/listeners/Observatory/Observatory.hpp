@@ -57,8 +57,8 @@ private slots:
 
     void on_globalLevel_currentIndexChanged(int index);
     void on_filterLevel_currentIndexChanged(int index);
+    void on_filterSender_currentTextChanged(const QString& text);
 
-    void on_cmbFrom_currentIndexChanged(const QString& text);
     void on_txtSearch_editingFinished();
     void on_viewLog_activated(const QModelIndex& i);
 
