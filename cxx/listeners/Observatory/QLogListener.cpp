@@ -101,8 +101,6 @@ bool QLogListener::IsDisplayed(size_t index) {
 }
 
 void QLogListener::add_message(CMDP1LogMessage&& msg) {
-
-    LOG(logger_, INFO) << "Recv msg";
     m_all.emplace_back(std::move(msg));
     if(IsDisplayed(m_all.size() - 1)) {
         std::vector<size_t>::iterator it = std::lower_bound(m_disp.begin(), m_disp.end(), m_all.size() - 1, m_sorter);
@@ -110,9 +108,11 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
         beginInsertRows(QModelIndex(), pos, pos);
         m_disp.insert(it, m_all.size() - 1);
         endInsertRows();
-        // return createIndex(pos, 0); // FIXME we need to tell someone that we changed it...?
+
+        // send signal:
+        emit newMessage(createIndex(pos, 0));
     }
-    // return QModelIndex(); // FIXME we need to tell someone that we changed it...?
+    // return QModelIndex(); // FIXME we need to tell someone that we changed it...? Probably not because display not changed
 }
 
 void QLogListener::UpdateDisplayed() {

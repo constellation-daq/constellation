@@ -51,7 +51,14 @@ public:
 
 public:
     void closeEvent(QCloseEvent*) override;
+
 private slots:
+    /**
+     * @brief Private slot to update the scroll position to the newly inserted and displayed message
+     * @param i model index to which to scroll
+     */
+    void new_message_display(const QModelIndex& i);
+
     void on_cmbLevel_currentIndexChanged(int index);
     void on_cmbFrom_currentIndexChanged(const QString& text);
     void on_txtSearch_editingFinished();
