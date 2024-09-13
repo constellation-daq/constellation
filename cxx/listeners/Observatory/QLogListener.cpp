@@ -97,7 +97,8 @@ QLogListener::QLogListener(QObject* parent)
 bool QLogListener::IsDisplayed(size_t index) {
     LogMessage& msg = m_all[index];
     return (msg.getLogLevel() >= filter_level_) &&
-           (msg.getHeader().getSender() == filter_sender_ || "- All -" == filter_sender_);
+           (msg.getHeader().getSender() == filter_sender_ || "- All -" == filter_sender_) &&
+           (msg.getLogTopic() == filter_topic_ || "- All -" == filter_topic_);
     // return ((msg.getLogLevel() >= filter_level_) && m_search.Match(msg));
     //  && (m_displaytype == "" || m_displaytype == "All")) ||
     // ((m_displayname == "" || m_displayname == "*" || msg.getHeader().getSender() == m_displayname)
@@ -126,9 +127,14 @@ void QLogListener::subscribeToTopic(constellation::log::Level level, std::string
 
 void QLogListener::add_message(CMDP1LogMessage&& msg) {
 
-    const auto [it, inserted] = filter_sender_list_.emplace(msg.getHeader().getSender());
-    if(inserted) {
+    const auto [s_it, s_inserted] = filter_sender_list_.emplace(msg.getHeader().getSender());
+    if(s_inserted) {
         emit newSender(QString::fromStdString(std::string(msg.getHeader().getSender())));
+    }
+
+    const auto [t_it, t_inserted] = filter_topic_list_.emplace(msg.getLogTopic());
+    if(t_inserted) {
+        emit newTopic(QString::fromStdString(std::string(msg.getLogTopic())));
     }
 
     m_all.emplace_back(std::move(msg));
@@ -228,7 +234,17 @@ void QLogListener::setGlobalSubscriptionLevel(Level level) {
 }
 
 void QLogListener::setFilterSender(const std::string& sender) {
-    LOG(logger_, DEBUG) << "Updating filter sender to " << sender;
-    filter_sender_ = sender;
-    UpdateDisplayed();
+    if(filter_sender_list_.contains(sender)) {
+        LOG(logger_, DEBUG) << "Updating filter sender to " << sender;
+        filter_sender_ = sender;
+        UpdateDisplayed();
+    }
+}
+
+void QLogListener::setFilterTopic(const std::string& topic) {
+    if(filter_topic_list_.contains(topic)) {
+        LOG(logger_, DEBUG) << "Updating filter topic to " << topic;
+        filter_topic_ = topic;
+        UpdateDisplayed();
+    }
 }
