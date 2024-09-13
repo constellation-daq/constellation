@@ -34,17 +34,6 @@ public:
     static constexpr std::array<const char*, 5> headers_ {"Time", "Sender", "Level", "Topic", "Message"};
 };
 
-class LogSearcher {
-public:
-    LogSearcher();
-    void SetSearch(const std::string& regexp);
-    bool Match(const LogMessage& msg);
-
-private:
-    bool m_set;
-    QRegularExpression m_regexp;
-};
-
 class LogSorter {
 public:
     LogSorter(std::vector<LogMessage>* messages);
@@ -89,10 +78,16 @@ public:
     bool setFilterTopic(const std::string& topic);
     std::string getFilterTopic() const { return filter_topic_; }
 
+    /**
+     * @brief Set a new message filter value
+     *
+     * @param pattern Message filter pattern
+     */
+    void setFilterMessage(const QString& topic);
+    QString getFilterMessage() const { return filter_message_.pattern(); }
+
     void setGlobalSubscriptionLevel(constellation::log::Level level);
     constellation::log::Level getGlobalSubscriptionLevel() const { return subscription_global_level_; }
-
-    void SetSearch(const std::string& regexp);
 
     void UpdateDisplayed();
 
@@ -143,6 +138,7 @@ private:
     std::set<std::string> filter_topic_list_ {"- All -"};
     std::string filter_topic_ {"- All -"};
 
-    LogSearcher m_search;
+    QRegularExpression filter_message_;
+
     LogSorter m_sorter;
 };
