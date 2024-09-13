@@ -96,7 +96,8 @@ QLogListener::QLogListener(QObject* parent)
 
 bool QLogListener::IsDisplayed(size_t index) {
     LogMessage& msg = m_all[index];
-    return (msg.getLogLevel() >= filter_level_);
+    return (msg.getLogLevel() >= filter_level_) &&
+           (msg.getHeader().getSender() == filter_sender_ || "- All -" == filter_sender_);
     // return ((msg.getLogLevel() >= filter_level_) && m_search.Match(msg));
     //  && (m_displaytype == "" || m_displaytype == "All")) ||
     // ((m_displayname == "" || m_displayname == "*" || msg.getHeader().getSender() == m_displayname)
@@ -124,6 +125,12 @@ void QLogListener::subscribeToTopic(constellation::log::Level level, std::string
 }
 
 void QLogListener::add_message(CMDP1LogMessage&& msg) {
+
+    const auto [it, inserted] = filter_sender_list_.emplace(msg.getHeader().getSender());
+    if(inserted) {
+        emit newSender(QString::fromStdString(std::string(msg.getHeader().getSender())));
+    }
+
     m_all.emplace_back(std::move(msg));
     if(IsDisplayed(m_all.size() - 1)) {
         std::vector<size_t>::iterator it = std::lower_bound(m_disp.begin(), m_disp.end(), m_all.size() - 1, m_sorter);
@@ -208,12 +215,6 @@ void QLogListener::SetSearch(const std::string& regexp) {
     UpdateDisplayed();
 }
 
-void QLogListener::SetDisplayNames(const std::string& type, const std::string& name) {
-    m_displaytype = type;
-    m_displayname = name;
-    UpdateDisplayed();
-}
-
 void QLogListener::setFilterLevel(Level level) {
     LOG(logger_, DEBUG) << "Updating filter level to " << to_string(level);
     filter_level_ = level;
@@ -224,4 +225,10 @@ void QLogListener::setGlobalSubscriptionLevel(Level level) {
     LOG(logger_, DEBUG) << "Updating global subscription level to " << to_string(level);
     subscription_global_level_ = level;
     subscribeToTopic(level);
+}
+
+void QLogListener::setFilterSender(const std::string& sender) {
+    LOG(logger_, DEBUG) << "Updating filter sender to " << sender;
+    filter_sender_ = sender;
+    UpdateDisplayed();
 }
