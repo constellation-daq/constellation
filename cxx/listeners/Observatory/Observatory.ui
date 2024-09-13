@@ -250,6 +250,22 @@
             </widget>
            </item>
            <item>
+            <widget class="QLabel" name="label_4">
+             <property name="text">
+              <string>Topic</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QComboBox" name="filterTopic">
+             <item>
+              <property name="text">
+               <string>- All -</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item>
             <widget class="QLabel" name="searchLabel">
              <property name="text">
               <string>Message</string>

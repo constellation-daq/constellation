@@ -83,6 +83,7 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), m_delegat
     // Connect signals:
     connect(&m_model, &QLogListener::newMessage, this, &Observatory::new_message_display);
     connect(&m_model, &QLogListener::newSender, this, [&](QString sender) { filterSender->addItem(sender); });
+    connect(&m_model, &QLogListener::newTopic, this, [&](QString topic) { filterTopic->addItem(topic); });
 
     // Start the log receiver
     m_model.startPool();
@@ -118,6 +119,10 @@ void Observatory::on_globalLevel_currentIndexChanged(int index) {
 
 void Observatory::on_filterSender_currentTextChanged(const QString& text) {
     m_model.setFilterSender(text.toStdString());
+}
+
+void Observatory::on_filterTopic_currentTextChanged(const QString& text) {
+    m_model.setFilterTopic(text.toStdString());
 }
 
 void Observatory::on_txtSearch_editingFinished() {
