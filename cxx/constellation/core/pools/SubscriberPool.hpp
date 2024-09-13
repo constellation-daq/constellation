@@ -54,6 +54,13 @@ namespace constellation::pools {
         void subscribe(std::string_view host, std::string_view topic);
 
         /**
+         * @brief Subscribe to a given topic for all connected hosts
+         *
+         * @param topic Topic to subscribe to
+         */
+        void subscribe(std::string_view topic);
+
+        /**
          * @brief Unsubscribe from a given topic of a specific host
          *
          * @param host Canonical name of the host to unsubscribe from
@@ -61,11 +68,22 @@ namespace constellation::pools {
          */
         void unsubscribe(std::string_view host, std::string_view topic);
 
+        /**
+         * @brief Unsubscribe from a given topic for all hosts
+         *
+         * @param topic Topic to unsubscribe
+         */
+        void unsubscribe(std::string_view topic);
+
     private:
         void socket_connected(zmq::socket_t& socket) override final;
 
-        /** Sub- or unsubscribe to a topic */
+        /** Sub- or unsubscribe to a topic for a single host */
         void scribe(std::string_view host, std::string_view topic, bool subscribe);
+
+        /** Sub- or unsubscribe to a topic for all connected hosts */
+        void scribe_all(std::string_view topic, bool subscribe);
+
         std::set<std::string> default_topics_;
     };
 } // namespace constellation::pools
