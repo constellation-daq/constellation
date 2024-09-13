@@ -67,7 +67,13 @@ public:
 
     constellation::log::Level GetLevel(const QModelIndex& index) const;
     bool IsDisplayed(size_t index);
+
     void setFilterLevel(constellation::log::Level level);
+    constellation::log::Level getFilterLevel() const { return filter_level_; }
+
+    void setGlobalSubscriptionLevel(constellation::log::Level level);
+    constellation::log::Level getGlobalSubscriptionLevel() const { return subscription_global_level_; }
+
     void SetDisplayNames(const std::string& type, const std::string& name);
     void SetSearch(const std::string& regexp);
     void UpdateDisplayed();
@@ -101,7 +107,7 @@ private:
 
     /** Filter & display */
     std::vector<size_t> m_disp;
-    constellation::log::Level filter_level_;
+    constellation::log::Level filter_level_ {constellation::log::Level::TRACE};
     std::string m_displaytype;
     std::string m_displayname;
     LogSearcher m_search;
