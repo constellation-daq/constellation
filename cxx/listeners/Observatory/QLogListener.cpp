@@ -70,7 +70,9 @@ bool LogSorter::operator()(size_t lhs, size_t rhs) {
 
 QLogListener::QLogListener(QObject* parent)
     : QAbstractListModel(parent), SubscriberPool<CMDP1LogMessage, MONITORING>(
-                                      "LOGRECV", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }),
+                                      "LOGRECV",
+                                      [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); },
+                                      [this]() { return get_global_subscription_topics(); }),
       logger_("QLGRCV"), filter_level_(Level::WARNING), m_sorter(&m_all) {
     filter_message_.setPatternOptions(QRegularExpression::CaseInsensitiveOption);
 }
@@ -81,6 +83,17 @@ bool QLogListener::IsDisplayed(size_t index) {
     return (msg.getLogLevel() >= filter_level_) &&
            (msg.getHeader().getSender() == filter_sender_ || "- All -" == filter_sender_) &&
            (msg.getLogTopic() == filter_topic_ || "- All -" == filter_topic_) && match.hasMatch();
+}
+
+std::set<std::string> QLogListener::get_global_subscription_topics() {
+    std::set<std::string> topics;
+
+    for(const auto level : magic_enum::enum_values<Level>()) {
+        if(level >= subscription_global_level_) {
+            topics.emplace("LOG/" + to_string(level));
+        }
+    }
+    return topics;
 }
 
 void QLogListener::subscribeToTopic(constellation::log::Level level, std::string_view topic) {

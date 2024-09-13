@@ -122,6 +122,8 @@ signals:
 private:
     void add_message(constellation::message::CMDP1LogMessage&& msg);
 
+    std::set<std::string> get_global_subscription_topics();
+
 private:
     /** Logger to use */
     constellation::log::Logger logger_;
