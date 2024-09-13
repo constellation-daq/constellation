@@ -96,7 +96,7 @@ QLogListener::QLogListener(QObject* parent)
 
 bool QLogListener::IsDisplayed(size_t index) {
     LogMessage& msg = m_all[index];
-    return true;
+    return (msg.getLogLevel() >= filter_level_);
     // return ((msg.getLogLevel() >= filter_level_) && m_search.Match(msg));
     //  && (m_displaytype == "" || m_displaytype == "All")) ||
     // ((m_displayname == "" || m_displayname == "*" || msg.getHeader().getSender() == m_displayname)
@@ -215,6 +215,13 @@ void QLogListener::SetDisplayNames(const std::string& type, const std::string& n
 }
 
 void QLogListener::setFilterLevel(Level level) {
+    LOG(logger_, DEBUG) << "Updating filter level to " << to_string(level);
     filter_level_ = level;
     UpdateDisplayed();
+}
+
+void QLogListener::setGlobalSubscriptionLevel(Level level) {
+    LOG(logger_, DEBUG) << "Updating global subscription level to " << to_string(level);
+    subscription_global_level_ = level;
+    subscribeToTopic(level);
 }

@@ -14,6 +14,7 @@
 #include <QInputDialog>
 
 #include <argparse/argparse.hpp>
+#include <magic_enum.hpp>
 
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/log/SinkManager.hpp"
@@ -72,6 +73,22 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), m_delegat
         }
     }
 
+    // Load last subscription:
+    const auto qslevel = gui_settings_.value("subscriptions/level").toString();
+    const auto slevel = magic_enum::enum_cast<Level>(qslevel.toStdString(), magic_enum::case_insensitive);
+    m_model.setGlobalSubscriptionLevel(slevel.value_or(Level::WARNING));
+    globalLevel->setCurrentIndex(std::to_underlying(slevel.value_or(Level::WARNING)));
+
+    // Load last filter settings:
+    if(gui_settings_.contains("filters/level")) {
+        const auto qlevel = gui_settings_.value("filters/level").toString();
+        const auto level = magic_enum::enum_cast<Level>(qlevel.toStdString(), magic_enum::case_insensitive);
+        if(level.has_value()) {
+            m_model.setFilterLevel(level.value());
+            filterLevel->setCurrentIndex(std::to_underlying(level.value()));
+        }
+    }
+
     // Connect signals:
     connect(&m_model, &QLogListener::newMessage, this, &Observatory::new_message_display);
 }
@@ -82,11 +99,16 @@ Observatory::~Observatory() {
 
     gui_settings_.setValue("window/size", size());
     gui_settings_.setValue("window/pos", pos());
+    gui_settings_.setValue("filters/level", QString::fromStdString(to_string(m_model.getFilterLevel())));
+    gui_settings_.setValue("subscriptions/level", QString::fromStdString(to_string(m_model.getGlobalSubscriptionLevel())));
 }
 
 void Observatory::closeEvent(QCloseEvent*) {
-    std::cout << "Closing!" << std::endl;
     QApplication::quit();
+}
+
+void Observatory::on_filterLevel_currentIndexChanged(int index) {
+    m_model.setFilterLevel(Level(index));
 }
 
 void Observatory::on_globalLevel_currentIndexChanged(int index) {
