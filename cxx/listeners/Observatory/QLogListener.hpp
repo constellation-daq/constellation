@@ -71,11 +71,14 @@ public:
     void setFilterLevel(constellation::log::Level level);
     constellation::log::Level getFilterLevel() const { return filter_level_; }
 
+    void setFilterSender(const std::string& sender);
+    std::string getFilterSender() const { return filter_sender_; }
+
     void setGlobalSubscriptionLevel(constellation::log::Level level);
     constellation::log::Level getGlobalSubscriptionLevel() const { return subscription_global_level_; }
 
-    void SetDisplayNames(const std::string& type, const std::string& name);
     void SetSearch(const std::string& regexp);
+
     void UpdateDisplayed();
 
     const LogMessage& GetMessage(int row) const;
@@ -94,6 +97,12 @@ signals:
      */
     void newMessage(QModelIndex index);
 
+    /**
+     * @brief Signal emitted whenever a message from a new sender has been received
+     * @param sender Canonical name of the sender
+     */
+    void newSender(QString sender);
+
 private:
     void add_message(constellation::message::CMDP1LogMessage&& msg);
 
@@ -108,8 +117,10 @@ private:
     /** Filter & display */
     std::vector<size_t> m_disp;
     constellation::log::Level filter_level_ {constellation::log::Level::TRACE};
+    std::set<std::string> filter_sender_list_;
+    std::string filter_sender_;
+
     std::string m_displaytype;
-    std::string m_displayname;
     LogSearcher m_search;
     LogSorter m_sorter;
 };
