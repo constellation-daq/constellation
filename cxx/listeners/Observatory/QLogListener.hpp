@@ -71,10 +71,22 @@ public:
     void setFilterLevel(constellation::log::Level level);
     constellation::log::Level getFilterLevel() const { return filter_level_; }
 
-    void setFilterSender(const std::string& sender);
+    /**
+     * @brief Set a new sender filter value
+     *
+     * @param sender Sender filter
+     * @return True if the filter was updated, false otherwise
+     */
+    bool setFilterSender(const std::string& sender);
     std::string getFilterSender() const { return filter_sender_; }
 
-    void setFilterTopic(const std::string& topic);
+    /**
+     * @brief Set a new topic filter value
+     *
+     * @param topic Topic filter
+     * @return True if the filter was updated, false otherwise
+     */
+    bool setFilterTopic(const std::string& topic);
     std::string getFilterTopic() const { return filter_topic_; }
 
     void setGlobalSubscriptionLevel(constellation::log::Level level);
