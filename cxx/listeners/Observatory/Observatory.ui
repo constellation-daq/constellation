@@ -174,13 +174,57 @@
            </size>
           </property>
           <property name="title">
-           <string>Filters</string>
+           <string>List Filters</string>
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout">
+           <property name="spacing">
+            <number>15</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="label_2">
+             <property name="text">
+              <string>Level</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QComboBox" name="filterLevel">
+             <item>
+              <property name="text">
+               <string>TRACE</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>DEBUG</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>INFO</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>WARNING</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>STATUS</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>CRITICAL</string>
+              </property>
+             </item>
+            </widget>
+           </item>
            <item>
             <widget class="QLabel" name="searchLabel">
              <property name="text">
-              <string>Search</string>
+              <string>Message</string>
              </property>
             </widget>
            </item>
