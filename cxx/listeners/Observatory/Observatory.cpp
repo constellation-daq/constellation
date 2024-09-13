@@ -97,6 +97,9 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), m_delegat
             filterTopic->setCurrentText(topic);
         }
     }
+    const auto pattern = gui_settings_.value("filters/search", "");
+    m_model.setFilterMessage(pattern.toString());
+    filterMessage->setText(pattern.toString());
 
     // Load last subscription:
     const auto qslevel = gui_settings_.value("subscriptions/level").toString();
@@ -114,6 +117,7 @@ Observatory::~Observatory() {
     gui_settings_.setValue("filters/level", QString::fromStdString(to_string(m_model.getFilterLevel())));
     gui_settings_.setValue("filters/sender", QString::fromStdString(m_model.getFilterSender()));
     gui_settings_.setValue("filters/topic", QString::fromStdString(m_model.getFilterTopic()));
+    gui_settings_.setValue("filters/search", m_model.getFilterMessage());
     gui_settings_.setValue("subscriptions/level", QString::fromStdString(to_string(m_model.getGlobalSubscriptionLevel())));
 }
 
@@ -137,8 +141,8 @@ void Observatory::on_filterTopic_currentTextChanged(const QString& text) {
     m_model.setFilterTopic(text.toStdString());
 }
 
-void Observatory::on_txtSearch_editingFinished() {
-    m_model.SetSearch(searchTxt->displayText().toStdString());
+void Observatory::on_filterMessage_editingFinished() {
+    m_model.setFilterMessage(filterMessage->displayText());
 }
 
 void Observatory::on_viewLog_activated(const QModelIndex& i) {
