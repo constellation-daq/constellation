@@ -84,6 +84,11 @@ namespace constellation::pools {
          */
         std::size_t pollerEvents() { return poller_events_.load(); }
 
+        /**
+         * @brief Return the number of currently connected sockets
+         */
+        std::size_t countSockets();
+
     protected:
         /**
          * @brief Method to select which services to connect to. By default this pool connects to all discovered services,

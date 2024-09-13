@@ -79,6 +79,12 @@ namespace constellation::pools {
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
+    std::size_t BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::countSockets() {
+        const std::lock_guard sockets_lock {sockets_mutex_};
+        return sockets_.size();
+    }
+
+    template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
     bool BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::should_connect(const chirp::DiscoveredService& /*service*/) {
         return true;
     }
