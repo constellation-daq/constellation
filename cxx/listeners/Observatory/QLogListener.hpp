@@ -67,7 +67,7 @@ public:
 
     constellation::log::Level GetLevel(const QModelIndex& index) const;
     bool IsDisplayed(size_t index);
-    void SetDisplayLevel(constellation::log::Level level);
+    void setFilterLevel(constellation::log::Level level);
     void SetDisplayNames(const std::string& type, const std::string& name);
     void SetSearch(const std::string& regexp);
     void UpdateDisplayed();
@@ -78,6 +78,8 @@ public:
     QVariant data(const QModelIndex& index, int role) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     void sort(int column, Qt::SortOrder order) override;
+
+    void subscribeToTopic(constellation::log::Level level, std::string_view topic = "");
 
 signals:
     /**
@@ -93,9 +95,13 @@ private:
     /** Logger to use */
     constellation::log::Logger logger_;
 
+    /** Subscription & storage */
     std::vector<LogMessage> m_all;
+    constellation::log::Level subscription_global_level_ {constellation::log::Level::INFO};
+
+    /** Filter & display */
     std::vector<size_t> m_disp;
-    constellation::log::Level m_displaylevel;
+    constellation::log::Level filter_level_;
     std::string m_displaytype;
     std::string m_displayname;
     LogSearcher m_search;
