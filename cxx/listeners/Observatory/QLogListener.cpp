@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include <magic_enum.hpp>
+
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/utils/string.hpp"
 
@@ -88,16 +90,37 @@ bool LogSorter::operator()(size_t lhs, size_t rhs) {
 }
 
 QLogListener::QLogListener(QObject* parent)
-    : QAbstractListModel(parent),
-      SubscriberPool<CMDP1LogMessage, MONITORING>(
-          "LOGRECV", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }, {"LOG/"}),
-      logger_("QLGRCV"), m_displaylevel(Level::WARNING), m_sorter(&m_all) {}
+    : QAbstractListModel(parent), SubscriberPool<CMDP1LogMessage, MONITORING>(
+                                      "LOGRECV", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }),
+      logger_("QLGRCV"), filter_level_(Level::WARNING), m_sorter(&m_all) {}
 
 bool QLogListener::IsDisplayed(size_t index) {
     LogMessage& msg = m_all[index];
-    return ((msg.getLogLevel() >= m_displaylevel && (m_displaytype == "" || m_displaytype == "All")) ||
-            ((m_displayname == "" || m_displayname == "*" || msg.getHeader().getSender() == m_displayname) &&
-             m_search.Match(msg)));
+    return true;
+    // return ((msg.getLogLevel() >= filter_level_) && m_search.Match(msg));
+    //  && (m_displaytype == "" || m_displaytype == "All")) ||
+    // ((m_displayname == "" || m_displayname == "*" || msg.getHeader().getSender() == m_displayname)
+}
+
+void QLogListener::subscribeToTopic(constellation::log::Level level, std::string_view topic) {
+
+    subscription_global_level_ = level;
+    constexpr auto levels = magic_enum::enum_values<Level>();
+    for(const auto lvl : levels) {
+        std::string log_topic = "LOG/" + to_string(lvl);
+        if(!topic.empty()) {
+            log_topic += "/";
+            log_topic += topic;
+        }
+
+        if(level <= lvl) {
+            LOG(logger_, DEBUG) << "Subscribing to " << std::quoted(log_topic);
+            subscribe(log_topic);
+        } else {
+            LOG(logger_, DEBUG) << "Unsubscribing from " << std::quoted(log_topic);
+            unsubscribe(log_topic);
+        }
+    }
 }
 
 void QLogListener::add_message(CMDP1LogMessage&& msg) {
@@ -191,7 +214,7 @@ void QLogListener::SetDisplayNames(const std::string& type, const std::string& n
     UpdateDisplayed();
 }
 
-void QLogListener::SetDisplayLevel(Level level) {
-    m_displaylevel = level;
+void QLogListener::setFilterLevel(Level level) {
+    filter_level_ = level;
     UpdateDisplayed();
 }
