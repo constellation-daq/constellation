@@ -149,10 +149,9 @@ void Observatory::on_viewLog_activated(const QModelIndex& i) {
     new LogDialog(m_model.GetMessage(i.row()));
 }
 
-void Observatory::new_message_display(const QModelIndex& i) {
-    if(i.isValid()) {
-        viewLog->scrollTo(i);
-    }
+void Observatory::new_message_display(const QModelIndex&) {
+    // FIXME it would be nice to only scroll when at the end and keep position otherwise
+    viewLog->scrollToBottom();
 }
 
 void Observatory::on_clearFilters_clicked() {
