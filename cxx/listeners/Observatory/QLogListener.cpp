@@ -55,27 +55,6 @@ QString LogMessage::ColumnName(int i) {
     return headers_[i];
 }
 
-LogSearcher::LogSearcher() : m_set(false) {
-    // FIXME port for Qt6
-    // m_regexp.setPattern(QRegularExpression::Wildcard);
-    // m_regexp.setCaseSensitivity(Qt::CaseInsensitive);
-}
-
-void LogSearcher::SetSearch(const std::string& regexp) {
-    m_set = (regexp != "");
-    m_regexp.setPattern(regexp.c_str());
-}
-
-bool LogSearcher::Match(const LogMessage&) {
-    if(!m_set)
-        return true;
-    for(int i = 0; i < LogMessage::NumColumns(); ++i) {
-        // if (m_regexp.index In(msg[i]) >= 0)
-        // return true;
-    }
-    return false;
-}
-
 LogSorter::LogSorter(std::vector<LogMessage>* messages) : m_msgs(messages), m_col(0), m_asc(true) {}
 
 void LogSorter::SetSort(int col, bool ascending) {
@@ -92,16 +71,16 @@ bool LogSorter::operator()(size_t lhs, size_t rhs) {
 QLogListener::QLogListener(QObject* parent)
     : QAbstractListModel(parent), SubscriberPool<CMDP1LogMessage, MONITORING>(
                                       "LOGRECV", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }),
-      logger_("QLGRCV"), filter_level_(Level::WARNING), m_sorter(&m_all) {}
+      logger_("QLGRCV"), filter_level_(Level::WARNING), m_sorter(&m_all) {
+    filter_message_.setPatternOptions(QRegularExpression::CaseInsensitiveOption);
+}
 
 bool QLogListener::IsDisplayed(size_t index) {
     LogMessage& msg = m_all[index];
+    const auto match = filter_message_.match(QString::fromStdString(std::string(msg.getLogMessage())));
     return (msg.getLogLevel() >= filter_level_) &&
            (msg.getHeader().getSender() == filter_sender_ || "- All -" == filter_sender_) &&
-           (msg.getLogTopic() == filter_topic_ || "- All -" == filter_topic_);
-    // return ((msg.getLogLevel() >= filter_level_) && m_search.Match(msg));
-    //  && (m_displaytype == "" || m_displaytype == "All")) ||
-    // ((m_displayname == "" || m_displayname == "*" || msg.getHeader().getSender() == m_displayname)
+           (msg.getLogTopic() == filter_topic_ || "- All -" == filter_topic_) && match.hasMatch();
 }
 
 void QLogListener::subscribeToTopic(constellation::log::Level level, std::string_view topic) {
@@ -216,11 +195,6 @@ void QLogListener::sort(int column, Qt::SortOrder order) {
     UpdateDisplayed();
 }
 
-void QLogListener::SetSearch(const std::string& regexp) {
-    m_search.SetSearch(regexp);
-    UpdateDisplayed();
-}
-
 void QLogListener::setFilterLevel(Level level) {
     LOG(logger_, DEBUG) << "Updating filter level to " << to_string(level);
     filter_level_ = level;
@@ -251,4 +225,10 @@ bool QLogListener::setFilterTopic(const std::string& topic) {
         return true;
     }
     return false;
+}
+
+void QLogListener::setFilterMessage(const QString& pattern) {
+    LOG(logger_, DEBUG) << "Updating filter pattern for message to " << pattern.toStdString();
+    filter_message_.setPattern(pattern);
+    UpdateDisplayed();
 }
