@@ -31,8 +31,8 @@ namespace constellation::pools {
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
     SubscriberPool<MESSAGE, SERVICE>::SubscriberPool(std::string_view log_topic,
                                                      std::function<void(MESSAGE&&)> callback,
-                                                     std::initializer_list<std::string> default_topics)
-        : BasePoolT(log_topic, std::move(callback)), default_topics_(default_topics) {}
+                                                     std::function<std::set<std::string>()> default_topics_callback)
+        : BasePoolT(log_topic, std::move(callback)), default_topics_callback_(std::move(default_topics_callback)) {}
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
     void SubscriberPool<MESSAGE, SERVICE>::scribe(std::string_view host, std::string_view topic, bool subscribe) {
@@ -72,8 +72,10 @@ namespace constellation::pools {
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
     void SubscriberPool<MESSAGE, SERVICE>::socket_connected(zmq::socket_t& socket) {
         // Directly subscribe to default topic list
-        for(const auto& topic : default_topics_) {
-            socket.set(zmq::sockopt::subscribe, topic);
+        if(default_topics_callback_) {
+            for(const auto& topic : default_topics_callback_()) {
+                socket.set(zmq::sockopt::subscribe, topic);
+            }
         }
     }
 
