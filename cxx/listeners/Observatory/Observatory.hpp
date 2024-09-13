@@ -60,6 +60,7 @@ private slots:
     void on_filterSender_currentTextChanged(const QString& text);
     void on_filterTopic_currentTextChanged(const QString& text);
     void on_filterMessage_editingFinished();
+    void on_clearFilters_clicked();
 
     void on_viewLog_activated(const QModelIndex& i);
 
