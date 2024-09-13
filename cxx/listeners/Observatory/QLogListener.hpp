@@ -74,6 +74,9 @@ public:
     void setFilterSender(const std::string& sender);
     std::string getFilterSender() const { return filter_sender_; }
 
+    void setFilterTopic(const std::string& topic);
+    std::string getFilterTopic() const { return filter_topic_; }
+
     void setGlobalSubscriptionLevel(constellation::log::Level level);
     constellation::log::Level getGlobalSubscriptionLevel() const { return subscription_global_level_; }
 
@@ -103,6 +106,12 @@ signals:
      */
     void newSender(QString sender);
 
+    /**
+     * @brief Signal emitted whenever a message with a new topic has been received
+     * @param topic Topic
+     */
+    void newTopic(QString topic);
+
 private:
     void add_message(constellation::message::CMDP1LogMessage&& msg);
 
@@ -117,10 +126,11 @@ private:
     /** Filter & display */
     std::vector<size_t> m_disp;
     constellation::log::Level filter_level_ {constellation::log::Level::TRACE};
-    std::set<std::string> filter_sender_list_;
-    std::string filter_sender_;
+    std::set<std::string> filter_sender_list_ {"- All -"};
+    std::string filter_sender_ {"- All -"};
+    std::set<std::string> filter_topic_list_ {"- All -"};
+    std::string filter_topic_ {"- All -"};
 
-    std::string m_displaytype;
     LogSearcher m_search;
     LogSorter m_sorter;
 };
