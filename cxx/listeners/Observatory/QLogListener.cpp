@@ -233,18 +233,22 @@ void QLogListener::setGlobalSubscriptionLevel(Level level) {
     subscribeToTopic(level);
 }
 
-void QLogListener::setFilterSender(const std::string& sender) {
+bool QLogListener::setFilterSender(const std::string& sender) {
     if(filter_sender_list_.contains(sender)) {
         LOG(logger_, DEBUG) << "Updating filter sender to " << sender;
         filter_sender_ = sender;
         UpdateDisplayed();
+        return true;
     }
+    return false;
 }
 
-void QLogListener::setFilterTopic(const std::string& topic) {
+bool QLogListener::setFilterTopic(const std::string& topic) {
     if(filter_topic_list_.contains(topic)) {
         LOG(logger_, DEBUG) << "Updating filter topic to " << topic;
         filter_topic_ = topic;
         UpdateDisplayed();
+        return true;
     }
+    return false;
 }
