@@ -120,7 +120,7 @@ namespace constellation::pools {
          *
          * @return Maps that maps the discovered service to the corresponding ZeroMQ sockets
          */
-        const std::map<chirp::DiscoveredService, zmq::socket_t>& get_sockets() const { return sockets_; }
+        std::map<chirp::DiscoveredService, zmq::socket_t>& get_sockets() { return sockets_; }
 
     protected:
         std::mutex sockets_mutex_; // NOLINT(*-non-private-member-variables-in-classes)
