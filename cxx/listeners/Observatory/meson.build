@@ -12,7 +12,7 @@ moc_files = qt.compile_moc(headers: ['QLogListener.hpp', 'Observatory.hpp'])
 
 executable('Observatory', 'Observatory.cpp', 'QLogListener.cpp', ui_files, moc_files, qrc_files,
            include_directories: inc,
-           dependencies: [exec_dep, argparse_dep, qt_dep, core_dep],
+           dependencies: [exec_dep, argparse_dep, qt_dep, core_dep, magic_enum_dep],
            install: true,
            install_rpath: constellation_rpath,
            cpp_args: ['-Wno-deprecated-enum-enum-conversion', '-Wno-unused-variable'],

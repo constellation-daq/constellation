@@ -89,8 +89,8 @@ void Observatory::closeEvent(QCloseEvent*) {
     QApplication::quit();
 }
 
-void Observatory::on_cmbLevel_currentIndexChanged(int index) {
-    m_model.SetDisplayLevel(Level(index));
+void Observatory::on_globalLevel_currentIndexChanged(int index) {
+    m_model.subscribeToTopic(Level(index));
 }
 
 void Observatory::on_cmbFrom_currentIndexChanged(const QString& text) {
