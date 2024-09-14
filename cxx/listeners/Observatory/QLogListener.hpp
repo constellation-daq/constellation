@@ -25,13 +25,14 @@ public:
     QString operator[](int) const;
     std::string Text(int) const;
 
-    static int NumColumns() { return headers_.size(); }
+    static int NumColumns() { return headers_.size() - 1; }
+    static int NumExtendedColumns() { return headers_.size(); }
 
     static QString ColumnName(int i);
     static int ColumnWidth(int);
 
     // Column headers of the log details
-    static constexpr std::array<const char*, 5> headers_ {"Time", "Sender", "Level", "Topic", "Message"};
+    static constexpr std::array<const char*, 6> headers_ {"Time", "Sender", "Level", "Topic", "Message", "Tags"};
 };
 
 class LogSorter {
