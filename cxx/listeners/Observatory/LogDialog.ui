@@ -11,40 +11,76 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Log Message</string>
+   <string>Log Message Details</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QTreeWidget" name="treeLogMessage">
+     <property name="rootIsDecorated">
+      <bool>false</bool>
+     </property>
+     <property name="uniformRowHeights">
+      <bool>false</bool>
+     </property>
+     <property name="columnCount">
+      <number>2</number>
+     </property>
      <column>
       <property name="text">
-       <string>Name</string>
+       <string>Key</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>Full</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Short</string>
+       <string>Value</string>
       </property>
      </column>
     </widget>
    </item>
    <item>
-    <widget class="QDialogButtonBox" name="btnClose">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0">
+     <property name="spacing">
+      <number>15</number>
      </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Close</set>
+     <property name="leftMargin">
+      <number>9</number>
      </property>
-     <property name="centerButtons">
-      <bool>true</bool>
+     <property name="topMargin">
+      <number>9</number>
      </property>
-    </widget>
+     <property name="rightMargin">
+      <number>9</number>
+     </property>
+     <property name="bottomMargin">
+      <number>9</number>
+     </property>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QDialogButtonBox" name="btnClose">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="standardButtons">
+        <set>QDialogButtonBox::StandardButton::Close</set>
+       </property>
+       <property name="centerButtons">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
