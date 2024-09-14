@@ -44,8 +44,8 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), m_delegat
 
     viewLog->setModel(&m_model);
     viewLog->setItemDelegate(&m_delegate);
-    for(int i = 0; i < LogMessage::NumColumns(); ++i) {
-        int w = LogMessage::ColumnWidth(i);
+    for(int i = 0; i < LogMessage::countColumns(); ++i) {
+        int w = LogMessage::columnWidth(i);
         if(w >= 0)
             viewLog->setColumnWidth(i, w);
     }
