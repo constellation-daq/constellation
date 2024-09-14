@@ -20,23 +20,23 @@
 #include "QLogListener.hpp"
 #include "ui_Observatory.h"
 
-static QColor level_colours[] = {
-    QColor(224, 224, 224, 128), // TRACE
-    QColor(200, 200, 200, 128), // DEBUG
-    QColor(191, 191, 191, 128), // INFO
-    QColor(255, 138, 0, 128),   // WARNING
-    QColor(0, 100, 0, 128),     // STATUS
-    QColor(255, 0, 0, 128),     // CRITICAL
-    QColor(0, 0, 0, 128),       // OFF
-};
-
 class LogItemDelegate : public QItemDelegate {
 public:
     LogItemDelegate(QLogListener* model);
 
 private:
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
-    QLogListener* m_model;
+    QLogListener* log_listener_;
+
+    const std::map<constellation::log::Level, QColor> level_colors {
+        {constellation::log::Level::TRACE, QColor(224, 224, 224, 128)},
+        {constellation::log::Level::DEBUG, QColor(200, 200, 200, 128)},
+        {constellation::log::Level::INFO, QColor(191, 191, 191, 128)},
+        {constellation::log::Level::WARNING, QColor(255, 138, 0, 128)},
+        {constellation::log::Level::STATUS, QColor(0, 100, 0, 128)},
+        {constellation::log::Level::CRITICAL, QColor(255, 0, 0, 128)},
+        {constellation::log::Level::OFF, QColor(0, 0, 0, 128)},
+    };
 };
 
 class Observatory : public QMainWindow, public Ui::wndLog {
@@ -66,8 +66,8 @@ private slots:
 
 private:
     static void CheckRegistered();
-    QLogListener m_model;
-    LogItemDelegate m_delegate;
+    QLogListener log_listener_;
+    LogItemDelegate log_message_delegate_;
 
     /** UI Settings */
     QSettings gui_settings_;
