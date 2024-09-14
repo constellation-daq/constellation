@@ -44,6 +44,7 @@ std::string LogMessage::Text(int i) const {
     case 2: return to_string(getLogLevel());
     case 3: return std::string(getLogTopic());
     case 4: return std::string(getLogMessage());
+    case 5: return getHeader().getTags().to_string();
     default: return "";
     }
 }
