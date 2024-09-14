@@ -58,24 +58,13 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_messa
             viewLog->setColumnWidth(i, w);
     }
 
-    QRect geom(-1, -1, 150, 200);
-    QRect geom_from_last_program_run;
-    geom_from_last_program_run.setSize(gui_settings_.value("window/size", geom.size()).toSize());
-    geom_from_last_program_run.moveTo(gui_settings_.value("window/pos", geom.topLeft()).toPoint());
-    QSize fsize = frameGeometry().size();
-    if((geom.x() == -1) || (geom.y() == -1) || (geom.width() == -1) || (geom.height() == -1)) {
-        if((geom_from_last_program_run.x() == -1) || (geom_from_last_program_run.y() == -1) ||
-           (geom_from_last_program_run.width() == -1) || (geom_from_last_program_run.height() == -1)) {
-            geom.setX(x());
-            geom.setY(y());
-            geom.setWidth(fsize.width());
-            geom.setHeight(fsize.height());
-            move(geom.topLeft());
-            resize(geom.size());
-        } else {
-            move(geom_from_last_program_run.topLeft());
-            resize(geom_from_last_program_run.size());
-        }
+    // Restore window geometry:
+    restoreGeometry(gui_settings_.value("window/geometry", saveGeometry()).toByteArray());
+    restoreState(gui_settings_.value("window/savestate", saveState()).toByteArray());
+    move(gui_settings_.value("window/pos", pos()).toPoint());
+    resize(gui_settings_.value("window/size", size()).toSize());
+    if(gui_settings_.value("window/maximized", isMaximized()).toBool()) {
+        showMaximized();
     }
 
     // Load last filter settings:
@@ -110,15 +99,26 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_messa
 
 Observatory::~Observatory() {
     // Stop the log receiver
-    m_model.stopPool();
+    log_listener_.stopPool();
 
-    gui_settings_.setValue("window/size", size());
-    gui_settings_.setValue("window/pos", pos());
-    gui_settings_.setValue("filters/level", QString::fromStdString(to_string(m_model.getFilterLevel())));
-    gui_settings_.setValue("filters/sender", QString::fromStdString(m_model.getFilterSender()));
-    gui_settings_.setValue("filters/topic", QString::fromStdString(m_model.getFilterTopic()));
-    gui_settings_.setValue("filters/search", m_model.getFilterMessage());
-    gui_settings_.setValue("subscriptions/level", QString::fromStdString(to_string(m_model.getGlobalSubscriptionLevel())));
+    // Store window geometry:
+    gui_settings_.setValue("window/geometry", saveGeometry());
+    gui_settings_.setValue("window/savestate", saveState());
+    gui_settings_.setValue("window/maximized", isMaximized());
+    if(!isMaximized()) {
+        gui_settings_.setValue("window/pos", pos());
+        gui_settings_.setValue("window/size", size());
+    }
+
+    // Store filter settings
+    gui_settings_.setValue("filters/level", QString::fromStdString(to_string(log_listener_.getFilterLevel())));
+    gui_settings_.setValue("filters/sender", QString::fromStdString(log_listener_.getFilterSender()));
+    gui_settings_.setValue("filters/topic", QString::fromStdString(log_listener_.getFilterTopic()));
+    gui_settings_.setValue("filters/search", log_listener_.getFilterMessage());
+
+    // Store subscription settings
+    gui_settings_.setValue("subscriptions/level",
+                           QString::fromStdString(to_string(log_listener_.getGlobalSubscriptionLevel())));
 }
 
 void Observatory::closeEvent(QCloseEvent*) {
