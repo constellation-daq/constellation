@@ -28,9 +28,9 @@ using namespace constellation::log;
 using namespace constellation::pools;
 using namespace constellation::utils;
 
-LogMessage::LogMessage(CMDP1LogMessage msg) : CMDP1LogMessage(std::move(msg)) {}
+LogMessage::LogMessage(CMDP1LogMessage&& msg) : CMDP1LogMessage(std::move(msg)) {}
 
-int LogMessage::ColumnWidth(int i) {
+int LogMessage::columnWidth(int i) {
     switch(i) {
     case 0: return 150;
     case 1: return 120;
@@ -40,8 +40,8 @@ int LogMessage::ColumnWidth(int i) {
     }
 }
 
-QString LogMessage::operator[](int i) const {
-    switch(i) {
+QString LogMessage::operator[](int column) const {
+    switch(column) {
     case 0:
         return QString::fromStdString(
             std::format("{:%Y-%m-%d %H:%M:%S}", std::chrono::time_point_cast<std::chrono::seconds>(getHeader().getTime())));
@@ -54,7 +54,7 @@ QString LogMessage::operator[](int i) const {
     }
 }
 
-QString LogMessage::ColumnName(int i) {
+QString LogMessage::columnName(int i) {
     if(i < 0 || i >= static_cast<int>(headers_.size())) {
         return {};
     }
@@ -175,7 +175,7 @@ int QLogListener::rowCount(const QModelIndex& /*parent*/) const {
 }
 
 int QLogListener::columnCount(const QModelIndex& /*parent*/) const {
-    return LogMessage::NumColumns();
+    return LogMessage::countColumns();
 }
 
 Level QLogListener::getMessageLevel(const QModelIndex& index) const {
@@ -204,7 +204,7 @@ QVariant QLogListener::headerData(int section, Qt::Orientation orientation, int 
     }
 
     if(orientation == Qt::Horizontal && section < columnCount()) {
-        return LogMessage::ColumnName(section);
+        return LogMessage::columnName(section);
     }
 
     return QVariant();

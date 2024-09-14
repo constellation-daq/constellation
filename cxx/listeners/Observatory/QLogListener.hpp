@@ -18,18 +18,55 @@
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/pools/SubscriberPool.hpp"
 
+/**
+ * @class LogMessage
+ * @brief Wrapper class around CMDP1 Log messages which provide additional accessors to make them play nice with the
+ * QAbstractListModel they are used in.
+ */
 class LogMessage : public constellation::message::CMDP1LogMessage {
 public:
-    explicit LogMessage(constellation::message::CMDP1LogMessage msg);
+    /**
+     * @brief Constructing a Log message from a CMDP1LogMessage
+     *
+     * @param msg CMDP1 Log Message
+     */
+    explicit LogMessage(constellation::message::CMDP1LogMessage&& msg);
 
-    QString operator[](int) const;
+    /**
+     * @brief Operator to fetch column information as string representation from the message
+     *
+     * @param column Column to retrieve the string representation for
+     * @return String representation of the message info
+     */
+    QString operator[](int column) const;
 
-    static int NumColumns() { return headers_.size() - 1; }
-    static int NumExtendedColumns() { return headers_.size(); }
+    /**
+     * @brief Obtain number of info columns this message provides
+     * @return Number of columns
+     */
+    static int countColumns() { return headers_.size() - 1; }
 
-    static QString ColumnName(int i);
-    static int ColumnWidth(int);
+    /**
+     * @brief Obtain number of info columns this message provides including extra information
+     * @return Number of all columns
+     */
+    static int countExtendedColumns() { return headers_.size(); }
 
+    /**
+     * @brief Get title of a given column
+     * @param column Column number
+     * @return Header of the column
+     */
+    static QString columnName(int column);
+
+    /**
+     * @brief Obtain predefined width of a column
+     * @param column Column number
+     * @return Width of the column
+     */
+    static int columnWidth(int column);
+
+private:
     // Column headers of the log details
     static constexpr std::array<const char*, 6> headers_ {"Time", "Sender", "Level", "Topic", "Message", "Tags"};
 };
@@ -141,13 +178,28 @@ public:
      */
     const LogMessage& getMessage(const QModelIndex& index) const;
 
+    /**
+     * @brief Subscribe to a given topic at a given log level
+     * @details This method subscribes automatically to all log levels higher than the chosen level. If no topic is provided,
+     * the method subscribes to the global logging at the given level, i.e. all topics available.
+     *
+     * @note Currently only works on all attached senders
+     *
+     * @param level Desired subscription log level
+     * @param topic Topic to subscribe to
+     */
+    void subscribeToTopic(constellation::log::Level level, std::string_view topic = "");
+
+    /// @cond doxygen_suppress
+
+    /* Qt accessor methods */
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     int columnCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     void sort(int column, Qt::SortOrder order) override;
 
-    void subscribeToTopic(constellation::log::Level level, std::string_view topic = "");
+    /// @endcond
 
 signals:
     /**
