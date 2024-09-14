@@ -28,7 +28,7 @@ using namespace constellation::utils;
 LogItemDelegate::LogItemDelegate(QLogListener* model) : m_model(model) {}
 
 void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const {
-    const auto level = std::to_underlying(m_model->GetLevel(index));
+    const auto level = std::to_underlying(m_model->getMessageLevel(index));
     painter->fillRect(option.rect, QBrush(level_colours[level]));
     QItemDelegate::paint(painter, option, index);
 }
@@ -146,7 +146,7 @@ void Observatory::on_filterMessage_editingFinished() {
 }
 
 void Observatory::on_viewLog_activated(const QModelIndex& i) {
-    new LogDialog(m_model.GetMessage(i.row()));
+    new LogDialog(m_model.getMessage(i));
 }
 
 void Observatory::new_message_display(const QModelIndex&) {

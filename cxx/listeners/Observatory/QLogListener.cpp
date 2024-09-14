@@ -32,19 +32,15 @@ int LogMessage::ColumnWidth(int i) {
 }
 
 QString LogMessage::operator[](int i) const {
-    return Text(i).c_str();
-}
-
-std::string LogMessage::Text(int i) const {
     switch(i) {
     case 0:
-        return std::format("{:%Y-%m-%d %H:%M:%S}",
-                           std::chrono::time_point_cast<std::chrono::seconds>(getHeader().getTime()));
-    case 1: return std::string(getHeader().getSender());
-    case 2: return to_string(getLogLevel());
-    case 3: return std::string(getLogTopic());
-    case 4: return std::string(getLogMessage());
-    case 5: return getHeader().getTags().to_string();
+        return QString::fromStdString(
+            std::format("{:%Y-%m-%d %H:%M:%S}", std::chrono::time_point_cast<std::chrono::seconds>(getHeader().getTime())));
+    case 1: return QString::fromStdString(std::string(getHeader().getSender()));
+    case 2: return QString::fromStdString(to_string(getLogLevel()));
+    case 3: return QString::fromStdString(std::string(getLogTopic()));
+    case 4: return QString::fromStdString(std::string(getLogMessage()));
+    case 5: return QString::fromStdString(getHeader().getTags().to_string());
     default: return "";
     }
 }
@@ -64,8 +60,8 @@ void LogSorter::SetSort(int col, bool ascending) {
 }
 
 bool LogSorter::operator()(size_t lhs, size_t rhs) {
-    QString l = (*m_msgs)[lhs].Text(m_col).c_str();
-    QString r = (*m_msgs)[rhs].Text(m_col).c_str();
+    const auto l = (*m_msgs)[lhs][m_col];
+    const auto r = (*m_msgs)[rhs][m_col];
     return m_asc ^ (QString::compare(l, r, Qt::CaseInsensitive) < 0);
 }
 
@@ -74,12 +70,12 @@ QLogListener::QLogListener(QObject* parent)
                                       "LOGRECV",
                                       [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); },
                                       [this]() { return get_global_subscription_topics(); }),
-      logger_("QLGRCV"), filter_level_(Level::WARNING), m_sorter(&m_all) {
+      logger_("QLGRCV"), filter_level_(Level::WARNING), m_sorter(&messages_) {
     filter_message_.setPatternOptions(QRegularExpression::CaseInsensitiveOption);
 }
 
-bool QLogListener::IsDisplayed(size_t index) {
-    LogMessage& msg = m_all[index];
+bool QLogListener::is_message_displayed(size_t index) {
+    LogMessage& msg = messages_[index];
     const auto match = filter_message_.match(QString::fromStdString(std::string(msg.getLogMessage())));
     return (msg.getLogLevel() >= filter_level_) &&
            (msg.getHeader().getSender() == filter_sender_ || "- All -" == filter_sender_) &&
@@ -130,12 +126,13 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
         emit newTopic(QString::fromStdString(std::string(msg.getLogTopic())));
     }
 
-    m_all.emplace_back(std::move(msg));
-    if(IsDisplayed(m_all.size() - 1)) {
-        std::vector<size_t>::iterator it = std::lower_bound(m_disp.begin(), m_disp.end(), m_all.size() - 1, m_sorter);
-        size_t pos = it - m_disp.begin();
+    messages_.emplace_back(std::move(msg));
+    if(is_message_displayed(messages_.size() - 1)) {
+        std::vector<size_t>::iterator it =
+            std::lower_bound(display_indices_.begin(), display_indices_.end(), messages_.size() - 1, m_sorter);
+        size_t pos = it - display_indices_.begin();
         beginInsertRows(QModelIndex(), pos, pos);
-        m_disp.insert(it, m_all.size() - 1);
+        display_indices_.insert(it, messages_.size() - 1);
         endInsertRows();
 
         // send signal:
@@ -144,36 +141,36 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
     // return QModelIndex(); // FIXME we need to tell someone that we changed it...? Probably not because display not changed
 }
 
-void QLogListener::UpdateDisplayed() {
-    if(m_disp.size() > 0) {
-        beginRemoveRows(createIndex(0, 0), 0, m_disp.size() - 1);
-        m_disp.clear();
+void QLogListener::update_displayed_messages() {
+    if(display_indices_.size() > 0) {
+        beginRemoveRows(createIndex(0, 0), 0, display_indices_.size() - 1);
+        display_indices_.clear();
         endRemoveRows();
     }
     std::vector<size_t> disp;
-    for(size_t i = 0; i < m_all.size(); ++i) {
-        if(IsDisplayed(i)) {
+    for(size_t i = 0; i < messages_.size(); ++i) {
+        if(is_message_displayed(i)) {
             disp.push_back(i);
         }
     }
     std::sort(disp.begin(), disp.end(), m_sorter);
     if(disp.size() > 0) {
         beginInsertRows(createIndex(0, 0), 0, disp.size() - 1);
-        m_disp = disp;
+        display_indices_ = disp;
         endInsertRows();
     }
 }
 
 int QLogListener::rowCount(const QModelIndex& /*parent*/) const {
-    return m_disp.size();
+    return display_indices_.size();
 }
 
 int QLogListener::columnCount(const QModelIndex& /*parent*/) const {
     return LogMessage::NumColumns();
 }
 
-Level QLogListener::GetLevel(const QModelIndex& index) const {
-    return m_all[m_disp[index.row()]].getLogLevel();
+Level QLogListener::getMessageLevel(const QModelIndex& index) const {
+    return messages_[display_indices_[index.row()]].getLogLevel();
 }
 
 QVariant QLogListener::data(const QModelIndex& index, int role) const {
@@ -182,14 +179,14 @@ QVariant QLogListener::data(const QModelIndex& index, int role) const {
     }
 
     if(index.column() < columnCount() && index.row() < rowCount()) {
-        return GetMessage(index.row())[index.column()];
+        return getMessage(index)[index.column()];
     }
 
     return QVariant();
 }
 
-const LogMessage& QLogListener::GetMessage(int row) const {
-    return m_all[m_disp[row]];
+const LogMessage& QLogListener::getMessage(const QModelIndex& index) const {
+    return messages_[display_indices_[index.row()]];
 }
 
 QVariant QLogListener::headerData(int section, Qt::Orientation orientation, int role) const {
@@ -206,13 +203,13 @@ QVariant QLogListener::headerData(int section, Qt::Orientation orientation, int 
 
 void QLogListener::sort(int column, Qt::SortOrder order) {
     m_sorter.SetSort(column, order == Qt::AscendingOrder);
-    UpdateDisplayed();
+    update_displayed_messages();
 }
 
 void QLogListener::setFilterLevel(Level level) {
     LOG(logger_, DEBUG) << "Updating filter level to " << to_string(level);
     filter_level_ = level;
-    UpdateDisplayed();
+    update_displayed_messages();
 }
 
 void QLogListener::setGlobalSubscriptionLevel(Level level) {
@@ -225,7 +222,7 @@ bool QLogListener::setFilterSender(const std::string& sender) {
     if(filter_sender_list_.contains(sender)) {
         LOG(logger_, DEBUG) << "Updating filter sender to " << sender;
         filter_sender_ = sender;
-        UpdateDisplayed();
+        update_displayed_messages();
         return true;
     }
     return false;
@@ -235,7 +232,7 @@ bool QLogListener::setFilterTopic(const std::string& topic) {
     if(filter_topic_list_.contains(topic)) {
         LOG(logger_, DEBUG) << "Updating filter topic to " << topic;
         filter_topic_ = topic;
-        UpdateDisplayed();
+        update_displayed_messages();
         return true;
     }
     return false;
@@ -244,5 +241,5 @@ bool QLogListener::setFilterTopic(const std::string& topic) {
 void QLogListener::setFilterMessage(const QString& pattern) {
     LOG(logger_, DEBUG) << "Updating filter pattern for message to " << pattern.toStdString();
     filter_message_.setPattern(pattern);
-    UpdateDisplayed();
+    update_displayed_messages();
 }
