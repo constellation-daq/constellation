@@ -150,7 +150,7 @@ public:
      *
      * @param pattern Message filter pattern
      */
-    void setFilterMessage(const QString& topic);
+    void setFilterMessage(const QString& pattern);
 
     /**
      * @brief Return the currently set message filter pattern
