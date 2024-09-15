@@ -503,16 +503,23 @@ void BaseSatellite::apply_internal_config(const config::Configuration& config) {
                              CSCP::State::stopping}) {
         const auto key = "_require_" + to_string(state) + "_after";
         if(config.has(key)) {
+            auto register_condition = [this, &config, key, state](auto& remote) {
+                if(transform(remote, ::tolower) == transform(getCanonicalName(), ::tolower)) {
+                    throw InvalidValueError(config, key, "Satellite cannot depend on itself");
+                }
+                fsm_.registerRemoteCondition(remote, state);
+            };
+
             try {
                 const auto remotes = config.getArray<std::string>(key);
                 LOG(logger_, INFO) << "Registering condition for transitional state " << to_string(state) << " and remotes "
                                    << range_to_string(remotes);
-                std::ranges::for_each(remotes, [this, state](auto& remote) { fsm_.registerRemoteCondition(remote, state); });
+                std::ranges::for_each(remotes, register_condition);
             } catch(InvalidTypeError&) {
                 const auto remote = config.get<std::string>(key);
                 LOG(logger_, INFO) << "Registering condition for transitional state " << to_string(state) << " and remote "
                                    << remote;
-                fsm_.registerRemoteCondition(remote, state);
+                register_condition(remote);
             }
         }
     }
