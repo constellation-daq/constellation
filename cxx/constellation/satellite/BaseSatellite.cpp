@@ -523,6 +523,11 @@ void BaseSatellite::apply_internal_config(const config::Configuration& config) {
             }
         }
     }
+
+    // Set timeout for conditional transitions:
+    if(config.has("_conditional_transition_timeout")) {
+        fsm_.setRemoteConditionTimeout(std::chrono::seconds(config.get<std::uint64_t>("_conditional_transition_timeout")));
+    }
 }
 
 void BaseSatellite::initializing_wrapper(config::Configuration&& config) {
