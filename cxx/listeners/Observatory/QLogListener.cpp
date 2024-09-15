@@ -61,7 +61,7 @@ QString LogMessage::columnName(int i) {
     return headers_[i];
 }
 
-LogSorter::LogSorter(std::vector<LogMessage>* messages) : m_msgs(messages), m_col(0), m_asc(true) {}
+LogSorter::LogSorter(std::deque<LogMessage>* messages) : m_msgs(messages), m_col(0), m_asc(true) {}
 
 void LogSorter::SetSort(int col, bool ascending) {
     m_col = col;
@@ -83,15 +83,15 @@ QLogListener::QLogListener(QObject* parent)
     filter_message_.setPatternOptions(QRegularExpression::CaseInsensitiveOption);
 }
 
-bool QLogListener::is_message_displayed(size_t index) {
-    LogMessage& msg = messages_[index];
+bool QLogListener::is_message_displayed(size_t index) const {
+    const LogMessage& msg = messages_[index];
     const auto match = filter_message_.match(QString::fromStdString(std::string(msg.getLogMessage())));
     return (msg.getLogLevel() >= filter_level_) &&
            (msg.getHeader().getSender() == filter_sender_ || "- All -" == filter_sender_) &&
            (msg.getLogTopic() == filter_topic_ || "- All -" == filter_topic_) && match.hasMatch();
 }
 
-std::set<std::string> QLogListener::get_global_subscription_topics() {
+std::set<std::string> QLogListener::get_global_subscription_topics() const {
     std::set<std::string> topics;
 
     for(const auto level : magic_enum::enum_values<Level>()) {
@@ -151,7 +151,7 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
 }
 
 void QLogListener::update_displayed_messages() {
-    if(display_indices_.size() > 0) {
+    if(!display_indices_.empty()) {
         beginRemoveRows(createIndex(0, 0), 0, display_indices_.size() - 1);
         display_indices_.clear();
         endRemoveRows();
