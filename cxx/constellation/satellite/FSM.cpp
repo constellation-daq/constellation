@@ -297,8 +297,8 @@ FSM::Transition FSM::call_satellite_function(Func func, Transition success_trans
 
                     // Check if condition is fulfilled:
                     if(!condition.isSatisfied(remote_state.value())) {
-                        LOG(logger_, STATUS) << "Awaiting state from " << condition.remote
-                                             << ", currently: " << to_string(remote_state.value());
+                        LOG(logger_, DEBUG) << "Awaiting state from " << condition.remote
+                                            << ", currently: " << to_string(remote_state.value());
                         satisfied = false;
                         break;
                     }

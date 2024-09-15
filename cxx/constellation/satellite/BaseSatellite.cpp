@@ -503,8 +503,17 @@ void BaseSatellite::apply_internal_config(const config::Configuration& config) {
                              CSCP::State::stopping}) {
         const auto key = "_require_" + to_string(state) + "_after";
         if(config.has(key)) {
-            LOG(logger_, INFO) << "Registering condition for transitional state " + to_string(state);
-            fsm_.registerRemoteCondition(config.get<std::string>(key), state);
+            try {
+                const auto remotes = config.getArray<std::string>(key);
+                LOG(logger_, INFO) << "Registering condition for transitional state " << to_string(state) << " and remotes "
+                                   << range_to_string(remotes);
+                std::ranges::for_each(remotes, [this, state](auto& remote) { fsm_.registerRemoteCondition(remote, state); });
+            } catch(InvalidTypeError&) {
+                const auto remote = config.get<std::string>(key);
+                LOG(logger_, INFO) << "Registering condition for transitional state " << to_string(state) << " and remote "
+                                   << remote;
+                fsm_.registerRemoteCondition(remote, state);
+            }
         }
     }
 }

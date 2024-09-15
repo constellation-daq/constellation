@@ -21,7 +21,7 @@ For this purpose, Constellation provides the `require_<transitional state>_after
 The respective satellite will receive these as conditions from the controller via the configuration passed in the
 `initialize` command and evaluate them upon entering transitional states.
 
-If, for example, Satellite `Sputnik.Second` receives the condition `require_starting_after = Sputnik.First` it will enter
+If, for example, Satellite `Sputnik.Second` receives the condition `require_starting_after = "Sputnik.First"` it will enter
 the `starting` transitional states but wait until satellite `Sputnik.First` has successfully completed the transition, and
 `Sputnik.Second` receives the state `RUN` from `Sputnik.First` via the
 [heartbeat protocol](../../reference/protocols.md#heartbeating) before progressing through its own `starting` state. This can
@@ -97,8 +97,14 @@ apart from `reconfiguring`, i.e.
 * `require_starting_after`
 * `require_stopping_after`
 
-There is no restriction to the number of conditions or the number of remote satellites to depend on. Conditions cannot be
-set on the same satellite executing the conditional transition, and they cannot be assigned to steady states.
+There is no restriction to the number of conditions or the number of remote satellites to depend on. When depending on
+multiple satellites in one transitional state, the corresponding key can be set as array, e.g.
+
+```toml
+require_launching_after = ["Sputnik.First", "Sputnik.Third"]
+```
+
+Conditions cannot be set on the same satellite executing the conditional transition, and they cannot be assigned to steady states.
 
 Waiting for remote conditions to be satisfied can be interrupted by a number of things:
 
