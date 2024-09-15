@@ -182,6 +182,13 @@ namespace constellation::satellite {
         CNSTLN_API void registerRemoteCondition(const std::string& remote, State transitional);
 
         /**
+         * @brief Set timeout for remote conditions of transitions
+         *
+         * @param timeout Timeout in seconds for the conditional transition to time out
+         */
+        CNSTLN_API void setRemoteConditionTimeout(std::chrono::seconds timeout) { remote_condition_timeout_ = timeout; };
+
+        /**
          * @brief Clears all remote conditions for this satellite
          */
         CNSTLN_API void clearRemoteCondition();
