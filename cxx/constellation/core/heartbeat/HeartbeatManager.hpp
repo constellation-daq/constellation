@@ -76,6 +76,8 @@ namespace constellation::heartbeat {
         /**
          * @brief Obtain the current state registered from a given remote
          *
+         * @note Remote canonical names are matched case-insensitive
+         *
          * @param remote Canonical name of the remote in question
          * @return Currently registered state of the remote if remote is present, empty optional otherwise
          */

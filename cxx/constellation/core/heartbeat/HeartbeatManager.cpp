@@ -60,7 +60,8 @@ void HeartbeatManager::sendExtrasystole() {
 
 std::optional<CSCP::State> HeartbeatManager::getRemoteState(std::string_view remote) {
     const std::lock_guard lock {mutex_};
-    const auto remote_it = remotes_.find(remote);
+    const auto remote_it = std::ranges::find_if(
+        remotes_, [remote](const auto& r) { return transform(r.first, ::tolower) == transform(remote, ::tolower); });
     if(remote_it != remotes_.end()) {
         // If the remote has vanished, return ERROR state
         if(remote_it->second.lives == 0) {
