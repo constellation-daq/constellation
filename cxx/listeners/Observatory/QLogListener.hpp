@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <deque>
 #include <QAbstractListModel>
 #include <QRegularExpression>
 #include <vector>
@@ -73,12 +74,12 @@ private:
 
 class LogSorter {
 public:
-    LogSorter(std::vector<LogMessage>* messages);
+    LogSorter(std::deque<LogMessage>* messages);
     void SetSort(int col, bool ascending);
     bool operator()(size_t lhs, size_t rhs);
 
 private:
-    std::vector<LogMessage>* m_msgs;
+    std::deque<LogMessage>* m_msgs;
     int m_col;
     bool m_asc;
 };
@@ -238,7 +239,7 @@ private:
      * @param index Index of the message in the message storage
      * @return True if the message is to be displayed, false otherwise
      */
-    bool is_message_displayed(size_t index);
+    bool is_message_displayed(size_t index) const;
 
     /**
      * @brief Helper to update the list of displayed messages
@@ -251,14 +252,14 @@ private:
 
      * @return Set of subscription topics
      */
-    std::set<std::string> get_global_subscription_topics();
+    std::set<std::string> get_global_subscription_topics() const;
 
 private:
     /** Logger to use */
     constellation::log::Logger logger_;
 
     /** Subscription & storage */
-    std::vector<LogMessage> messages_;
+    std::deque<LogMessage> messages_;
     constellation::log::Level subscription_global_level_ {constellation::log::Level::INFO};
 
     /** Filter & display */
