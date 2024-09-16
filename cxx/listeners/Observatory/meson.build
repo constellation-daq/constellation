@@ -1,6 +1,11 @@
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
+# Build listener only if feature is enabled:
+if not get_option('listener_observatory').enabled()
+  subdir_done()
+endif
+
 qt = import('qt6')
 qt_dep = dependency('qt6', modules: ['Core', 'Gui', 'Widgets'])
 
