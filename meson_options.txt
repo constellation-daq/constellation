@@ -10,6 +10,9 @@ option('cxx_tests', type: 'feature', value: 'auto', description: 'Build C++ test
 # GUI framework version
 option('qt_version', type: 'combo', choices: ['qt5', 'qt6'], value: 'qt6')
 
+# Controllers
+option('controller_missioncontrol', type: 'feature', value: 'auto', description: 'Build the MissionControl Qt Controller GUI')
+
 # Satellites
 option('satellite_dev_null_receiver', type: 'boolean', value: false, description: 'Build DevNullReceiver satellite')
 option('satellite_random_transmitter', type: 'boolean', value: false, description: 'Build RandomTransmitter satellite')
