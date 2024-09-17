@@ -95,28 +95,16 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
         }
     }
 
-    m_lastexit_success = gui_settings_.value("successexit", 1).toUInt();
     // TODO: check last if last file exits. if not, use default value.
     txtConfigFileName->setText(gui_settings_.value("run/configfile", "config file not set").toString());
 
-    QRect geom(-1, -1, 150, 200);
-    QRect geom_from_last_program_run;
-    geom_from_last_program_run.setSize(gui_settings_.value("window/size", geom.size()).toSize());
-    geom_from_last_program_run.moveTo(gui_settings_.value("window/pos", geom.topLeft()).toPoint());
-    QSize fsize = frameGeometry().size();
-    if((geom.x() == -1) || (geom.y() == -1) || (geom.width() == -1) || (geom.height() == -1)) {
-        if((geom_from_last_program_run.x() == -1) || (geom_from_last_program_run.y() == -1) ||
-           (geom_from_last_program_run.width() == -1) || (geom_from_last_program_run.height() == -1)) {
-            geom.setX(x());
-            geom.setY(y());
-            geom.setWidth(fsize.width());
-            geom.setHeight(fsize.height());
-            move(geom.topLeft());
-            resize(geom.size());
-        } else {
-            move(geom_from_last_program_run.topLeft());
-            resize(geom_from_last_program_run.size());
-        }
+    // Restore window geometry:
+    restoreGeometry(gui_settings_.value("window/geometry", saveGeometry()).toByteArray());
+    restoreState(gui_settings_.value("window/savestate", saveState()).toByteArray());
+    move(gui_settings_.value("window/pos", pos()).toPoint());
+    resize(gui_settings_.value("window/size", size()).toSize());
+    if(gui_settings_.value("window/maximized", isMaximized()).toBool()) {
+        showMaximized();
     }
 
     setWindowTitle("Constellation MissionControl " CNSTLN_VERSION);
@@ -147,8 +135,6 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     });
     // Update button state once manually
     update_button_states(state);
-
-    gui_settings_.setValue("successexit", 0);
 }
 
 void MissionControl::update_run_identifier(const QString& text, int number) {
@@ -286,10 +272,17 @@ void MissionControl::update_run_infos() {
 }
 
 void MissionControl::closeEvent(QCloseEvent* event) {
-    gui_settings_.setValue("window/size", size());
-    gui_settings_.setValue("window/pos", pos());
+
+    // Store window geometry:
+    gui_settings_.setValue("window/geometry", saveGeometry());
+    gui_settings_.setValue("window/savestate", saveState());
+    gui_settings_.setValue("window/maximized", isMaximized());
+    if(!isMaximized()) {
+        gui_settings_.setValue("window/pos", pos());
+        gui_settings_.setValue("window/size", size());
+    }
+
     gui_settings_.setValue("run/configfile", txtConfigFileName->text());
-    gui_settings_.setValue("successexit", 1);
 
     // Terminate the application
     event->accept();

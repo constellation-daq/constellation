@@ -167,9 +167,6 @@ private:
     /** Context menu */
     QMenu* contextMenu;
 
-    /** Marker for successful UI exit */
-    bool m_lastexit_success;
-
     /** UI Settings */
     QSettings gui_settings_;
 };
