@@ -20,6 +20,7 @@
 #include <QFileInfo>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QPainter>
 #include <QSpinBox>
 #include <QTimeZone>
 #include <string>
@@ -41,6 +42,35 @@ using namespace constellation::log;
 using namespace constellation::protocol;
 using namespace constellation::utils;
 
+void ConnectionItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const {
+    auto options = option;
+    initStyleOption(&options, index);
+
+    painter->save();
+
+    QTextDocument doc;
+    doc.setHtml(options.text);
+
+    options.text = "";
+    options.widget->style()->drawControl(QStyle::CE_ItemViewItem, &options, painter);
+
+    painter->translate(options.rect.left(), options.rect.top());
+    QRect clip(0, 0, options.rect.width(), options.rect.height());
+    doc.drawContents(painter, clip);
+
+    painter->restore();
+}
+
+QSize ConnectionItemDelegate::sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const {
+    QStyleOptionViewItem options = option;
+    initStyleOption(&options, index);
+
+    QTextDocument doc;
+    doc.setHtml(options.text);
+    doc.setTextWidth(options.rect.width());
+    return QSize(doc.idealWidth(), doc.size().height());
+}
+
 MissionControl::MissionControl(std::string controller_name, std::string_view group_name)
     : QMainWindow(), runcontrol_(std::move(controller_name)), logger_("GUI"), user_logger_("OP") {
 
@@ -56,6 +86,7 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
 
     sorting_proxy_.setSourceModel(&runcontrol_);
     viewConn->setModel(&sorting_proxy_);
+    viewConn->setItemDelegate(&item_delegate_);
     viewConn->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(viewConn, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(onCustomContextMenu(const QPoint&)));
 

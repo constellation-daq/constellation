@@ -14,10 +14,17 @@
 #include <QRegularExpression>
 #include <QSettings>
 #include <QString>
+#include <QStyledItemDelegate>
 #include <QTimer>
 
 #include "QController.hpp"
 #include "ui_MissionControl.h"
+
+class ConnectionItemDelegate : public QStyledItemDelegate {
+protected:
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const;
+};
 
 /**
  * @class MissionControl
@@ -130,6 +137,7 @@ private:
 
     /** The controller instance of the UI */
     QController runcontrol_;
+    ConnectionItemDelegate item_delegate_;
 
     /** Sorting proxy for the connection list */
     QControllerSortProxy sorting_proxy_;
