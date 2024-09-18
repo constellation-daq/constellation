@@ -63,8 +63,7 @@ QVariant QController::data(const QModelIndex& index, int role) const {
         return QString::fromStdString(name.substr(name_startpos + 1));
     }
     case 2: {
-        const auto state = std::string(magic_enum::enum_name(conn.state));
-        return QString::fromStdString(state);
+        return getStyledState(conn.state, true);
     }
     case 3: {
         const std::string last_endpoint = conn.req.get(zmq::sockopt::last_endpoint);
