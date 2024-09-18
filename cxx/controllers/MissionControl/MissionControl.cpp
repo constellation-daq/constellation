@@ -50,7 +50,7 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     // Set initial values for header bar
     const auto state = runcontrol_.getLowestState();
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
-    labelState->setText(get_state_str(state, runcontrol_.isInGlobalState()));
+    labelState->setText(runcontrol_.getStyledState(state, runcontrol_.isInGlobalState()));
     labelNrSatellites->setText("<font color='gray'><b>" + QString::number(runcontrol_.getConnections().size()) +
                                "</b></font>");
 
@@ -127,11 +127,11 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     // Connect state update signal:
     connect(&runcontrol_, &QController::reachedGlobalState, this, [&](CSCP::State state) {
         update_button_states(state);
-        labelState->setText(get_state_str(state, true));
+        labelState->setText(runcontrol_.getStyledState(state, true));
     });
     connect(&runcontrol_, &QController::reachedLowestState, this, [&](CSCP::State state) {
         update_button_states(state);
-        labelState->setText(get_state_str(state, false));
+        labelState->setText(runcontrol_.getStyledState(state, false));
     });
     // Update button state once manually
     update_button_states(state);
@@ -286,54 +286,6 @@ void MissionControl::closeEvent(QCloseEvent* event) {
 
     // Terminate the application
     event->accept();
-}
-
-QString MissionControl::get_state_str(CSCP::State state, bool global) const {
-
-    QString global_indicatior = (global ? "" : " ≊");
-
-    switch(state) {
-    case CSCP::State::NEW: {
-        return "<font color='gray'><b>New</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::initializing: {
-        return "<font color='gray'><b>Initializing...</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::INIT: {
-        return "<font color='gray'><b>Initialized</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::launching: {
-        return "<font color='orange'><b>Launching...</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::landing: {
-        return "<font color='orange'><b>Landing...</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::reconfiguring: {
-        return "<font color='orange'><b>Reconfiguring...</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::ORBIT: {
-        return "<font color='orange'><b>Orbiting</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::starting: {
-        return "<font color='green'><b>Starting...</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::stopping: {
-        return "<font color='green'><b>Stopping...</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::RUN: {
-        return "<font color='green'><b>Running</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::SAFE: {
-        return "<font color='red'><b>Safe Mode</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::interrupting: {
-        return "<font color='red'><b>Interrupting...</b>" + global_indicatior + "</font>";
-    }
-    case CSCP::State::ERROR: {
-        return "<font color='darkred'><b>Error</b>" + global_indicatior + "</font>";
-    }
-    default: std::unreachable();
-    }
 }
 
 void MissionControl::onCustomContextMenu(const QPoint& point) {

@@ -92,6 +92,54 @@ QVariant QController::headerData(int column, Qt::Orientation orientation, int ro
     return QVariant();
 }
 
+QString QController::getStyledState(CSCP::State state, bool global) const {
+
+    QString global_indicatior = (global ? "" : " ≊");
+
+    switch(state) {
+    case CSCP::State::NEW: {
+        return "<font color='gray'><b>New</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::initializing: {
+        return "<font color='gray'><b>Initializing...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::INIT: {
+        return "<font color='gray'><b>Initialized</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::launching: {
+        return "<font color='orange'><b>Launching...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::landing: {
+        return "<font color='orange'><b>Landing...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::reconfiguring: {
+        return "<font color='orange'><b>Reconfiguring...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::ORBIT: {
+        return "<font color='orange'><b>Orbiting</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::starting: {
+        return "<font color='green'><b>Starting...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::stopping: {
+        return "<font color='green'><b>Stopping...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::RUN: {
+        return "<font color='green'><b>Running</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::SAFE: {
+        return "<font color='red'><b>Safe Mode</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::interrupting: {
+        return "<font color='red'><b>Interrupting...</b>" + global_indicatior + "</font>";
+    }
+    case CSCP::State::ERROR: {
+        return "<font color='darkred'><b>Error</b>" + global_indicatior + "</font>";
+    }
+    default: std::unreachable();
+    }
+}
+
 void QController::reached_global_state(CSCP::State state) {
     LOG(logger_, DEBUG) << "Reached new global state " << to_string(state);
     emit reachedGlobalState(state);
