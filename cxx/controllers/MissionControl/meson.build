@@ -6,8 +6,8 @@ if not get_option('controller_missioncontrol').enabled()
   subdir_done()
 endif
 
-qt = import('qt6')
-qt_dep = dependency('qt6', modules: ['Core', 'Gui', 'Widgets'])
+qt = import(get_option('qt_version'))
+qt_dep = dependency(get_option('qt_version'), modules: ['Core', 'Gui', 'Widgets'])
 
 inc = include_directories('.')
 
