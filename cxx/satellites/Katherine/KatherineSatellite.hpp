@@ -84,18 +84,7 @@ private:
         }
         // Try to send and retry if it failed:
         LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
-
-        using namespace std::literals::chrono_literals;
-        const constellation::utils::TimeoutTimer timer {data_timeout_};
-        while(!sendDataMessage(msg)) {
-            std::this_thread::sleep_for(100ms);
-
-            // Abort if we could not send the message after timeout:
-            if(timer.timeoutReached()) {
-                LOG(CRITICAL) << "Aborting data transmission - cannot send data";
-                throw constellation::satellite::SendTimeoutError("pixel data", data_timeout_);
-            }
-        }
+        trySendDataMessage(msg);
     }
 
     template <typename T> std::vector<std::uint8_t> to_bytes(const T& pixel) {
@@ -127,8 +116,6 @@ private:
 
     /* Future to keep track of Katherine acquisition call state & exceptions */
     std::future<void> acq_future_;
-
-    std::chrono::seconds data_timeout_ {};
 
     katherine::readout_type ro_type_ {};
     OperationMode opmode_ {};
