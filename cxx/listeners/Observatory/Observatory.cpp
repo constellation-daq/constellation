@@ -51,10 +51,10 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_messa
 
     viewLog->setModel(&log_listener_);
     viewLog->setItemDelegate(&log_message_delegate_);
-    for(int i = 0; i < LogMessage::countColumns(); ++i) {
-        int w = LogMessage::columnWidth(i);
-        if(w >= 0)
-            viewLog->setColumnWidth(i, w);
+    for(int col = 0; col < LogMessage::countColumns(); ++col) {
+        const int width = LogMessage::columnWidth(col);
+        if(width >= 0)
+            viewLog->setColumnWidth(col, width);
     }
 
     // Restore window geometry:
