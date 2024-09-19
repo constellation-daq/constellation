@@ -22,6 +22,7 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QSpinBox>
+#include <QTextDocument>
 #include <QTimeZone>
 #include <string>
 
@@ -75,6 +76,7 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     : QMainWindow(), runcontrol_(std::move(controller_name)), logger_("GUI"), user_logger_("OP") {
 
     qRegisterMetaType<QModelIndex>("QModelIndex");
+    qRegisterMetaType<constellation::protocol::CSCP::State>("constellation::protocol::CSCP::State");
     setupUi(this);
 
     // Set initial values for header bar
