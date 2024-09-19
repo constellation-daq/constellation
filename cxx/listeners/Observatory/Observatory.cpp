@@ -36,7 +36,6 @@ void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
 Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_message_delegate_(&log_listener_) {
 
     qRegisterMetaType<QModelIndex>("QModelIndex");
-    qRegisterMetaType<constellation::message::CMDP1LogMessage>("constellation::message::CMDP1LogMessage");
     setupUi(this);
 
     // Connect signals:
