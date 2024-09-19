@@ -4,6 +4,7 @@
 project('Constellation',
   version: '0.0.0',
   license: 'EUPL-1.2',
+  meson_version: '>=0.63.0',
   default_options: ['warning_level=3', 'werror=true', 'cpp_std=c++20'],
 )
 
