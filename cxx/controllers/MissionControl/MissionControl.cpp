@@ -150,7 +150,9 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     connect(runIdentifier, &QLineEdit::editingFinished, this, [&]() {
         update_run_identifier(runIdentifier->text(), runSequence->value());
     });
-    connect(runSequence, &QSpinBox::valueChanged, this, [&](int i) { update_run_identifier(runIdentifier->text(), i); });
+    connect(runSequence, QOverload<int>::of(&QSpinBox::valueChanged), this, [&](int i) {
+        update_run_identifier(runIdentifier->text(), i);
+    });
 
     // Connect connection update signal:
     connect(&runcontrol_, &QController::connectionsChanged, this, [&](std::size_t num) {
