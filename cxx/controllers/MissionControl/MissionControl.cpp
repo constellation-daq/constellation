@@ -28,7 +28,7 @@
 
 #include <argparse/argparse.hpp>
 
-#include "constellation/controller/ConfigParser.hpp"
+#include "constellation/controller/ControllerConfiguration.hpp"
 #include "constellation/controller/exceptions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Configuration.hpp"
@@ -386,11 +386,11 @@ void MissionControl::onCustomContextMenu(const QPoint& point) {
 
 std::map<std::string, Controller::CommandPayload> MissionControl::parse_config_file(QString file) {
     try {
-        auto dictionaries = ConfigParser::getDictionariesFromFile(runcontrol_.getConnections(), file.toStdString());
+        const auto configs = ControllerConfiguration(std::filesystem::path(file.toStdString()));
         // Convert to CommandPayloads:
         std::map<std::string, Controller::CommandPayload> payloads;
-        for(const auto& [key, dict] : dictionaries) {
-            payloads.emplace(key, dict);
+        for(const auto& satellite : runcontrol_.getConnections()) {
+            payloads.emplace(satellite, configs.getSatelliteConfiguration(satellite));
         }
         return payloads;
     } catch(ControllerError& err) {
@@ -400,12 +400,10 @@ std::map<std::string, Controller::CommandPayload> MissionControl::parse_config_f
 }
 
 Controller::CommandPayload MissionControl::parse_config_file(QString file, const QModelIndex& index) {
-    auto name = runcontrol_.getQName(index);
+    const auto name = runcontrol_.getQName(index);
     try {
-        auto dictionary = ConfigParser::getDictionaryFromFile(name, file.toStdString());
-        if(dictionary.has_value()) {
-            return {dictionary.value()};
-        }
+        const auto configs = ControllerConfiguration(std::filesystem::path(file.toStdString()));
+        return configs.getSatelliteConfiguration(name);
     } catch(ControllerError& err) {
         QMessageBox::warning(NULL, "ERROR", QString::fromStdString(std::string("Parsing failed: ") + err.what()));
     }
