@@ -181,7 +181,6 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     data_buffer_depth_ = config.get<int>("data_buffer");
     pixel_buffer_depth_ = config.get<int>("pixel_buffer");
     decode_data_ = config.get<bool>("decode_data");
-    data_timeout_ = std::chrono::seconds(config.get<std::uint64_t>("_data_timeout", 10));
 }
 
 void KatherineSatellite::launching() {
@@ -253,18 +252,7 @@ void KatherineSatellite::data_received(const char* data, size_t count) {
     }
     // Try to send and retry if it failed:
     LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
-
-    using namespace std::literals::chrono_literals;
-    const TimeoutTimer timer {data_timeout_};
-    while(!sendDataMessage(msg)) {
-        std::this_thread::sleep_for(100ms);
-
-        // Abort if we could not send the message after timeout:
-        if(timer.timeoutReached()) {
-            LOG(CRITICAL) << "Aborting data transmission - cannot send data";
-            throw SendTimeoutError("pixel data", data_timeout_);
-        }
-    }
+    trySendDataMessage(msg);
 }
 
 void KatherineSatellite::landing() {
