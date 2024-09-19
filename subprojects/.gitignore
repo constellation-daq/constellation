@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: CC0-1.0
 
 /packagecache/
+
+# Framework dependencies
 /argparse-*/
 /asio-*/
 /Catch2-*/
@@ -12,3 +14,6 @@
 /msgpack-cxx-*/
 /spdlog-*/
 /tomlplusplus-*/
+
+# Satellite dependencies
+/katherine/
