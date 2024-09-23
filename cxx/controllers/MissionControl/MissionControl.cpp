@@ -90,7 +90,7 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     viewConn->setModel(&sorting_proxy_);
     viewConn->setItemDelegate(&item_delegate_);
     viewConn->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(viewConn, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(onCustomContextMenu(const QPoint&)));
+    connect(viewConn, &QTreeView::customContextMenuRequested, this, &MissionControl::custom_context_menu);
 
     // Pick up latest run identifier information - either from running Constellation or from settings
     auto run_id = std::string(runcontrol_.getRunIdentifier());
@@ -317,7 +317,7 @@ void MissionControl::closeEvent(QCloseEvent* event) {
     event->accept();
 }
 
-void MissionControl::onCustomContextMenu(const QPoint& point) {
+void MissionControl::custom_context_menu(const QPoint& point) {
     const QModelIndex index = viewConn->indexAt(point);
     if(!index.isValid()) {
         return;

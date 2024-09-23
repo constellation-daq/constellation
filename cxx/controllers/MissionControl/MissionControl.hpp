@@ -115,7 +115,7 @@ private slots:
      * @brief Private slot for the connection list context menu
      * @param point Selected point of the context menu
      */
-    void onCustomContextMenu(const QPoint& point);
+    void custom_context_menu(const QPoint& point);
 
 private:
     /**
