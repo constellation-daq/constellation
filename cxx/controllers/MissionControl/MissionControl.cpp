@@ -282,7 +282,7 @@ void MissionControl::update_button_states(CSCP::State state) {
 
     btnLand->setEnabled(state == CSCP::State::ORBIT);
     btnConfig->setEnabled(state == CSCP::State::INIT);
-    btnLoadConf->setEnabled(state != CSCP::State::RUN || state != CSCP::State::ORBIT);
+    btnLoadConf->setEnabled(state != CSCP::State::RUN && state != CSCP::State::ORBIT);
     btnStart->setEnabled(state == CSCP::State::ORBIT);
     btnStop->setEnabled(state == CSCP::State::RUN);
     btnShutdown->setEnabled(state == CSCP::State::SAFE || state == CSCP::State::INIT || state == CSCP::State::NEW);
