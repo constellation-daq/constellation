@@ -84,7 +84,7 @@ QVariant QController::data(const QModelIndex& index, int role) const {
 QVariant QController::headerData(int column, Qt::Orientation orientation, int role) const {
     if(role == Qt::DisplayRole && orientation == Qt::Horizontal && column >= 0 &&
        column < static_cast<int>(headers_.size())) {
-        return QString::fromStdString(headers_[column]);
+        return QString::fromStdString(headers_.at(column));
     }
     return {};
 }

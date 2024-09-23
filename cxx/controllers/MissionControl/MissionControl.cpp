@@ -82,7 +82,7 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     // Set initial values for header bar
     const auto state = runcontrol_.getLowestState();
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
-    labelState->setText(runcontrol_.getStyledState(state, runcontrol_.isInGlobalState()));
+    labelState->setText(QController::getStyledState(state, runcontrol_.isInGlobalState()));
     labelNrSatellites->setText("<font color='gray'><b>" + QString::number(runcontrol_.getConnections().size()) +
                                "</b></font>");
 
@@ -164,11 +164,11 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     // Connect state update signal:
     connect(&runcontrol_, &QController::reachedGlobalState, this, [&](CSCP::State state) {
         update_button_states(state);
-        labelState->setText(runcontrol_.getStyledState(state, true));
+        labelState->setText(QController::getStyledState(state, true));
     });
     connect(&runcontrol_, &QController::reachedLowestState, this, [&](CSCP::State state) {
         update_button_states(state);
-        labelState->setText(runcontrol_.getStyledState(state, false));
+        labelState->setText(QController::getStyledState(state, false));
     });
     // Update button state once manually
     update_button_states(state);
@@ -201,8 +201,7 @@ void MissionControl::on_btnInit_clicked() {
         return;
     }
 
-    auto responses = runcontrol_.sendCommands("initialize", configs);
-    for(auto& response : responses) {
+    for(auto& response : runcontrol_.sendCommands("initialize", configs)) {
         LOG(logger_, DEBUG) << "Initialize: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
@@ -213,8 +212,7 @@ void MissionControl::on_btnShutdown_clicked() {
        QMessageBox::Cancel) {
         LOG(logger_, DEBUG) << "Aborted satellite shutdown";
     } else {
-        auto responses = runcontrol_.sendCommands("shutdown");
-        for(auto& response : responses) {
+        for(auto& response : runcontrol_.sendCommands("shutdown")) {
             LOG(logger_, DEBUG) << "Shutdown: " << response.first << ": "
                                 << utils::to_string(response.second.getVerb().first);
         }
@@ -222,24 +220,19 @@ void MissionControl::on_btnShutdown_clicked() {
 }
 
 void MissionControl::on_btnConfig_clicked() {
-    auto responses = runcontrol_.sendCommands("launch");
-    for(auto& response : responses) {
+    for(auto& response : runcontrol_.sendCommands("launch")) {
         LOG(logger_, DEBUG) << "Launch: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
 void MissionControl::on_btnLand_clicked() {
-    auto responses = runcontrol_.sendCommands("land");
-    for(auto& response : responses) {
+    for(auto& response : runcontrol_.sendCommands("land")) {
         LOG(logger_, DEBUG) << "Land: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 }
 
 void MissionControl::on_btnStart_clicked() {
-    auto responses = runcontrol_.sendCommands("start", current_run_.toStdString());
-
-    // FIXME check that all started
-    for(auto& response : responses) {
+    for(auto& response : runcontrol_.sendCommands("start", current_run_.toStdString())) {
         LOG(logger_, DEBUG) << "Start: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 
@@ -248,8 +241,7 @@ void MissionControl::on_btnStart_clicked() {
 }
 
 void MissionControl::on_btnStop_clicked() {
-    auto responses = runcontrol_.sendCommands("stop");
-    for(auto& response : responses) {
+    for(auto& response : runcontrol_.sendCommands("stop")) {
         LOG(logger_, DEBUG) << "Stop: " << response.first << ": " << utils::to_string(response.second.getVerb().first);
     }
 
@@ -373,7 +365,7 @@ void MissionControl::onCustomContextMenu(const QPoint& point) {
             continue;
         }
 
-        QAction* action = new QAction(QString::fromStdString(key), this);
+        auto action = new QAction(QString::fromStdString(key), this);
         connect(action, &QAction::triggered, this, [this, index, key]() {
             auto response = runcontrol_.sendQCommand(index, key);
             if(response.has_value()) {
@@ -460,6 +452,14 @@ int main(int argc, char** argv) {
     QCoreApplication::setOrganizationName("Constellation");
     QCoreApplication::setOrganizationDomain("constellation.pages.desy.de");
     QCoreApplication::setApplicationName("MissionControl");
+
+    // Ensure that ZeroMQ doesn't fail creating the CMDP sink
+    try {
+        SinkManager::getInstance();
+    } catch(const ZMQInitError& error) {
+        std::cerr << "Failed to initialize logging: " << error.what() << std::endl;
+        return 1;
+    }
 
     // Get the default logger
     auto& logger = Logger::getDefault();
