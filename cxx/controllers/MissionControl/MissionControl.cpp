@@ -16,6 +16,7 @@
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDateTime>
+#include <QException>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QInputDialog>
@@ -365,7 +366,7 @@ void MissionControl::custom_context_menu(const QPoint& point) {
             continue;
         }
 
-        auto action = new QAction(QString::fromStdString(key), this);
+        auto* action = new QAction(QString::fromStdString(key), this);
         connect(action, &QAction::triggered, this, [this, index, key]() {
             auto response = runcontrol_.sendQCommand(index, key);
             if(response.has_value()) {
@@ -449,9 +450,14 @@ std::string get_arg(argparse::ArgumentParser& parser, std::string_view arg) noex
 int main(int argc, char** argv) {
     QCoreApplication* qapp = new QApplication(argc, argv);
 
-    QCoreApplication::setOrganizationName("Constellation");
-    QCoreApplication::setOrganizationDomain("constellation.pages.desy.de");
-    QCoreApplication::setApplicationName("MissionControl");
+    try {
+        QCoreApplication::setOrganizationName("Constellation");
+        QCoreApplication::setOrganizationDomain("constellation.pages.desy.de");
+        QCoreApplication::setApplicationName("MissionControl");
+    } catch(QException& e) {
+        std::cerr << "Failed to set up UI application" << std::endl;
+        return 1;
+    }
 
     // Ensure that ZeroMQ doesn't fail creating the CMDP sink
     try {
@@ -535,8 +541,12 @@ int main(int argc, char** argv) {
     // Register CMDP in CHIRP and set sender name for CMDP
     SinkManager::getInstance().enableCMDPSending(controller_name);
 
-    MissionControl gui(controller_name, group_name);
-    gui.show();
-
-    return QCoreApplication::exec();
+    try {
+        MissionControl gui(controller_name, group_name);
+        gui.show();
+        return QCoreApplication::exec();
+    } catch(QException& e) {
+        std::cerr << "Failed to start UI application" << std::endl;
+        return 1;
+    }
 }
