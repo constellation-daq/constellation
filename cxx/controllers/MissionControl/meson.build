@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 # Build listener only if feature is enabled:
-if not get_option('controller_missioncontrol').enabled()
+if not get_option('controller_missioncontrol')
   subdir_done()
 endif
 

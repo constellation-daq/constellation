@@ -11,7 +11,7 @@ option('cxx_tests', type: 'feature', value: 'auto', description: 'Build C++ test
 option('qt_version', type: 'combo', choices: ['qt5', 'qt6'], value: 'qt6')
 
 # Controllers
-option('controller_missioncontrol', type: 'feature', value: 'auto', description: 'Build the MissionControl Qt Controller GUI')
+option('controller_missioncontrol', type: 'boolean', value: true, description: 'Build the MissionControl Qt Controller GUI')
 
 # Satellites
 option('satellite_dev_null_receiver', type: 'boolean', value: false, description: 'Build DevNullReceiver satellite')
