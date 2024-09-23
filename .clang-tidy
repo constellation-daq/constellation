@@ -41,5 +41,6 @@ CheckOptions:
   readability-identifier-naming.PublicMethodIgnoredRegexp: '^msgpack_.+$|^to_.+$'
   readability-identifier-naming.ProtectedMethodCase: lower_case
   readability-identifier-naming.PrivateMethodCase: lower_case
+  readability-identifier-naming.PrivateMethodIgnoredRegexp: '^on_.+$'
   readability-identifier-naming.PrivateMemberCase: lower_case
   readability-identifier-naming.PrivateMemberSuffix: '_'
