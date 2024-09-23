@@ -27,23 +27,23 @@ QController::QController(std::string controller_name, QObject* parent)
     : QAbstractListModel(parent), Controller(std::move(controller_name)) {}
 
 int QController::rowCount(const QModelIndex& /*unused*/) const {
-    return getConnectionCount();
+    return static_cast<int>(getConnectionCount());
 }
 
 int QController::columnCount(const QModelIndex& /*unused*/) const {
-    return headers_.size();
+    return static_cast<int>(headers_.size());
 }
 
 QVariant QController::data(const QModelIndex& index, int role) const {
 
     if(role != Qt::DisplayRole || !index.isValid()) {
-        return QVariant();
+        return {};
     }
 
     const std::lock_guard connection_lock {connection_mutex_};
 
     if(index.row() >= static_cast<int>(connections_.size()) || index.column() >= static_cast<int>(headers_.size())) {
-        return QVariant();
+        return {};
     }
 
     // Select connection by index:
@@ -93,7 +93,7 @@ QVariant QController::headerData(int column, Qt::Orientation orientation, int ro
 
 QString QController::getStyledState(CSCP::State state, bool global) const {
 
-    QString global_indicatior = (global ? "" : " ≊");
+    const QString global_indicatior = (global ? "" : " ≊");
 
     switch(state) {
     case CSCP::State::NEW: {
@@ -151,19 +151,19 @@ void QController::reached_lowest_state(CSCP::State state) {
 
 void QController::propagate_update(UpdateType type, std::size_t position, std::size_t total) {
     if(type == UpdateType::ADDED) {
-        beginInsertRows(QModelIndex(), position, position);
+        beginInsertRows(QModelIndex(), static_cast<int>(position), static_cast<int>(position));
         endInsertRows();
         // Emit signal for changed connections
         emit connectionsChanged(total);
     } else if(type == UpdateType::REMOVED) {
-        beginRemoveRows(QModelIndex(), position, position);
+        beginRemoveRows(QModelIndex(), static_cast<int>(position), static_cast<int>(position));
         endRemoveRows();
 
         // Emit signal for changed connections
         emit connectionsChanged(total);
     }
 
-    emit dataChanged(createIndex(0, 0), createIndex(position, headers_.size() - 1));
+    emit dataChanged(createIndex(0, 0), createIndex(static_cast<int>(position), headers_.size() - 1));
 }
 
 Dictionary QController::getQCommands(const QModelIndex& index) {
@@ -182,7 +182,7 @@ Dictionary QController::getQCommands(const QModelIndex& index) {
 }
 
 std::string QController::getQName(const QModelIndex& index) const {
-    std::unique_lock<std::mutex> lock(connection_mutex_);
+    const std::unique_lock<std::mutex> lock(connection_mutex_);
 
     // Select connection by index:
     auto it = connections_.begin();
@@ -221,10 +221,10 @@ QControllerSortProxy::QControllerSortProxy(QObject* parent) : QSortFilterProxyMo
 
 bool QControllerSortProxy::lessThan(const QModelIndex& left, const QModelIndex& right) const {
 
-    QVariant leftData = sourceModel()->data(left);
-    QVariant rightData = sourceModel()->data(right);
+    const QVariant leftData = sourceModel()->data(left);
+    const QVariant rightData = sourceModel()->data(right);
 
-    QString leftString = leftData.toString();
-    QString rightString = rightData.toString();
+    const QString leftString = leftData.toString();
+    const QString rightString = rightData.toString();
     return QString::localeAwareCompare(leftString, rightString) < 0;
 }

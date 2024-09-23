@@ -22,8 +22,8 @@
 
 class ConnectionItemDelegate : public QStyledItemDelegate {
 protected:
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
-    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const;
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 };
 
 /**
@@ -161,9 +161,6 @@ private:
 
     /** UI timer for refreshing certain elements such as the run duration */
     QTimer m_timer_display;
-
-    /** Context menu */
-    QMenu* contextMenu;
 
     /** UI Settings */
     QSettings gui_settings_;

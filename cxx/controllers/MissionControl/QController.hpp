@@ -34,7 +34,7 @@ public:
      * @param controller_name Name of the controller
      * @param parent Parent Qt object
      */
-    QController(std::string controller_name, QObject* parent = 0);
+    QController(std::string controller_name, QObject* parent = nullptr);
 
     /**
      * @brief Get total number of rows, i.e. number of connections the controller has

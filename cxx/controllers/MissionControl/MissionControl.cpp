@@ -56,7 +56,7 @@ void ConnectionItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem
     options.widget->style()->drawControl(QStyle::CE_ItemViewItem, &options, painter);
 
     painter->translate(options.rect.left(), options.rect.top());
-    QRect clip(0, 0, options.rect.width(), options.rect.height());
+    const QRect clip(0, 0, options.rect.width(), options.rect.height());
     doc.drawContents(painter, clip);
 
     painter->restore();
@@ -69,11 +69,11 @@ QSize ConnectionItemDelegate::sizeHint(const QStyleOptionViewItem& option, const
     QTextDocument doc;
     doc.setHtml(options.text);
     doc.setTextWidth(options.rect.width());
-    return QSize(doc.idealWidth(), doc.size().height());
+    return {static_cast<int>(doc.idealWidth()), static_cast<int>(doc.size().height())};
 }
 
 MissionControl::MissionControl(std::string controller_name, std::string_view group_name)
-    : QMainWindow(), runcontrol_(std::move(controller_name)), logger_("GUI"), user_logger_("OP") {
+    : runcontrol_(std::move(controller_name)), logger_("GUI"), user_logger_("OP") {
 
     qRegisterMetaType<QModelIndex>("QModelIndex");
     qRegisterMetaType<constellation::protocol::CSCP::State>("constellation::protocol::CSCP::State");
@@ -99,7 +99,7 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
                               gui_settings_.value("run/sequence", 0).toInt());
     } else {
         // Attempt to find sequence:
-        std::size_t pos = run_id.find_last_of("_");
+        const std::size_t pos = run_id.find_last_of("_");
         auto identifier = (pos != std::string::npos ? run_id.substr(0, pos) : run_id);
         std::size_t sequence = 0;
         try {
@@ -263,8 +263,8 @@ void MissionControl::on_btnLog_clicked() {
 }
 
 void MissionControl::on_btnLoadConf_clicked() {
-    QString usedpath = QFileInfo(txtConfigFileName->text()).path();
-    QString filename =
+    const QString usedpath = QFileInfo(txtConfigFileName->text()).path();
+    const QString filename =
         QFileDialog::getOpenFileName(this, tr("Open File"), usedpath, tr("Configurations (*.conf *.toml *.ini)"));
     if(!filename.isNull()) {
         txtConfigFileName->setText(filename);
@@ -273,7 +273,7 @@ void MissionControl::on_btnLoadConf_clicked() {
 
 void MissionControl::update_button_states(CSCP::State state) {
 
-    QRegularExpression rx_conf(".+(\\.conf$|\\.ini$|\\.toml$)");
+    const QRegularExpression rx_conf(".+(\\.conf$|\\.ini$|\\.toml$)");
     auto m = rx_conf.match(txtConfigFileName->text());
 
     btnInit->setEnabled((state == CSCP::State::NEW || state == CSCP::State::INIT || state == CSCP::State::ERROR ||
@@ -324,44 +324,44 @@ void MissionControl::closeEvent(QCloseEvent* event) {
 }
 
 void MissionControl::onCustomContextMenu(const QPoint& point) {
-    QModelIndex index = viewConn->indexAt(point);
+    const QModelIndex index = viewConn->indexAt(point);
     if(!index.isValid()) {
         return;
     }
 
-    QMenu* contextMenu = new QMenu(viewConn);
+    auto contextMenu = QMenu(viewConn);
 
     QAction* initialiseAction = new QAction("Initialize", this);
     connect(initialiseAction, &QAction::triggered, this, [this, index]() {
         auto config = parse_config_file(txtConfigFileName->text(), index);
         runcontrol_.sendQCommand(index, "initialize", config);
     });
-    contextMenu->addAction(initialiseAction);
+    contextMenu.addAction(initialiseAction);
 
     QAction* launchAction = new QAction("Launch", this);
     connect(launchAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "launch"); });
-    contextMenu->addAction(launchAction);
+    contextMenu.addAction(launchAction);
 
     QAction* landAction = new QAction("Land", this);
     connect(landAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "land"); });
-    contextMenu->addAction(landAction);
+    contextMenu.addAction(landAction);
 
     QAction* startAction = new QAction("Start", this);
     connect(startAction, &QAction::triggered, this, [this, index]() {
         runcontrol_.sendQCommand(index, "start", current_run_.toStdString());
     });
-    contextMenu->addAction(startAction);
+    contextMenu.addAction(startAction);
 
     QAction* stopAction = new QAction("Stop", this);
     connect(stopAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "stop"); });
-    contextMenu->addAction(stopAction);
+    contextMenu.addAction(stopAction);
 
     QAction* terminateAction = new QAction("Shutdown", this);
     connect(terminateAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "shutdown"); });
-    contextMenu->addAction(terminateAction);
+    contextMenu.addAction(terminateAction);
 
     // Draw separator
-    contextMenu->addSeparator();
+    contextMenu.addSeparator();
 
     // Request possible commands from remote:
     auto dict = runcontrol_.getQCommands(index);
@@ -375,13 +375,13 @@ void MissionControl::onCustomContextMenu(const QPoint& point) {
         connect(action, &QAction::triggered, this, [this, index, key]() {
             auto response = runcontrol_.sendQCommand(index, key);
             if(response.has_value()) {
-                QMessageBox::information(NULL, "Satellite Response", QString::fromStdString(response.value()));
+                QMessageBox::information(nullptr, "Satellite Response", QString::fromStdString(response.value()));
             }
         });
-        contextMenu->addAction(action);
+        contextMenu.addAction(action);
     }
 
-    contextMenu->exec(viewConn->viewport()->mapToGlobal(point));
+    contextMenu.exec(viewConn->viewport()->mapToGlobal(point));
 }
 
 std::map<std::string, Controller::CommandPayload> MissionControl::parse_config_file(QString file) {
@@ -394,7 +394,7 @@ std::map<std::string, Controller::CommandPayload> MissionControl::parse_config_f
         }
         return payloads;
     } catch(ControllerError& err) {
-        QMessageBox::warning(NULL, "ERROR", QString::fromStdString(std::string("Parsing failed: ") + err.what()));
+        QMessageBox::warning(nullptr, "ERROR", QString::fromStdString(std::string("Parsing failed: ") + err.what()));
         return {};
     }
 }
@@ -405,7 +405,7 @@ Controller::CommandPayload MissionControl::parse_config_file(QString file, const
         const auto configs = ControllerConfiguration(std::filesystem::path(file.toStdString()));
         return configs.getSatelliteConfiguration(name);
     } catch(ControllerError& err) {
-        QMessageBox::warning(NULL, "ERROR", QString::fromStdString(std::string("Parsing failed: ") + err.what()));
+        QMessageBox::warning(nullptr, "ERROR", QString::fromStdString(std::string("Parsing failed: ") + err.what()));
     }
     return {};
 }
@@ -510,7 +510,8 @@ int main(int argc, char** argv) {
     if(parser.is_used("group")) {
         group_name = get_arg(parser, "group");
     } else {
-        QString text = QInputDialog::getText(NULL, "Constellation", "Constellation group to connect to:", QLineEdit::Normal);
+        const QString text =
+            QInputDialog::getText(nullptr, "Constellation", "Constellation group to connect to:", QLineEdit::Normal);
         if(!text.isEmpty()) {
             group_name = text.toStdString();
         } else {
