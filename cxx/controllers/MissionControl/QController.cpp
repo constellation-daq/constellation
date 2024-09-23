@@ -139,11 +139,7 @@ QString QController::getStyledState(CSCP::State state, bool global) {
 
 void QController::reached_state(CSCP::State state, bool global) {
     LOG(logger_, DEBUG) << "Reached new " << (global ? "global" : "lowest") << " state " << to_string(state);
-    if(global) {
-        emit reachedGlobalState(state);
-    } else {
-        emit reachedLowestState(state);
-    }
+    emit reachedState(state, global);
 }
 
 void QController::propagate_update(UpdateType type, std::size_t position, std::size_t total) {

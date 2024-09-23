@@ -122,19 +122,12 @@ signals:
     void connectionsChanged(std::size_t connections);
 
     /**
-     * @brief Signal emitted whenever the Constellation enters a global state
+     * @brief Signal emitted whenever the state of the Constellation changed, either to a new lowest or a new global state
      *
      * @param state State the Constellation entered into
+     * @param global Boolean indicating whether this is a global or a lowest state
      */
-    void reachedGlobalState(constellation::protocol::CSCP::State state);
-
-    /**
-     * @brief Signal emitted whenever the state of the Constellation changed but the resulting situation is not a global
-     * state
-     *
-     * @param state Lowest state the Constellation currently includes
-     */
-    void reachedLowestState(constellation::protocol::CSCP::State state);
+    void reachedState(constellation::protocol::CSCP::State state, bool global);
 
 protected:
     /**

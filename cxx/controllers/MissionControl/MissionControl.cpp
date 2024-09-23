@@ -163,14 +163,11 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     });
 
     // Connect state update signal:
-    connect(&runcontrol_, &QController::reachedGlobalState, this, [&](CSCP::State state) {
+    connect(&runcontrol_, &QController::reachedState, this, [&](CSCP::State state, bool global) {
         update_button_states(state);
-        labelState->setText(QController::getStyledState(state, true));
+        labelState->setText(QController::getStyledState(state, global));
     });
-    connect(&runcontrol_, &QController::reachedLowestState, this, [&](CSCP::State state) {
-        update_button_states(state);
-        labelState->setText(QController::getStyledState(state, false));
-    });
+
     // Update button state once manually
     update_button_states(state);
 }
