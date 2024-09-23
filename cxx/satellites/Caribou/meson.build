@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 # Do not build if not explicitly enabled
-if not get_option('satellite_caribou').enabled()
+if not get_option('satellite_caribou')
   subdir_done()
 endif
 
