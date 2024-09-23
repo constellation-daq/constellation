@@ -138,18 +138,12 @@ signals:
 
 protected:
     /**
-     * @brief Helper method emitting the reachedGlobalState signal
+     * @brief Helper method emitting the reachedGlobalState and reachedLowestSate signals
      *
-     * @param state State the Constellation entered into
+     * @param state Global or lowest state the Constellation entered into
+     * @param global Flag whether the state is a new global or lowest state
      */
-    void reached_global_state(constellation::protocol::CSCP::State state) override;
-
-    /**
-     * @brief Helper method emitting the reachedLowestState signal
-     *
-     * @param state Lowest state the Constellation currently includes
-     */
-    void reached_lowest_state(constellation::protocol::CSCP::State state) override;
+    void reached_state(constellation::protocol::CSCP::State state, bool global) override;
 
     /**
      * @brief Helper method emitting the connectionsChanged signal
