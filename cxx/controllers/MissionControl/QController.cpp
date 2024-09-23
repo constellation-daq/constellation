@@ -50,8 +50,8 @@ QVariant QController::data(const QModelIndex& index, int role) const {
     auto it = connections_.begin();
     std::advance(it, index.row());
 
-    auto& name = it->first;
-    auto& conn = it->second;
+    const auto& name = it->first;
+    const auto& conn = it->second;
 
     switch(index.column()) {
     case 0: {
@@ -82,16 +82,14 @@ QVariant QController::data(const QModelIndex& index, int role) const {
 }
 
 QVariant QController::headerData(int column, Qt::Orientation orientation, int role) const {
-    if(role != Qt::DisplayRole)
-        return QVariant();
-
-    if(orientation == Qt::Horizontal && column >= 0 && column < static_cast<int>(headers_.size())) {
+    if(role == Qt::DisplayRole && orientation == Qt::Horizontal && column >= 0 &&
+       column < static_cast<int>(headers_.size())) {
         return QString::fromStdString(headers_[column]);
     }
-    return QVariant();
+    return {};
 }
 
-QString QController::getStyledState(CSCP::State state, bool global) const {
+QString QController::getStyledState(CSCP::State state, bool global) {
 
     const QString global_indicatior = (global ? "" : " ≊");
 

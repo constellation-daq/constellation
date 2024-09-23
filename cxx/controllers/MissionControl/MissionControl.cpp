@@ -99,7 +99,7 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
                               gui_settings_.value("run/sequence", 0).toInt());
     } else {
         // Attempt to find sequence:
-        const std::size_t pos = run_id.find_last_of("_");
+        const std::size_t pos = run_id.find_last_of('_');
         auto identifier = (pos != std::string::npos ? run_id.substr(0, pos) : run_id);
         std::size_t sequence = 0;
         try {
@@ -111,7 +111,7 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
         if(!runcontrol_.isInState(CSCP::State::RUN)) {
             sequence++;
         }
-        update_run_identifier(QString::fromStdString(identifier), sequence);
+        update_run_identifier(QString::fromStdString(identifier), static_cast<int>(sequence));
     }
 
     // Pick up the current run timer from the constellation of available:
@@ -128,8 +128,10 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
         }
     }
 
-    // TODO: check last if last file exits. if not, use default value.
-    txtConfigFileName->setText(gui_settings_.value("run/configfile", "config file not set").toString());
+    const auto cfg_file = gui_settings_.value("run/configfile", "").toString();
+    if(QFile::exists(cfg_file)) {
+        txtConfigFileName->setText(cfg_file);
+    }
 
     // Restore window geometry:
     restoreGeometry(gui_settings_.value("window/geometry", saveGeometry()).toByteArray());
@@ -143,8 +145,8 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     setWindowTitle("Constellation MissionControl " CNSTLN_VERSION);
 
     // Connect timer to method for run timer update
-    connect(&m_timer_display, &QTimer::timeout, this, &MissionControl::update_run_infos);
-    m_timer_display.start(300); // internal update time of GUI
+    connect(&display_timer_, &QTimer::timeout, this, &MissionControl::update_run_infos);
+    display_timer_.start(300); // internal update time of GUI
 
     // Connect run identifier edit boxes:
     connect(runIdentifier, &QLineEdit::editingFinished, this, [&]() {
@@ -273,7 +275,7 @@ void MissionControl::on_btnLoadConf_clicked() {
 
 void MissionControl::update_button_states(CSCP::State state) {
 
-    const QRegularExpression rx_conf(".+(\\.conf$|\\.ini$|\\.toml$)");
+    const QRegularExpression rx_conf(R"(.+(\.conf$|\.ini$|\.toml$))");
     auto m = rx_conf.match(txtConfigFileName->text());
 
     btnInit->setEnabled((state == CSCP::State::NEW || state == CSCP::State::INIT || state == CSCP::State::ERROR ||
@@ -331,32 +333,32 @@ void MissionControl::onCustomContextMenu(const QPoint& point) {
 
     auto contextMenu = QMenu(viewConn);
 
-    QAction* initialiseAction = new QAction("Initialize", this);
+    auto* initialiseAction = new QAction("Initialize", this);
     connect(initialiseAction, &QAction::triggered, this, [this, index]() {
         auto config = parse_config_file(txtConfigFileName->text(), index);
         runcontrol_.sendQCommand(index, "initialize", config);
     });
     contextMenu.addAction(initialiseAction);
 
-    QAction* launchAction = new QAction("Launch", this);
+    auto* launchAction = new QAction("Launch", this);
     connect(launchAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "launch"); });
     contextMenu.addAction(launchAction);
 
-    QAction* landAction = new QAction("Land", this);
+    auto* landAction = new QAction("Land", this);
     connect(landAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "land"); });
     contextMenu.addAction(landAction);
 
-    QAction* startAction = new QAction("Start", this);
+    auto* startAction = new QAction("Start", this);
     connect(startAction, &QAction::triggered, this, [this, index]() {
         runcontrol_.sendQCommand(index, "start", current_run_.toStdString());
     });
     contextMenu.addAction(startAction);
 
-    QAction* stopAction = new QAction("Stop", this);
+    auto* stopAction = new QAction("Stop", this);
     connect(stopAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "stop"); });
     contextMenu.addAction(stopAction);
 
-    QAction* terminateAction = new QAction("Shutdown", this);
+    auto* terminateAction = new QAction("Shutdown", this);
     connect(terminateAction, &QAction::triggered, this, [this, index]() { runcontrol_.sendQCommand(index, "shutdown"); });
     contextMenu.addAction(terminateAction);
 
@@ -384,7 +386,7 @@ void MissionControl::onCustomContextMenu(const QPoint& point) {
     contextMenu.exec(viewConn->viewport()->mapToGlobal(point));
 }
 
-std::map<std::string, Controller::CommandPayload> MissionControl::parse_config_file(QString file) {
+std::map<std::string, Controller::CommandPayload> MissionControl::parse_config_file(const QString& file) {
     try {
         const auto configs = ControllerConfiguration(std::filesystem::path(file.toStdString()));
         // Convert to CommandPayloads:
@@ -399,7 +401,7 @@ std::map<std::string, Controller::CommandPayload> MissionControl::parse_config_f
     }
 }
 
-Controller::CommandPayload MissionControl::parse_config_file(QString file, const QModelIndex& index) {
+Controller::CommandPayload MissionControl::parse_config_file(const QString& file, const QModelIndex& index) {
     const auto name = runcontrol_.getQName(index);
     try {
         const auto configs = ControllerConfiguration(std::filesystem::path(file.toStdString()));
@@ -536,5 +538,5 @@ int main(int argc, char** argv) {
     MissionControl gui(controller_name, group_name);
     gui.show();
 
-    return qapp->exec();
+    return QCoreApplication::exec();
 }

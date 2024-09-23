@@ -112,7 +112,7 @@ public:
      *
      * @return String for the state display
      */
-    QString getStyledState(constellation::protocol::CSCP::State state, bool global) const;
+    static QString getStyledState(constellation::protocol::CSCP::State state, bool global);
 
 signals:
     /**

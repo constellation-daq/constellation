@@ -124,7 +124,7 @@ private:
      * @param file File path to parse
      * @return Map of configuration dictionaries for all known satellites
      */
-    std::map<std::string, constellation::controller::Controller::CommandPayload> parse_config_file(QString file);
+    std::map<std::string, constellation::controller::Controller::CommandPayload> parse_config_file(const QString& file);
 
     /**
      * @brief Helper to parse the configuration file for a single satellite
@@ -133,7 +133,7 @@ private:
      * @param index QModelIndex of the satellite in question
      * @return Configuration as command payload for the satellite in questions
      */
-    constellation::controller::Controller::CommandPayload parse_config_file(QString file, const QModelIndex& index);
+    constellation::controller::Controller::CommandPayload parse_config_file(const QString& file, const QModelIndex& index);
 
     /** The controller instance of the UI */
     QController runcontrol_;
@@ -160,7 +160,7 @@ private:
     void update_button_states(constellation::protocol::CSCP::State state);
 
     /** UI timer for refreshing certain elements such as the run duration */
-    QTimer m_timer_display;
+    QTimer display_timer_;
 
     /** UI Settings */
     QSettings gui_settings_;
