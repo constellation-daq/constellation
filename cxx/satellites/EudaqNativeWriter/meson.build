@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 # Build satellite only if feature is enabled:
-if not get_option('satellite_eudaq_native_writer').enabled()
+if not get_option('satellite_eudaq_native_writer')
   subdir_done()
 endif
 
