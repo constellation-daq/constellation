@@ -13,6 +13,10 @@
 #include <QDateTime>
 #include <QTimeZone>
 
+#if __cpp_lib_format >= 201907L
+#include <format>
+#endif
+
 namespace constellation::controller {
 
     QDateTime from_timepoint(const std::chrono::system_clock::time_point& time_point) {
@@ -21,6 +25,18 @@ namespace constellation::controller {
 #else
         return QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0), QTimeZone::utc())
             .addMSecs(std::chrono::duration_cast<std::chrono::milliseconds>(time_point.time_since_epoch()).count());
+#endif
+    }
+
+    QString duration_string(std::chrono::seconds duration) {
+#if __cpp_lib_format >= 201907L
+        return QString::fromStdString(std::format("{:%H:%M:%S}", duration));
+#else
+        const std::chrono::hh_mm_ss<std::chrono::seconds> fdur {duration};
+        return QString("%1:%2:%3")
+            .arg(fdur.hours().count(), 2, 10, QChar('0'))
+            .arg(fdur.minutes().count(), 2, 10, QChar('0'))
+            .arg(fdur.seconds().count(), 2, 10, QChar('0'));
 #endif
     }
 } // namespace constellation::controller

@@ -10,7 +10,6 @@
 #include "MissionControl.hpp"
 
 #include <chrono>
-#include <format>
 #include <fstream>
 #include <iostream>
 #include <QApplication>
@@ -287,9 +286,8 @@ void MissionControl::update_run_infos() {
 
     // Update run timer:
     if(runcontrol_.getLowestState() == CSCP::State::RUN) {
-        auto duration =
-            std::format("{:%H:%M:%S}", std::chrono::seconds(run_start_time_.secsTo(QDateTime::currentDateTime())));
-        runDuration->setText("<b>" + QString::fromStdString(duration) + "</b>");
+        auto duration = duration_string(std::chrono::seconds(run_start_time_.secsTo(QDateTime::currentDateTime())));
+        runDuration->setText("<b>" + duration + "</b>");
         runID->setText("<b>" + current_run_ + "</b>");
     } else {
         runDuration->setText("<font color=gray>" + runDuration->text() + "</font>");
