@@ -37,6 +37,8 @@
 #include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/utils/casts.hpp"
 
+#include "qt_utils.hpp"
+
 using namespace constellation;
 using namespace constellation::chirp;
 using namespace constellation::controller;
@@ -122,10 +124,7 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
             LOG(logger_, DEBUG) << "Fetched time from satellites, setting run timer to " << run_time.value();
 
             // FIXME somehow fromStdTimePoint is not found
-            run_start_time_ =
-                QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0), QTimeZone::utc())
-                    .addMSecs(
-                        std::chrono::duration_cast<std::chrono::milliseconds>(run_time.value().time_since_epoch()).count());
+            run_start_time_ = from_timepoint(run_time.value());
         }
     }
 
