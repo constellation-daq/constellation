@@ -75,18 +75,24 @@ namespace constellation::controller {
     public:
         /**
          * @brief Construct a controller base object
-         * @details This starts the heartbeat receiver thread, registers a CHIRP service discovery callback and sends a
-         * CHIRP request beacon for CONTROL-type services
          *
          * @param controller_name Name of the controller
          */
         Controller(std::string controller_name);
 
+        virtual ~Controller() = default;
+
+        /*
+         * @brief This starts the heartbeat receiver thread, registers a CHIRP service discovery callback and sends a
+         * CHIRP request beacon for CONTROL-type services
+         */
+        void start();
+
         /**
          * @brief Destruct the controller base class object
          * @details This deregisters the CHIRP service discovery callback and closes all open connections to satellites
          */
-        virtual ~Controller();
+        void stop();
 
         /// @cond doxygen_suppress
         // No copy/move constructor/assignment
