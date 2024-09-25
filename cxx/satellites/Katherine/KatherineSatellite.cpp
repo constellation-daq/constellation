@@ -295,15 +295,11 @@ void KatherineSatellite::frame_started(int frame_idx) {
 }
 
 void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
-    const double recv_perc = 100. * info.received_pixels / info.sent_pixels;
-
-    LOG(INFO) << "Ended frame " << frame_idx << "." << std::endl;
-    LOG(INFO) << " - TPX3->Katherine lost " << info.lost_pixels << " pixels" << std::endl
-              << " - Katherine->PC sent " << info.sent_pixels << " pixels" << std::endl
-              << " - Katherine->PC received " << info.received_pixels << " pixels (" << recv_perc << " %)" << std::endl
-              << " - state: " << (completed ? "completed" : "not completed") << std::endl
-              << " - start time: " << info.start_time.d << std::endl
-              << " - end time: " << info.end_time.d << std::endl;
+    LOG(STATUS) << "Frame " << frame_idx << " finished, started at " << info.start_time.d << ", ended at "
+                << info.end_time.d;
+    LOG_IF(WARNING, info.lost_pixels > 0) << "TPX3 -> Katherine lost " << info.lost_pixels << " pixels";
+    LOG_IF(WARNING, info.sent_pixels > info.received_pixels)
+        << "Katherine -> PC lost " << (info.sent_pixels - info.received_pixels) << " pixels";
 }
 
 void KatherineSatellite::starting(std::string_view) {
@@ -377,8 +373,9 @@ void KatherineSatellite::stopping() {
     // Read status information from acquisition object
     LOG(STATUS) << "Acquisition completed:" << std::endl
                 << "state: " << katherine::str_acq_state(acquisition_->state()) << std::endl
-                << "received " << acquisition_->completed_frames() << " complete frames" << std::endl
-                << "dropped " << acquisition_->dropped_measurement_data() << " measurement data items";
+                << "received " << acquisition_->completed_frames() << " complete frames";
+    LOG_IF(WARNING, acquisition_->dropped_measurement_data() > 0)
+        << "Dropped " << acquisition_->dropped_measurement_data() << " measurement data items";
 }
 
 std::vector<std::string> KatherineSatellite::get_hw_info() {
