@@ -168,6 +168,9 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
 
     // Update button state once manually
     update_button_states(state);
+
+    // Start the controller
+    runcontrol_.start();
 }
 
 void MissionControl::update_run_identifier(const QString& text, int number) {
@@ -296,6 +299,9 @@ void MissionControl::update_run_infos() {
 }
 
 void MissionControl::closeEvent(QCloseEvent* event) {
+
+    // Stop the controller:
+    runcontrol_.stop();
 
     // Store window geometry:
     gui_settings_.setValue("window/geometry", saveGeometry());
