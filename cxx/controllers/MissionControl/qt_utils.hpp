@@ -19,7 +19,7 @@
 
 namespace constellation::controller {
 
-    QDateTime from_timepoint(const std::chrono::system_clock::time_point& time_point) {
+    inline QDateTime from_timepoint(const std::chrono::system_clock::time_point& time_point) {
 #if __cpp_lib_chrono >= 201907L
         return QDateTime::fromStdTimePoint(std::chrono::time_point_cast<std::chrono::milliseconds>(time_point));
 #else
@@ -28,7 +28,7 @@ namespace constellation::controller {
 #endif
     }
 
-    QString duration_string(std::chrono::seconds duration) {
+    inline QString duration_string(std::chrono::seconds duration) {
 #if __cpp_lib_format >= 201907L
         return QString::fromStdString(std::format("{:%H:%M:%S}", duration));
 #else
