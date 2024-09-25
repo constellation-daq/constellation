@@ -324,7 +324,8 @@ void MissionControl::closeEvent(QCloseEvent* event) {
 }
 
 void MissionControl::custom_context_menu(const QPoint& point) {
-    const QModelIndex index = viewConn->indexAt(point);
+    // Use the sorting proxy to obtain the correct model index of the source:
+    const QModelIndex index = sorting_proxy_.mapToSource(viewConn->indexAt(point));
     if(!index.isValid()) {
         return;
     }
