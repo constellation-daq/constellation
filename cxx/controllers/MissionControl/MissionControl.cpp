@@ -94,39 +94,6 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     viewConn->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(viewConn, &QTreeView::customContextMenuRequested, this, &MissionControl::custom_context_menu);
 
-    // Pick up latest run identifier information - either from running Constellation or from settings
-    auto run_id = std::string(runcontrol_.getRunIdentifier());
-    if(run_id.empty()) {
-        update_run_identifier(gui_settings_.value("run/identifier", "run").toString(),
-                              gui_settings_.value("run/sequence", 0).toInt());
-    } else {
-        // Attempt to find sequence:
-        const std::size_t pos = run_id.find_last_of('_');
-        auto identifier = (pos != std::string::npos ? run_id.substr(0, pos) : run_id);
-        std::size_t sequence = 0;
-        try {
-            sequence = (pos != std::string::npos ? std::stoi(run_id.substr(pos + 1)) : 0);
-        } catch(std::invalid_argument&) {
-        }
-
-        // This is an old run identifier, increment the sequence:
-        if(!runcontrol_.isInState(CSCP::State::RUN)) {
-            sequence++;
-        }
-        update_run_identifier(QString::fromStdString(identifier), static_cast<int>(sequence));
-    }
-
-    // Pick up the current run timer from the constellation of available:
-    auto run_time = runcontrol_.getRunStartTime();
-    if(run_time.has_value()) {
-        if(runcontrol_.isInState(CSCP::State::RUN)) {
-            LOG(logger_, DEBUG) << "Fetched time from satellites, setting run timer to " << run_time.value();
-
-            // FIXME somehow fromStdTimePoint is not found
-            run_start_time_ = from_timepoint(run_time.value());
-        }
-    }
-
     const auto cfg_file = gui_settings_.value("run/configfile", "").toString();
     if(QFile::exists(cfg_file)) {
         txtConfigFileName->setText(cfg_file);
@@ -140,6 +107,10 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     if(gui_settings_.value("window/maximized", isMaximized()).toBool()) {
         showMaximized();
     }
+
+    // Restore last run identifier from configuration:
+    update_run_identifier(gui_settings_.value("run/identifier", "run").toString(),
+                          gui_settings_.value("run/sequence", 0).toInt());
 
     setWindowTitle("Constellation MissionControl " CNSTLN_VERSION);
 
@@ -160,17 +131,51 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
         labelNrSatellites->setText("<font color='gray'><b>" + QString::number(num) + "</b></font>");
     });
 
+    connect(&runcontrol_, &QController::connectionsChanged, this, &MissionControl::startup);
+
     // Connect state update signal:
     connect(&runcontrol_, &QController::reachedState, this, [&](CSCP::State state, bool global) {
         update_button_states(state);
         labelState->setText(QController::getStyledState(state, global));
     });
 
-    // Update button state once manually
-    update_button_states(state);
-
     // Start the controller
     runcontrol_.start();
+}
+
+void MissionControl::startup(std::size_t num) {
+
+    // For the very first connection, try to obtain run time and run identifier
+    if(num == 1) {
+        const auto is_running = runcontrol_.isInState(CSCP::State::RUN);
+
+        if(is_running) {
+            auto run_time = runcontrol_.getRunStartTime();
+            if(run_time.has_value()) {
+                LOG(logger_, DEBUG) << "Fetched time from satellites, setting run timer to " << run_time.value();
+                run_start_time_ = from_timepoint(run_time.value());
+            }
+        }
+
+        // Read last run identifier from the connection:
+        auto run_id = std::string(runcontrol_.getRunIdentifier());
+        if(!run_id.empty()) {
+            // attempt to find a sequence number:
+            const std::size_t pos = run_id.find_last_of('_');
+            auto identifier = (pos != std::string::npos ? run_id.substr(0, pos) : run_id);
+            std::size_t sequence = 0;
+            try {
+                sequence = (pos != std::string::npos ? std::stoi(run_id.substr(pos + 1)) : 0);
+            } catch(std::invalid_argument&) {
+            }
+
+            // This is an old run identifier, increment the sequence:
+            if(!is_running) {
+                sequence++;
+            }
+            update_run_identifier(QString::fromStdString(identifier), static_cast<int>(sequence));
+        }
+    }
 }
 
 void MissionControl::update_run_identifier(const QString& text, int number) {

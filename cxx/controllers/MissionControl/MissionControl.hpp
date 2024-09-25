@@ -72,6 +72,13 @@ private slots:
     void update_run_identifier(const QString& text, int number);
 
     /**
+     * @brief Private slot to obtain run identifier and run number from constellation when the first connection joins
+     *
+     * @param num Number of current connections
+     */
+    void startup(std::size_t num);
+
+    /**
      * @brief Private slot for "Init" button
      */
     void on_btnInit_clicked();
