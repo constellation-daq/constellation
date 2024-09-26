@@ -11,6 +11,7 @@ satellites_to_build = []
 subdir('DevNullReceiver')
 subdir('RandomTransmitter')
 subdir('Sputnik')
+subdir('SPIDR')
 
 # Print build summary for satellites
 summary('Building', satellites_to_build, section: 'Satellites')
