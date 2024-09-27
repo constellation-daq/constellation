@@ -1,0 +1,48 @@
+[x]
+port = "/dev/ttyUSB0"
+chan = 0
+# in mm
+velocity = 2
+acceleration = 10
+home_position = 10
+
+[y]
+port = "/dev/ttyUSB1"
+chan = 0
+# in mm
+velocity = 2
+acceleration = 10
+home_position = 10
+
+[z]
+port = "/dev/ttyUSB3"
+chan = 0
+# in mm
+velocity = 2
+acceleration = 10
+home_position = 10
+
+[r]
+port = "/dev/ttyUSB4"
+chan = 0
+# in deg
+home_position = 180
+
+[run]
+active_axes = ["x","y"]
+# active_axes = ["x","y","z","r"]
+
+## in mm
+# pos_x = [10,30,10]
+# pos_y = [10,30,10]
+# pos_z = [10,30,10]
+## in deg
+# pos_r = [175,185,10]
+
+
+# in mm
+pos_x = 50
+pos_y = 50
+pos_z = 50
+# in deg
+pos_r = 180
