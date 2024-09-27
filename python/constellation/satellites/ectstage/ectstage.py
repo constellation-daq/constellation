@@ -136,7 +136,7 @@ class ECTstage(Satellite):
 
     def do_run(self, payload: Any) -> str:
         """The main run routine.
-        Here, the main part of the mission would be performed.
+        Move stages to all positions while returning positions
         """
         print("data acquiring")
 
