@@ -5,8 +5,8 @@
 satellites_to_build = []
 
 # Subdirs with satellites
-subdir('Katherine')
 subdir('DevNullReceiver')
+subdir('Katherine')
 subdir('RandomTransmitter')
 subdir('Sputnik')
 
