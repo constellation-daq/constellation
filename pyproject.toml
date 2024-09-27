@@ -44,7 +44,7 @@ DemoHeartbeatSender = "constellation.core.heartbeater:main"
 # tools
 ConstellationListInterfaces = "constellation.tools.list_interfaces:main"
 # 3rd-party Satellites
-SatelliteECTstage = "constellation.satellites.eCTstage.eCTstage:main"
+SatelliteECTstage = "constellation.satellites.ectstage.ectstage:main"
 SatelliteKeithley = "constellation.satellites.Keithley.Keithley:main"
 SatelliteMariner = "constellation.satellites.Mariner.Mariner:main"
 SatelliteCaenHV = "constellation.satellites.CaenHV.CaenHV:main"
