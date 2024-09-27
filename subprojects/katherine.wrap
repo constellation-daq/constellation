@@ -1,9 +1,0 @@
-[wrap-git]
-url = https://github.com/simonspa/libkatherine.git
-revision = master
-depth = 1
-method = cmake
-
-[provide]
-katherine = katherine_dep
-katherinexx = katherinexx_dep

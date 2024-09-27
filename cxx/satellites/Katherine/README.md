@@ -16,6 +16,26 @@ and time-over-threshold mode (`TOA_TOT`), the time-of-arrival mode (`TOA`) or th
 (`EVT_ITOT`). The detector can be operated either in data-driven mode (`sequential_mode = false`) or frame-based mode. In the
 latter case, the number of frames to acquire has to be configured via `no_frames`.
 
+## Building
+
+The Katherine satellite requires the [`libkatherine`](https://github.com/petrmanek/libkatherine) library. It can be installed via
+
+```sh
+git clone https://github.com/petrmanek/libkatherine.git
+cd libkatherine
+mkdir build && cd build
+cmake .. -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=/opt # Adjust install path if wanted
+ninja install
+```
+
+The satellite is not build by default, building can be enabled via:
+
+```sh
+meson configure build -Dpkg_config_path="/opt/share/pkgconfig" -Dsatellite_katherine=true
+```
+
+## Chip Settings
+
 The chip settings are read from two separate files which need to be provided, the DACS file and the pixel configuration file:
 
 ### DAC Settings
