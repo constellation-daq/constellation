@@ -8,12 +8,8 @@
 /asio-*/
 /Catch2-*/
 /cppzmq-*/
-/katherine/
 /libzmq-*/
 /magic_enum-*/
 /msgpack-cxx-*/
 /spdlog-*/
 /tomlplusplus-*/
-
-# Satellite dependencies
-/katherine/

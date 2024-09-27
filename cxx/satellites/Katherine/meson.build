@@ -7,8 +7,7 @@ if not get_option('satellite_katherine')
 endif
 
 # LibKatherine is needed as dependency
-katherine_dep = dependency('katherine', required: true, allow_fallback: true, default_options: ['werror=false'])
-katherinexx_dep = dependency('katherinexx', required: true, allow_fallback: true, default_options: ['werror=false'])
+katherinexx_dep = dependency('katherinexx', required: true)
 
 # Type this satellite identifies as:
 satellite_type = 'Katherine'
@@ -34,7 +33,7 @@ satellite_main = configure_file(
 
 shared_library(satellite_type,
   sources: [satellite_generator, satellite_sources],
-  dependencies: [core_dep, satellite_dep, katherinexx_dep, katherine_dep],
+  dependencies: [core_dep, satellite_dep, katherinexx_dep],
   gnu_symbol_visibility: 'hidden',
   install_dir: satellite_libdir,
   install_rpath: constellation_rpath,
