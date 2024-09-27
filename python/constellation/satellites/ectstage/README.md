@@ -20,8 +20,8 @@ Declare as `[{stage_axis}]` eg: `[x]`,`[y]`,`[z]`,`[r]`. All parameters must be 
 |-----------------|------------------------------------------------------------------------|-----------|-------------------|--------------------------------|
 | `port`          | Serial port name (eg:`"/dev/ttyUSB0"`)                                 | string    | -                 | -                              |
 | `chan`          | Channel number if multiple stages are moved via same serial connection | number    | `0`               | -                              |
-| `velocity`      | Velocity of the stage movement in mm/s                                 | int/float | -                 | `5`                            |
-| `acceleration`  | Velocity of the stage movement in mm/s^2                               | int/float | -                 | 15                             |
+| `velocity`      | Velocity of the stage movement in mm/s                                 | int/float | -                 | max=`5`                        |
+| `acceleration`  | Velocity of the stage movement in mm/s^2                               | int/float | -                 | max=`10`                       |
 | `home_position` | Start Position of all new runs in mm                                   | int/float | -                 | `0` to `290` for linear stages |
 
 [+]Use the given default value if unsure of value
