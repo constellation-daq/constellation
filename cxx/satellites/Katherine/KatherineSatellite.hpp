@@ -13,14 +13,10 @@
 #include <future>
 #include <mutex>
 #include <string_view>
-#include <thread>
 
 #include <katherinexx/katherinexx.hpp>
 
-#include "constellation/core/log/log.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
-#include "constellation/core/utils/timers.hpp"
-#include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
 class KatherineSatellite final : public constellation::satellite::TransmitterSatellite {
@@ -61,8 +57,8 @@ public:
     void failure(constellation::protocol::CSCP::State previous_state) override;
 
 private:
-    katherine::dacs parse_dacs_file(std::filesystem::path file_path) const;
-    katherine::px_config parse_px_config_file(std::filesystem::path file_path) const;
+    katherine::dacs parse_dacs_file(const std::filesystem::path& file_path) const;
+    katherine::px_config parse_px_config_file(const std::filesystem::path& file_path) const;
 
     std::vector<std::string> get_hw_info();
 
@@ -71,7 +67,7 @@ private:
     void frame_started(int frame_idx);
     void frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info);
 
-    void data_received(const char* px, size_t count);
+    void data_received(const char* data, size_t count);
 
     template <typename T> void pixels_received(const T* px, size_t count) {
         auto msg = newDataMessage();
