@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 subdir('CaenHV')
+subdir('ectstage')
 subdir('H5DataWriter')
 subdir('Keithley')
 subdir('Mariner')
