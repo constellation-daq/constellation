@@ -17,7 +17,7 @@ a `.toml` configuration file is needed to configure the satellite. The following
 Declare as `[{stage_axis}]` eg: `[x]`,`[y]`,`[z]`,`[r]`. All parameters must be defined in config file.
 
 | Parameter | Description | Type | Default Value [+] | Safety Limit |
-|-----------|-------------|------|---------------|
+|-----------|-------------|------|---------------|----|
 | `port` | Serial port name (eg:`"/dev/ttyUSB0"`) | string | - | - |
 | `chan` | Channel number if multiple stages are moved via same serial connection | number | `0` | - |
 | `velocity` | Velocity of the stage movement in mm/s | int/float | - | `5` |
@@ -30,7 +30,7 @@ Declare as `[{stage_axis}]` eg: `[x]`,`[y]`,`[z]`,`[r]`. All parameters must be 
 Declare as `[run]`. All parameters must be defined in config file.
 
 | Parameter | Description | Type | Default Value [+] | Safety Limit |
-|-----------|-------------|------|---------------|
+|-----------|-------------|------|---------------|----|
 | `active_axes` | Axes/stages that must be initialised | list of axis names eg: `["x","y"]` | - | - |
 | `pos_{stage_axis}` | move to position | single int/float OR three-value vector | `0` | `0` to `290` for linear stages |
 
