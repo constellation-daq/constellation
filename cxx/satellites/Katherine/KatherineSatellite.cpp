@@ -9,13 +9,18 @@
 
 #include "KatherineSatellite.hpp"
 
-#include <condition_variable>
+#include <chrono>
 #include <fstream>
+#include <functional>
+#include <memory>
 #include <mutex>
+#include <string>
 #include <string_view>
+#include <vector>
 
 #include "constellation/core/log/log.hpp"
-#include "constellation/core/utils/timers.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
 using namespace constellation::config;
@@ -36,7 +41,7 @@ KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view n
                      std::function<std::vector<std::string>()>([&]() -> std::vector<std::string> {
                          std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                          auto state = device_->comm_status();
-                         return {"Line mask " + char_to_hex_string(state.comm_lines_mask),
+                         return {"Line mask " + char_to_hex_string(static_cast<char>(state.comm_lines_mask)),
                                  "Data rate " + to_string(state.data_rate),
                                  (state.chip_detected ? "Chip present" : "Chip absent")};
                      }));
@@ -170,12 +175,12 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     katherine_config_.set_freq(katherine::freq::f40);
 
     // Set the DACs in the Katherine config
-    auto dacs = parse_dacs_file(config.getPath("dacs_file"));
+    const auto dacs = parse_dacs_file(config.getPath("dacs_file"));
     LOG(DEBUG) << "Sending DACs to Katherine system";
-    katherine_config_.set_dacs(std::move(dacs));
+    katherine_config_.set_dacs(dacs);
 
-    auto px_config = parse_px_config_file(config.getPath("px_config_file"));
-    katherine_config_.set_pixel_config(std::move(px_config));
+    const auto px_config = parse_px_config_file(config.getPath("px_config_file"));
+    katherine_config_.set_pixel_config(px_config);
 
     // Set how many pixels are buffered before returning and sending a message
     data_buffer_depth_ = config.get<int>("data_buffer");
@@ -291,12 +296,12 @@ void KatherineSatellite::failure(CSCP::State state) {
 }
 
 void KatherineSatellite::frame_started(int frame_idx) {
-    LOG(INFO) << "Started frame " << frame_idx << std::endl;
+    LOG(INFO) << "Started frame " << frame_idx;
 }
 
 void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
-    LOG(STATUS) << "Frame " << frame_idx << " finished, started at " << info.start_time.d << ", ended at "
-                << info.end_time.d;
+    LOG(STATUS) << "Frame " << frame_idx << " finished, started at " << info.start_time.d << ", ended at " << info.end_time.d
+                << ", completed " << std::boolalpha << completed;
     LOG_IF(WARNING, info.lost_pixels > 0) << "TPX3 -> Katherine lost " << info.lost_pixels << " pixels";
     LOG_IF(WARNING, info.sent_pixels > info.received_pixels)
         << "Katherine -> PC lost " << (info.sent_pixels - info.received_pixels) << " pixels";
@@ -323,10 +328,9 @@ void KatherineSatellite::starting(std::string_view) {
             // the pixel buffer to the user code
             const std::lock_guard data_lock {katherine_data_mutex_};
             acquisition_->read();
-        } catch(katherine::system_error& e) {
+        } catch(katherine::system_error& error) {
             std::string error_msg {"Katherine error: "};
-            error_msg += e.what();
-            LOG(CRITICAL) << error_msg;
+            error_msg += error.what();
             throw CommunicationError(error_msg);
         }
     });
@@ -387,10 +391,10 @@ std::vector<std::string> KatherineSatellite::get_hw_info() {
             "Firmware " + to_string(state.fw_version)};
 }
 
-katherine::dacs KatherineSatellite::parse_dacs_file(std::filesystem::path file_path) const {
+katherine::dacs KatherineSatellite::parse_dacs_file(const std::filesystem::path& file_path) const {
 
     LOG(DEBUG) << "Attempting to read DAC file at " << file_path;
-    std::ifstream dacfile(file_path);
+    std::ifstream dacfile {file_path};
     if(!dacfile.good()) {
         throw SatelliteError("Failed to open DAC file at " + file_path.string());
     }
@@ -410,7 +414,8 @@ katherine::dacs KatherineSatellite::parse_dacs_file(std::filesystem::path file_p
 
         std::istringstream iss(line);
 
-        int dac_nr, dac_val;
+        int dac_nr {};
+        int dac_val {};
         if(!(iss >> dac_nr >> dac_val)) {
             LOG(DEBUG) << "Read invalid line: " << line;
             break;
@@ -424,7 +429,7 @@ katherine::dacs KatherineSatellite::parse_dacs_file(std::filesystem::path file_p
     return dacs;
 }
 
-katherine::px_config KatherineSatellite::parse_px_config_file(std::filesystem::path file_path) const {
+katherine::px_config KatherineSatellite::parse_px_config_file(const std::filesystem::path& file_path) const {
 
     LOG(INFO) << "Attempting to read pixel configuration file at " << file_path;
 
@@ -443,7 +448,7 @@ katherine::px_config KatherineSatellite::parse_px_config_file(std::filesystem::p
     // Generate new object and reset memory
     katherine::px_config px_config {};
     memset(&px_config.words, 0, 65536);
-    uint32_t* dest = (uint32_t*)px_config.words;
+    auto* dest = (uint32_t*)px_config.words;
 
     std::string tline;
     size_t pixels = 0;
@@ -460,7 +465,11 @@ katherine::px_config KatherineSatellite::parse_px_config_file(std::filesystem::p
 
         std::istringstream iss(tline);
 
-        int row, col, thr, mask, tp_ena;
+        int row {};
+        int col {};
+        int thr {};
+        int mask {};
+        int tp_ena {};
         if(!(iss >> col >> row >> thr >> mask >> tp_ena)) {
             LOG(WARNING) << "Read invalid line: " << tline;
             break;
