@@ -16,23 +16,23 @@ a `.toml` configuration file is needed to configure the satellite. The following
 ### Stage Parameters
 Declare as `[{stage_axis}]` eg: `[x]`,`[y]`,`[z]`,`[r]`. All parameters must be defined in config file.
 
-| Parameter | Description | Type | Default Value [+] | Safety Limit |
-|-----------|-------------|------|---------------|----|
-| `port` | Serial port name (eg:`"/dev/ttyUSB0"`) | string | - | - |
-| `chan` | Channel number if multiple stages are moved via same serial connection | number | `0` | - |
-| `velocity` | Velocity of the stage movement in mm/s | int/float | - | `5` |
-| `acceleration` | Velocity of the stage movement in mm/s^2 | int/float | - | 15 |
-| `home_position` | Start Position of all new runs in mm | int/float | - | - |
+| Parameter       | Description                                                            | Type      | Default Value [+] | Safety Limit                   |
+|-----------------|------------------------------------------------------------------------|-----------|-------------------|--------------------------------|
+| `port`          | Serial port name (eg:`"/dev/ttyUSB0"`)                                 | string    | -                 | -                              |
+| `chan`          | Channel number if multiple stages are moved via same serial connection | number    | `0`               | -                              |
+| `velocity`      | Velocity of the stage movement in mm/s                                 | int/float | -                 | `5`                            |
+| `acceleration`  | Velocity of the stage movement in mm/s^2                               | int/float | -                 | 15                             |
+| `home_position` | Start Position of all new runs in mm                                   | int/float | -                 | `0` to `290` for linear stages |
 
 [+]Use the given default value if unsure of value
 
 ### Run Parameters
 Declare as `[run]`. All parameters must be defined in config file.
 
-| Parameter | Description | Type | Default Value [+] | Safety Limit |
-|-----------|-------------|------|---------------|----|
-| `active_axes` | Axes/stages that must be initialised | list of axis names eg: `["x","y"]` | - | - |
-| `pos_{stage_axis}` | move to position | single int/float OR three-value vector | `0` | `0` to `290` for linear stages |
+| Parameter          | Description                            | Type                                   | Default Value [+]| Safety Limit                   |
+|--------------------|----------------------------------------|------- --------------------------------|------------------|--------------------------------|
+| `active_axes`      | Axes/stages that must be initialised   | list of axis names eg: `["x","y"]`     | -                | -                              |
+| `pos_{stage_axis}` | move to position                       | single int/float OR three-value vector | `0`              | `0` to `290` for linear stages |
 
 * If `pos_{stage_axis}` is a single value, the stage will move to this position, take data and go back home.
 If `pos_{stage_axis}` is a three-vector eg: `[val_1,val_2,val_3]` the stage will move between `val_1` and `val_2` in steps of `val_3`.
