@@ -80,12 +80,13 @@ noted otherwise.
 |---------------|-------------|------|---------------|
 | `ip_address`        | IP address of the Katherine system | String | |
 | `chip_id`           | ID of the chip to be operated. Optional setting, this will only be checked when provided. If it does not match, an error is reported. | String | |
-| `dacs_file`         | Path to file with DAC settings     | Path | |
-| `px_config_file`    | Path to file with individual pixel trim settings | Path | |
+| `dacs_file`         | Path to file with DAC settings     | String | |
+| `px_config_file`    | Path to file with individual pixel trim settings | String | |
 | `positive_polarity` | Threshold polarity switch | Bool | `true`    |
 | `sequential_mode`   | Switch to enable/disable sequential mode | Bool | `false`   |
 | `op_mode`           | Operation mode, can be `TOA_TOT`, `TOA`, `EVT_ITOT` or `MASK` | | `TOA_TOT` |
-| `shutter_mode`      | Shutter operation mode, can be `POS_EXT`, `NEG_EXT`, `POS_EXT_TIMER`, `NEG_EXT_TIMER` or `AUTO` | | `AUTO` |
+| `op_mode`           | Operation mode, can be `TOA_TOT`, `TOA`, `EVT_ITOT` or `MASK` | String | `TOA_TOT` |
+| `shutter_mode`      | Shutter operation mode, can be `POS_EXT`, `NEG_EXT`, `POS_EXT_TIMER`, `NEG_EXT_TIMER` or `AUTO` | String | `AUTO` |
 | `shutter_width`     | Width of the shutter window, only relevant for shutter modes `POS_EXT_TIMER` and `NEG_EXT_TIMER` | Int | |
 | `pixel_buffer`      | Depth of the pixel buffer. This many pixel hits are accumulate before sending. The default corresponds to one full Timepix3 frame | Int  | 65536     |
 | `data_buffer`       | Depth of the data buffer in units of Timepix3 packets (6 bytes each). Data is either decoded or sent directly from this buffer. The default corresponds to 200 MB memory. | Int  | 34952533 |
