@@ -289,15 +289,12 @@ void CaribouSatellite::starting(std::string_view) {
     // Start the DAQ
     std::lock_guard<std::mutex> lock {device_mutex_};
 
-    // How to add additional information for the Begin-of-run event, e.g. containing tags with detector information?
-    /*DataSender::BORMessage bor_msg {};
-    bor_msg.add_tag("software", device_->getVersion());
-    bor_msg.add_tag("firmware", device_->getFirmwareVersion());
-    const auto registers = device_->getRegisters();
-    for(const auto& reg : registers) {
-        bor_msg.add_tag(reg.first, reg.second);
+    // Add additional information for the Begin-of-run event
+    setBORTag("software", device_->getVersion());
+    setBORTag("firmware", device_->getFirmwareVersion());
+    for(const auto& reg : device_->getRegisters()) {
+        setBORTag(reg.first, reg.second);
     }
-    data_sender_.sendBOR(std::move(bor_msg));*/
 
     // Start DAQ:
     device_->daqStart();
