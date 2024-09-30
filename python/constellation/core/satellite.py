@@ -93,16 +93,10 @@ class Satellite(
     def _add_satellite_heatbeat(self, service: DiscoveredService) -> None:
         """Callback method registering satellite's heartbeat."""
         if service.alive:
-            self.log.debug(
-                f"Registering new host for heartbeats at {service.address}:{service.port}"
-            )
-            self.register_heartbeat_host(
-                service.host_uuid, "tcp://" + service.address + ":" + str(service.port)
-            )
+            self.log.debug(f"Registering new host for heartbeats at {service.address}:{service.port}")
+            self.register_heartbeat_host(service.host_uuid, "tcp://" + service.address + ":" + str(service.port))
         else:
-            self.log.debug(
-                f"Unregistering host for heartbeats at {service.address}:{service.port}"
-            )
+            self.log.debug(f"Unregistering host for heartbeats at {service.address}:{service.port}")
             self.unregister_heartbeat_host(service.host_uuid)
 
     def run_satellite(self) -> None:
@@ -373,7 +367,7 @@ class Satellite(
     @debug_log
     def _heartbeat_interrupt(self, name: str, State: SatelliteState) -> None:
         self.log.debug("Interrupting")
-        self.fsm.interrupt({})
+        self._transition("interrupt", None, thread=False)
 
     @handle_error
     @debug_log
