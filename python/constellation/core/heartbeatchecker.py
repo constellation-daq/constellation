@@ -13,7 +13,7 @@ import zmq
 from typing import Optional, Callable, Any
 from .fsm import SatelliteState
 from .chp import CHPDecodeMessage
-from .base import BaseSatelliteFrame, setup_cli_logging
+from .base import BaseSatelliteFrame
 
 
 class HeartbeatState:
@@ -241,36 +241,3 @@ class HeartbeatChecker(BaseSatelliteFrame):
         for socket in self._states.keys():
             socket.close()
         self._states = dict[zmq.Socket, HeartbeatState]()  # type: ignore[type-arg]
-
-
-def main(args: Any = None) -> None:
-    """Receive heartbeats from a single host."""
-    import argparse
-
-    parser = argparse.ArgumentParser(description=main.__doc__)
-    parser.add_argument("--log-level", default="debug")
-    parser.add_argument("--ip", type=str, default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=61234)
-    args = parser.parse_args()
-
-    # set up logging
-    logger = setup_cli_logging(args["name"], args.pop("log_level"))
-    logger.info("Starting up heartbeat checker!")
-
-    def callback(name: str, _state: SatelliteState) -> None:
-        logger.error(f"Service {name} failed, callback was called!")
-
-    hb_checker = HeartbeatChecker()
-    hb_checker.register_heartbeat_callback(callback)
-    evt = hb_checker.register_heartbeat_host(UUID(), f"tcp://{args.ip}:{args.port}")
-
-    while True:
-        failed = ", ".join(hb_checker.get_failed())
-        print(f"Failed heartbeats so far: {failed}, evt is set: {evt.is_set()}, states: {hb_checker._states}")
-        time.sleep(1)
-
-    hb_checker.stop()
-
-
-if __name__ == "__main__":
-    main()
