@@ -13,3 +13,6 @@
 /msgpack-cxx-*/
 /spdlog-*/
 /tomlplusplus-*/
+
+# Satellite dependencies
+/katherine/

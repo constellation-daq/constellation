@@ -7,7 +7,7 @@ if not get_option('satellite_katherine')
 endif
 
 # LibKatherine is needed as dependency
-katherinexx_dep = dependency('katherinexx', required: true)
+katherinexx_dep = dependency('katherinexx', required: true, allow_fallback: meson.version() >= '1.3.0', default_options: ['werror=false', 'warning_level=0'])
 
 # Type this satellite identifies as:
 satellite_type = 'Katherine'

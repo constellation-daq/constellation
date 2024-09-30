@@ -18,7 +18,8 @@ latter case, the number of frames to acquire has to be configured via `no_frames
 
 ## Building
 
-The Katherine satellite requires the [`libkatherine`](https://github.com/petrmanek/libkatherine) library. It can be installed via
+The Katherine satellite requires the [`libkatherine`](https://github.com/petrmanek/libkatherine) library. For Meson versions
+starting with `1.3.0` it can be bunlded automatically, otherwise it can be installed via
 
 ```sh
 git clone https://github.com/petrmanek/libkatherine.git
