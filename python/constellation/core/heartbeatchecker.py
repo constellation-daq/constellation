@@ -70,7 +70,9 @@ class HeartbeatChecker(BaseSatelliteFrame):
         self._com_thread_pool["heartbeatrecv"] = threading.Thread(target=self._run_thread, daemon=True)
         self.log.debug("Heartbeat receiver thread prepared and added to the pool.")
 
-    def register_heartbeat_host(self, host: UUID, address: str, context: Optional[zmq.Context] = None) -> threading.Event:
+    def register_heartbeat_host(
+        self, host: UUID, address: str, context: Optional[zmq.Context] = None  # type: ignore[type-arg]
+    ) -> threading.Event:
         """Register a heartbeat check for a specific Satellite.
 
         Returns threading.Event that will be set when a failure occurs.
