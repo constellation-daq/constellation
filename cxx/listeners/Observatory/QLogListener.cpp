@@ -76,11 +76,13 @@ bool LogSorter::operator()(size_t lhs, size_t rhs) {
 
 QLogListener::QLogListener(QObject* parent)
     : QAbstractListModel(parent), SubscriberPool<CMDP1LogMessage, MONITORING>(
-                                      "LOGRECV",
-                                      [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); },
-                                      [this]() { return get_global_subscription_topics(); }),
+                                      "LOGRECV", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }),
       logger_("QLGRCV"), filter_level_(Level::WARNING), m_sorter(&messages_) {
+    // Make filtering case-insensitive
     filter_message_.setPatternOptions(QRegularExpression::CaseInsensitiveOption);
+
+    // Set default subscription topics:
+    setSubscriptionTopics(get_global_subscription_topics());
 }
 
 bool QLogListener::is_message_displayed(size_t index) const {
@@ -105,6 +107,10 @@ std::set<std::string> QLogListener::get_global_subscription_topics() const {
 void QLogListener::subscribeToTopic(constellation::log::Level level, std::string_view topic) {
 
     subscription_global_level_ = level;
+
+    // Update default subscription topics:
+    setSubscriptionTopics(get_global_subscription_topics());
+
     constexpr auto levels = magic_enum::enum_values<Level>();
     for(const auto lvl : levels) {
         std::string log_topic = "LOG/" + to_string(lvl);
