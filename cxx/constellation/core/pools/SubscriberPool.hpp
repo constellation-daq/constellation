@@ -38,12 +38,16 @@ namespace constellation::pools {
          *
          * @param log_topic Logger topic to be used for this component
          * @param callback Callback function pointer for received messages
-         * @param default_topics_callback Callback to retrieve the default subscription topics to which this component should
-         *        subscribe directly upon opening the socket. The callback is evaluated at the time of the socket joining.
          */
-        SubscriberPool(std::string_view log_topic,
-                       std::function<void(MESSAGE&&)> callback,
-                       std::function<std::set<std::string>()> default_topics_callback = nullptr);
+        SubscriberPool(std::string_view log_topic, std::function<void(MESSAGE&&)> callback);
+
+        /*
+         * @brief Method to update the default topics this pool directly subscribed to when a new socket joins
+         *
+         * @param topics Set of default subscription topics to which this component should subscribe directly upon opening
+         *               the socket.
+         */
+        void setSubscriptionTopics(std::set<std::string> topics);
 
         /**
          * @brief Subscribe to a given topic of a specific host
@@ -84,7 +88,7 @@ namespace constellation::pools {
         /** Sub- or unsubscribe to a topic for all connected hosts */
         void scribe_all(std::string_view topic, bool subscribe);
 
-        std::function<std::set<std::string>()> default_topics_callback_;
+        std::set<std::string> default_topics_;
     };
 } // namespace constellation::pools
 
