@@ -34,6 +34,7 @@
 #include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
+using namespace constellation::config;
 using namespace constellation::log;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
@@ -177,21 +178,22 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
     // Set configured log level
     caribou::Log::setReportingLevel(caribou::Log::getLevelFromString(config.get<std::string>("peary_verbosity")));
 
-    // Open configuration file and read caribou configuration
-    const auto config_file_path = config.getPath("config_file");
-    LOG(INFO) << "Attempting to use initial device configuration " << config_file_path;
-    std::ifstream config_file {config_file_path};
-    if(!config_file.is_open()) {
-        throw SatelliteError("Could not open configuration file \"" + config_file_path.string() + "\"");
+    // Prepare ADC info to be distributed as metrics
+    if(config.has("adc_signal")) {
+        // Select which ADC signal to regularly fetch:
+        adc_signal_ = config.get<std::string>("adc_signal");
+        adc_freq_ = config.get<std::uint64_t>("adc_frequency");
     }
-    auto caribou_configs = caribou::ConfigParser(config_file);
 
-    // Select section from the configuration file relevant for this device
-    if(!caribou_configs.Has(device_class_)) {
-        throw SatelliteError("Could not find section for device \"" + device_class_ + "\" in config file \"" +
-                             config_file_path.string() + "\"");
+    // Cache the number of frames to attach to a single data message:
+    number_of_frames_ = config.get<std::size_t>("number_of_frames");
+
+    // Obtain all previously unused configuration KVPs and add them to a Peary configuration
+    caribou::Configuration device_config;
+    for(const auto& [key, value] : config.getDictionary(Configuration::Group::USER, Configuration::Usage::UNUSED)) {
+        LOG(DEBUG) << "Adding " << key << " = " << value.str() << " to Peary configuration";
+        device_config.Add(key, value.str());
     }
-    const auto device_config = caribou_configs.GetConfig(device_class_);
 
     std::lock_guard<std::mutex> lock {device_mutex_};
     try {
@@ -202,34 +204,12 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
         throw SatelliteError("Failed to get device \"" + device_class_ + "\": " + error.what());
     }
 
-    // Add secondary device if it is configured
-    if(config.has("secondary_device")) {
-        const auto secondary = config.get<std::string>("secondary_device");
-        const auto secondary_config =
-            (caribou_configs.Has(secondary) ? caribou_configs.GetConfig(secondary) : caribou::Configuration {});
-        try {
-            const auto device_id2 = manager_->addDevice(secondary, secondary_config);
-            LOG(INFO) << "Manager returned device ID " << device_id2 << ", fetching secondary device...";
-            secondary_device_ = manager_->getDevice(device_id2);
-        } catch(const caribou::DeviceException& error) {
-            throw SatelliteError("Failed to get secondary device \"" + secondary + "\": " + error.what());
-        }
-    }
-
-    // Prepare ADC info to be distributed as metrics
     if(config.has("adc_signal")) {
-        // Select which ADC signal to regularly fetch:
-        adc_signal_ = config.get<std::string>("adc_signal");
-        adc_freq_ = config.get<std::uint64_t>("adc_frequency");
-
-        // Try it out directly to catch mis-configuration
+        // Try out ADC reading directly to catch mis-configuration
         auto adc_value = device_->getADC(adc_signal_);
         LOG(INFO) << "Will probe ADC signal \"" << adc_signal_ << "\" every " << adc_freq_ << " frames";
         LOG(TRACE) << "ADC value: " << adc_value; // FIXME: unused variable, send as stats instead
     }
-
-    // Cache the number of frames to attach to a single data message:
-    number_of_frames_ = config.get<std::size_t>("number_of_frames");
 }
 
 void CaribouSatellite::launching() {
