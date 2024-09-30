@@ -21,6 +21,8 @@ from constellation.core.base import EPILOG
 from constellation.core.cscp import CSCPMessage
 from constellation.core.commandmanager import cscp_requestable
 
+from constellation.core.datasender import DataSender
+
 import pylablib as pll
 from pylablib.devices import Thorlabs
 
@@ -49,9 +51,9 @@ stage_limits = {'x':[0,250],'y':[0,250],'z':[0,250],'r':[-360,360]}
 #################################################################
 
 
-velocity     =  2     # mm/s  (recommended: <5 mm/s)
-acceleration =  1     # mm/s^2
-# DO NOT VELOCITY > 5!!! THE STAGE WILL STOP SYNCING WITH PC LEADING TO ERRORS IN POSITION
+max_velocity =  20     # mm/s  (recommended: <5 mm/s)
+max_aclrtn   =  10     # mm/s^2
+# DO NOT VELOCITY > 15!!! THE STAGE WILL STOP MOVING AND SYNCING WITH PC MAY BE AFFECTED
 
 
 """
@@ -60,8 +62,11 @@ TODO: operation modes:
     zigzag = move in zigzag path in x and y directions (2D projection)
 """
 
-class ECTstage(Satellite):
+class ECTstage(DataSender):
     """Stage movements in XYZR"""
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs,data_port=65123)
 
     #
     def do_initializing(self, cnfg: Configuration) -> str:
@@ -73,7 +78,7 @@ class ECTstage(Satellite):
         config_file = cnfg["config_file"]
         with open(config_file, 'r') as f:
             self.conf = toml.load(f)
-
+        
         # initialise stage
         if "x" in self.conf["run"]["active_axes"]: self.stage_x = self._init_stage("x")
         if "y" in self.conf["run"]["active_axes"]: self.stage_y = self._init_stage("y")
@@ -96,7 +101,22 @@ class ECTstage(Satellite):
         config_file = cnfg["config_file"]
         with open(config_file, 'r') as f:
             self.conf = toml.load(f)
-
+        
+        # close stages 
+        for axis in self.conf["run"]["active_axes"]:
+            stage = self._stage_select(axis)
+            stage.close()
+        
+        # re-initialise stages
+        if "x" in self.conf["run"]["active_axes"]: self.stage_x = self._init_stage("x")
+        if "y" in self.conf["run"]["active_axes"]: self.stage_y = self._init_stage("y")
+        if "z" in self.conf["run"]["active_axes"]: self.stage_z = self._init_stage("z")
+        if "r" in self.conf["run"]["active_axes"]: self.stage_r = self._init_stage("r")
+  
+        # verbose
+        for axis in self.conf["run"]["active_axes"]:
+            self._get_stage_info(axis)
+            
         return "Reconfigured from conf file"
 
 
@@ -142,18 +162,19 @@ class ECTstage(Satellite):
 
         pos = {}
         for axis in self.conf["run"]["active_axes"]:
-            if type(self.conf["run"]["pos_"+axis]) == int :
-                pos[axis] = self._list_positions(np.ones(3)*self.conf["run"]["pos_"+axis])
-            else: 
+            try:
                 pos[axis] = self._list_positions(self.conf["run"]["pos_"+axis])
+            except KeyError: 
+                pos[axis] = self._list_positions(np.append(np.ones(2)*self.conf[axis]["home_position"], np.array([1]), axis=0))
+        
                 
         if 'z' in self.conf["run"]["active_axes"]:
             for pos_z in pos['z']:
                 self._move_stage("z", pos_z,True)
                 while self.stage_z.is_moving():
                     if not self._state_thread_evt.is_set():
-                        #self._send_data()
-                        self._print_data()
+                        self._send_data()
+                        #self._print_data()
                         
                     else: 
                         self.stage_z.stop()
@@ -168,8 +189,8 @@ class ECTstage(Satellite):
                         self._move_stage("r", pos_r,True)
                         while self.stage_r.is_moving():
                             if not self._state_thread_evt.is_set():
-                                #self._send_data()
-                                self._print_data()
+                                self._send_data()
+                                #self._print_data()
                             else: 
                                 self.stage_r.stop()
                                 return "movement stopped"
@@ -184,8 +205,8 @@ class ECTstage(Satellite):
                         self._move_stage("x", pos_x,True)
                         while self.stage_x.is_moving():
                             if not self._state_thread_evt.is_set():
-                                #self._send_data()
-                                self._print_data()
+                                self._send_data()
+                                #self._print_data()
                             else: 
                                 self.stage_r.stop()
                                 return "movement stopped"
@@ -196,14 +217,14 @@ class ECTstage(Satellite):
                         self._move_stage("y", pos_y,True)
                         while self.stage_y.is_moving():
                             if not self._state_thread_evt.is_set():
-                                #self._send_data()
-                                self._print_data()
+                                self._send_data()
+                                #self._print_data()
                             else: 
                                 self.stage_r.stop()
                                 return "movement stopped"
                         
-                        #self._send_data() 
-                        self._print_data()      
+                        self._send_data() 
+                        #self._print_data()      
                         
                         # measurement time
                         time.sleep(self.conf["run"]["time_per_point_s"])
@@ -211,12 +232,14 @@ class ECTstage(Satellite):
                 else:
                     print("Either x or y axes not defined")
                     exit()
-                      
+        
+        print("stages moving to home position")
         for axis in self.conf["run"]["active_axes"]:
-                self._move_stage(axis, self.conf[axis]["home_position"],False)
-                print("stage moved")
-
-        return "Finished acquisition."
+            self._move_stage(axis, self.conf[axis]["home_position"],False)
+        print("stages moved")
+        print("Run completed")
+        
+        return "Finished acquisition. Stop run to proceed"
 
 
     #def do_stop(self, payload: Any) -> str:
@@ -230,50 +253,113 @@ class ECTstage(Satellite):
 
 
     @cscp_requestable
-    def home(self,request: CSCPMessage,axis=None) -> tuple[str, Any, dict]:
-        if axis!=None and axis in self.conf["run"]["active_axes"]:
+    def go_origin(self,request: CSCPMessage) -> tuple[str, Any, dict]:
+        axis = request.payload
+        if axis in self.conf["run"]["active_axes"]:
             stage = self._stage_select(axis)
             stage.home()
         else:
             for axis in self.conf["run"]["active_axes"]:
-                stage = self._stage_select(ax)
+                stage = self._stage_select(axis)
                 stage.home()
-        return "Stage moved home", None, {}
-
-
+        return "Stage moved to origin", None, {}
+        
+    @cscp_requestable
+    def go_home_position(self,request: CSCPMessage) -> tuple[str, Any, dict]:
+        axis = request.payload
+        if axis in self.conf["run"]["active_axes"]:
+            stage = self._stage_select(axis)
+            stage._move_stage(axis,self.conf[axis]["home_position"],False)
+        else:
+            for axis in self.conf["run"]["active_axes"]:
+                stage = self._stage_select(axis)
+                stage._move_stage(axis,self.conf[axis]["home_position"],False)
+        return "Stage moved to home position", None, {}
 
     @cscp_requestable
-    def stage_stop(self,request: CSCPMessage,axis=None) -> tuple[str, Any, dict]:
-        if axis!=None and axis in self.conf["run"]["active_axes"]:
+    def stage_stop(self,request: CSCPMessage) -> tuple[str, Any, dict]:
+        axis = request.payload
+        if axis in self.conf["run"]["active_axes"]:
             stage = self._stage_select(axis)
             if stage.is_moving(): stage.stop()
-        else:
-            for ax in self.conf["run"]["active_axes"]:
-                stage = self._stage_select(ax)
+        else: 
+            for axis in self.conf["run"]["active_axes"]:
+                stage = self._stage_select(axis)
                 if stage.is_moving(): stage.stop()
-
         return "Stage Stopped", None, {}
+        
+    @cscp_requestable
+    def get_status(self,request: CSCPMessage) -> tuple[str, Any, dict]:
+        axis = request.payload
+        if axis in self.conf["run"]["active_axes"]:
+            stage = self._stage_select(axis)
+            print( axis +": "+ str(stage.get_status()))
+            return str(axis +": "+ stage.get_status()), None, {}
+        else:
+            val = ""
+            for axis in self.conf["run"]["active_axes"]:
+                stage = self._stage_select(axis)
+                val = val + axis +": "+ str(stage.get_status()) +"\n"
+            print(val)
+            return val, None, {}
+        return "stage not identified", None, {}
+        
+
+    @cscp_requestable
+    def blink(self,request: CSCPMessage) -> tuple[str, Any, dict]:
+        axis = request.payload
+        if not isinstance(axis, str):
+            # missing/wrong payload
+            raise TypeError("Payload must be a stage axis identification string")
+
+        if axis in self.conf["run"]["active_axes"]:
+            stage = self._stage_select(axis)
+            stage.blink()
+        else:
+            return "stage not identified", None, {}
+
+        return "Blinking {} axis".format(axis), None, {}
 
     
     @cscp_requestable
-    def disconnect(self,request: CSCPMessage,axis=None) -> tuple[str, Any, dict]:
-        if axis!=None and axis in self.conf["run"]["active_axes"]:
+    def disconnect(self,request: CSCPMessage) -> tuple[str, Any, dict]:
+        if self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.NEW]:
+            raise RuntimeError(
+                f"Command not allowed in state '{self.fsm.current_state_value.name}'"
+            )
+        axis = request.payload
+        if axis in self.conf["run"]["active_axes"]:
             stage = self._stage_select(axis)
             stage.close()
+            return "stage",axis,"closed! Reinitialize to reconnect", None, {}
         else:
             for ax in self.conf["run"]["active_axes"]:
                 stage = self._stage_select(ax)
                 stage.close()
                 print("stage",ax,"closed! Reinitialize to reconnect")
-        return "Stage disconnected! Reinitialize to reconnect", None, {}
-
-    #@cscp_requestable
-        #def get_stage_position(self,request: CSCPMessage,axis) -> tuple[str, Any, dict]:
-        #    if axis!=None and axis in self.conf["run"]["active_axes"]:
-        #        stage = self._stage_select(axis)
-        #        try: return str(stage.get_position(channel=self.conf[axis]["chan"],scale=True)), None, {}
-        #        except NameError: return "NaN", None, {}
+            return "stages closed! Reinitialize to reconnect", None, {}
     
+    @cscp_requestable
+    def get_fsm_state(self,request: CSCPMessage) -> tuple[str, Any, dict]:
+        print(self.fsm.current_state_value.name)
+        return self.fsm.current_state_value.name, None, {}
+    
+
+    @cscp_requestable
+    def get_position(self,request: CSCPMessage) -> tuple[str, Any, dict]:
+        axis = request.payload
+        if axis in self.conf["run"]["active_axes"]:
+            stage = self._stage_select(axis)
+            return str(stage.get_position(channel=self.conf[axis]["chan"],scale=True)), None, {}
+        else:
+            val = ""
+            for axis in self.conf["run"]["active_axes"]:
+                stage = self._stage_select(axis)
+                val = val + " "+axis+ ":"+str(stage.get_position(channel=self.conf[axis]["chan"],scale=True))
+                if axis in stage_axes["r"]:    val = val + " deg;"
+                else: val = val + " mm;"
+            return val, None, {}
+       
     
     def _get_position(self,axis) -> tuple[str, Any, dict]:
         if axis!=None and axis in self.conf["run"]["active_axes"]:
@@ -281,19 +367,7 @@ class ECTstage(Satellite):
             try: return stage.get_position(channel=self.conf[axis]["chan"],scale=True)
             except NameError: return -303.303
             
-    def _send_data(self):
-        meta = {}
-        payload = np.array([
-             time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW),
-             self._get_position("x"),self._get_position("y"),
-             self._get_position("z"),self._get_position("r")], dtype=np.float64)
-        self.data_queue.put((payload.tobytes(), meta))
-        
-    def _print_data(self):
-        print("time:",time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW),
-             " x:",self._get_position("x")," y:",self._get_position("y"),
-             " z:",self._get_position("z")," r:",self._get_position("r"))
-
+    
     def _init_stage(self,axis):
         "initialise the ThorLabs motor stages"
 
@@ -304,10 +378,15 @@ class ECTstage(Satellite):
                     THORLABS_STAGE_CALFACTOR_VEL_LTS300,
                     THORLABS_STAGE_CALFACTOR_ACC_LTS300
                 ))
-
+            
+            if self.conf[axis]["velocity"] > max_velocity:
+                raise KeyError("Velocity must be smaller than {}".format(max_velocity))
+            if self.conf[axis]["acceleration"] > max_aclrtn:
+                raise KeyError("Acceleration must be smaller than {}".format(max_aclrtn))
+            
             stage.setup_velocity(channel=self.conf[axis]["chan"],
-                max_velocity=self.conf[axis]["velocity"],
-                acceleration=self.conf[axis]["acceleration"])
+                    max_velocity=self.conf[axis]["velocity"],
+                    acceleration=self.conf[axis]["acceleration"])
 
         elif (axis in stage_axes["r"]):
             stage = Thorlabs.KinesisMotor(conn=self.conf[axis]["port"],
@@ -316,10 +395,6 @@ class ECTstage(Satellite):
                     THORLABS_STAGE_CALFACTOR_VEL_PRMTZ8,
                     THORLABS_STAGE_CALFACTOR_ACC_PRMTZ8
                 ))
-
-#            stage.setup_velocity(channel=self.conf[axis]["chan"],
-#                max_velocity=self.conf[axis]["velocity"],
-#                acceleration=self.conf[axis]["acceleration"])
 
         else:
             print("axis not found.Exiting application")
@@ -338,7 +413,20 @@ class ECTstage(Satellite):
             stage = self._stage_select(axis)
         stage.move_to(position,channel=self.conf[axis]["chan"])
         
+    def _send_data(self):
+        meta = {}
+        payload = np.array([
+             time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW),
+             self._get_position("x"),self._get_position("y"),
+             self._get_position("z"),self._get_position("r")], dtype=np.float64)
+        self.data_queue.put((payload.tobytes(), meta))
         
+    def _print_data(self):
+        print("time:",time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW),
+             " x:",self._get_position("x")," y:",self._get_position("y"),
+             " z:",self._get_position("z")," r:",self._get_position("r"))
+    
+    
     def _get_stage_info(self,axis):
         """
         prints many parameters
