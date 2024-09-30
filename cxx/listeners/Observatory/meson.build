@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 # Build listener only if feature is enabled:
-if not get_option('listener_observatory').enabled()
+if not get_option('listener_observatory')
   subdir_done()
 endif
 
