@@ -108,7 +108,7 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
         // Log topic is message body stripped by first byte
         auto body = frame.to_string_view();
         body.remove_prefix(1);
-        LOG_IF(*logger_, TRACE, logger_) << "Received " << (subscribe ? "" : "un") << "subscribe message for " << body;
+        LOG(*logger_, TRACE) << "Received " << (subscribe ? "" : "un") << "subscribe message for " << body;
 
         // TODO(simonspa) At some point we also have to treat STAT here
         if(!body.starts_with("LOG/")) {
@@ -124,13 +124,13 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
 
         // Only accept valid levels
         if(!level.has_value()) {
-            LOG_IF(*logger_, TRACE, logger_) << "Invalid log level " << std::quoted(level_str) << ", ignoring";
+            LOG(*logger_, TRACE) << "Invalid log level " << std::quoted(level_str) << ", ignoring";
             continue;
         }
 
         const auto topic = (level_endpos != std::string::npos ? body.substr(level_endpos + 1) : std::string_view());
         const auto topic_uc = transform(topic, ::toupper);
-        LOG_IF(*logger_, TRACE, logger_) << "In/decrementing subscription counters for topic " << std::quoted(topic_uc);
+        LOG(*logger_, TRACE) << "In/decrementing subscription counters for topic " << std::quoted(topic_uc);
 
         if(subscribe) {
             log_subscriptions_[topic_uc][level.value()] += 1;
@@ -154,7 +154,7 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
             }
         }
 
-        LOG_IF(*logger_, TRACE, logger_) << "Lowest global log level: " << std::quoted(to_string(cmdp_global_level));
+        LOG(*logger_, TRACE) << "Lowest global log level: " << std::quoted(to_string(cmdp_global_level));
 
         // Update subscriptions
         SinkManager::getInstance().updateCMDPLevels(cmdp_global_level, std::move(cmdp_sub_topic_levels));
