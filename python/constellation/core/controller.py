@@ -396,7 +396,7 @@ class BaseController(CHIRPBroadcaster, HeartbeatChecker):
             # we are controlling this satellite
             if not self.heartbeat_host_is_registered(service.host_uuid):
                 self.register_heartbeat_host(
-                    name=service.host_uuid,
+                    host=service.host_uuid,
                     address=f"tcp://{service.address}:{service.port}",
                 )
 
@@ -448,7 +448,7 @@ class BaseController(CHIRPBroadcaster, HeartbeatChecker):
                     if self.heartbeat_host_is_registered(service.host_uuid):
                         self.unregister_heartbeat_host(service.host_uuid)
                     self.register_heartbeat_host(
-                        name=service.host_uuid,
+                        host=service.host_uuid,
                         address=f"tcp://{hbservice.address}:{hbservice.port}",
                     )
                     break

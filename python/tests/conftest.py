@@ -272,7 +272,7 @@ def mock_heartbeat_checker():
             mock_poller = MagicMock()
             mock_poller.poll.side_effect = poll
             mock_p.return_value = mock_poller
-            hbc = HeartbeatChecker()
+            hbc = HeartbeatChecker("mock_hbchecker", "127.0.0.1")
             yield hbc
 
 
