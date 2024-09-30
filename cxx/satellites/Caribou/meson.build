@@ -35,34 +35,6 @@ satellite_sources = files(
   'CaribouSatellite.cpp',
 )
 
-satellite_cfg_data = configuration_data()
-satellite_cfg_data.set('SATELLITE_TYPE', satellite_type)
-satellite_generator = configure_file(
-  input: satellite_generator_template,
-  output: 'generator.cpp',
-  configuration: satellite_cfg_data,
-)
-satellite_main = configure_file(
-  input: satellite_main_template,
-  output: 'main.cpp',
-  configuration: satellite_cfg_data,
-)
+satellite_dependencies = [peary_dep]
 
-shared_library(satellite_type,
-  sources: [satellite_generator, satellite_sources],
-  dependencies: [core_dep, satellite_dep, peary_dep],
-  gnu_symbol_visibility: 'hidden',
-  install: true,
-  install_dir: satellite_libdir,
-  install_rpath: constellation_rpath,
-)
-
-executable('satellite' + satellite_type,
-  sources: [satellite_main],
-  dependencies: [exec_dep],
-  install: true,
-  install_rpath: constellation_rpath,
-)
-
-# Add satellite to build summary:
-satellites_to_build += satellite_type
+satellites_to_build += [[satellite_type, satellite_sources, satellite_dependencies]]
