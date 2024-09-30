@@ -20,8 +20,8 @@ Declare as `[{stage_axis}]` eg: `[x]`,`[y]`,`[z]`,`[r]`. All parameters must be 
 |-----------------|------------------------------------------------------------------------|-----------|-------------------|--------------------------------|
 | `port`          | Serial port name (eg:`"/dev/ttyUSB0"`)                                 | string    | -                 | -                              |
 | `chan`          | Channel number if multiple stages are moved via same serial connection | number    | `0`               | -                              |
-| `velocity`      | Velocity of the stage movement in mm/s                                 | int/float | -                 | max=`5`                        |
-| `acceleration`  | Velocity of the stage movement in mm/s^2                               | int/float | -                 | max=`10`                       |
+| `velocity`      | Velocity of the stage movement in `mm/s`                               | int/float | -                 | max=`20`                       |
+| `acceleration`  | Acceleration of the stage movement in `mm/s^2`                         | int/float | -                 | max=`10`                       |
 | `home_position` | Start Position of all new runs in mm                                   | int/float | -                 | `0` to `290` for linear stages |
 
 [+]Use the given default value if unsure of value
@@ -32,12 +32,13 @@ Declare as `[run]`. All parameters must be defined in config file.
 | Parameter          | Description                            | Type                                   | Default Value [+] | Safety Limit                   |
 |--------------------|----------------------------------------|------- --------------------------------|------------------ |--------------------------------|
 | `active_axes`      | Axes/stages that must be initialised   | list of axis names eg: `["x","y"]`     | -                 | -                              |
-| `pos_{stage_axis}` | move to position                       | single int/float OR three-value vector | `0`               | `0` to `290` for linear stages |
+| `pos_{stage_axis}` | move to position                       | three-vector list  (int/float)         | -                 | `0` to `290` for linear stages |
 
 [+]Use the given default value if unsure of value
 
-* If `pos_{stage_axis}` is a single value, the stage will move to this position, take data and go back home.
-If `pos_{stage_axis}` is a three-vector eg: `[val_1,val_2,val_3]` the stage will move between `val_1` and `val_2` in steps of `val_3`.
+* If `pos_{stage_axis}` is undefined, the stage will move to the home position and take data.
+
+* If `pos_{stage_axis}` is a three-vector eg: `[val_1,val_2,val_3]` the stage will move between `val_1` and `val_2` in steps of `val_3`.
 
 A minimal configuration would be:
 
@@ -74,11 +75,12 @@ home_position = 180
 
 [run]
 active_axes = ["x","y","z","r"]
+time_per_point_s = 3 
 
 # in mm
 pos_x = [10,30,10]
 pos_y = [10,30,10]
-pos_z = [10,30,10]
+pos_z = [10,20,10]
 # in deg
 pos_r = [175,185,10]
 ```
@@ -87,7 +89,7 @@ pos_r = [175,185,10]
 To start the Satellite, run
 
 ``` shell
-SatelliteECTstage
+SatelliteECTstage --group {group_name} --name {instance_name}
 ```
 
 or
