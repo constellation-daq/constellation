@@ -1,26 +1,26 @@
 [x]
-port = "/dev/ttyUSB0"
-chan = 0
-# in mm
-velocity = 2
-acceleration = 10
-home_position = 10
-
-[y]
 port = "/dev/ttyUSB1"
 chan = 0
 # in mm
-velocity = 2
+velocity = 5
 acceleration = 10
-home_position = 10
+home_position = 100
 
-[z]
+[y]
 port = "/dev/ttyUSB2"
 chan = 0
 # in mm
-velocity = 2
+velocity = 5
 acceleration = 10
-home_position = 10
+home_position = 0
+
+[z]
+port = "/dev/ttyUSB0"
+chan = 0
+# in mm
+velocity = 5
+acceleration = 10
+home_position = 20
 
 [r]
 port = "/dev/ttyUSB3"
@@ -34,16 +34,9 @@ active_axes = ["x","y","z","r"]
 time_per_point_s = 3 
 
 # in mm
-# pos_x = [10,30,10]
+#pos_x = [10,30,10]
 #pos_y = [10,30,10]
 #pos_z = [10,20,10]
 # in deg
 #pos_r = [175,185,10]
 
-
-## in mm
-pos_x = 30
-pos_y = 30
-pos_z = 30
-## in deg
-pos_r = 170
