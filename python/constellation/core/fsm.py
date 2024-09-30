@@ -62,9 +62,7 @@ class SatelliteFSM(StateMachine):
 
     # Define transitions
     # - NEW <=> INIT
-    initialize = states.NEW.to(states.initializing) | states.INIT.to(
-        states.initializing
-    )
+    initialize = states.NEW.to(states.initializing) | states.INIT.to(states.initializing)
     initialize |= states.ERROR.to(states.initializing)
 
     initialized = states.initializing.to(states.INIT)
@@ -87,9 +85,7 @@ class SatelliteFSM(StateMachine):
     reconfigured = states.reconfiguring.to(states.ORBIT)
 
     # - safe
-    interrupt = states.ORBIT.to(states.interrupting) | states.RUN.to(
-        states.interrupting
-    )
+    interrupt = states.ORBIT.to(states.interrupting) | states.RUN.to(states.interrupting)
     interrupted = states.interrupting.to(states.SAFE)
 
     recover = states.SAFE.to(states.INIT)
@@ -169,7 +165,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         if not isinstance(request.payload, dict):
             # missing payload
             raise TypeError("Payload must be a dictionary with configuration values")
-        return self._transition("initialize", request, thread=False)
+        return self._transition("initialize", request.payload, thread=False)
 
     @debug_log
     @cscp_requestable
@@ -182,7 +178,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         the FSM.
 
         """
-        return self._transition("launch", request, thread=False)
+        return self._transition("launch", request.payload, thread=False)
 
     @debug_log
     @cscp_requestable
@@ -195,7 +191,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         the FSM.
 
         """
-        return self._transition("land", request, thread=False)
+        return self._transition("land", request.payload, thread=False)
 
     @debug_log
     @cscp_requestable
@@ -211,7 +207,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         if not isinstance(request.payload, str):
             # missing/wrong payload
             raise TypeError("Payload must be a run identification string")
-        return self._transition("start", request, thread=True)
+        return self._transition("start", request.payload, thread=True)
 
     @debug_log
     @cscp_requestable
@@ -228,7 +224,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         # the acquisition thread (which does not stop on its own). If
         # thread=True then it would be added as another worker thread and
         # potentially never started.
-        return self._transition("stop", request, thread=False)
+        return self._transition("stop", request.payload, thread=False)
 
     @debug_log
     @cscp_requestable
@@ -242,13 +238,11 @@ class SatelliteStateHandler(BaseSatelliteFrame):
 
         """
         if not hasattr(self, "do_reconfigure"):
-            raise NotImplementedError(
-                "Reconfigure not supported: missing function 'do_reconfigure'"
-            )
+            raise NotImplementedError("Reconfigure not supported: missing function 'do_reconfigure'")
         if not isinstance(request.payload, dict):
             # missing payload
             raise TypeError("Payload must be a dictionary with configuration values")
-        return self._transition("reconfigure", request, thread=False)
+        return self._transition("reconfigure", request.payload, thread=False)
 
     @debug_log
     @cscp_requestable
@@ -261,7 +255,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         the FSM.
 
         """
-        return self._transition("interrupt", request, thread=False)
+        return self._transition("interrupt", request.payload, thread=False)
 
     @debug_log
     @cscp_requestable
@@ -274,7 +268,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         the FSM.
 
         """
-        return self._transition("recover", request, thread=False)
+        return self._transition("recover", request.payload, thread=False)
 
     @debug_log
     @cscp_requestable
@@ -287,11 +281,9 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         normal operation.
 
         """
-        return self._transition("failure", request, thread=False)
+        return self._transition("failure", request.payload, thread=False)
 
-    def _transition(
-        self, target: str, request: CSCPMessage, thread: bool
-    ) -> Tuple[str, str, None]:
+    def _transition(self, target: str, payload: Any, thread: bool) -> Tuple[str, str, None]:
         """Prepare and enqeue a transition task.
 
         The task consists of the respective transition method and the request
@@ -314,14 +306,10 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         # add to the task queue to run from the main thread
         if thread:
             # task will be run in a separate thread
-            self.task_queue.put(
-                (self._start_transition_thread, [transit_fcn, request.payload])
-            )
+            self.task_queue.put((self._start_transition_thread, [transit_fcn, payload]))
         else:
             # task will be executed within the main satellite thread
-            self.task_queue.put(
-                (self._start_transition, [transit_fcn, request.payload])
-            )
+            self.task_queue.put((self._start_transition, [transit_fcn, payload]))
         return "transitioning", target, None
 
     @debug_log
@@ -335,9 +323,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
             prev = self.fsm.current_state_value.name
             self.fsm.complete(res)
             now = self.fsm.current_state_value.name
-            self.log.info(
-                f"State transition to steady state completed ({prev} -> {now})."
-            )
+            self.log.info(f"State transition to steady state completed ({prev} -> {now}).")
         except TransitionNotAllowed:
             if self.fsm.current_state_value != SatelliteState.ERROR:
                 # no need to do more than set the status, we are in a steady
@@ -363,9 +349,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         if not res:
             res = "Transition completed!"
         # assert for mypy static type analysis
-        assert isinstance(
-            self._state_thread_evt, Event
-        ), "Thread transition Event not set up correctly"
+        assert isinstance(self._state_thread_evt, Event), "Thread transition Event not set up correctly"
         if self._state_thread_evt.is_set():
             # Cancelled; do not advance state. This handles stopping RUN state
             # and avoids premature progression out of STOPPING
@@ -378,9 +362,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
             prev = self.fsm.current_state_value.name
             self.fsm.complete(res)
             now = self.fsm.current_state_value.name
-            self.log.info(
-                f"State transition to steady state completed ({prev} -> {now})."
-            )
+            self.log.info(f"State transition to steady state completed ({prev} -> {now}).")
         except TransitionNotAllowed:
             if self.fsm.current_state_value != SatelliteState.ERROR:
                 # no need to do more than set the status, we are in a steady
@@ -388,9 +370,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
                 self.fsm.status = res
 
     @cscp_requestable
-    def get_state(
-        self, _request: CSCPMessage | None = None
-    ) -> Tuple[str, int, dict[str, Any]]:
+    def get_state(self, _request: CSCPMessage | None = None) -> Tuple[str, int, dict[str, Any]]:
         """Return the current state of the Satellite.
 
         No payload argument.
