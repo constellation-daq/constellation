@@ -1,42 +1,46 @@
 [x]
-port = "/dev/ttyUSB1"
-chan = 0
-# in mm
-velocity = 5
-acceleration = 10
-home_position = 100
-
-[y]
-port = "/dev/ttyUSB2"
-chan = 0
-# in mm
-velocity = 5
-acceleration = 10
-home_position = 0
-
-[z]
 port = "/dev/ttyUSB0"
 chan = 0
 # in mm
 velocity = 5
 acceleration = 10
-home_position = 20
+start_position = 15
+
+[y]
+port = "/dev/ttyUSB1"
+chan = 0
+# in mm
+velocity = 5
+acceleration = 10
+start_position = 15
+
+[z]
+port = "/dev/ttyUSB2"
+chan = 0
+# in mm
+velocity = 5
+acceleration = 10
+start_position = 15
 
 [r]
 port = "/dev/ttyUSB3"
 chan = 0
 # in deg
-home_position = 180
+start_position = 180
 
 [run]
 active_axes = ["x","y","z","r"]
-# active_axes = ["x","y","z","r"]
-time_per_point_s = 3 
+
+# wait time at each point (measurement window)
+stop_time_per_point_s = 3 
+# stage position sending frequency (in seconds) to data writer
+time_frequency_s = 1e-3
+
 
 # in mm
-#pos_x = [10,30,10]
-#pos_y = [10,30,10]
+pos_x = [10,30,10]
+pos_y = [10,30,10]
 #pos_z = [10,20,10]
 # in deg
-#pos_r = [175,185,10]
+pos_r = [175,185,10]
 
