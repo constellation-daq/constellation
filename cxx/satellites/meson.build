@@ -6,6 +6,7 @@ satellites_to_build = []
 
 # Subdirs with satellites
 subdir('DevNullReceiver')
+subdir('Katherine')
 subdir('RandomTransmitter')
 subdir('Sputnik')
 
