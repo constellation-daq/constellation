@@ -83,7 +83,7 @@ class H5DataWriter(DataReceiver):
                 item.name,
             )
 
-        title = f"data_{self.run_identifier}_{item.sequence_number}"
+        title = f"data_{self.run_identifier}_{item.sequence_number:09}"
 
         if isinstance(item.payload, bytes):
             # interpret bytes as array of uint8 if nothing else was specified in the meta
