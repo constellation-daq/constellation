@@ -21,7 +21,7 @@ SPDX-License-Identifier = "GPL-3.0-or-later"
 path = [
   "cxx/listeners/Observatory/Observatory.qrc",
   "cxx/listeners/Observatory/Observatory.ui",
-  "cxx/listeners/Observatory/LogDialog.ui"
+  "cxx/listeners/Observatory/LogDialog.ui",
 ]
 SPDX-FileCopyrightText = "DESY and the Constellation authors"
 SPDX-License-Identifier = "EUPL-1.2"
