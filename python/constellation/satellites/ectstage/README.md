@@ -41,7 +41,7 @@ Declare as `[run]`. All parameters must be defined in config file.
 | `active_axes`           | Axes/stages that must be initialised         | list of axis names eg: `["x","y"]`     | -                 | -                              |
 | `pos_{stage_axis}`      | move to position                             | three-vector list  (int/float)         | -                 | `0` to `290` for linear stages |
 | `stop_time_per_point_s` | wait time at each point (measurement window) in `s` | float                           | -                 | -                              |
-| `time_frequency_s`      | stage position sending frequency (in seconds) to data writer in `s`| float            | -                 | -                              |
+| `readout_freq_s`        | stage position sending frequency (in seconds) to data writer in `s`| float            | -                 | -                              |
 
 [+]Use the given default value if unsure of value
 
@@ -88,7 +88,7 @@ start_position = 180
 [run]
 active_axes = ["x","y","z","r"]
 stop_time_per_point_s = 3
-time_frequency_s = 1e-3
+readout_freq_s = 1e-3
 
 # in mm
 pos_x = [10,30,10]

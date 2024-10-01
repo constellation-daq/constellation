@@ -235,7 +235,7 @@ class ECTstage(DataSender):
             self.log.info("Run has been interrupted")
         
         #while not self._state_thread_evt.is_set():
-        #    time.sleep(self.conf["run"]["time_frequency_s"])
+        #    time.sleep(self.conf["run"]["readout_freq_s"])
 
         bg_event.set()
         bg_thread.join()
@@ -496,7 +496,7 @@ class ECTstage(DataSender):
         """
         while self._stage_moving(stage):
             if not self._state_thread_evt.is_set():
-                time.sleep(self.conf["run"]["time_frequency_s"])
+                time.sleep(self.conf["run"]["readout_freq_s"])
             else:
                 self._stage_stop(stage)
                 break
@@ -528,7 +528,7 @@ class ECTstage(DataSender):
         for axis in self.conf["run"]["active_axes"]:
             stage = self._stage_select(axis)
             while self._stage_moving(stage):
-                time.sleep(self.conf["run"]["time_frequency_s"])
+                time.sleep(self.conf["run"]["readout_freq_s"])
     
     def _get_stage_info(self,axis):
         """

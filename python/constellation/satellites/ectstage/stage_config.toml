@@ -34,7 +34,7 @@ active_axes = ["x","y","z","r"]
 # wait time at each point (measurement window)
 stop_time_per_point_s = 3 
 # stage position sending frequency (in seconds) to data writer
-time_frequency_s = 1e-3
+readout_freq_s = 1e-3
 
 
 # in mm
