@@ -15,8 +15,8 @@ import uuid
 from typing import Any
 from functools import partial
 
-from PyQt5.QtCore import QSize, QTimer, Qt
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import QSize, QTimer, Qt
+from PyQt6.QtWidgets import (
     QApplication,
     QPushButton,
     QHBoxLayout,
@@ -80,7 +80,7 @@ class MinimalistGUIController(QMainWindow):
         self.run_sequence = 0
 
         # set up main control buttons
-        pixmapi = QStyle.SP_MediaStop
+        pixmapi = QStyle.StandardPixmap.SP_MediaStop
         icon = self.style().standardIcon(pixmapi)
 
         self.stopBtn = QPushButton(icon=icon, text="Stop", parent=self)
@@ -90,7 +90,7 @@ class MinimalistGUIController(QMainWindow):
 
         self.stopBtn.clicked.connect(self.onStopBtnClicked)
 
-        pixmapi = QStyle.SP_DialogApplyButton
+        pixmapi = QStyle.StandardPixmap.SP_DialogApplyButton
         icon = self.style().standardIcon(pixmapi)
 
         self.configBtn = QPushButton(icon=icon, text="Configure", parent=self)
@@ -98,7 +98,7 @@ class MinimalistGUIController(QMainWindow):
         self.configBtn.setFixedWidth(150)
         self.configBtn.setStyleSheet(f"background-color:{self.default_background}")
         self.configBtn.clicked.connect(self.onConfigBtnClicked)
-        pixmapi = QStyle.SP_MediaPlay
+        pixmapi = QStyle.StandardPixmap.SP_MediaPlay
         icon = self.style().standardIcon(pixmapi)
 
         self.startBtn = QPushButton(icon=icon, text="Start", parent=self)
@@ -114,7 +114,7 @@ class MinimalistGUIController(QMainWindow):
         self.updateCfgMenu()
         self.selectCfgBtn.setMenu(self.cfgMenu)
 
-        pixmapi = QStyle.SP_DialogOpenButton
+        pixmapi = QStyle.StandardPixmap.SP_DialogOpenButton
         icon = self.style().standardIcon(pixmapi)
 
         self.configDirSelectBtn = QPushButton(
@@ -153,7 +153,7 @@ class MinimalistGUIController(QMainWindow):
         state = ctrl.state
         self.state.setText(state.name)
         self.state.setStyleSheet(self.state_style_map[state])
-        self.state.setAlignment(Qt.AlignCenter)
+        self.state.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.lcd = QLCDNumber()
         self.lcd.setDigitCount(2)
@@ -212,7 +212,7 @@ class MinimalistGUIController(QMainWindow):
             self,
             "Select Configuration Directory",
             self.cfg_dir,
-            QFileDialog.ShowDirsOnly,
+            QFileDialog.Option.ShowDirsOnly,
         )
         self.updateCfgMenu()
 
@@ -258,10 +258,12 @@ class MinimalistGUIController(QMainWindow):
                 "No configuration file has been loaded yet. "
                 "Do you want to continue with an empty configuration?"
             )
-            dlg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-            dlg.setIcon(QMessageBox.Warning)
+            dlg.setStandardButtons(
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            dlg.setIcon(QMessageBox.Icon.Warning)
             button = dlg.exec()
-            if button == QMessageBox.No:
+            if button == QMessageBox.StandardButton.No:
                 return
         sat_states = self.ctrl.states
         for sat, state in sat_states.items():
