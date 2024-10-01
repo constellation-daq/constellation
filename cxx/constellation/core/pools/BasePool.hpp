@@ -80,6 +80,11 @@ namespace constellation::pools {
          */
         std::size_t pollerEvents() { return poller_events_.load(); }
 
+        /**
+         * @brief Return the number of currently connected sockets
+         */
+        std::size_t countSockets();
+
     protected:
         /**
          * @brief Method to select which services to connect to. By default this pool connects to all discovered services,
@@ -111,7 +116,7 @@ namespace constellation::pools {
          *
          * @return Maps that maps the discovered service to the corresponding ZeroMQ sockets
          */
-        const std::map<chirp::DiscoveredService, zmq::socket_t>& get_sockets() const { return sockets_; }
+        std::map<chirp::DiscoveredService, zmq::socket_t>& get_sockets() { return sockets_; }
 
     protected:
         std::mutex sockets_mutex_; // NOLINT(*-non-private-member-variables-in-classes)
