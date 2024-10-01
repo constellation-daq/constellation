@@ -69,9 +69,7 @@ class SatelliteCommLink(SatelliteClassCommLink):
         """Convert to canonical name."""
         return f"{self._class_name}.{self._name}"
 
-    def _repr_pretty_(
-        self, p: Any, cycle: bool
-    ) -> None:  # p is a pretty printer from IPython
+    def _repr_pretty_(self, p: Any, cycle: bool) -> None:  # p is a pretty printer from IPython
         if cycle:
             # this is not a container, so this should not happen!
             pass
@@ -85,9 +83,7 @@ class SatelliteArray:
     def __init__(
         self,
         group: str,
-        handler: Callable[
-            [str, str, str, Any], Tuple[str, Any, Optional[dict[str, Any]]]
-        ],
+        handler: Callable[[str, str, str, Any], Tuple[str, Any, Optional[dict[str, Any]]]],
     ):
         self.group = group
         self._handler = handler
@@ -117,9 +113,7 @@ class SatelliteArray:
         setattr(self, name, cl)
         return cl
 
-    def _add_satellite(
-        self, name: str, cls: str, commands: dict[str, str]
-    ) -> SatelliteCommLink:
+    def _add_satellite(self, name: str, cls: str, commands: dict[str, str]) -> SatelliteCommLink:
         """Add a new Satellite."""
         try:
             cl: SatelliteClassCommLink = getattr(self, cls)
@@ -150,9 +144,7 @@ class SatelliteArray:
     def _add_cmds(
         self,
         obj: Any,
-        handler: Callable[
-            [str, str, str, Any], Tuple[str, Any, Optional[dict[str, Any]]]
-        ],
+        handler: Callable[[str, str, str, Any], Tuple[str, Any, Optional[dict[str, Any]]]],
         cmds: dict[str, str],
     ) -> None:
         try:
@@ -194,9 +186,7 @@ class CommandWrapper:
 
     def __init__(
         self,
-        handler: Callable[
-            [str, str, str, Any], Tuple[str, Any, Optional[dict[str, Any]]]
-        ],
+        handler: Callable[[str, str, str, Any], Tuple[str, Any, Optional[dict[str, Any]]]],
         sat: str,
         satcls: str,
         cmd: str,
@@ -268,7 +258,7 @@ class SatelliteResponse:
                         p.pretty(item)
 
 
-class BaseController(CHIRPBroadcaster):
+class BaseController(CHIRPBroadcaster, HeartbeatChecker):
     """Simple controller class to send commands to a Constellation."""
 
     def __init__(self, group: str, **kwargs: Any) -> None:
@@ -290,14 +280,12 @@ class BaseController(CHIRPBroadcaster):
         super()._add_com_thread()
         super()._start_com_threads()
 
-        self._hb_checker = HeartbeatChecker(self._hb_failure)
-        self._hb_checker.auto_recover = True
+        # auto-recover for heartbeats
+        self.auto_recover = True
 
         # set up thread to handle incoming tasks (e.g. CHIRP discoveries)
         self._task_handler_event = threading.Event()
-        self._task_handler_thread = threading.Thread(
-            target=self._run_task_handler, daemon=True
-        )
+        self._task_handler_thread = threading.Thread(target=self._run_task_handler, daemon=True)
         self._task_handler_thread.start()
 
         # wait for threads to be ready
@@ -316,7 +304,7 @@ class BaseController(CHIRPBroadcaster):
         Based on heartbeat information.
 
         """
-        return self._hb_checker.states
+        return self.heartbeat_states
 
     @property
     def state(self) -> ControllerState:
@@ -374,14 +362,10 @@ class BaseController(CHIRPBroadcaster):
         for state in SatelliteState:
             sats = [sat for sat, stat in self.states.items() if stat == state]
             if sats:
-                res.append(
-                    f"{len(sats)} Satellite{'s are' if len(sats) > 1 else ' is'} in {state.name}"
-                )
+                res.append(f"{len(sats)} Satellite{'s are' if len(sats) > 1 else ' is'} in {state.name}")
         if len(self.states) != len(self.constellation.satellites):
             miss = len(self.constellation.satellites) - len(self.states)
-            res.append(
-                f"{miss} connected Satellite{'s are' if len(sats) > 1 else ' is'} missing heartbeat information"
-            )
+            res.append(f"{miss} connected Satellite{'s are' if len(sats) > 1 else ' is'} missing heartbeat information")
         prefix = f"{len(self.constellation.satellites)} connected: "
         if len(res) == 1:
             return prefix + "All " + res[0]
@@ -410,14 +394,11 @@ class BaseController(CHIRPBroadcaster):
         uuid = str(service.host_uuid)
         if uuid in self._transmitters:
             # we are controlling this satellite
-            cls, name = self._uuid_lookup[uuid]
-            canonical_name = f"{cls}.{name}"
-            if not self._hb_checker.is_registered(canonical_name):
-                self._hb_checker.register(
-                    name=canonical_name,
+            if not self.heartbeat_host_is_registered(service.host_uuid):
+                self.register_heartbeat_host(
+                    host=service.host_uuid,
                     address=f"tcp://{service.address}:{service.port}",
                 )
-                self._hb_checker.start(canonical_name)
 
     def _add_satellite(self, service: DiscoveredService) -> None:
         self.log.debug("Adding Satellite %s", service)
@@ -464,14 +445,12 @@ class BaseController(CHIRPBroadcaster):
             # check if heartbeat service for satellite is known already
             for hbservice in self.get_discovered(CHIRPServiceIdentifier.HEARTBEAT):
                 if hbservice.host_uuid == service.host_uuid:
-                    canonical_name = f"{cls}.{name}"
-                    if self._hb_checker.is_registered(canonical_name):
-                        self._hb_checker.unregister(canonical_name)
-                    self._hb_checker.register(
-                        name=canonical_name,
+                    if self.heartbeat_host_is_registered(service.host_uuid):
+                        self.unregister_heartbeat_host(service.host_uuid)
+                    self.register_heartbeat_host(
+                        host=service.host_uuid,
                         address=f"tcp://{hbservice.address}:{hbservice.port}",
                     )
-                    self._hb_checker.start(canonical_name)
                     break
         except RuntimeError as e:
             self.log.error("Could not add Satellite %s: %s", service.host_uuid, repr(e))
@@ -503,23 +482,15 @@ class BaseController(CHIRPBroadcaster):
         """Callback for Satellites failing to send heartbeats."""
         self.log.critical("%s has entered %s", name, state.name)
 
-    def command(
-        self, payload: Any = None, sat: str = "", satcls: str = "", cmd: str = ""
-    ) -> Any:
+    def command(self, payload: Any = None, sat: str = "", satcls: str = "", cmd: str = "") -> Any:
         """Wrapper for _command_satellite function. Handle sending commands to all hosts"""
         targets = []
         # figure out whether to send command to Satellite, Class or whole Constellation
         if not sat and not satcls:
             targets = [sat for sat in self._constellation.satellites.values()]
-            self.log.debug(
-                "Sending %s to all %s connected Satellites.", cmd, len(targets)
-            )
+            self.log.debug("Sending %s to all %s connected Satellites.", cmd, len(targets))
         elif not sat:
-            targets = [
-                sat
-                for sat in self._constellation.satellites.values()
-                if sat._class_name == satcls
-            ]
+            targets = [sat for sat in self._constellation.satellites.values() if sat._class_name == satcls]
             self.log.debug(
                 "Sending %s to all %s connected Satellites of class %s.",
                 cmd,
@@ -599,9 +570,7 @@ class BaseController(CHIRPBroadcaster):
                 # have a nested dict
                 cls, name = self._uuid_lookup[uuid]
                 cfg = flatten_config(payload, cls, name)
-                self.log.debug(
-                    "Flattening and sending configuration for %s.%s", cls, name
-                )
+                self.log.debug("Flattening and sending configuration for %s.%s", cls, name)
                 return cfg
         return payload
 
@@ -633,22 +602,13 @@ class BaseController(CHIRPBroadcaster):
             # ignore errors; this avoids spurious error messages if e.g. the
             # initialization of the class fails
             pass
-        try:
-            self._hb_checker.stop()
-            self._hb_checker.close()
-        except Exception as e:
-            self.log.warning(
-                "Encountered problem shutting heartbeat checker down: %s", repr(e)
-            )
         if getattr(self, "_task_handler_event", None):
             self._task_handler_thread.join()
         super().reentry()
 
     def _repr_pretty_(self, p: Any, cycle: bool) -> None:
         nsat = len(self.constellation.satellites)
-        p.text(
-            f"Controller(group='{self.group}') for {nsat} Satellites, current state is {self.state.name}"
-        )
+        p.text(f"Controller(group='{self.group}') for {nsat} Satellites, current state is {self.state.name}")
 
 
 def main(args: Any = None) -> None:
@@ -663,9 +623,7 @@ def main(args: Any = None) -> None:
     from IPython.terminal.embed import InteractiveShellEmbed
 
     parser = ConstellationArgumentParser(description=main.__doc__, epilog=EPILOG)
-    parser.add_argument(
-        "-c", "--config", type=str, help="Path to the TOML configuration file to load."
-    )
+    parser.add_argument("-c", "--config", type=str, help="Path to the TOML configuration file to load.")
     # set the default arguments
     parser.set_defaults(name="controller")
     # get a dict of the parsed arguments
@@ -684,9 +642,7 @@ def main(args: Any = None) -> None:
     constellation = ctrl.constellation  # noqa
 
     print("\nWelcome to the Constellation CLI IPython Controller!\n")
-    print(
-        "You can interact with the discovered Satellites via the `constellation` array:"
-    )
+    print("You can interact with the discovered Satellites via the `constellation` array:")
     print("         > constellation.get_state()\n")
     print("To get help for any of its methods, call it with a question mark:")
     print("         > constellation.get_state?\n")
@@ -726,8 +682,7 @@ def main(args: Any = None) -> None:
                 (
                     (
                         Token.Prompt
-                        if self.shell.last_execution_succeeded
-                        and ctrl.state not in [ControllerState.ERROR]
+                        if self.shell.last_execution_succeeded and ctrl.state not in [ControllerState.ERROR]
                         else Token.Generic.Error
                     ),
                     f"{ctrl.group} ❯ ",
