@@ -1,7 +1,7 @@
 ---
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC-BY-4.0 OR EUPL-1.2
-title: "Red Pitaya Satellites for CLABDAQ2"
+title: "Red Pitaya Satellites for RpDaq"
 description: "Satellites running (custom) FPGA firmware on RedPityas"
 ---
 

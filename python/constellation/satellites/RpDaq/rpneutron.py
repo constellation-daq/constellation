@@ -9,7 +9,6 @@ RedPitaya device.
 """
 
 import mmap
-import os
 import numpy as np
 from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
 from constellation.core.satellite import SatelliteArgumentParser
@@ -152,7 +151,6 @@ def main(args=None):
     )
     # this sets the defaults for our Satellite
     parser.set_defaults(
-        name=str(os.uname().nodename),
         cmd_port=23999,
         mon_port=55556,
         hb_port=61234,

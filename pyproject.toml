@@ -48,10 +48,8 @@ SatelliteKeithley = "constellation.satellites.Keithley.Keithley:main"
 SatelliteMariner = "constellation.satellites.Mariner.Mariner:main"
 SatelliteCaenHV = "constellation.satellites.CaenHV.CaenHV:main"
 SatelliteH5DataWriter = "constellation.satellites.H5DataWriter.H5DataWriter:main"
-ExampleSatellite = "constellation.satellites.example.example:main"
-SatelliteCaenHv = "constellation.satellites.caenhv.caenhv:main"
-SatelliteRPNeutron = "constellation.satellites.clabdaq2.rpneutron:main"
-SatelliteRPGamma = "constellation.satellites.clabdaq2.rpgamma:main"
+SatelliteRPNeutron = "constellation.satellites.RpDaq.rpneutron:main"
+SatelliteRPGamma = "constellation.satellites.RpDaq.rpgamma:main"
 
 [project.urls]
 Homepage = "https://constellation.pages.desy.de/"

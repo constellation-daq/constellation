@@ -68,8 +68,7 @@ class RedPitayaSatellite(DataSender):
         try:
 
             self.cpu_temperature_offset_file_reader = open(
-                "/sys/devices/soc0/axi/83c00000.xadc_wiz/"
-                "iio:device1/in_temp0_offset",
+                "/sys/devices/soc0/axi/83c00000.xadc_wiz/" "iio:device1/in_temp0_offset",
                 "r",
             )
             self.cpu_temperature_raw_file_reader = open(
@@ -82,12 +81,8 @@ class RedPitayaSatellite(DataSender):
             )
             self.cpu_times_file_reader = open("/proc/stat", "r")
             self.memor_load_file_reader = open("/proc/meminfo", "r")
-            self.network_tx_file_reader = open(
-                "/sys/class/net/eth0/statistics/tx_bytes", "r"
-            )
-            self.network_rx_file_reader = open(
-                "/sys/class/net/eth0/statistics/rx_bytes", "r"
-            )
+            self.network_tx_file_reader = open("/sys/class/net/eth0/statistics/tx_bytes", "r")
+            self.network_rx_file_reader = open("/sys/class/net/eth0/statistics/rx_bytes", "r")
         except FileNotFoundError:
             self.log.warning("Failed to find path of monitoring files")
 
@@ -149,21 +144,15 @@ class RedPitayaSatellite(DataSender):
                 mmap.PROT_READ | mmap.PROT_WRITE,
                 offset=0x40600000,
             )
-            axi_numpy_array_reset = np.recarray(
-                1, axi_regset_data_type, buf=axi_mmap_custom_registers
-            )
+            axi_numpy_array_reset = np.recarray(1, axi_regset_data_type, buf=axi_mmap_custom_registers)
             self.data_type_axi_array_contents = axi_numpy_array_reset[0]
 
             # Setting configuration values to FPGA registers
-            axi_numpy_array_config = np.recarray(
-                1, self.axi_regset_config, buf=axi_mmap_custom_registers
-            )
+            axi_numpy_array_config = np.recarray(1, self.axi_regset_config, buf=axi_mmap_custom_registers)
             self.config_axi_array_contents = axi_numpy_array_config[0]
 
             # Define the axi array for parameters and status
-            axi_numpy_array_param = np.recarray(
-                1, self.regset_readout, buf=axi_mmap_custom_registers
-            )
+            axi_numpy_array_param = np.recarray(1, self.regset_readout, buf=axi_mmap_custom_registers)
             self.axi_array_contents_param = axi_numpy_array_param[0]
             time.sleep(0.1)
             # Writes FPGA configurations to register
@@ -216,9 +205,7 @@ class RedPitayaSatellite(DataSender):
                 mmap.PROT_READ | mmap.PROT_WRITE,
                 offset=0x40100000,
             )
-            axi_writer_numpy_array0 = np.recarray(
-                1, self.axi_writer_register_names, buf=axi_writer_mmap0
-            )
+            axi_writer_numpy_array0 = np.recarray(1, self.axi_writer_register_names, buf=axi_writer_mmap0)
             time.sleep(0.1)
             self.axi_writer_contents0 = axi_writer_numpy_array0[0]
             self.axi_writer_contents0.lower_address_0 = 0x1000000
@@ -237,9 +224,7 @@ class RedPitayaSatellite(DataSender):
                     mmap.PROT_READ | mmap.PROT_WRITE,
                     offset=0x40200000,
                 )
-                axi_writer_numpy_array2 = np.recarray(
-                    1, self.axi_writer_register_names, buf=axi_writer_mmap2
-                )
+                axi_writer_numpy_array2 = np.recarray(1, self.axi_writer_register_names, buf=axi_writer_mmap2)
                 axi_writer_contents2 = axi_writer_numpy_array2[0]
                 axi_writer_contents2.lower_address_0 = 0x1100000
                 axi_writer_contents2.upper_address_0 = 0x117FFF8
@@ -294,9 +279,7 @@ class RedPitayaSatellite(DataSender):
                     mmap.PROT_READ | mmap.PROT_WRITE,
                     offset=0x40000000,
                 )
-                axi_numpy_array_gpio = np.recarray(
-                    1, axi_gpio_regset_pins, buf=axi_mmap_gpio
-                )
+                axi_numpy_array_gpio = np.recarray(1, axi_gpio_regset_pins, buf=axi_mmap_gpio)
                 self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
 
                 self.schedule_metric(
@@ -391,9 +374,7 @@ class RedPitayaSatellite(DataSender):
 
     def reset(self):
         """Reset DAQ."""
-        self.data_type_axi_array_contents.data_type = self.config["data_type"] | (
-            1 << 4
-        )
+        self.data_type_axi_array_contents.data_type = self.config["data_type"] | (1 << 4)
         time.sleep(0.1)
         self.data_type_axi_array_contents.data_type = self.config["data_type"]
         self._readpos = 0
@@ -449,16 +430,11 @@ class RedPitayaSatellite(DataSender):
         # Check if the amount of data is greater than 10000 if 2 second has passed since last read,
         # otherwise wait 0.01 s and retry. This to not send excessive amount of packages.
         if cycled:
-            if (self._writepos + BUFFER_SIZE) < (
-                self._readpos + 10000
-            ) and time.time() - self.sample_time < 2:
+            if (self._writepos + BUFFER_SIZE) < (self._readpos + 10000) and time.time() - self.sample_time < 2:
                 time.sleep(0.01)
                 return None
         else:
-            if (
-                self._writepos < (self._readpos + 10000)
-                and time.time() - self.sample_time < 2
-            ):
+            if self._writepos < (self._readpos + 10000) and time.time() - self.sample_time < 2:
                 time.sleep(0.01)
                 return None
 
@@ -473,27 +449,19 @@ class RedPitayaSatellite(DataSender):
                             stop=BUFFER_SIZE,
                             channel=channel,
                         ),
-                        self._sample_axi_raw32(
-                            start=0, stop=self._writepos, channel=channel
-                        ),
+                        self._sample_axi_raw32(start=0, stop=self._writepos, channel=channel),
                     )
                 )
             else:
-                buffer = self._sample_axi_raw32(
-                    start=self._readpos, stop=self._writepos, channel=channel
-                )
+                buffer = self._sample_axi_raw32(start=self._readpos, stop=self._writepos, channel=channel)
 
             if i == 0:
-                data = np.empty(
-                    (len(self.active_channels), len(buffer)), dtype=np.uint32
-                )
+                data = np.empty((len(self.active_channels), len(buffer)), dtype=np.uint32)
 
             data[i] = buffer
 
         if (self.data_type >> 0) & 1 == 1:
-            self.data_type_axi_array_contents.data_type = (
-                self.data_type | (1 << 5) | (1 << 6)
-            )
+            self.data_type_axi_array_contents.data_type = self.data_type | (1 << 5) | (1 << 6)
             time.sleep(0.01)
             self.data_type_axi_array_contents.data_type = self.data_type | (1 << 5)
 
@@ -578,9 +546,7 @@ class RedPitayaSatellite(DataSender):
     def _get_axi_write_pointer(self):
         """Obtain _axi_write pointer"""
 
-        write_pointer = int(
-            (self.axi_writer_contents0.current_write_pointer - 0x1000000) / 4
-        )
+        write_pointer = int((self.axi_writer_contents0.current_write_pointer - 0x1000000) / 4)
         if write_pointer < 0 or 131072 < write_pointer:
             # To take care of negative number in initialization
             write_pointer = 0

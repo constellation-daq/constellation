@@ -59,10 +59,7 @@ class Expand11:
 
     def set_pin_direction(self, direction, pin_mask):
         """Set the direction of specific pins."""
-        if (
-            pin_mask > self.EXPAND11_ALL_PINS_MASK
-            or direction > self.EXPAND11_INPUT_DIRECTION
-        ):
+        if pin_mask > self.EXPAND11_ALL_PINS_MASK or direction > self.EXPAND11_INPUT_DIRECTION:
             return self.EXPAND11_ERROR
 
         config = self.read_register(self.EXPAND11_REG_CONFIG)
@@ -79,12 +76,8 @@ class Expand11:
     def default_cfg(self):
         # Implement the default configuration,
         try:
-            self.write_register(
-                self.EXPAND11_REG_CONFIG, self.EXPAND11_ALL_PINS_MASK
-            )  # Setting all pins to input
-            self.set_pin_polarity(
-                self.EXPAND11_POLARITY_INV, self.EXPAND11_ALL_PINS_MASK
-            )  # Setting inverted polarity
+            self.write_register(self.EXPAND11_REG_CONFIG, self.EXPAND11_ALL_PINS_MASK)  # Setting all pins to input
+            self.set_pin_polarity(self.EXPAND11_POLARITY_INV, self.EXPAND11_ALL_PINS_MASK)  # Setting inverted polarity
             self.enable_pull_up()  # Activating Pull-up
             return self.EXPAND11_OK
         except FileNotFoundError:
@@ -97,20 +90,13 @@ class Expand11:
             return self.EXPAND11_ERROR
 
         if direction == self.EXPAND11_OUTPUT_DIRECTION:
-            return self.write_register(
-                self.EXPAND11_REG_CONFIG, self.EXPAND11_NO_PIN_MASK
-            )
+            return self.write_register(self.EXPAND11_REG_CONFIG, self.EXPAND11_NO_PIN_MASK)
         else:
-            return self.write_register(
-                self.EXPAND11_REG_CONFIG, self.EXPAND11_ALL_PINS_MASK
-            )
+            return self.write_register(self.EXPAND11_REG_CONFIG, self.EXPAND11_ALL_PINS_MASK)
 
     def set_pin_polarity(self, polarity, pin_mask):
         """Set the polarity of specific pins."""
-        if (
-            pin_mask > self.EXPAND11_ALL_PINS_MASK
-            or polarity > self.EXPAND11_POLARITY_INV
-        ):
+        if pin_mask > self.EXPAND11_ALL_PINS_MASK or polarity > self.EXPAND11_POLARITY_INV:
             return self.EXPAND11_ERROR
 
         config = self.read_register(self.EXPAND11_REG_POLARITY_INV)
@@ -151,9 +137,7 @@ class Expand11:
             return self.EXPAND11_ERROR
 
         if p3_func:
-            config |= (
-                self.EXPAND11_SPECIAL_FUNC_P3_AS_INT
-            )  # Assuming 3rd bit for P3_FUNC_INT
+            config |= self.EXPAND11_SPECIAL_FUNC_P3_AS_INT  # Assuming 3rd bit for P3_FUNC_INT
         else:
             config &= ~self.EXPAND11_SPECIAL_FUNC_P3_AS_INT  # Clear the 3rd bit
 
@@ -165,9 +149,7 @@ class Expand11:
         if config == self.EXPAND11_ERROR:
             return self.EXPAND11_ERROR
         print(config)
-        config |= (
-            self.EXPAND11_SPECIAL_FUNC_PU_DISABLED
-        )  # Assuming 4th bit for PULL_UP_DISABLE
+        config |= self.EXPAND11_SPECIAL_FUNC_PU_DISABLED  # Assuming 4th bit for PULL_UP_DISABLE
         print(config)
         return self.write_register(self.EXPAND11_REG_SPECIAL_FUNC, config)
 
