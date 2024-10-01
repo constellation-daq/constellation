@@ -46,8 +46,6 @@ axi_gpio_regset_pins = np.dtype(
 )
 
 
-RP_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2, rp.RP_CH_3, rp.RP_CH_4]
-
 METRICS_PERIOD = 60.0
 
 
@@ -64,7 +62,8 @@ class RedPitayaSatellite(DataSender):
         self._writepos = 0
         self.sample_time = 0
         self.data_type = 0
-
+        self.memory_file_handle = os.open("/dev/mem", os.O_RDWR | os.O_SYNC)
+        rp.rp_Init()
         # Define file readers for monitoring from file
         try:
 
@@ -97,7 +96,6 @@ class RedPitayaSatellite(DataSender):
         self._prev_tx = int(self.network_tx_file_reader.read())
         self._prev_rx = int(self.network_rx_file_reader.read())
         self.regset_readout = None
-        self.active_channels = RP_CHANNELS
         self.device = None
         self.schedule_metric(
             self.get_cpu_temperature.__name__,
@@ -125,22 +123,9 @@ class RedPitayaSatellite(DataSender):
             interval=METRICS_PERIOD,
         )
 
-        # Define the axi array for GPIO pins
-        self.memory_file_handle = os.open("/dev/mem", os.O_RDWR | os.O_SYNC)
-
-        axi_mmap_gpio = mmap.mmap(
-            self.memory_file_handle,
-            mmap.PAGESIZE,
-            mmap.MAP_SHARED,
-            mmap.PROT_READ | mmap.PROT_WRITE,
-            offset=0x40000000,
-        )
-        axi_numpy_array_gpio = np.recarray(1, axi_gpio_regset_pins, buf=axi_mmap_gpio)
-        self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
-        rp.rp_Init()
-
     def do_reconfigure(self, payload: any) -> str:
         # Writes FPGA configurations to register
+        time.sleep(1)
         names = [field[0] for field in self.axi_regset_config.descr]
         for name, value in zip(names, self.config_axi_array_contents):
             setattr(self.config_axi_array_contents, name, self.config[name])
@@ -300,6 +285,20 @@ class RedPitayaSatellite(DataSender):
                     self.log.warning("Could not connect to RTD card")
 
             if self.config["read_gpio"]:
+                # Define the axi array for GPIO pins
+
+                axi_mmap_gpio = mmap.mmap(
+                    self.memory_file_handle,
+                    mmap.PAGESIZE,
+                    mmap.MAP_SHARED,
+                    mmap.PROT_READ | mmap.PROT_WRITE,
+                    offset=0x40000000,
+                )
+                axi_numpy_array_gpio = np.recarray(
+                    1, axi_gpio_regset_pins, buf=axi_mmap_gpio
+                )
+                self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
+
                 self.schedule_metric(
                     self.get_analog_gpio_pins.__name__,
                     self.get_analog_gpio_pins,
@@ -347,14 +346,26 @@ class RedPitayaSatellite(DataSender):
 
     def get_water_sensor_state(self):
 
+        names = [
+            "water_sensor_ch0",
+            "water_sensor_ch1",
+            "water_sensor_ch2",
+            "water_sensor_ch3",
+        ]
+        values = self.expand11.read_port_value()
+        ret = {}
+        for name, value in zip(names, values):
+            ret[name] = value
+        return ret, "uint8"
+
         return self.expand11.read_port_value()
 
     def do_starting(self, payload):
         """Starting the acquisition and Wrote BOR"""
+        # tmp_BOR = self.config._config
+        # tmp_BOR["start time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
+        # self.BOR = tmp_BOR
         self.data_type = self.config["data_type"]
-        tmp_BOR = self.config._config
-        tmp_BOR["start time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
-        self.BOR = tmp_BOR
         return "Started"
 
     def do_run(self, payload):
@@ -396,6 +407,7 @@ class RedPitayaSatellite(DataSender):
         time.sleep(1)  # add sleep to make sure that everything has stopped
 
         # Read last buffer
+        self.sample_time = self.sample_time - 10
         payload = self.get_axi_data()
 
         if payload is not None:

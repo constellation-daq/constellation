@@ -14,6 +14,7 @@ import numpy as np
 from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
 from constellation.core.satellite import SatelliteArgumentParser
 from constellation.core.base import setup_cli_logging
+import rp
 
 axi_regset_config = np.dtype(
     [
@@ -95,6 +96,8 @@ axi_regset_readout = np.dtype(
     ]
 )
 
+RP_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2, rp.RP_CH_3, rp.RP_CH_4]
+
 
 class RPNeutron(RedPitayaSatellite):
     """Constellation Satellite to control a RedPitaya for neutron event
@@ -105,6 +108,7 @@ class RPNeutron(RedPitayaSatellite):
         self.device = "RedPitaya_125_14"
         self.axi_regset_config = axi_regset_config
         self.regset_readout = axi_regset_readout
+        self.active_channels = RP_CHANNELS
         self.master = False
 
     def do_initializing(self, payload: any) -> str:

@@ -18,7 +18,7 @@ from constellation.core.base import setup_cli_logging
 from constellation.core.configuration import ConfigError
 from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
 
-RPG_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2]
+RP_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2]
 
 axi_regset_config = np.dtype(
     [
@@ -57,7 +57,7 @@ class RPGamma(RedPitayaSatellite):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.active_channels = RPG_CHANNELS
+        self.active_channels = RP_CHANNELS
         self.device = "RedPitaya_250_12"
         self.axi_regset_config = axi_regset_config
         self.regset_readout = axi_regset_readout
@@ -66,12 +66,9 @@ class RPGamma(RedPitayaSatellite):
         """Initialize satellite. Change the FPGA image and set register
         values."""
         try:
-            for ch in RPG_CHANNELS:
+            for ch in RP_CHANNELS:
                 rp.rp_AcqSetAC_DC(ch, rp.RP_DC)
-                rp.rp_AcqSetGain(
-                    ch, rp.RP_LOW
-                )  # They are not well documented and easy to confuse.
-                # I believe these are the correct values set.
+                rp.rp_AcqSetGain(ch, rp.RP_LOW)
 
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)

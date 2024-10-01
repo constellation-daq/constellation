@@ -15,7 +15,6 @@ class RTD:
 
     def __init__(self, spi_speed=1000000, spi_mode=0b01, microbus=1):
         """Inits the communication"""
-        rp.rp_Init()
         self.spi = spidev.SpiDev()
         self.spi.open(1, 0)
         self.spi.max_speed_hz = spi_speed
