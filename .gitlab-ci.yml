@@ -221,7 +221,8 @@ build:fedora-mingw:
     - .fedora-mingw
   variables:
     BUILD_TYPE: "release"
-    BUILD_OPTIONS: "--cross .cross/mingw-ucrt.ini"
+    # Do not build the Qt UI
+    BUILD_OPTIONS: "--cross .cross/mingw-ucrt.ini -Dcontroller_missioncontrol=false"
     NINJA_OPTIONS: "-l4"
   retry: 2
 

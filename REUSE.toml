@@ -16,3 +16,11 @@ SPDX-License-Identifier = "MIT"
 [[annotations]]
 path = "cxx/constellation/core/external/md5.h"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
+path = [
+  "cxx/controllers/MissionControl/MissionControl.qrc",
+  "cxx/controllers/MissionControl/MissionControl.ui"
+]
+SPDX-FileCopyrightText = "DESY and the Constellation authors"
+SPDX-License-Identifier = "EUPL-1.2"

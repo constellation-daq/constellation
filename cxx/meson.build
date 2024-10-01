@@ -88,5 +88,6 @@ constellation_rpath = get_option('prefix') / get_option('libdir')
 
 subdir('constellation')
 subdir('tools')
+subdir('controllers')
 subdir('satellites')
 subdir('tests')
