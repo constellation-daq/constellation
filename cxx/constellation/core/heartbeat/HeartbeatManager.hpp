@@ -13,11 +13,11 @@
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
-#include <map>
 #include <mutex>
 #include <optional>
 #include <stop_token>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 
@@ -28,6 +28,7 @@
 #include "constellation/core/message/CHP1Message.hpp"
 #include "constellation/core/protocol/CHP_definitions.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/string_hash_map.hpp"
 
 namespace constellation::heartbeat {
 
@@ -77,7 +78,16 @@ namespace constellation::heartbeat {
          * @param remote Canonical name of the remote in question
          * @return Currently registered state of the remote if remote is present, empty optional otherwise
          */
-        CNSTLN_API std::optional<protocol::CSCP::State> getRemoteState(const std::string& remote);
+        CNSTLN_API std::optional<protocol::CSCP::State> getRemoteState(std::string_view remote);
+
+        /**
+         * @brief Update the maximum heartbeat interval to a new value
+         *
+         * @note Heartbeats are send roughly twice as often as the maximum heartbeat interval
+         *
+         * @param interval New maximum heartbeat interval
+         */
+        CNSTLN_API void updateInterval(std::chrono::milliseconds interval) { sender_.updateInterval(interval); }
 
     private:
         /**
@@ -87,7 +97,7 @@ namespace constellation::heartbeat {
          *
          * @param msg Received CHP message from remote service
          * */
-        void process_heartbeat(const message::CHP1Message& msg);
+        void process_heartbeat(message::CHP1Message&& msg);
 
         /**
          * @brief Main loop of the manager which checks for heartbeats of registered remotes.
@@ -121,7 +131,7 @@ namespace constellation::heartbeat {
         };
 
         /** Map of remotes this manager tracks */
-        std::map<std::string, Remote> remotes_;
+        utils::string_hash_map<Remote> remotes_;
         std::mutex mutex_;
         std::condition_variable cv_;
 

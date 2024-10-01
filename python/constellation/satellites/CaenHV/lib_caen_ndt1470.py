@@ -184,9 +184,7 @@ class CaenNDT1470Manager:
         """Kill powered channels."""
         raise NotImplementedError
 
-    def connect(
-        self, system: str, link: str, argument: str, user: str = "", password: str = ""
-    ) -> None:
+    def connect(self, system: str, link: str, argument: str, user: str = "", password: str = "") -> None:
         """Connect to a board."""
         if link == "TCPIP":
             self._handle = self._connect_tcp(argument)
@@ -352,9 +350,7 @@ class CaenHVBoard:
         self.num_channels = num_channels
         # Get the number of channels for this board
         # Populate channels information
-        self.channels: List[Channel] = [
-            Channel(self, ch) for ch in range(self.num_channels)
-        ]
+        self.channels: List[Channel] = [Channel(self, ch) for ch in range(self.num_channels)]
 
     @property
     def handle(self) -> socket.socket | serial.Serial | None:
@@ -465,18 +461,14 @@ class ChannelParameter:
     def value(self) -> Any:
         """Reads (if possible) the value of a parameter from the board's channel"""
         if "R" in self.attributes["mode"]:
-            return self.channel.board.module.command(
-                self.channel.board.slot, self.channel.index, self.name
-            )
+            return self.channel.board.module.command(self.channel.board.slot, self.channel.index, self.name)
         raise ValueError(f"Trying to read write-only parameter {self.name}")
 
     @value.setter
     def value(self, value: Any) -> None:
         """Writes (if possible) parameter value to the board"""
         if "W" in self.attributes["mode"]:
-            self.channel.board.module.command(
-                self.channel.board.slot, self.channel.index, self.name, value
-            )
+            self.channel.board.module.command(self.channel.board.slot, self.channel.index, self.name, value)
         else:
             raise ValueError(f"Trying to write read-only parameter {self.name}")
 

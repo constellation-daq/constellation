@@ -48,4 +48,6 @@ void Satellite::interrupting(State previous_state) {
     landing();
 }
 
-void Satellite::failure(State /* previous_state */) {}
+void Satellite::failure(State previous_state) {
+    LOG(logger_, DEBUG) << "Failure from " << to_string(previous_state) << " (default implementation)";
+}

@@ -31,3 +31,17 @@ InvalidCombinationError::InvalidCombinationError(const Configuration& config,
         error_message_ += ": " + reason;
     }
 }
+
+InvalidValueError::InvalidValueError(const Configuration& config, const std::string& key, const std::string& reason) {
+    error_message_ = "Value " + config.getText(key) + " of key '" + key + "' is not valid";
+    if(!reason.empty()) {
+        error_message_ += ": " + reason;
+    }
+}
+
+InvalidValueError::InvalidValueError(const std::string& value, const std::string& key, const std::string& reason) {
+    error_message_ = "Value " + value + " of key '" + key + "' is not valid";
+    if(!reason.empty()) {
+        error_message_ += ": " + reason;
+    }
+}

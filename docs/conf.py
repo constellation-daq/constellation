@@ -103,7 +103,7 @@ favicons = [
 ]
 
 # myst settings
-myst_heading_anchors = 3
+myst_heading_anchors = 4
 myst_fence_as_directive = ["plantuml"]
 myst_enable_extensions = ["colon_fence"]
 myst_update_mathjax = False
@@ -132,9 +132,11 @@ for path in (docsdir / "satellites").glob("*.md"):
     path.unlink()
 
 # Add satellite READMEs to documentation
-satellite_files_cxx = list((repodir / "cxx" / "satellites").glob("**/README.md"))
-satellite_files_py = list(
-    (repodir / "python" / "constellation" / "satellites").glob("**/README.md")
+satellite_files_cxx = sorted(
+    list((repodir / "cxx" / "satellites").glob("**/README.md"))
+)
+satellite_files_py = sorted(
+    list((repodir / "python" / "constellation" / "satellites").glob("**/README.md"))
 )
 
 satellites_types_cxx = []

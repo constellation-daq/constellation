@@ -277,7 +277,7 @@ namespace constellation::config {
          * @brief Get number of key-value pairs for specific group and usage setting
          *
          * @param group Enum to restrict group of key-value pairs to include
-         * @param usage Enum to restrict uasge of key-value pairs to include
+         * @param usage Enum to restrict usage status of key-value pairs to include
          *
          * @return Number of key-value pairs
          */
@@ -285,6 +285,10 @@ namespace constellation::config {
 
         /**
          * @brief Get dictionary with key-value pairs for specific group and usage setting
+         *
+         * @param group Enum to restrict group of key-value pairs to include
+         * @param usage Enum to restrict usage status of key-value pairs to include
+         *
          * @return Dictionary containing the key-value pairs
          */
         CNSTLN_API Dictionary getDictionary(Group group = Group::ALL, Usage usage = Usage::ANY) const;

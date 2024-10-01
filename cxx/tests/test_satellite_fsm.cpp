@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
+#include <atomic>
 #include <chrono>
 #include <string>
 #include <thread>
@@ -19,6 +20,7 @@
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/exceptions.hpp"
 #include "constellation/satellite/FSM.hpp"
 
 #include "dummy_satellite.hpp"
@@ -429,6 +431,37 @@ TEST_CASE("Allowed FSM transitions", "[satellite][satellite::fsm]") {
     REQUIRE_THROWS_WITH(fsm.react(interrupted), Equals("Transition interrupted not allowed from ERROR state"));
     REQUIRE_THROWS_WITH(fsm.react(failure), Equals("Transition failure not allowed from ERROR state"));
     INFO("ERROR succeeded");
+
+    // Reset
+    fsm.react(Transition::initialize, Configuration());
+    satellite.progressFsm();
+    REQUIRE(fsm.getState() == State::INIT);
+}
+
+TEST_CASE("FSM callbacks", "[satellite][satellite::fsm]") {
+    DummySatellite satellite {};
+    auto& fsm = satellite.getFSM();
+
+    std::atomic_bool throw_cb = false;
+    std::atomic_int cb_count = 0;
+    fsm.registerStateCallback("test", [&](State state) {
+        const auto local_count = ++cb_count;
+        LOG(DEBUG) << "State callback with state " << to_string(state) << ", count " << local_count;
+        if(throw_cb) {
+            throw Exception("Throwing in state callback as requested");
+        }
+    });
+
+    // Initialize, callbacks for initializing and INIT
+    satellite.reactFSM(Transition::initialize, Configuration());
+    REQUIRE(cb_count.load() == 2);
+
+    // Launch, throw in callback, callbacks for launching and ORBIT
+    throw_cb = true;
+    satellite.reactFSM(Transition::launch);
+    REQUIRE(cb_count.load() == 4);
+
+    fsm.unregisterStateCallback("test");
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace)

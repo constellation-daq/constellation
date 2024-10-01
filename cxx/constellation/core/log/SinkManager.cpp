@@ -110,7 +110,7 @@ SinkManager::SinkManager() : zmq_context_(global_zmq_context()), console_global_
 
     // CMDP sink, log level always TRACE since only accessed via ProxySink
     try {
-        cmdp_sink_ = std::make_shared<CMDPSink>();
+        cmdp_sink_ = std::make_shared<CMDPSink>(zmq_context_);
         cmdp_sink_->set_level(to_spdlog_level(TRACE));
     } catch(const zmq::error_t& error) {
         throw ZMQInitError(error.what());

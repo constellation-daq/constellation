@@ -11,7 +11,7 @@ import time
 import zmq
 from typing import Tuple, Any, Callable, TypeVar, ParamSpec
 from functools import wraps
-from statemachine.exceptions import TransitionNotAllowed  # type: ignore[import-untyped]
+from statemachine.exceptions import TransitionNotAllowed
 
 from .cscp import CommandTransmitter, CSCPMessageVerb, CSCPMessage
 from .base import BaseSatelliteFrame
@@ -185,7 +185,7 @@ class CommandReceiver(BaseSatelliteFrame):
                 )
                 continue
             # check the response; empty string means 'missing data/incomplete'
-            if not res:
+            if res is None:
                 self.log.error("Command returned nothing: %s", req)
                 self._cmd_tm.send_reply(
                     "Command returned nothing", CSCPMessageVerb.INCOMPLETE
@@ -219,13 +219,13 @@ class CommandReceiver(BaseSatelliteFrame):
         return f"{len(self._cmds)} commands known", self._cmds, None
 
     @cscp_requestable
-    def get_class(self, _request: CSCPMessage) -> Tuple[str, None, None]:
-        """Return the class of the Satellite.
+    def get_type(self, _request: CSCPMessage) -> Tuple[str, None, None]:
+        """Return the type of the Satellite.
 
         No payload argument.
 
         """
-        return type(self).__name__, None, None
+        return self.type, None, None
 
     @cscp_requestable
     def get_name(self, _request: CSCPMessage) -> Tuple[str, None, None]:

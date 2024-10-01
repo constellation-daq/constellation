@@ -10,9 +10,15 @@
 #pragma once
 
 #include <functional>
+#include <initializer_list>
 #include <set>
+#include <string>
+#include <string_view>
 
-#include "BasePool.hpp"
+#include "constellation/core/chirp/CHIRP_definitions.hpp"
+#include "constellation/core/pools/BasePool.hpp"
+
+#include "zmq.hpp"
 
 namespace constellation::pools {
 
@@ -22,20 +28,21 @@ namespace constellation::pools {
      * This class registers a CHIRP callback for the services defined via the template parameter, listens to incoming
      * messages and forwards them to a callback registered upon creation of the subscriber socket
      */
-    template <typename MESSAGE> class SubscriberPool : public BasePool<MESSAGE> {
+    template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
+    class SubscriberPool : public BasePool<MESSAGE, SERVICE, zmq::socket_type::sub> {
     public:
+        using BasePoolT = BasePool<MESSAGE, SERVICE, zmq::socket_type::sub>;
+
         /**
          * @brief Construct SubscriberPool
          *
-         * @param service CHIRP service identifier for which a subscription should be made
          * @param log_topic Logger topic to be used for this component
          * @param callback Callback function pointer for received messages
          * @param default_topics List of default subscription topics to which this component subscribes directly upon
          *        opening the socket
          */
-        SubscriberPool(chirp::ServiceIdentifier service,
-                       std::string_view log_topic,
-                       std::function<void(const MESSAGE&)> callback,
+        SubscriberPool(std::string_view log_topic,
+                       std::function<void(MESSAGE&&)> callback,
                        std::initializer_list<std::string> default_topics = {});
 
         /**
@@ -64,4 +71,4 @@ namespace constellation::pools {
 } // namespace constellation::pools
 
 // Include template members
-#include "SubscriberPool.ipp"
+#include "SubscriberPool.ipp" // IWYU pragma: keep

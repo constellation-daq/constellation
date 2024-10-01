@@ -8,17 +8,18 @@
  */
 
 #include <chrono>
+#include <cstdint>
 #include <iostream>
 #include <span>
 #include <string>
 #include <utility>
 
 #include <msgpack.hpp>
-#include <zmq.hpp>
-#include <zmq_addon.hpp>
 
+#include "constellation/controller/Controller.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Dictionary.hpp"
+#include "constellation/core/log/log.hpp"
 #include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
@@ -27,6 +28,7 @@
 
 using namespace constellation;
 using namespace constellation::config;
+using namespace constellation::controller;
 using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::utils;
@@ -34,71 +36,71 @@ using namespace std::literals::chrono_literals;
 using namespace std::literals::string_literals;
 
 void cli_loop(std::span<char*> args) {
-    // Get group via cmdline
-    std::cout << "Usage: chp_receiver CONSTELLATION_GROUP" << std::endl;
 
+    // Get the default logger
+    auto& logger = Logger::getDefault();
+    SinkManager::getInstance().setConsoleLevels(INFO);
+    LOG(logger, STATUS) << "Usage: dummy_controller CONSTELLATION_GROUP";
+
+    // Get group via cmdline
     auto group = "constellation"s;
     if(args.size() >= 2) {
         group = args[1];
     }
-    std::cout << "Using constellation group " << std::quoted(group) << std::endl;
+    LOG(logger, STATUS) << "Using constellation group " << std::quoted(group);
 
-    SinkManager::getInstance().setConsoleLevels(OFF);
-    auto chirp_manager = chirp::Manager("255.255.255.255", "0.0.0.0", group, "dummy_controller");
+    const std::string name = "dummy_controller";
+
+    auto chirp_manager = chirp::Manager("255.255.255.255", "0.0.0.0", group, name);
+    chirp_manager.setAsDefaultInstance();
     chirp_manager.start();
     chirp_manager.sendRequest(chirp::ServiceIdentifier::CONTROL);
 
-    // Wait a bit for service discovery
-    auto discovered_services = chirp_manager.getDiscoveredServices(chirp::ServiceIdentifier::CONTROL);
-    while(discovered_services.empty()) {
-        std::cout << "Waiting for a satellite..." << std::endl;
-        std::this_thread::sleep_for(100ms);
-        discovered_services = chirp_manager.getDiscoveredServices(chirp::ServiceIdentifier::CONTROL);
-    }
-    auto uri = "tcp://" + discovered_services[0].address.to_string() + ":" + to_string(discovered_services[0].port);
-    std::cout << "Connecting to " << uri << std::endl;
-
-    zmq::socket_t req_socket {*global_zmq_context(), zmq::socket_type::req};
-
-    req_socket.connect(uri);
+    LOG(logger, STATUS) << "Starting controller \"" << name << "\"";
+    Controller controller(name);
 
     while(true) {
-        std::string command;
-        std::cout << "Send command: ";
+        // Flush logger before printing to cout
+        logger.flush();
+
+        std::string command {};
+        std::cout << "\nCommand: ";
         std::getline(std::cin, command);
 
-        // Send command
+        // Avoid sending infinite loop of empty commands on Ctrl+D
+        if(command.empty()) {
+            continue;
+        }
+
+        // Send command to all satellites we currently know
         auto send_msg = CSCP1Message({"dummy_controller"}, {CSCP1Message::Type::REQUEST, command});
         if(command == "initialize" || command == "reconfigure") {
             send_msg.addPayload(Dictionary().assemble());
-            std::cout << "Added empty configuration to message" << std::endl;
+            LOG(logger, DEBUG) << "Added empty configuration to message";
         } else if(command == "start") {
             const std::string run_identifier = "1234";
             msgpack::sbuffer sbuf {};
             msgpack::pack(sbuf, run_identifier);
             send_msg.addPayload(std::move(sbuf));
-            std::cout << "Added run identifier \"" << run_identifier << "\" to message" << std::endl;
+            LOG(logger, DEBUG) << "Added run identifier \"" << run_identifier << "\" to message";
         }
-        send_msg.assemble().send(req_socket);
 
-        // Receive reply
-        zmq::multipart_t recv_zmq_msg {};
-        recv_zmq_msg.recv(req_socket);
-        auto recv_msg = CSCP1Message::disassemble(recv_zmq_msg);
+        auto responses = controller.sendCommands(send_msg);
+        for(const auto& [sat, recv_msg] : responses) {
+            // Print message
+            LOG(logger, INFO) << recv_msg.getHeader().to_string() << "\n"
+                              << "Verb: " << to_string(recv_msg.getVerb().first) << " : " << recv_msg.getVerb().second;
 
-        // Print message
-        std::cout << recv_msg.getHeader().to_string() << "\n"
-                  << "Verb: " << to_string(recv_msg.getVerb().first) << " : " << recv_msg.getVerb().second << std::endl;
-
-        // Print payload if dict
-        if(recv_msg.hasPayload()) {
-            try {
-                const auto dict = Dictionary::disassemble(recv_msg.getPayload());
-                if(!dict.empty()) {
-                    std::cout << "Payload:" << dict.to_string() << std::endl;
+            // Print payload if dict
+            if(recv_msg.hasPayload()) {
+                try {
+                    const auto dict = Dictionary::disassemble(recv_msg.getPayload());
+                    if(!dict.empty()) {
+                        LOG(logger, INFO) << dict.to_string();
+                    }
+                } catch(...) {
+                    LOG(logger, WARNING) << "Payload: <could not unpack payload>";
                 }
-            } catch(...) {
-                std::cout << "Payload: <could not unpack payload>" << std::endl;
             }
         }
     }

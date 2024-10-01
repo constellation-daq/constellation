@@ -137,8 +137,6 @@ zmq::multipart_t CDTP1Message::assemble() {
 }
 
 CDTP1Message CDTP1Message::disassemble(zmq::multipart_t& frames) {
-    // Note: also only 1 frame is ok (e.g. EOR)
-
     // Decode header
     const auto header_frame = frames.pop();
     const auto header = Header::disassemble({to_byte_ptr(header_frame.data()), header_frame.size()});
@@ -149,6 +147,12 @@ CDTP1Message CDTP1Message::disassemble(zmq::multipart_t& frames) {
     // Move payload frames into buffers
     while(!frames.empty()) {
         cdtp_message.addPayload(frames.pop());
+    }
+
+    // If BOR / EOR, exactly one frame needed
+    if((header.getType() == Type::BOR || header.getType() == Type::EOR) && cdtp_message.getPayload().size() != 1) {
+        throw MessageDecodingError("Wrong number of frames for " + to_string(header.getType()) +
+                                   ", exactly one payload frame expected");
     }
 
     return cdtp_message;

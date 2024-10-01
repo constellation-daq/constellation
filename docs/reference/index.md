@@ -25,6 +25,7 @@ protocols
 
 cxx/core/index
 cxx/satellite/index
+cxx/controller/index
 ```
 
 ```{toctree}

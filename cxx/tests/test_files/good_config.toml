@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+# SPDX-License-Identifier: CC0-1.0
+
+# Config file that is valid
+
+[satellites]
+bool = true
+string = "global"
+int = -42
+float = 3.14
+array_bool = [true, false, false, true]
+array_string = ["global1", "global2"]
+array_int = [1, 2, 3]
+array_float = [0.1]
+empty_array = []
+
+[satellites.Dummy]
+string = "type"
+type = "Dummy"
+
+[satellites.Dummy.D1]
+string = "D1"
+satellite = true
+
+[satellites.dummy.d2]
+StRiNg = "D2"
+saTelliTe = true

@@ -94,6 +94,11 @@ namespace constellation::message {
         void addPayload(message::PayloadBuffer&& payload) { payload_buffers_.emplace_back(std::move(payload)); }
 
         /**
+         * @return Current number of payload frames in this message
+         */
+        std::size_t countPayloadFrames() const { return payload_buffers_.size(); }
+
+        /**
          * Assemble full message to frames for ZeroMQ
          *
          * This function always moves the payload

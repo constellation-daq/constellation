@@ -12,17 +12,18 @@
 #include <algorithm>
 #include <chrono>
 #include <functional>
-#include <iterator>
 #include <mutex>
 #include <optional>
 #include <stop_token>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "constellation/core/log/log.hpp"
-#include "constellation/core/message/exceptions.hpp"
+#include "constellation/core/message/CHP1Message.hpp"
+#include "constellation/core/protocol/CHP_definitions.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
-#include "constellation/core/utils/std_future.hpp"
+#include "constellation/core/utils/std_future.hpp" // IWYU pragma: keep
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::heartbeat;
@@ -36,9 +37,13 @@ HeartbeatManager::HeartbeatManager(std::string sender,
                                    std::function<void(std::string_view)> interrupt_callback)
     : receiver_([this](auto&& arg) { process_heartbeat(std::forward<decltype(arg)>(arg)); }),
       sender_(std::move(sender), std::move(state_callback), 5000ms), interrupt_callback_(std::move(interrupt_callback)),
-      logger_("CHP"), watchdog_thread_(std::bind_front(&HeartbeatManager::run, this)) {}
+      logger_("CHP"), watchdog_thread_(std::bind_front(&HeartbeatManager::run, this)) {
+    receiver_.startPool();
+}
 
 HeartbeatManager::~HeartbeatManager() {
+    receiver_.stopPool();
+
     watchdog_thread_.request_stop();
     if(watchdog_thread_.joinable()) {
         watchdog_thread_.join();
@@ -49,7 +54,8 @@ void HeartbeatManager::sendExtrasystole() {
     sender_.sendExtrasystole();
 }
 
-std::optional<CSCP::State> HeartbeatManager::getRemoteState(const std::string& remote) {
+std::optional<CSCP::State> HeartbeatManager::getRemoteState(std::string_view remote) {
+    const std::lock_guard lock {mutex_};
     const auto remote_it = remotes_.find(remote);
     if(remote_it != remotes_.end()) {
         return remote_it->second.last_state;
@@ -59,14 +65,15 @@ std::optional<CSCP::State> HeartbeatManager::getRemoteState(const std::string& r
     return {};
 }
 
-void HeartbeatManager::process_heartbeat(const CHP1Message& msg) {
+void HeartbeatManager::process_heartbeat(CHP1Message&& msg) {
     LOG(logger_, TRACE) << msg.getSender() << " reports state " << to_string(msg.getState()) << ", next message in "
                         << msg.getInterval();
 
     const auto now = std::chrono::system_clock::now();
+    const std::lock_guard lock {mutex_};
 
     // Update or add the remote:
-    const auto remote_it = remotes_.find(to_string(msg.getSender()));
+    const auto remote_it = remotes_.find(msg.getSender());
     if(remote_it != remotes_.end()) {
 
         const auto deviation = std::chrono::duration_cast<std::chrono::seconds>(now - msg.getTime());

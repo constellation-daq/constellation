@@ -65,7 +65,8 @@ std::string get_rel_file_path(std::string file_path_char) {
     return to_std_string(std::move(file_path));
 }
 
-CMDPSink::CMDPSink() : pub_socket_(context_, zmq::socket_type::xpub), port_(bind_ephemeral_port(pub_socket_)) {
+CMDPSink::CMDPSink(std::shared_ptr<zmq::context_t> context)
+    : context_(std::move(context)), pub_socket_(*context_, zmq::socket_type::xpub), port_(bind_ephemeral_port(pub_socket_)) {
     // Set reception timeout for subscription messages on XPUB socket to zero because we need to mutex-lock the socket
     // while reading and cannot log at the same time.
     pub_socket_.set(zmq::sockopt::rcvtimeo, 0);

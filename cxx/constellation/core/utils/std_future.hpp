@@ -11,7 +11,7 @@
 
 #include <version>
 
-// NOLINTBEGIN(cert-dcl58-cpp)
+// NOLINTBEGIN(cert-dcl58-cpp,readability-duplicate-include)
 
 // std::to_underlying
 #ifndef __cpp_lib_to_underlying
@@ -74,4 +74,25 @@ namespace std::ranges {
 
 #endif
 
-// NOLINTEND(cert-dcl58-cpp)
+// std::ranges::to
+#ifndef __cpp_lib_ranges_to_container
+
+#include <concepts>
+#include <ranges>
+#include <utility>
+
+namespace std::ranges {
+    template <template <typename...> typename C, typename R, typename... Args>
+        requires std::ranges::input_range<R> && std::constructible_from<C<std::ranges::range_value_t<R>>,
+                                                                        std::ranges::iterator_t<R>,
+                                                                        std::ranges::sentinel_t<R>,
+                                                                        Args...>
+    C<std::ranges::range_value_t<R>> to(R&& range, Args&&... args) {
+        return {std::ranges::begin(range), std::ranges::end(range), std::forward<Args>(args)...};
+    }
+
+} // namespace std::ranges
+
+#endif
+
+// NOLINTEND(cert-dcl58-cpp,readability-duplicate-include)

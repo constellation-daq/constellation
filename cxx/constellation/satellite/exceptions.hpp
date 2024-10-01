@@ -9,14 +9,15 @@
 
 #pragma once
 
+#include <chrono>
 #include <string>
 #include <string_view>
 
 #include "constellation/build.hpp"
+#include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/string.hpp"
-#include "constellation/core/utils/type.hpp"
 
 namespace constellation::satellite {
 
@@ -156,6 +157,40 @@ namespace constellation::satellite {
             error_message_ = "Error casting function return type \"";
             error_message_ += argtype;
             error_message_ += "\" to dictionary value";
+        }
+    };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Error when sending a message timed out
+     */
+    class CNSTLN_API SendTimeoutError : public SatelliteError {
+    public:
+        explicit SendTimeoutError(const std::string& what, std::chrono::seconds timeout) {
+            error_message_ = "Failed sending " + what + " after " + utils::to_string<std::chrono::seconds>(timeout);
+        }
+    };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Error when receiving a message timed out
+     */
+    class CNSTLN_API RecvTimeoutError : public satellite::SatelliteError {
+    public:
+        explicit RecvTimeoutError(const std::string& what, std::chrono::seconds timeout) {
+            error_message_ = "Failed receiving " + what + " after " + utils::to_string<std::chrono::seconds>(timeout);
+        }
+    };
+
+    /**
+     * @ingroup Exceptions
+     * @brief Error when a received CDTP message does not have the correct type
+     */
+    class CNSTLN_API InvalidCDTPMessageType : public satellite::SatelliteError {
+    public:
+        explicit InvalidCDTPMessageType(message::CDTP1Message::Type type, std::string_view reason) {
+            error_message_ = "Error handling CDTP message with type " + utils::to_string(type) + ": ";
+            error_message_ += reason;
         }
     };
 

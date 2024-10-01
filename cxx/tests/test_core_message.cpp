@@ -11,6 +11,7 @@
 #include <string>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_exception.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <msgpack.hpp>
@@ -98,6 +99,7 @@ TEST_CASE("Header Packing / Unpacking", "[core][core::message]") {
     cscp1_header.setTag("test_d", std::numbers::pi);
     cscp1_header.setTag("test_s", "String"s);
     cscp1_header.setTag("test_t", tp);
+    cscp1_header.setTag("Test_C", 0);
 
     // Pack header
     msgpack::sbuffer sbuf {};
@@ -107,12 +109,14 @@ TEST_CASE("Header Packing / Unpacking", "[core][core::message]") {
     const auto cscp1_header_unpacked = CSCP1Message::Header::disassemble({to_byte_ptr(sbuf.data()), sbuf.size()});
 
     // Compare unpacked header
-    REQUIRE(cscp1_header_unpacked.getTags().size() == 5);
+    REQUIRE(cscp1_header_unpacked.getTags().size() == 6);
     REQUIRE(cscp1_header_unpacked.getTag<bool>("test_b"));
     REQUIRE(cscp1_header_unpacked.getTag<std::int64_t>("test_i") == std::numeric_limits<std::int64_t>::max());
     REQUIRE(cscp1_header_unpacked.getTag<double>("test_d") == std::numbers::pi);
     REQUIRE_THAT(cscp1_header_unpacked.getTag<std::string>("test_s"), Equals("String"));
     REQUIRE(cscp1_header_unpacked.getTag<std::chrono::system_clock::time_point>("test_t") == tp);
+    REQUIRE(cscp1_header_unpacked.hasTag("tEst_C"));
+    REQUIRE(cscp1_header_unpacked.getTag<int>("teSt_c") == 0);
 }
 
 TEST_CASE("Header Packing / Unpacking (invalid protocol)", "[core][core::message]") {
@@ -239,6 +243,19 @@ TEST_CASE("Message Assembly / Disassembly (CDTP1)", "[core][core::message]") {
 
     REQUIRE_THAT(cdtp1_msg2.getHeader().to_string(), ContainsSubstring("Sender: senderCDTP"));
     REQUIRE(cdtp1_msg2.getPayload().empty());
+}
+
+TEST_CASE("Message Assembly / Disassembly (CDTP1, wrong number of frames)", "[core][core::message]") {
+    CDTP1Message cdtp1_msg {{"senderCDTP", 1234, CDTP1Message::Type::BOR}, 2};
+    cdtp1_msg.addPayload("frame1"s);
+    cdtp1_msg.addPayload("frame2"s);
+
+    auto frames = cdtp1_msg.assemble();
+
+    REQUIRE_THROWS_MATCHES(
+        CDTP1Message::disassemble(frames),
+        MessageDecodingError,
+        Message("Error decoding message: Wrong number of frames for BOR, exactly one payload frame expected"));
 }
 
 TEST_CASE("Incorrect message type (CMDP1)", "[core][core::message]") {

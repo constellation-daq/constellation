@@ -20,9 +20,9 @@ from constellation.core.broadcastmanager import DiscoveredService
 from constellation.core.cdtp import CDTPMessageIdentifier, DataTransmitter
 from constellation.core.chirp import CHIRPServiceIdentifier, get_uuid
 from constellation.core.cscp import CommandTransmitter
-from constellation.core.datareceiver import H5DataReceiverWriter
 from constellation.core.datasender import DataSender
 from constellation.core import __version__
+from constellation.satellites.H5DataWriter.H5DataWriter import H5DataWriter
 
 DATA_PORT = 50101
 MON_PORT = 22222
@@ -104,7 +104,7 @@ def mock_sender_satellite(mock_chirp_transmitter):
 def receiver_satellite():
     """A receiver Satellite."""
 
-    class MockReceiverSatellite(H5DataReceiverWriter):
+    class MockReceiverSatellite(H5DataWriter):
         def do_initializing(self, config: dict[str]) -> str:
             res = super().do_initializing(config)
             # configure monitoring with higher frequency
@@ -127,9 +127,7 @@ def receiver_satellite():
 
 
 @pytest.mark.forked
-def test_datatransmitter(
-    mock_data_transmitter: DataTransmitter, mock_data_receiver: DataTransmitter
-):
+def test_datatransmitter(mock_data_transmitter: DataTransmitter, mock_data_receiver: DataTransmitter):
     sender = mock_data_transmitter
     rx = mock_data_receiver
 
@@ -194,9 +192,7 @@ def test_sending_package(
     wait_for_state(transmitter.fsm, "ORBIT")
     commander.send_request("start", "100102")
     wait_for_state(transmitter.fsm, "RUN")
-    assert (
-        transmitter.fsm.current_state_value.name == "RUN"
-    ), "Could not set up test environment"
+    assert transmitter.fsm.current_state_value.name == "RUN", "Could not set up test environment"
 
     BOR = True
     for idx in range(11):
@@ -240,9 +236,7 @@ def test_receive_writing_package(
     receiver = receiver_satellite
     tx = data_transmitter
     with TemporaryDirectory() as tmpdir:
-        commander.request_get_response(
-            "initialize", {"file_name_pattern": FILE_NAME, "output_path": tmpdir}
-        )
+        commander.request_get_response("initialize", {"file_name_pattern": FILE_NAME, "output_path": tmpdir})
         wait_for_state(receiver.fsm, "INIT", 1)
         receiver._add_sender(service)
         commander.request_get_response("launch")
@@ -267,15 +261,11 @@ def test_receive_writing_package(
                 time.sleep(0.05)
                 timeout -= 0.05
             assert len(receiver.active_satellites) == 1, "No BOR received!"
-            assert (
-                receiver.fsm.current_state_value.name == "RUN"
-            ), "Could not set up test environment"
+            assert receiver.fsm.current_state_value.name == "RUN", "Could not set up test environment"
             commander.request_get_response("stop")
             time.sleep(0.5)
             # receiver should still be in 'stopping' as no EOR has been sent
-            assert (
-                receiver.fsm.current_state_value.name == "stopping"
-            ), "Receiver stopped before receiving EORE"
+            assert receiver.fsm.current_state_value.name == "stopping", "Receiver stopped before receiving EORE"
             # send EORE
             tx.send_end({"mock_end": f"whatanend{run_num}"})
             wait_for_state(receiver.fsm, "ORBIT", 1)
@@ -293,23 +283,12 @@ def test_receive_writing_package(
             assert bor in h5file["simple_sender"].keys()
             assert h5file["simple_sender"][bor]["mock_cfg"][()] == run_num
             assert eor in h5file["simple_sender"].keys()
-            assert "whatanend" in str(
-                h5file["simple_sender"][eor]["mock_end"][()], encoding="utf-8"
-            )
-            assert set(dat).issubset(
-                h5file["simple_sender"].keys()
-            ), "Data packets missing in file"
+            assert "whatanend" in str(h5file["simple_sender"][eor]["mock_end"][()], encoding="utf-8")
+            assert set(dat).issubset(h5file["simple_sender"].keys()), "Data packets missing in file"
             assert (payload == h5file["simple_sender"][dat[0]]).all()
             # interpret the uint8 values again as uint16:
-            assert (
-                payload == np.array(h5file["simple_sender"][dat[1]]).view(np.uint16)
-            ).all()
-            assert (
-                h5file["MockReceiverSatellite.mock_receiver"]["constellation_version"][
-                    ()
-                ]
-                == __version__.encode()
-            )
+            assert (payload == np.array(h5file["simple_sender"][dat[1]]).view(np.uint16)).all()
+            assert h5file["MockReceiverSatellite.mock_receiver"]["constellation_version"][()] == __version__.encode()
             h5file.close()
 
 
@@ -335,9 +314,7 @@ def test_receiver_stats(
 
     receiver = receiver_satellite
     ml, tmpdir = monitoringlistener
-    commander.request_get_response(
-        "initialize", {"file_name_pattern": FILE_NAME, "output_path": tmpdir}
-    )
+    commander.request_get_response("initialize", {"file_name_pattern": FILE_NAME, "output_path": tmpdir})
     wait_for_state(receiver.fsm, "INIT", 1)
     receiver._add_sender(service)
     commander.request_get_response("launch")
@@ -367,9 +344,7 @@ def test_receiver_stats(
     assert len(receiver.receiver_stats) == 2
     assert len(receiver._metrics_callbacks) > 1
     assert len(ml._metric_sockets) == 1
-    assert os.path.exists(
-        os.path.join(tmpdir, "stats")
-    ), "Stats output directory not created"
+    assert os.path.exists(os.path.join(tmpdir, "stats")), "Stats output directory not created"
     statfile = os.path.join(tmpdir, "stats", "mock_receiver_nbytes.csv")
     timeout = 4
     while timeout > 0 and not os.path.exists(statfile):

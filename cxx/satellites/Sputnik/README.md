@@ -19,10 +19,10 @@ The Sputnik satellite has no additional dependencies and is build by default.
 
 The following parameters are read and interpreted by this satellite. Parameters without a default value are required.
 
-| Parameter     | Description | Type | Default Value |
-|---------------|-------------|------|---------------|
-| `my_param`    | Number of channels to be used | Unsigned 8-bit integer | `1024` |
-| `other_param` | Name of the communication module | String | `"antenna"` |
+| Parameter | Type | Description | Default Value |
+|-----------|------|-------------|---------------|
+| `my_param` | Unsigned integer | Number of channels to be used | `1024` |
+| `other_param` | String | Name of the communication module | `"antenna"` |
 
 ### Configuration Example
 
@@ -40,8 +40,8 @@ This section describes all custom commands the satellite exposes to the command 
 command as well as all of its arguments, the return value and the allowed states:
 
 
-| Command     | Description | Arguments | Return Value | Allowed States |
-|-------------|-------------|-----------|--------------|----------------|
+| Command | Description | Arguments | Return Value | Allowed States |
+|---------|-------------|-----------|--------------|----------------|
 | `get_channel_reading` | This command returns the reading from the given channel number | channel number, `int` | channel reading, `double` | `INIT`, `ORBIT` |
 | `get_module_name` | Reads the name of the communication module | - | module name, `string` | all |
 
@@ -50,8 +50,8 @@ command as well as all of its arguments, the return value and the allowed states
 
 The following metrics are distributed by this satellite and can be subscribed to. Timed metrics provide an interval in units of time, triggered metrics in number of calls.
 
-| Metric         | Description | Interval | Type |
-|----------------|-------------|----------|------|
+| Metric | Description | Interval | Type |
+|--------|-------------|----------|------|
 | `STAT/CPULOAD` | Current CPU load of the satellite host machine | 3s | AVERAGE |
-| `STAT/TEMP`    | Highest reported system temperature of the satellite | 5s | AVERAGE |
-| `STAT/EVENTS`  | Currently processed event number | 100 | LAST_VALUE |
+| `STAT/TEMP` | Highest reported system temperature of the satellite | 5s | AVERAGE |
+| `STAT/EVENTS` | Currently processed event number | 100 | LAST_VALUE |

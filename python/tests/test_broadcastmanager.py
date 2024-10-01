@@ -105,7 +105,7 @@ def test_manager_discover(mock_bm):
 
 @pytest.mark.forked
 def test_manager_ext_callback_runtime(mock_bm):
-    """Test callback when discovering services registered during rumtime."""
+    """Test callback when discovering services registered during runtime."""
     # create external callback
     global callback_seen
     callback_seen = False
@@ -131,7 +131,7 @@ def test_manager_ext_callback_runtime(mock_bm):
 
 @pytest.mark.forked
 def test_manager_method_callback_runtime(mock_bm_alt_parent):
-    """Test callback when discovering services registered during rumtime."""
+    """Test callback when discovering services registered during runtime."""
     assert mock_bm_alt_parent.task_queue.empty()
     mock_bm_alt_parent.register_request(
         CHIRPServiceIdentifier.DATA,

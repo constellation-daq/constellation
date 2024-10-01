@@ -38,14 +38,16 @@ dependencies = [
 [project.scripts]
 Controller = "constellation.core.controller:main"
 Monitor = "constellation.core.monitoring:main"
-DataReceiver = "constellation.core.datareceiver:main"
-DemoSatellite = "constellation.core.satellite:main"
 DemoDataSender = "constellation.core.datasender:main"
 DemoHeartbeatChecker = "constellation.core.heartbeatchecker:main"
 DemoHeartbeatSender = "constellation.core.heartbeater:main"
 # tools
 ConstellationListInterfaces = "constellation.tools.list_interfaces:main"
 # 3rd-party Satellites
+SatelliteKeithley = "constellation.satellites.Keithley.Keithley:main"
+SatelliteMariner = "constellation.satellites.Mariner.Mariner:main"
+SatelliteCaenHV = "constellation.satellites.CaenHV.CaenHV:main"
+SatelliteH5DataWriter = "constellation.satellites.H5DataWriter.H5DataWriter:main"
 ExampleSatellite = "constellation.satellites.example.example:main"
 SatelliteCaenHv = "constellation.satellites.caenhv.caenhv:main"
 SatelliteRPNeutron = "constellation.satellites.clabdaq2.rpneutron:main"
@@ -84,6 +86,7 @@ docs = [
 cli = ["ipython"]
 hdf5 = ["h5py"]
 caenhv = ["pycaenhv>=0.03", "pyserial"]
+keithley = ["pyserial"]
 
 [tool.meson-python.args]
 setup = ["--wrap-mode=forcefallback", "-Dimpl_py=enabled", "-Dimpl_cxx=disabled"]  # disable C++ for now
@@ -91,7 +94,10 @@ dist = ["--include-subprojects"]
 
 [tool.flake8]
 max-line-length = 125
-ignore = ["E203", "W503"]
+ignore = ["E203", "E731", "W503"]
+
+[tool.black]
+line-length = 125
 
 [tool.coverage.run]
 source = ["constellation"]

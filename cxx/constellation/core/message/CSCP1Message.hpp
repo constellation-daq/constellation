@@ -54,8 +54,10 @@ namespace constellation::message {
         /** CSCP1 Header */
         class CNSTLN_API Header final : public BaseHeader {
         public:
-            Header(std::string sender, std::chrono::system_clock::time_point time = std::chrono::system_clock::now())
-                : BaseHeader(protocol::CSCP1, std::move(sender), time) {}
+            Header(std::string sender,
+                   std::chrono::system_clock::time_point time = std::chrono::system_clock::now(),
+                   config::Dictionary tags = {})
+                : BaseHeader(protocol::CSCP1, std::move(sender), time, std::move(tags)) {}
 
             static Header disassemble(std::span<const std::byte> data) {
                 return {BaseHeader::disassemble(protocol::CSCP1, data)};
