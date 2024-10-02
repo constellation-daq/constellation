@@ -29,6 +29,16 @@ using namespace constellation::chirp;
 using namespace constellation::log;
 using namespace constellation::utils;
 
+LogDialog::LogDialog(const QLogMessage& msg) {
+    setupUi(this);
+    for(int i = 0; i < QLogMessage::countExtendedColumns(); ++i) {
+        auto* item = new QTreeWidgetItem(treeLogMessage);
+        item->setText(0, QLogMessage::columnName(i));
+        item->setText(1, msg[i].toString());
+    }
+    show();
+}
+
 void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const {
     // Get sibling for column 2 (where the log level is stored) for current row:
     const QModelIndex lvl_index = index.sibling(index.row(), 2);
