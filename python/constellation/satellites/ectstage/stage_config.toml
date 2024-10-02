@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+# SPDX-License-Identifier: CC-BY-4.0
+
 [x]
 port = "/dev/ttyUSB0"
 chan = 0
@@ -34,7 +37,7 @@ start_position = 180
 active_axes = ["x","y","z","r"]
 
 # wait time at each point (measurement window)
-stop_time_per_point_s = 3 
+stop_time_per_point_s = 3
 # stage position sending frequency (in seconds) to data writer
 readout_freq_s = 0.5
 
@@ -45,4 +48,3 @@ pos_y = [10,30,10]
 #pos_z = [10,20,10]
 # in deg
 pos_r = [175,185,10]
-
