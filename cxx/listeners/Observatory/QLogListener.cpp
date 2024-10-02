@@ -118,26 +118,17 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
         emit newTopic(QString::fromStdString(std::string(msg.getLogTopic())));
     }
 
+    const std::lock_guard message_lock {message_mutex_};
+
     // We always add new messages to the end of the deque:
     const auto pos = static_cast<int>(messages_.size());
     beginInsertRows(QModelIndex(), pos, pos);
     messages_.emplace_back(std::move(msg));
+    message_count_.store(messages_.size());
     endInsertRows();
 
     // send signal:
     emit newMessage(createIndex(pos, 0));
-}
-
-int QLogListener::rowCount(const QModelIndex& /*parent*/) const {
-    return messages_.size();
-}
-
-int QLogListener::columnCount(const QModelIndex& /*parent*/) const {
-    return LogMessage::countColumns();
-}
-
-Level QLogListener::getMessageLevel(const QModelIndex& index) const {
-    return messages_[index.row()].getLogLevel();
 }
 
 QVariant QLogListener::data(const QModelIndex& index, int role) const {
@@ -145,14 +136,16 @@ QVariant QLogListener::data(const QModelIndex& index, int role) const {
         return {};
     }
 
+    const std::lock_guard message_lock {message_mutex_};
     if(index.column() < LogMessage::countColumns() && index.row() < static_cast<int>(messages_.size())) {
-        return getMessage(index)[index.column()];
+        return messages_[index.row()][index.column()];
     }
 
     return {};
 }
 
 const LogMessage& QLogListener::getMessage(const QModelIndex& index) const {
+    const std::lock_guard message_lock {message_mutex_};
     return messages_[index.row()];
 }
 
