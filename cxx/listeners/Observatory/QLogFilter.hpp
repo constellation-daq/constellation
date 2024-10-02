@@ -26,7 +26,7 @@ class QLogFilter : public QSortFilterProxyModel {
 public:
     QLogFilter(QObject* parent = nullptr);
 
-    bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const;
+    bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
 
     /**
      * @brief Set a new log level filter value

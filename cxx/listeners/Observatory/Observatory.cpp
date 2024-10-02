@@ -109,7 +109,7 @@ Observatory::Observatory(std::string_view group_name) {
     globalLevel->setCurrentIndex(std::to_underlying(slevel.value_or(Level::WARNING)));
 }
 
-Observatory::~Observatory() {
+void Observatory::closeEvent(QCloseEvent* event) {
     // Stop the log receiver
     log_listener_.stopPool();
 
@@ -131,10 +131,9 @@ Observatory::~Observatory() {
     // Store subscription settings
     gui_settings_.setValue("subscriptions/level",
                            QString::fromStdString(to_string(log_listener_.getGlobalSubscriptionLevel())));
-}
 
-void Observatory::closeEvent(QCloseEvent* /*event*/) {
-    QApplication::quit();
+    // Terminate the application
+    event->accept();
 }
 
 void Observatory::on_filterLevel_currentIndexChanged(int index) {
