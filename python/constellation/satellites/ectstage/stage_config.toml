@@ -26,6 +26,8 @@ start_position = 15
 port = "/dev/ttyUSB3"
 chan = 0
 # in deg
+velocity = 8
+acceleration = 8
 start_position = 180
 
 [run]
@@ -34,11 +36,11 @@ active_axes = ["x","y","z","r"]
 # wait time at each point (measurement window)
 stop_time_per_point_s = 3 
 # stage position sending frequency (in seconds) to data writer
-readout_freq_s = 1e-3
+readout_freq_s = 0.5
 
 
 # in mm
-pos_x = [10,30,10]
+pos_x = [10,40,30]
 pos_y = [10,30,10]
 #pos_z = [10,20,10]
 # in deg
