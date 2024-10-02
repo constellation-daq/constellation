@@ -26,6 +26,16 @@ class QLogFilter : public QSortFilterProxyModel {
 public:
     QLogFilter(QObject* parent = nullptr);
 
+    /**
+     * @brief Method to filter rows
+     * @details In this method, all currently set filters are allied to the given row of the source model. It checks for
+     * log level, sender, topic match and compares the message to the filter regular expression.
+     *
+     * @param sourceRow Row of the respective message in the source model
+     * @param sourceParent QModelIndex of the parent item
+     *
+     * @return True if the message passes the filters, false otherwise
+     */
     bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
 
     /**
