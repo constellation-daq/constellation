@@ -149,7 +149,9 @@ void Observatory::on_filterMessage_editingFinished() {
 }
 
 void Observatory::on_viewLog_activated(const QModelIndex& i) {
-    new LogDialog(log_listener_.getMessage(i));
+    // Translate to source index:
+    const QModelIndex index = log_filter_.mapToSource(i);
+    new LogDialog(log_listener_.getMessage(index));
 }
 
 void Observatory::on_clearFilters_clicked() {
