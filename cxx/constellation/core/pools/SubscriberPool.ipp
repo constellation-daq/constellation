@@ -29,8 +29,7 @@
 namespace constellation::pools {
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
-    SubscriberPool<MESSAGE, SERVICE>::SubscriberPool(std::string_view log_topic,
-                                                     std::function<void(MESSAGE&&)> callback)
+    SubscriberPool<MESSAGE, SERVICE>::SubscriberPool(std::string_view log_topic, std::function<void(MESSAGE&&)> callback)
         : BasePoolT(log_topic, std::move(callback)) {}
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
