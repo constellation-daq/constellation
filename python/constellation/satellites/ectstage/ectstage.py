@@ -165,9 +165,12 @@ class ECTstage(DataSender):
 
         pos = {}
         for axis in self.conf["run"]["active_axes"]:
-            try:
-                pos[axis] = self._list_positions(self.conf["run"]["pos_"+axis])
-            except KeyError:
+            param = "pos_"+axis
+            if param in self.conf["run"]:
+                if len(self.conf["run"][param])==3:
+                    pos[axis] = self._list_positions(self.conf["run"][param])
+                else: raise KeyError("{} must be a 3-valued list. To take data at a single point, remove this parameter and use `home_position` instead".format(param))
+            else:
                 pos[axis] = self._list_positions(np.append(np.ones(2)*self.conf[axis]["start_position"], np.array([1]), axis=0))
 
         if 'z' in self.conf["run"]["active_axes"]:
