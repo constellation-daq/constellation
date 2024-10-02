@@ -29,7 +29,7 @@ Declare as `[{stage_axis}]` eg: `[x]`,`[y]`,`[z]`,`[r]`. All parameters must be 
 | `chan`          | Channel number if multiple stages are moved via same serial connection | number    | `0`               | -                              |
 | `velocity`      | Velocity of the stage movement in `mm/s`                               | int/float | -                 | max=`20`                       |
 | `acceleration`  | Acceleration of the stage movement in `mm/s^2`                         | int/float | -                 | max=`10`                       |
-| `start_position`| Start Position of all new runs in mm                                   | int/float | -                 | `0` to `290` for linear stages |
+| `start_position`| Start Position of all new runs in `mm`. See "Modes of Operations"      | int/float | -                 | `0` to `290` for linear stages |
 
 [+]Use the given default value if unsure of value
 
@@ -39,7 +39,7 @@ Declare as `[run]`. All parameters must be defined in config file.
 | Parameter               | Description                                  | Type                                   | Default Value [+] | Safety Limit                   |
 |-------------------------|----------------------------------------------|----------------------------------------|------------------ |--------------------------------|
 | `active_axes`           | Axes/stages that must be initialised         | list of axis names eg: `["x","y"]`     | -                 | -                              |
-| `pos_{stage_axis}`      | move to position                             | three-vector list  (int/float)         | -                 | `0` to `290` for linear stages |
+| `pos_{stage_axis}`      | in `mm`. See "Modes of Operations"           | three-vector list  (int/float)         | -                 | `0` to `290` for linear stages |
 | `stop_time_per_point_s` | wait time at each point (measurement window) in `s` | float                           | -                 | -                              |
 | `readout_freq_s`        | stage position sending frequency (in seconds) to data writer in `s`| float            | -                 | -                              |
 
@@ -80,9 +80,11 @@ acceleration = 10
 start_position = 10
 
 [r]
-port = "/dev/ttyUSB4"
+port = "/dev/ttyUSB3"
 chan = 0
 # in deg
+velocity = 8
+acceleration = 8
 start_position = 180
 
 [run]
@@ -111,3 +113,66 @@ or
 SatelliteECTstage --help
 ```
 
+
+## Additional Satellite Functions 
+
+* `blink(axis)`
+  * Blink test stages.
+  * args: `axis`. Mandatory argument
+  
+  
+* `disable_axis(axis)`
+  * Disable axis. Once disabled, the stage cannot be moved until re-enabled
+  * args: `axis`. Mandatory Argument
+  
+  
+* `disconnect(axis=None (optional))`
+  * Disconnects the communication via the serial port to the stages.
+  * args: `axis` (optional). if None: applies to all stages
+  * Can only be executed if in INIT Satellite State
+  
+
+* `enable_axis(axis)`
+  * Enable axis
+  * args: `axis`. Mandatory Argument
+  
+  
+* `get_full_status(axis=None (optional))`
+  * Returns stage full status
+  * args: `axis` (optional). if None: applies to all stages
+
+
+* `get_full_info(axis=None (optional))`
+  * Returns stage information including status, serial port communication information
+  * args: `axis` (optional). if None: applies to all stages
+  
+  
+*  `get_position(axis=None (optional))`
+  * Get stage position
+  * args: `axis` (optional). if None: applies to all stages
+  
+  
+* `get_status(axis=None (optional))`
+  * Returns stage status as string
+  * args: `axis` (optional). if None: applies to all stages
+
+
+* `get_vel_acc_params(axis=None (optional))`
+  * Get stage max, min velocities and acceleration
+  * args: `axis` (optional). if None: applies to all stages
+
+
+* `go_home(axis=None (optional))`
+  * Goes back to the stage defined home position. Ideally should be 0 mm for linear stages and 0 deg for rotational stage.
+  * args: `axis` (optional). if None: applies to all stages
+  
+  
+* `go_start_position(axis=None (optional))`
+  * move to start position
+  * args: `axis` (optional). if None: applies to all stages
+  
+
+* `stage_stop(axis=None (optional))`
+  * Stops stages. Only works outside of main loop.
+    (NOTE: For emergency stop while within run loop, use stop())
+  * args: `axis` (optional). if None: applies to all stages
