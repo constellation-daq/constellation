@@ -13,6 +13,8 @@
 #include <chrono>
 #include <format>
 #include <iostream>
+#include <QDateTime>
+#include <QVariant>
 #include <set>
 #include <string>
 #include <vector>
@@ -40,11 +42,10 @@ int LogMessage::columnWidth(int i) {
     }
 }
 
-QString LogMessage::operator[](int column) const {
+QVariant LogMessage::operator[](int column) const {
     switch(column) {
     case 0:
-        return QString::fromStdString(
-            std::format("{:%Y-%m-%d %H:%M:%S}", std::chrono::time_point_cast<std::chrono::seconds>(getHeader().getTime())));
+        return QDateTime::fromStdTimePoint(std::chrono::time_point_cast<std::chrono::milliseconds>(getHeader().getTime()));
     case 1: return QString::fromStdString(std::string(getHeader().getSender()));
     case 2: return QString::fromStdString(to_string(getLogLevel()));
     case 3: return QString::fromStdString(std::string(getLogTopic()));

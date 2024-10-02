@@ -19,7 +19,7 @@ public:
         for(int i = 0; i < msg.countExtendedColumns(); ++i) {
             QTreeWidgetItem* item = new QTreeWidgetItem(treeLogMessage);
             item->setText(0, msg.columnName(i));
-            item->setText(1, msg[i]);
+            item->setText(1, msg[i].toString());
         }
         show();
     }
