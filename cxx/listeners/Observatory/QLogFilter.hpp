@@ -97,8 +97,7 @@ private:
     /** Logger to use */
     constellation::log::Logger logger_;
 
-    /** Filter & display */
-    std::vector<size_t> display_indices_;
+    /** Filters */
     constellation::log::Level filter_level_ {constellation::log::Level::TRACE};
     std::string filter_sender_ {"- All -"};
     std::string filter_topic_ {"- All -"};

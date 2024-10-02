@@ -12,6 +12,7 @@
 #include <iostream>
 #include <QApplication>
 #include <QDateTime>
+#include <QException>
 #include <QInputDialog>
 
 #include <argparse/argparse.hpp>
@@ -46,14 +47,14 @@ QString LogItemDelegate::displayText(const QVariant& value, const QLocale& local
     return QStyledItemDelegate::displayText(value, locale);
 }
 
-Observatory::Observatory(std::string_view group_name) : QMainWindow() {
+Observatory::Observatory(std::string_view group_name) {
 
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
 
     // Connect signals:
-    connect(&log_listener_, &QLogListener::newSender, this, [&](QString sender) { filterSender->addItem(sender); });
-    connect(&log_listener_, &QLogListener::newTopic, this, [&](QString topic) { filterTopic->addItem(topic); });
+    connect(&log_listener_, &QLogListener::newSender, this, [&](const QString& sender) { filterSender->addItem(sender); });
+    connect(&log_listener_, &QLogListener::newTopic, this, [&](const QString& topic) { filterTopic->addItem(topic); });
 
     // Start the log receiver pool
     log_listener_.startPool();
@@ -66,8 +67,9 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow() {
     viewLog->setItemDelegate(&log_message_delegate_);
     for(int col = 0; col < LogMessage::countColumns(); ++col) {
         const int width = LogMessage::columnWidth(col);
-        if(width >= 0)
+        if(width >= 0) {
             viewLog->setColumnWidth(col, width);
+        }
     }
 
     // Restore window geometry:
@@ -131,7 +133,7 @@ Observatory::~Observatory() {
                            QString::fromStdString(to_string(log_listener_.getGlobalSubscriptionLevel())));
 }
 
-void Observatory::closeEvent(QCloseEvent*) {
+void Observatory::closeEvent(QCloseEvent* /*event*/) {
     QApplication::quit();
 }
 
@@ -272,7 +274,8 @@ int main(int argc, char** argv) {
     if(parser.is_used("group")) {
         group_name = get_arg(parser, "group");
     } else {
-        QString text = QInputDialog::getText(NULL, "Constellation", "Constellation group to connect to:", QLineEdit::Normal);
+        const QString text =
+            QInputDialog::getText(nullptr, "Constellation", "Constellation group to connect to:", QLineEdit::Normal);
         if(!text.isEmpty()) {
             group_name = text.toStdString();
         } else {
@@ -294,8 +297,12 @@ int main(int argc, char** argv) {
     // Register CMDP in CHIRP and set sender name for CMDP
     SinkManager::getInstance().enableCMDPSending(logger_name);
 
-    Observatory gui(group_name);
-    gui.show();
-
-    return qapp->exec();
+    try {
+        Observatory gui(group_name);
+        gui.show();
+        return QCoreApplication::exec();
+    } catch(QException& e) {
+        std::cerr << "Failed to start UI application" << std::endl;
+        return 1;
+    }
 }
