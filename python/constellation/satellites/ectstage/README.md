@@ -9,8 +9,8 @@ subtitle: "Satellite controlling the ThorLab LT300C linear and PRM1/MZ8 rotation
 
 This satellite allows the control of the ThorLab LT300C linear and PRM1/MZ8 rotation stages via the `pylablib` python package
 
-## Prerequisits
-Python package `pylablib` is required to steer the linear and rotational stages. Install using command: 
+## Prerequisites
+Python package `pylablib` is required to steer the linear and rotational stages. Install using command:
 ```
 pip install pylablib
 ```
@@ -45,7 +45,7 @@ Declare as `[run]`. All parameters must be defined in config file.
 
 [+]Use the given default value if unsure of value
 
-### Modes of Operation 
+### Modes of Operation
 
 * If `pos_{stage_axis}` is undefined, the stage will move to the home position of `{stage_axis}` and take data.
 
@@ -114,29 +114,29 @@ SatelliteECTstage --help
 ```
 
 
-## Additional Satellite Functions 
+## Additional Satellite Functions
 
 * `blink(axis)`
   * Blink test stages.
   * args: `axis`. Mandatory argument
-  
-  
+
+
 * `disable_axis(axis)`
   * Disable axis. Once disabled, the stage cannot be moved until re-enabled
   * args: `axis`. Mandatory Argument
-  
-  
+
+
 * `disconnect(axis=None (optional))`
   * Disconnects the communication via the serial port to the stages.
   * args: `axis` (optional). if None: applies to all stages
   * Can only be executed if in INIT Satellite State
-  
+
 
 * `enable_axis(axis)`
   * Enable axis
   * args: `axis`. Mandatory Argument
-  
-  
+
+
 * `get_full_status(axis=None (optional))`
   * Returns stage full status
   * args: `axis` (optional). if None: applies to all stages
@@ -145,13 +145,13 @@ SatelliteECTstage --help
 * `get_full_info(axis=None (optional))`
   * Returns stage information including status, serial port communication information
   * args: `axis` (optional). if None: applies to all stages
-  
-  
+
+
 *  `get_position(axis=None (optional))`
   * Get stage position
   * args: `axis` (optional). if None: applies to all stages
-  
-  
+
+
 * `get_status(axis=None (optional))`
   * Returns stage status as string
   * args: `axis` (optional). if None: applies to all stages
@@ -165,12 +165,12 @@ SatelliteECTstage --help
 * `go_home(axis=None (optional))`
   * Goes back to the stage defined home position. Ideally should be 0 mm for linear stages and 0 deg for rotational stage.
   * args: `axis` (optional). if None: applies to all stages
-  
-  
+
+
 * `go_start_position(axis=None (optional))`
   * move to start position
   * args: `axis` (optional). if None: applies to all stages
-  
+
 
 * `stage_stop(axis=None (optional))`
   * Stops stages. Only works outside of main loop.
