@@ -10,20 +10,22 @@
 #pragma once
 
 #include <QCloseEvent>
-#include <QItemDelegate>
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QPainter>
 #include <QSettings>
+#include <QStyledItemDelegate>
 
 #include "LogDialog.hpp"
 #include "QLogFilter.hpp"
 #include "QLogListener.hpp"
 #include "ui_Observatory.h"
 
-class LogItemDelegate : public QItemDelegate {
+class LogItemDelegate : public QStyledItemDelegate {
 public:
     LogItemDelegate(QLogListener* model);
+
+    QString displayText(const QVariant& value, const QLocale& locale) const override;
 
 private:
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;

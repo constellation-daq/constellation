@@ -12,6 +12,7 @@
 #include <deque>
 #include <QAbstractListModel>
 #include <QRegularExpression>
+#include <QVariant>
 #include <vector>
 
 #include "constellation/core/chirp/Manager.hpp"
@@ -37,9 +38,9 @@ public:
      * @brief Operator to fetch column information as string representation from the message
      *
      * @param column Column to retrieve the string representation for
-     * @return String representation of the message info
+     * @return Variant with the respective message information
      */
-    QString operator[](int column) const;
+    QVariant operator[](int column) const;
 
     /**
      * @brief Obtain number of info columns this message provides
