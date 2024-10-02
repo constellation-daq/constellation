@@ -28,9 +28,9 @@ public:
     QString displayText(const QVariant& value, const QLocale& locale) const override;
 
 private:
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
-    const std::map<constellation::log::Level, QColor> level_colors {
+    static inline std::map<constellation::log::Level, QColor> level_colors {
         {constellation::log::Level::TRACE, QColor(224, 224, 224, 128)},
         {constellation::log::Level::DEBUG, QColor(200, 200, 200, 128)},
         {constellation::log::Level::INFO, QColor(191, 191, 191, 128)},
@@ -48,7 +48,7 @@ public:
     virtual ~Observatory();
 
 public:
-    void closeEvent(QCloseEvent*) override;
+    void closeEvent(QCloseEvent* /*event*/) override;
 
 private slots:
     void on_globalLevel_currentIndexChanged(int index);
@@ -61,7 +61,6 @@ private slots:
     void on_viewLog_activated(const QModelIndex& i);
 
 private:
-    static void CheckRegistered();
     QLogListener log_listener_;
     QLogFilter log_filter_;
     LogItemDelegate log_message_delegate_;

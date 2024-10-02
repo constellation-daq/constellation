@@ -16,9 +16,9 @@ class LogDialog : public QDialog, Ui::dlgLogMessage {
 public:
     LogDialog(const LogMessage& msg) {
         setupUi(this);
-        for(int i = 0; i < msg.countExtendedColumns(); ++i) {
+        for(int i = 0; i < LogMessage::countExtendedColumns(); ++i) {
             QTreeWidgetItem* item = new QTreeWidgetItem(treeLogMessage);
-            item->setText(0, msg.columnName(i));
+            item->setText(0, LogMessage::columnName(i));
             item->setText(1, msg[i].toString());
         }
         show();
