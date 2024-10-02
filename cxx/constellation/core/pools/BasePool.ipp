@@ -79,12 +79,6 @@ namespace constellation::pools {
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
-    std::size_t BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::countSockets() {
-        const std::lock_guard sockets_lock {sockets_mutex_};
-        return sockets_.size();
-    }
-
-    template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
     bool BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::should_connect(const chirp::DiscoveredService& /*service*/) {
         return true;
     }
@@ -143,7 +137,7 @@ namespace constellation::pools {
             // Register the socket with the poller
             poller_.add(socket, zmq::event_flags::pollin, handler);
             sockets_.emplace(service, std::move(socket));
-            sockets_empty_.store(false);
+            socket_count_.store(sockets_.size());
             LOG(pool_logger_, DEBUG) << "Connected to " << service.to_uri();
         } catch(const zmq::error_t& error) {
             // The socket is emplaced in the list only on success of connection and poller registration and goes out of scope
@@ -173,7 +167,7 @@ namespace constellation::pools {
             }
         }
         sockets_.clear();
-        sockets_empty_.store(true);
+        socket_count_.store(sockets_.size());
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
@@ -200,7 +194,7 @@ namespace constellation::pools {
             }
 
             sockets_.erase(socket_it);
-            sockets_empty_.store(sockets_.empty());
+            socket_count_.store(sockets_.size());
             LOG(pool_logger_, DEBUG) << "Disconnected from " << service.to_uri();
         }
     }
@@ -235,7 +229,7 @@ namespace constellation::pools {
                 std::this_thread::sleep_for(1ns);
 
                 // The poller doesn't work if no socket registered
-                if(sockets_empty_.load()) {
+                if(socket_count_.load() == 0) {
                     std::this_thread::sleep_for(50ms);
                     continue;
                 }
