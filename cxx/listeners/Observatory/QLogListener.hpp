@@ -126,6 +126,9 @@ public:
      */
     void subscribeToTopic(constellation::log::Level level, std::string_view topic = "");
 
+    bool isSenderKnown(const std::string& sender) const { return sender_list_.contains(sender); }
+    bool isTopicKnown(const std::string& topic) const { return topic_list_.contains(topic); }
+
     /// @cond doxygen_suppress
 
     /* Qt accessor methods */
