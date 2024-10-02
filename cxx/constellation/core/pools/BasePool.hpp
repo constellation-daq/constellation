@@ -83,7 +83,7 @@ namespace constellation::pools {
         /**
          * @brief Return the number of currently connected sockets
          */
-        std::size_t countSockets();
+        std::size_t countSockets() { return socket_count_.load(); }
 
     protected:
         /**
@@ -158,7 +158,7 @@ namespace constellation::pools {
         std::function<void(MESSAGE&&)> message_callback_;
 
         std::map<chirp::DiscoveredService, zmq::socket_t> sockets_;
-        std::atomic_bool sockets_empty_ {true};
+        std::atomic_size_t socket_count_ {0};
 
         std::jthread pool_thread_;
         std::exception_ptr exception_ptr_ {nullptr};
