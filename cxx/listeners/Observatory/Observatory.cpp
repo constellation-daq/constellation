@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <QApplication>
+#include <QDateTime>
 #include <QInputDialog>
 
 #include <argparse/argparse.hpp>
@@ -30,7 +31,14 @@ LogItemDelegate::LogItemDelegate(QLogListener* model) : log_listener_(model) {}
 void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const {
     const auto color = level_colors.at(log_listener_->getMessageLevel(index));
     painter->fillRect(option.rect, QBrush(color));
-    QItemDelegate::paint(painter, option, index);
+    QStyledItemDelegate::paint(painter, option, index);
+}
+
+QString LogItemDelegate::displayText(const QVariant& value, const QLocale& locale) const {
+    if(value.typeId() == QMetaType::QDateTime) {
+        return locale.toString(value.toDateTime(), "yyyy-MM-dd hh:mm:ss");
+    }
+    return QStyledItemDelegate::displayText(value, locale);
 }
 
 Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_message_delegate_(&log_listener_) {
