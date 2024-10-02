@@ -7,10 +7,12 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include "QLogFilter.hpp"
+#include "listeners/Observatory/QLogFilter.hpp"
 
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/utils/string.hpp"
+
+#include "listeners/Observatory/QLogMessage.hpp"
 
 using namespace constellation::log;
 using namespace constellation::utils;
@@ -23,7 +25,7 @@ QLogFilter::QLogFilter(QObject* parent) : QSortFilterProxyModel(parent), logger_
 bool QLogFilter::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const {
     const auto src_index = sourceModel()->index(sourceRow, 0, sourceParent);
     const auto* listener = dynamic_cast<QLogListener*>(sourceModel());
-    const LogMessage& msg = listener->getMessage(src_index);
+    const auto& msg = listener->getMessage(src_index);
 
     const auto match = filter_message_.match(QString::fromStdString(std::string(msg.getLogMessage())));
     return (msg.getLogLevel() >= filter_level_) &&

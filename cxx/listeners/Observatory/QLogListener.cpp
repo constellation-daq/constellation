@@ -24,43 +24,13 @@
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/utils/string.hpp"
 
+#include "listeners/Observatory/QLogMessage.hpp"
+
 using namespace constellation::message;
 using namespace constellation::chirp;
 using namespace constellation::log;
 using namespace constellation::pools;
 using namespace constellation::utils;
-
-LogMessage::LogMessage(CMDP1LogMessage&& msg) : CMDP1LogMessage(std::move(msg)) {}
-
-int LogMessage::columnWidth(int column) {
-    switch(column) {
-    case 0: return 150;
-    case 1: return 120;
-    case 2: return 90;
-    case 3: return 95;
-    default: return -1;
-    }
-}
-
-QVariant LogMessage::operator[](int column) const {
-    switch(column) {
-    case 0:
-        return QDateTime::fromStdTimePoint(std::chrono::time_point_cast<std::chrono::milliseconds>(getHeader().getTime()));
-    case 1: return QString::fromStdString(std::string(getHeader().getSender()));
-    case 2: return QString::fromStdString(to_string(getLogLevel()));
-    case 3: return QString::fromStdString(std::string(getLogTopic()));
-    case 4: return QString::fromStdString(std::string(getLogMessage()));
-    case 5: return QString::fromStdString(getHeader().getTags().to_string());
-    default: return "";
-    }
-}
-
-QString LogMessage::columnName(int column) {
-    if(column < 0 || column >= static_cast<int>(headers_.size())) {
-        return {};
-    }
-    return headers_.at(column);
-}
 
 QLogListener::QLogListener(QObject* parent)
     : QAbstractListModel(parent), SubscriberPool<CMDP1LogMessage, MONITORING>(
@@ -137,22 +107,22 @@ QVariant QLogListener::data(const QModelIndex& index, int role) const {
     }
 
     const std::lock_guard message_lock {message_mutex_};
-    if(index.column() < LogMessage::countColumns() && index.row() < static_cast<int>(messages_.size())) {
+    if(index.column() < QLogMessage::countColumns() && index.row() < static_cast<int>(messages_.size())) {
         return messages_[index.row()][index.column()];
     }
 
     return {};
 }
 
-const LogMessage& QLogListener::getMessage(const QModelIndex& index) const {
+const QLogMessage& QLogListener::getMessage(const QModelIndex& index) const {
     const std::lock_guard message_lock {message_mutex_};
     return messages_[index.row()];
 }
 
 QVariant QLogListener::headerData(int column, Qt::Orientation orientation, int role) const {
 
-    if(role == Qt::DisplayRole && orientation == Qt::Horizontal && column >= 0 && column < LogMessage::countColumns()) {
-        return LogMessage::columnName(column);
+    if(role == Qt::DisplayRole && orientation == Qt::Horizontal && column >= 0 && column < QLogMessage::countColumns()) {
+        return QLogMessage::columnName(column);
     }
 
     return {};

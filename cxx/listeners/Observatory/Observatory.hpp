@@ -16,9 +16,9 @@
 #include <QSettings>
 #include <QStyledItemDelegate>
 
-#include "LogDialog.hpp"
-#include "QLogFilter.hpp"
-#include "QLogListener.hpp"
+#include "listeners/Observatory/LogDialog.hpp"
+#include "listeners/Observatory/QLogFilter.hpp"
+#include "listeners/Observatory/QLogListener.hpp"
 #include "ui_Observatory.h"
 
 class LogItemDelegate : public QStyledItemDelegate {
