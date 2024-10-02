@@ -84,7 +84,7 @@ public:
      *
      * @param parent QObject parent
      */
-    explicit QLogListener(QObject* parent = 0);
+    explicit QLogListener(QObject* parent = nullptr);
 
     /**
      * @brief Update the global subscription log level
@@ -124,10 +124,10 @@ public:
     /// @cond doxygen_suppress
 
     /* Qt accessor methods */
-    int rowCount(const QModelIndex& /*parent*/) const override { return message_count_.load(); }
+    int rowCount(const QModelIndex& /*parent*/) const override { return static_cast<int>(message_count_.load()); }
     int columnCount(const QModelIndex& /*parent*/) const override { return LogMessage::countColumns(); }
     QVariant data(const QModelIndex& index, int role) const override;
-    QVariant headerData(int column, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int column, Qt::Orientation orientation, int role) const override;
 
     /// @endcond
 

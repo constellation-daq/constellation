@@ -45,7 +45,6 @@ class Observatory : public QMainWindow, public Ui::wndLog {
     Q_OBJECT
 public:
     Observatory(std::string_view group_name);
-    virtual ~Observatory();
 
 public:
     void closeEvent(QCloseEvent* /*event*/) override;
