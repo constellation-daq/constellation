@@ -50,12 +50,6 @@ public:
     void closeEvent(QCloseEvent*) override;
 
 private slots:
-    /**
-     * @brief Private slot to update the scroll position to the newly inserted and displayed message
-     * @param i model index to which to scroll
-     */
-    void new_message_display(const QModelIndex& i);
-
     void on_globalLevel_currentIndexChanged(int index);
     void on_filterLevel_currentIndexChanged(int index);
     void on_filterSender_currentTextChanged(const QString& text);
