@@ -43,7 +43,7 @@ void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
 }
 
 QString LogItemDelegate::displayText(const QVariant& value, const QLocale& locale) const {
-    if(value.typeId() == QMetaType::QDateTime) {
+    if(value.userType() == QMetaType::QDateTime) {
         return locale.toString(value.toDateTime(), "yyyy-MM-dd hh:mm:ss");
     }
     return QStyledItemDelegate::displayText(value, locale);
