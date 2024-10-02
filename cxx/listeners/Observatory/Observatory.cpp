@@ -22,6 +22,8 @@
 #include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/utils/casts.hpp"
 
+#include "listeners/Observatory/QLogMessage.hpp"
+
 using namespace constellation;
 using namespace constellation::chirp;
 using namespace constellation::log;
@@ -65,8 +67,8 @@ Observatory::Observatory(std::string_view group_name) {
     log_filter_.setSourceModel(&log_listener_);
     viewLog->setModel(&log_filter_);
     viewLog->setItemDelegate(&log_message_delegate_);
-    for(int col = 0; col < LogMessage::countColumns(); ++col) {
-        const int width = LogMessage::columnWidth(col);
+    for(int col = 0; col < QLogMessage::countColumns(); ++col) {
+        const int width = QLogMessage::columnWidth(col);
         if(width >= 0) {
             viewLog->setColumnWidth(col, width);
         }
