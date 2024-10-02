@@ -52,14 +52,8 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow() {
     setupUi(this);
 
     // Connect signals:
-    connect(&log_listener_, &QLogListener::newSender, this, [&](QString sender) {
-        filterSender->addItem(sender);
-        log_filter_.addSender(sender);
-    });
-    connect(&log_listener_, &QLogListener::newTopic, this, [&](QString topic) {
-        filterTopic->addItem(topic);
-        log_filter_.addTopic(topic);
-    });
+    connect(&log_listener_, &QLogListener::newSender, this, [&](QString sender) { filterSender->addItem(sender); });
+    connect(&log_listener_, &QLogListener::newTopic, this, [&](QString topic) { filterTopic->addItem(topic); });
 
     // Start the log receiver pool
     log_listener_.startPool();

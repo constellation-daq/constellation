@@ -31,14 +31,6 @@ bool QLogFilter::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent
            (msg.getLogTopic() == filter_topic_ || "- All -" == filter_topic_) && match.hasMatch();
 }
 
-void QLogFilter::addSender(const QString& sender) {
-    filter_sender_list_.emplace(sender.toStdString());
-}
-
-void QLogFilter::addTopic(const QString& topic) {
-    filter_topic_list_.emplace(topic.toStdString());
-}
-
 void QLogFilter::setFilterLevel(Level level) {
     if(filter_level_ != level) {
         LOG(logger_, DEBUG) << "Updating filter level to " << to_string(level);
@@ -48,7 +40,8 @@ void QLogFilter::setFilterLevel(Level level) {
 }
 
 void QLogFilter::setFilterSender(const std::string& sender) {
-    if(filter_sender_list_.contains(sender)) {
+    const auto* listener = dynamic_cast<QLogListener*>(sourceModel());
+    if(sender == "- All -" || listener->isSenderKnown(sender)) {
         LOG(logger_, DEBUG) << "Updating filter sender to " << sender;
         filter_sender_ = sender;
         invalidateFilter();
@@ -56,7 +49,8 @@ void QLogFilter::setFilterSender(const std::string& sender) {
 }
 
 void QLogFilter::setFilterTopic(const std::string& topic) {
-    if(filter_topic_list_.contains(topic)) {
+    const auto* listener = dynamic_cast<QLogListener*>(sourceModel());
+    if(topic == "- All -" || listener->isTopicKnown(topic)) {
         LOG(logger_, DEBUG) << "Updating filter topic to " << topic;
         filter_topic_ = topic;
         invalidateFilter();
