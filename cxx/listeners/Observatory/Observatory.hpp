@@ -16,11 +16,25 @@
 #include <QSettings>
 #include <QStyledItemDelegate>
 
-#include "listeners/Observatory/LogDialog.hpp"
 #include "listeners/Observatory/QLogFilter.hpp"
 #include "listeners/Observatory/QLogListener.hpp"
+#include "ui_LogDialog.h"
 #include "ui_Observatory.h"
 
+/**
+ * @class LogDialog
+ * @brief Dialog window to show details of individual log messages
+ */
+class LogDialog : public QDialog, Ui::dlgLogMessage {
+public:
+    LogDialog(const QLogMessage& msg);
+};
+
+/**
+ * @class LogItemDelegate
+ * @brief Delegate for drawing log items in the logging view. This adds color to the row and converts the timestamp of the
+ *        log message to a format including seconds.
+ */
 class LogItemDelegate : public QStyledItemDelegate {
 public:
     LogItemDelegate() = default;
