@@ -17,6 +17,7 @@
 #include <QSettings>
 
 #include "LogDialog.hpp"
+#include "QLogFilter.hpp"
 #include "QLogListener.hpp"
 #include "ui_Observatory.h"
 
@@ -67,6 +68,7 @@ private slots:
 private:
     static void CheckRegistered();
     QLogListener log_listener_;
+    QLogFilter log_filter_;
     LogItemDelegate log_message_delegate_;
 
     /** UI Settings */

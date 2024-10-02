@@ -72,18 +72,6 @@ private:
     static constexpr std::array<const char*, 6> headers_ {"Time", "Sender", "Level", "Topic", "Message", "Tags"};
 };
 
-class LogSorter {
-public:
-    LogSorter(std::deque<LogMessage>* messages);
-    void SetSort(int col, bool ascending);
-    bool operator()(size_t lhs, size_t rhs);
-
-private:
-    std::deque<LogMessage>* m_msgs;
-    int m_col;
-    bool m_asc;
-};
-
 class QLogListener : public QAbstractListModel,
                      public constellation::pools::SubscriberPool<constellation::message::CMDP1LogMessage,
                                                                  constellation::chirp::MONITORING> {
@@ -104,60 +92,6 @@ public:
      * @return Log level of the message
      */
     constellation::log::Level getMessageLevel(const QModelIndex& index) const;
-
-    /**
-     * @brief Set a new log level filter value
-     *
-     * @param level New log level filter
-     */
-    void setFilterLevel(constellation::log::Level level);
-
-    /**
-     * @brief Return the currently set log level filter
-     * @return Log level filter
-     */
-    constellation::log::Level getFilterLevel() const { return filter_level_; }
-
-    /**
-     * @brief Set a new sender filter value
-     *
-     * @param sender Sender filter
-     * @return True if the filter was updated, false otherwise
-     */
-    bool setFilterSender(const std::string& sender);
-
-    /**
-     * @brief Return the currently set sender filter
-     * @return Sender filter
-     */
-    std::string getFilterSender() const { return filter_sender_; }
-
-    /**
-     * @brief Set a new topic filter value
-     *
-     * @param topic Topic filter
-     * @return True if the filter was updated, false otherwise
-     */
-    bool setFilterTopic(const std::string& topic);
-
-    /**
-     * @brief Return the currently set topic filter
-     * @return Topic filter
-     */
-    std::string getFilterTopic() const { return filter_topic_; }
-
-    /**
-     * @brief Set a new message filter value
-     *
-     * @param pattern Message filter pattern
-     */
-    void setFilterMessage(const QString& pattern);
-
-    /**
-     * @brief Return the currently set message filter pattern
-     * @return Message filter pattern
-     */
-    QString getFilterMessage() const { return filter_message_.pattern(); }
 
     /**
      * @brief Update the global subscription log level
@@ -198,7 +132,6 @@ public:
     int columnCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-    void sort(int column, Qt::SortOrder order) override;
 
     /// @endcond
 
@@ -232,21 +165,6 @@ private:
     void add_message(constellation::message::CMDP1LogMessage&& msg);
 
     /**
-     * @brief Helper to determine if a message at the given index should be displayed currently.
-     *
-     * This evaluates the currently-configured filters.
-     *
-     * @param index Index of the message in the message storage
-     * @return True if the message is to be displayed, false otherwise
-     */
-    bool is_message_displayed(size_t index) const;
-
-    /**
-     * @brief Helper to update the list of displayed messages
-     */
-    void update_displayed_messages();
-
-    /**
      * @brief Helper to get all subscription topics given a global subscription log level.This is used to immediately
      * subscribe new sockets appearing to the global log level and all topics below
 
@@ -261,16 +179,6 @@ private:
     /** Subscription & storage */
     std::deque<LogMessage> messages_;
     constellation::log::Level subscription_global_level_ {constellation::log::Level::INFO};
-
-    /** Filter & display */
-    std::vector<size_t> display_indices_;
-    constellation::log::Level filter_level_ {constellation::log::Level::TRACE};
-    std::set<std::string> filter_sender_list_ {"- All -"};
-    std::string filter_sender_ {"- All -"};
-    std::set<std::string> filter_topic_list_ {"- All -"};
-    std::string filter_topic_ {"- All -"};
-    QRegularExpression filter_message_;
-
-    /** Sorting helper */
-    LogSorter m_sorter;
+    std::set<std::string> sender_list_;
+    std::set<std::string> topic_list_;
 };
