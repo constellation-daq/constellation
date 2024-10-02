@@ -101,6 +101,22 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
     emit newMessage(createIndex(pos, 0));
 }
 
+void QLogListener::socket_connected(zmq::socket_t& socket) {
+    // Perform the socket connection & subscription:
+    SubscriberPool<CMDP1LogMessage, MONITORING>::socket_connected(socket);
+
+    // Emit the signal with the current number of connections
+    emit connectionsChanged(countSockets());
+}
+
+void QLogListener::socket_disconnected(zmq::socket_t& socket) {
+    // Perform the socket connection & subscription:
+    SubscriberPool<CMDP1LogMessage, MONITORING>::socket_disconnected(socket);
+
+    // Emit the signal with the current number of connections
+    emit connectionsChanged(countSockets());
+}
+
 QVariant QLogListener::data(const QModelIndex& index, int role) const {
     if(role != Qt::DisplayRole || !index.isValid()) {
         return {};

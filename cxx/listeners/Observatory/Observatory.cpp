@@ -67,6 +67,9 @@ Observatory::Observatory(std::string_view group_name) {
     // Connect signals:
     connect(&log_listener_, &QLogListener::newSender, this, [&](const QString& sender) { filterSender->addItem(sender); });
     connect(&log_listener_, &QLogListener::newTopic, this, [&](const QString& topic) { filterTopic->addItem(topic); });
+    connect(&log_listener_, &QLogListener::connectionsChanged, this, [&](std::size_t num) {
+        labelNrSatellites->setText("<font color='gray'><b>" + QString::number(num) + "</b></font>");
+    });
 
     // Start the log receiver pool
     log_listener_.startPool();
