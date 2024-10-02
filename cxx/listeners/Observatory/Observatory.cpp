@@ -26,11 +26,15 @@ using namespace constellation::chirp;
 using namespace constellation::log;
 using namespace constellation::utils;
 
-LogItemDelegate::LogItemDelegate(QLogListener* model, QLogFilter* filter) : log_listener_(model), filter_(filter) {}
+void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const {
+    // Get sibling for column 2 (where the log level is stored) for current row:
+    const QModelIndex lvl_index = index.sibling(index.row(), 2);
 
-void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& i) const {
-    const QModelIndex index = filter_->mapToSource(i);
-    const auto color = level_colors.at(log_listener_->getMessageLevel(index));
+    // Get log level color
+    const auto level_str = lvl_index.data().toString().toStdString();
+    const auto color =
+        level_colors.at(magic_enum::enum_cast<Level>(level_str, magic_enum::case_insensitive).value_or(WARNING));
+
     painter->fillRect(option.rect, QBrush(color));
     QStyledItemDelegate::paint(painter, option, index);
 }
@@ -42,7 +46,7 @@ QString LogItemDelegate::displayText(const QVariant& value, const QLocale& local
     return QStyledItemDelegate::displayText(value, locale);
 }
 
-Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_message_delegate_(&log_listener_, &log_filter_) {
+Observatory::Observatory(std::string_view group_name) : QMainWindow() {
 
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
