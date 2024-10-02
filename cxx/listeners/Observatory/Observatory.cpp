@@ -39,7 +39,6 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_messa
     setupUi(this);
 
     // Connect signals:
-    connect(&log_listener_, &QLogListener::newMessage, this, &Observatory::new_message_display);
     connect(&log_listener_, &QLogListener::newSender, this, [&](QString sender) {
         filterSender->addItem(sender);
         log_filter_.addSender(sender);
@@ -151,11 +150,6 @@ void Observatory::on_filterMessage_editingFinished() {
 
 void Observatory::on_viewLog_activated(const QModelIndex& i) {
     new LogDialog(log_listener_.getMessage(i));
-}
-
-void Observatory::new_message_display(const QModelIndex&) {
-    // FIXME it would be nice to only scroll when at the end and keep position otherwise
-    viewLog->scrollToBottom();
 }
 
 void Observatory::on_clearFilters_clicked() {
