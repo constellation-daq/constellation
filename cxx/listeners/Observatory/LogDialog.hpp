@@ -9,16 +9,16 @@
 
 #pragma once
 
-#include "QLogListener.hpp"
+#include "listeners/Observatory/QLogMessage.hpp"
 #include "ui_LogDialog.h"
 
 class LogDialog : public QDialog, Ui::dlgLogMessage {
 public:
-    LogDialog(const LogMessage& msg) {
+    LogDialog(const QLogMessage& msg) {
         setupUi(this);
-        for(int i = 0; i < LogMessage::countExtendedColumns(); ++i) {
+        for(int i = 0; i < QLogMessage::countExtendedColumns(); ++i) {
             auto* item = new QTreeWidgetItem(treeLogMessage);
-            item->setText(0, LogMessage::columnName(i));
+            item->setText(0, QLogMessage::columnName(i));
             item->setText(1, msg[i].toString());
         }
         show();

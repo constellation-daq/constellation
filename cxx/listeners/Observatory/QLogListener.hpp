@@ -20,58 +20,7 @@
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/pools/SubscriberPool.hpp"
 
-/**
- * @class LogMessage
- * @brief Wrapper class around CMDP1 Log messages which provide additional accessors to make them play nice with the
- * QAbstractListModel they are used in.
- */
-class LogMessage : public constellation::message::CMDP1LogMessage {
-public:
-    /**
-     * @brief Constructing a Log message from a CMDP1LogMessage
-     *
-     * @param msg CMDP1 Log Message
-     */
-    explicit LogMessage(constellation::message::CMDP1LogMessage&& msg);
-
-    /**
-     * @brief Operator to fetch column information as string representation from the message
-     *
-     * @param column Column to retrieve the string representation for
-     * @return Variant with the respective message information
-     */
-    QVariant operator[](int column) const;
-
-    /**
-     * @brief Obtain number of info columns this message provides
-     * @return Number of columns
-     */
-    static int countColumns() { return headers_.size() - 1; }
-
-    /**
-     * @brief Obtain number of info columns this message provides including extra information
-     * @return Number of all columns
-     */
-    static int countExtendedColumns() { return headers_.size(); }
-
-    /**
-     * @brief Get title of a given column
-     * @param column Column number
-     * @return Header of the column
-     */
-    static QString columnName(int column);
-
-    /**
-     * @brief Obtain predefined width of a column
-     * @param column Column number
-     * @return Width of the column
-     */
-    static int columnWidth(int column);
-
-private:
-    // Column headers of the log details
-    static constexpr std::array<const char*, 6> headers_ {"Time", "Sender", "Level", "Topic", "Message", "Tags"};
-};
+#include "listeners/Observatory/QLogMessage.hpp"
 
 class QLogListener : public QAbstractListModel,
                      public constellation::pools::SubscriberPool<constellation::message::CMDP1LogMessage,
@@ -104,7 +53,7 @@ public:
      * @param index QModelIndex of the message
      * @return Constant reference to the message
      */
-    const LogMessage& getMessage(const QModelIndex& index) const;
+    const QLogMessage& getMessage(const QModelIndex& index) const;
 
     /**
      * @brief Subscribe to a given topic at a given log level
@@ -125,7 +74,7 @@ public:
 
     /* Qt accessor methods */
     int rowCount(const QModelIndex& /*parent*/) const override { return static_cast<int>(message_count_.load()); }
-    int columnCount(const QModelIndex& /*parent*/) const override { return LogMessage::countColumns(); }
+    int columnCount(const QModelIndex& /*parent*/) const override { return QLogMessage::countColumns(); }
     QVariant data(const QModelIndex& index, int role) const override;
     QVariant headerData(int column, Qt::Orientation orientation, int role) const override;
 
@@ -173,7 +122,7 @@ private:
     constellation::log::Logger logger_;
 
     /** Log messages & access mutex*/
-    std::deque<LogMessage> messages_;
+    std::deque<QLogMessage> messages_;
     std::atomic_size_t message_count_;
     mutable std::mutex message_mutex_;
 
