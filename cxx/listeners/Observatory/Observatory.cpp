@@ -40,8 +40,14 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_messa
 
     // Connect signals:
     connect(&log_listener_, &QLogListener::newMessage, this, &Observatory::new_message_display);
-    connect(&log_listener_, &QLogListener::newSender, this, [&](QString sender) { filterSender->addItem(sender); });
-    connect(&log_listener_, &QLogListener::newTopic, this, [&](QString topic) { filterTopic->addItem(topic); });
+    connect(&log_listener_, &QLogListener::newSender, this, [&](QString sender) {
+        filterSender->addItem(sender);
+        log_filter_.addSender(sender);
+    });
+    connect(&log_listener_, &QLogListener::newTopic, this, [&](QString topic) {
+        filterTopic->addItem(topic);
+        log_filter_.addTopic(topic);
+    });
 
     // Start the log receiver pool
     log_listener_.startPool();
@@ -49,7 +55,8 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_messa
     // Set up header bar:
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
 
-    viewLog->setModel(&log_listener_);
+    log_filter_.setSourceModel(&log_listener_);
+    viewLog->setModel(&log_filter_);
     viewLog->setItemDelegate(&log_message_delegate_);
     for(int col = 0; col < LogMessage::countColumns(); ++col) {
         const int width = LogMessage::columnWidth(col);
@@ -70,23 +77,21 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_messa
     if(gui_settings_.contains("filters/level")) {
         const auto qlevel = gui_settings_.value("filters/level").toString();
         const auto level = magic_enum::enum_cast<Level>(qlevel.toStdString(), magic_enum::case_insensitive);
-        log_listener_.setFilterLevel(level.value_or(Level::TRACE));
+        log_filter_.setFilterLevel(level.value_or(Level::TRACE));
         filterLevel->setCurrentIndex(std::to_underlying(level.value_or(Level::TRACE)));
     }
     if(gui_settings_.contains("filters/sender")) {
         const auto sender = gui_settings_.value("filters/sender").toString();
-        if(log_listener_.setFilterSender(sender.toStdString())) {
-            filterSender->setCurrentText(sender);
-        }
+        log_filter_.setFilterSender(sender.toStdString());
+        filterSender->setCurrentText(QString::fromStdString(log_filter_.getFilterSender()));
     }
     if(gui_settings_.contains("filters/topic")) {
         const auto topic = gui_settings_.value("filters/topic").toString();
-        if(log_listener_.setFilterTopic(topic.toStdString())) {
-            filterTopic->setCurrentText(topic);
-        }
+        log_filter_.setFilterTopic(topic.toStdString());
+        filterTopic->setCurrentText(QString::fromStdString(log_filter_.getFilterTopic()));
     }
     const auto pattern = gui_settings_.value("filters/search", "");
-    log_listener_.setFilterMessage(pattern.toString());
+    log_filter_.setFilterMessage(pattern.toString());
     filterMessage->setText(pattern.toString());
 
     // Load last subscription:
@@ -110,10 +115,10 @@ Observatory::~Observatory() {
     }
 
     // Store filter settings
-    gui_settings_.setValue("filters/level", QString::fromStdString(to_string(log_listener_.getFilterLevel())));
-    gui_settings_.setValue("filters/sender", QString::fromStdString(log_listener_.getFilterSender()));
-    gui_settings_.setValue("filters/topic", QString::fromStdString(log_listener_.getFilterTopic()));
-    gui_settings_.setValue("filters/search", log_listener_.getFilterMessage());
+    gui_settings_.setValue("filters/level", QString::fromStdString(to_string(log_filter_.getFilterLevel())));
+    gui_settings_.setValue("filters/sender", QString::fromStdString(log_filter_.getFilterSender()));
+    gui_settings_.setValue("filters/topic", QString::fromStdString(log_filter_.getFilterTopic()));
+    gui_settings_.setValue("filters/search", log_filter_.getFilterMessage());
 
     // Store subscription settings
     gui_settings_.setValue("subscriptions/level",
@@ -125,7 +130,7 @@ void Observatory::closeEvent(QCloseEvent*) {
 }
 
 void Observatory::on_filterLevel_currentIndexChanged(int index) {
-    log_listener_.setFilterLevel(Level(index));
+    log_filter_.setFilterLevel(Level(index));
 }
 
 void Observatory::on_globalLevel_currentIndexChanged(int index) {
@@ -133,15 +138,15 @@ void Observatory::on_globalLevel_currentIndexChanged(int index) {
 }
 
 void Observatory::on_filterSender_currentTextChanged(const QString& text) {
-    log_listener_.setFilterSender(text.toStdString());
+    log_filter_.setFilterSender(text.toStdString());
 }
 
 void Observatory::on_filterTopic_currentTextChanged(const QString& text) {
-    log_listener_.setFilterTopic(text.toStdString());
+    log_filter_.setFilterTopic(text.toStdString());
 }
 
 void Observatory::on_filterMessage_editingFinished() {
-    log_listener_.setFilterMessage(filterMessage->displayText());
+    log_filter_.setFilterMessage(filterMessage->displayText());
 }
 
 void Observatory::on_viewLog_activated(const QModelIndex& i) {
@@ -161,7 +166,7 @@ void Observatory::on_clearFilters_clicked() {
 
     // Setting the text does not emit the editingFinished signal, do it manually
     filterMessage->setText("");
-    log_listener_.setFilterMessage("");
+    log_filter_.setFilterMessage("");
 }
 
 // NOLINTNEXTLINE(*-avoid-c-arrays)
