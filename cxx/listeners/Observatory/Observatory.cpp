@@ -46,7 +46,7 @@ void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     // Get log level color
     const auto level_str = lvl_index.data().toString().toStdString();
     const auto color =
-        level_colors.at(magic_enum::enum_cast<Level>(level_str, magic_enum::case_insensitive).value_or(WARNING));
+        level_colors_.at(magic_enum::enum_cast<Level>(level_str, magic_enum::case_insensitive).value_or(WARNING));
 
     painter->fillRect(option.rect, QBrush(color));
     QStyledItemDelegate::paint(painter, option, index);

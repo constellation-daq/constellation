@@ -67,7 +67,26 @@ public:
      */
     void subscribeToTopic(constellation::log::Level level, std::string_view topic = "");
 
+    /**
+     * @brief Helper to check if a given sender is known already
+     * This is used to e.g. cross-check filter settings
+     *
+     * @note the comparison here is not case-insensitive.
+     *
+     * @param sender Sender to be checked for
+     * @return True if this sender has been sending messages, false otherwise
+     */
     bool isSenderKnown(const std::string& sender) const { return sender_list_.contains(sender); }
+
+    /**
+     * @brief Helper to check if a given topic is known already
+     * This is used to e.g. cross-check filter settings
+     *
+     * @note the comparison here is not case-insensitive.
+     *
+     * @param topic Topic to be checked for
+     * @return True if this topic has been found in any message, false otherwise
+     */
     bool isTopicKnown(const std::string& topic) const { return topic_list_.contains(topic); }
 
     /// @cond doxygen_suppress
@@ -105,7 +124,7 @@ private:
      * This function inserts the message into storage, checks for new topics or sender names to register, and emits a
      * newMessage signal with the inserted index when the message is displayed.
      *
-     * \param msg Received log message
+     * @param msg Received log message
      */
     void add_message(constellation::message::CMDP1LogMessage&& msg);
 
