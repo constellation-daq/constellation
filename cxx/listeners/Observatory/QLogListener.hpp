@@ -101,6 +101,12 @@ public:
 
 signals:
     /**
+     * @brief Signal emitted whenever a connection changed
+     * @param connections Number of currently held connections
+     */
+    void connectionsChanged(std::size_t connections);
+
+    /**
      * @brief Signal emitted whenever a new message has been added
      * @param index QModelIndex at which the message has been inserted
      */
@@ -127,6 +133,9 @@ private:
      * @param msg Received log message
      */
     void add_message(constellation::message::CMDP1LogMessage&& msg);
+
+    void socket_connected(zmq::socket_t& socket) override;
+    void socket_disconnected(zmq::socket_t& socket) override;
 
     /**
      * @brief Helper to get all subscription topics given a global subscription log level.This is used to immediately
