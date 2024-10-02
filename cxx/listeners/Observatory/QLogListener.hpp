@@ -87,14 +87,6 @@ public:
     explicit QLogListener(QObject* parent = 0);
 
     /**
-     * @brief Obtain the log level of a message at a given model index
-     *
-     * @param index QModelIndex of the message in question
-     * @return Log level of the message
-     */
-    constellation::log::Level getMessageLevel(const QModelIndex& index) const;
-
-    /**
      * @brief Update the global subscription log level
      * @param level New global subscription log level
      */
@@ -132,8 +124,8 @@ public:
     /// @cond doxygen_suppress
 
     /* Qt accessor methods */
-    int rowCount(const QModelIndex& parent) const override;
-    int columnCount(const QModelIndex& parent) const override;
+    int rowCount(const QModelIndex& /*parent*/) const override { return message_count_.load(); }
+    int columnCount(const QModelIndex& /*parent*/) const override { return LogMessage::countColumns(); }
     QVariant data(const QModelIndex& index, int role) const override;
     QVariant headerData(int column, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
@@ -180,8 +172,12 @@ private:
     /** Logger to use */
     constellation::log::Logger logger_;
 
-    /** Subscription & storage */
+    /** Log messages & access mutex*/
     std::deque<LogMessage> messages_;
+    std::atomic_size_t message_count_;
+    mutable std::mutex message_mutex_;
+
+    /** Subscriptions */
     constellation::log::Level subscription_global_level_ {constellation::log::Level::INFO};
     std::set<std::string> sender_list_;
     std::set<std::string> topic_list_;
