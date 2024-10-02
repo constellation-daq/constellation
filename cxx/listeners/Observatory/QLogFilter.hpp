@@ -82,9 +82,6 @@ public:
      */
     QString getFilterMessage() const { return filter_message_.pattern(); }
 
-    void addSender(const QString& sender);
-    void addTopic(const QString& topic);
-
 private:
     /**
      * @brief Helper to determine if a message at the given index should be displayed currently.
@@ -103,9 +100,7 @@ private:
     /** Filter & display */
     std::vector<size_t> display_indices_;
     constellation::log::Level filter_level_ {constellation::log::Level::TRACE};
-    std::set<std::string> filter_sender_list_ {"- All -"};
     std::string filter_sender_ {"- All -"};
-    std::set<std::string> filter_topic_list_ {"- All -"};
     std::string filter_topic_ {"- All -"};
     QRegularExpression filter_message_;
 };
