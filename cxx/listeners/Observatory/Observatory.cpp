@@ -26,9 +26,10 @@ using namespace constellation::chirp;
 using namespace constellation::log;
 using namespace constellation::utils;
 
-LogItemDelegate::LogItemDelegate(QLogListener* model) : log_listener_(model) {}
+LogItemDelegate::LogItemDelegate(QLogListener* model, QLogFilter* filter) : log_listener_(model), filter_(filter) {}
 
-void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const {
+void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& i) const {
+    const QModelIndex index = filter_->mapToSource(i);
     const auto color = level_colors.at(log_listener_->getMessageLevel(index));
     painter->fillRect(option.rect, QBrush(color));
     QStyledItemDelegate::paint(painter, option, index);
@@ -41,7 +42,7 @@ QString LogItemDelegate::displayText(const QVariant& value, const QLocale& local
     return QStyledItemDelegate::displayText(value, locale);
 }
 
-Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_message_delegate_(&log_listener_) {
+Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_message_delegate_(&log_listener_, &log_filter_) {
 
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);

@@ -23,13 +23,14 @@
 
 class LogItemDelegate : public QStyledItemDelegate {
 public:
-    LogItemDelegate(QLogListener* model);
+    LogItemDelegate(QLogListener* model, QLogFilter* filter);
 
     QString displayText(const QVariant& value, const QLocale& locale) const override;
 
 private:
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
     QLogListener* log_listener_;
+    QLogFilter* filter_;
 
     const std::map<constellation::log::Level, QColor> level_colors {
         {constellation::log::Level::TRACE, QColor(224, 224, 224, 128)},
