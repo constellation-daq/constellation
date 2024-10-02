@@ -32,12 +32,12 @@ using namespace constellation::utils;
 
 LogMessage::LogMessage(CMDP1LogMessage&& msg) : CMDP1LogMessage(std::move(msg)) {}
 
-int LogMessage::columnWidth(int i) {
-    switch(i) {
+int LogMessage::columnWidth(int column) {
+    switch(column) {
     case 0: return 150;
     case 1: return 120;
     case 2: return 90;
-    case 3: return 90;
+    case 3: return 95;
     default: return -1;
     }
 }
@@ -55,11 +55,11 @@ QVariant LogMessage::operator[](int column) const {
     }
 }
 
-QString LogMessage::columnName(int i) {
-    if(i < 0 || i >= static_cast<int>(headers_.size())) {
+QString LogMessage::columnName(int column) {
+    if(column < 0 || column >= static_cast<int>(headers_.size())) {
         return {};
     }
-    return headers_[i];
+    return headers_.at(column);
 }
 
 QLogListener::QLogListener(QObject* parent)
@@ -119,7 +119,7 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
     }
 
     // We always add new messages to the end of the deque:
-    const auto pos = messages_.size();
+    const auto pos = static_cast<int>(messages_.size());
     beginInsertRows(QModelIndex(), pos, pos);
     messages_.emplace_back(std::move(msg));
     endInsertRows();
@@ -142,30 +142,27 @@ Level QLogListener::getMessageLevel(const QModelIndex& index) const {
 
 QVariant QLogListener::data(const QModelIndex& index, int role) const {
     if(role != Qt::DisplayRole || !index.isValid()) {
-        return QVariant();
+        return {};
     }
 
-    if(index.column() < columnCount() && index.row() < rowCount()) {
+    if(index.column() < LogMessage::countColumns() && index.row() < static_cast<int>(messages_.size())) {
         return getMessage(index)[index.column()];
     }
 
-    return QVariant();
+    return {};
 }
 
 const LogMessage& QLogListener::getMessage(const QModelIndex& index) const {
     return messages_[index.row()];
 }
 
-QVariant QLogListener::headerData(int section, Qt::Orientation orientation, int role) const {
-    if(role != Qt::DisplayRole) {
-        return QVariant();
+QVariant QLogListener::headerData(int column, Qt::Orientation orientation, int role) const {
+
+    if(role == Qt::DisplayRole && orientation == Qt::Horizontal && column >= 0 && column < LogMessage::countColumns()) {
+        return LogMessage::columnName(column);
     }
 
-    if(orientation == Qt::Horizontal && section < columnCount()) {
-        return LogMessage::columnName(section);
-    }
-
-    return QVariant();
+    return {};
 }
 
 void QLogListener::setGlobalSubscriptionLevel(Level level) {
