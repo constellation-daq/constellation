@@ -10,12 +10,14 @@
 #pragma once
 
 #include <functional>
+#include <mutex>
 #include <set>
 #include <string>
 #include <string_view>
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/pools/BasePool.hpp"
+#include "constellation/core/utils/string_hash_map.hpp"
 
 #include "zmq.hpp"
 
@@ -41,45 +43,68 @@ namespace constellation::pools {
         SubscriberPool(std::string_view log_topic, std::function<void(MESSAGE&&)> callback);
 
         /*
-         * @brief Method to update the default topics this pool directly subscribed to when a new socket joins
+         * @brief Method to update the topics this pool subscribe to for all sockets
          *
-         * @param topics Set of default subscription topics to which this component should subscribe directly upon opening
-         *               the socket.
+         * @param topics Set of subscription topics to which to subscribe to
          */
         void setSubscriptionTopics(std::set<std::string> topics);
 
         /**
-         * @brief Subscribe to a given topic of a specific host
+         * @brief Subscribe to a given topic for all sockets
+         *
+         * @param topic Topic to subscribe to
+         */
+        void subscribe(std::string topic);
+
+        /**
+         * @brief Unsubscribe from a given topic for all sockets
+         *
+         * @param topic Topic to unsubscribe
+         */
+        void unsubscribe(const std::string& topic);
+
+        /*
+         * @brief Method to update the extra topics this pool subscribe to for a specific socket
+         *
+         * @note Extra topics are topics subscribed to in addition to the topics for every socket
+         *
+         * @param host Canonical name of the host to set subscription topics
+         * @param topics Set of subscription topics to which to subscribe all sockets
+         */
+        void setExtraSubscriptionTopics(const std::string& host, std::set<std::string> topics);
+
+        /**
+         * @brief Subscribe to a given topic for a specific socket
          *
          * @param host Canonical name of the host to subscribe to
          * @param topic Topic to subscribe to
          */
-        void subscribe(std::string_view host, std::string_view topic);
+        void subscribeExtra(const std::string& host, std::string topic);
 
         /**
-         * @brief Subscribe to a given topic for all connected hosts
+         * @brief Unsubscribe from a given topic for a specific socket
          *
-         * @param topic Topic to subscribe to
-         */
-        void subscribe(std::string_view topic);
-
-        /**
-         * @brief Unsubscribe from a given topic of a specific host
+         * @note Only unsubscribes if not in topics that every socket is subscribed to
          *
          * @param host Canonical name of the host to unsubscribe from
          * @param topic Topic to unsubscribe
          */
-        void unsubscribe(std::string_view host, std::string_view topic);
+        void unsubscribeExtra(const std::string& host, const std::string& topic);
 
         /**
-         * @brief Unsubscribe from a given topic for all hosts
+         * @brief Remove extra topics for a specific socket
          *
-         * @param topic Topic to unsubscribe
+         * @param host Canonical name of the host
          */
-        void unsubscribe(std::string_view topic);
+        void removeExtraSubscriptions(const std::string& host);
+
+        /**
+         * @brief Remove extra topics for all sockets
+         */
+        void removeExtraSubscriptions();
 
     private:
-        void socket_connected(zmq::socket_t& socket) final;
+        void socket_connected(const chirp::DiscoveredService& service, zmq::socket_t& socket) final;
 
         /** Sub- or unsubscribe to a topic for a single host */
         void scribe(std::string_view host, std::string_view topic, bool subscribe);
@@ -87,7 +112,9 @@ namespace constellation::pools {
         /** Sub- or unsubscribe to a topic for all connected hosts */
         void scribe_all(std::string_view topic, bool subscribe);
 
-        std::set<std::string> default_topics_;
+        std::mutex subscribed_topics_mutex_;
+        std::set<std::string> subscribed_topics_;
+        utils::string_hash_map<std::set<std::string>> extra_subscribed_topics_;
     };
 } // namespace constellation::pools
 

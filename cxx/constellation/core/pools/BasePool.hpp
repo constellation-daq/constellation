@@ -102,16 +102,18 @@ namespace constellation::pools {
         /**
          * @brief Method for derived classes to act on newly connected sockets
          *
+         * @param service The service corresponding to the socket
          * @param socket The newly connected socket
          */
-        virtual void socket_connected(zmq::socket_t& socket);
+        virtual void socket_connected(const chirp::DiscoveredService& service, zmq::socket_t& socket);
 
         /**
          * @brief Method for derived classes to act on sockets before disconnecting
          *
+         * @param service The service corresponding to the socket
          * @param socket The socket to be disconnected
          */
-        virtual void socket_disconnected(zmq::socket_t& socket);
+        virtual void socket_disconnected(const chirp::DiscoveredService& service, zmq::socket_t& socket);
 
         /**
          * @brief Return all connected sockets

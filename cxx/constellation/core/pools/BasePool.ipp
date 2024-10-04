@@ -84,10 +84,12 @@ namespace constellation::pools {
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
-    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::socket_connected(zmq::socket_t& /*socket*/) {}
+    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::socket_connected(const chirp::DiscoveredService& /*service*/,
+                                                                   zmq::socket_t& /*socket*/) {}
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
-    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::socket_disconnected(zmq::socket_t& /*socket*/) {}
+    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::socket_disconnected(const chirp::DiscoveredService& /*service*/,
+                                                                      zmq::socket_t& /*socket*/) {}
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
     void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::checkPoolException() {
@@ -110,7 +112,7 @@ namespace constellation::pools {
             socket.connect(service.to_uri());
 
             // Perform connection actions:
-            socket_connected(socket);
+            socket_connected(service, socket);
 
             /**
              * This lambda is passed to the ZMQ active_poller_t to be called when a socket has a incoming message pending.
@@ -157,7 +159,7 @@ namespace constellation::pools {
                 poller_.remove(zmq::socket_ref(socket));
 
                 // Perform disconnect actions:
-                socket_disconnected(socket);
+                socket_disconnected(service, socket);
 
                 // Disconnect and close socket
                 socket.disconnect(service.to_uri());
@@ -183,7 +185,7 @@ namespace constellation::pools {
                 poller_.remove(zmq::socket_ref(socket_it->second));
 
                 // Perform disconnect actions:
-                socket_disconnected(socket_it->second);
+                socket_disconnected(service, socket_it->second);
 
                 // Disconnect the socket and close it
                 socket_it->second.disconnect(service.to_uri());
