@@ -274,7 +274,7 @@ def test_receive_writing_package(
             # Does file exist and has it been written to?
             bor = "BOR"
             eor = "EOR"
-            dat = [f"data_{run_num}_{i}" for i in range(1, 3)]
+            dat = [f"data_{run_num}_{i:09}" for i in range(1, 3)]
 
             fn = FILE_NAME.format(run_identifier=run_num)
             assert os.path.exists(os.path.join(tmpdir, fn))

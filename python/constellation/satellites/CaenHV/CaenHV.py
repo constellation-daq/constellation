@@ -44,6 +44,7 @@ class CaenHVSatellite(Satellite):
         link_arg = configuration["link_argument"]
         user = configuration.setdefault("username", "")
         pw = configuration.setdefault("password", "")
+        metrics_poll_rate = configuration["metrics_poll_rate"]
         if "ndt1" in system.lower():
             self.caen: CaenNDT1470Manager | CaenHVModule = CaenNDT1470Manager()
         else:
@@ -98,7 +99,7 @@ class CaenHVSatellite(Satellite):
                         )
 
         # configure metrics sending
-        self._configure_monitoring()
+        self._configure_monitoring(metrics_poll_rate)
         return f"Connected to crate and configured {len(crate.boards)} boards"
 
     # def do_reconfigure(self, partial_config: Configuration) -> str:
@@ -232,7 +233,7 @@ class CaenHVSatellite(Satellite):
                     ch.switch_off()
         self.log.info("All channels powered down.")
 
-    def _configure_monitoring(self) -> None:
+    def _configure_monitoring(self, metrics_poll_rate: int) -> None:
         """Schedule monitoring for certain parameters."""
         self.reset_scheduled_metrics()
         with self.caen as crate:
@@ -251,7 +252,7 @@ class CaenHVSatellite(Satellite):
                                 channel=chno,
                                 par=par,
                             ),
-                            10.0,
+                            metrics_poll_rate,
                         )
                     self.schedule_metric(
                         f"b{brdno}_ch{chno}_status",
@@ -261,7 +262,7 @@ class CaenHVSatellite(Satellite):
                             channel=chno,
                             par=par,
                         ),
-                        30.0,
+                        metrics_poll_rate,
                     )
 
     def _power_up(self) -> int:
