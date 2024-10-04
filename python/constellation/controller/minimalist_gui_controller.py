@@ -240,7 +240,7 @@ class MinimalistGUIController(QMainWindow):
             dlg.setWindowTitle("Could not load configuration!")
             dlg.setText(f"Loading '{cfg}' resulted in an Exception: '{repr(e)}'")
             dlg.setStandardButtons(QMessageBox.Abort)
-            dlg.setIcon(QMessageBox.Warning)
+            dlg.setIcon(QMessageBox.Icon.Warning)
             dlg.exec()
 
     def onRunIdFieldEdit(self, text):
@@ -291,10 +291,12 @@ class MinimalistGUIController(QMainWindow):
                 "Do you want to continue with an random string?\n"
                 f"  e.g. '{rand_uuid}'?"
             )
-            dlg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-            dlg.setIcon(QMessageBox.Warning)
+            dlg.setStandardButtons(
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            dlg.setIcon(QMessageBox.Icon.Warning)
             button = dlg.exec()
-            if button == QMessageBox.No:
+            if button == QMessageBox.StandardButton.No:
                 return
             run_id = rand_uuid
         else:
