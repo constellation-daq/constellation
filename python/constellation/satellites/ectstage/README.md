@@ -17,7 +17,7 @@ pip install pylablib
 
 ## Initialization Parameters
 
-To initialize `SatelliteECTstage`, two parameters are required.
+To initialize `SatelliteECTstage`, one parameter is required.
 
 | Parameter       | Description                                                                                                        | Type      |
 |-----------------|--------------------------------------------------------------------------------------------------------------------|-----------|
