@@ -57,7 +57,7 @@ In Python, commands are registered by placing the `@cscp_requestable` decorator 
 The method needs to have a specific signature:
 
 ```python
-def COMMAND(self, request: cscp.CSCPMessage) -> (str, any, dict):
+def COMMAND(self, request: cscp.CSCPMessage) -> tuple[str, Any, dict]:
 ```
 
 The expected return values are:
@@ -72,12 +72,12 @@ In this example, the command `get_channel_reading(channel: int)` is added to a s
 
 ```python
 @cscp_requestable
-def get_channel_reading(self, request: CSCPMessage):
+def get_channel_reading(self, request: CSCPMessage) -> tuple[str, Any, dict]:
     """Read the value of the channel given by the first supplied argument."""
     paramList = request.payload
     channel = paramList[0]
     value = _device.read(channel)
-    return str(value / 10), None, None
+    return str(value / 10), None, {}
 ```
 
 The `@cscp_requestable` decorator registers the command with the command registry, and the comment block in the beginning is
@@ -175,7 +175,7 @@ def _COMMAND_is_allowed(self, request: cscp.CSCPMessage) -> bool:
 to the satellite. If this exists, it will be called before the method of the custom command is called, to determine whether it is allowed or not. An example is shown below, limiting the usage of the `get_channel_reading` command to the states `INIT` and `ORBIT`:
 
 ```python
-def _get_channel_reading_is_allowed(self, request: CSCPMessage):
+def _get_channel_reading_is_allowed(self, request: CSCPMessage) -> bool:
     """Allow in the states INIT and ORBIT, but not during RUN"""
     return self.fsm.current_state.id in ["INIT", "ORBIT"]
 ```

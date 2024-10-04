@@ -22,7 +22,7 @@ class Configuration:
         """Initialize configuration variables"""
         self._config: dict[str, typing.Any] = config if config else {}
         if not isinstance(config, dict):
-            raise ConfigError
+            raise TypeError("Provided argument not a dictionary")
         self._requested_keys: set[str] = set()
 
     def has_unused_values(self) -> bool:
@@ -51,7 +51,10 @@ class Configuration:
         Mark key as requested in configuration.
         """
         self._requested_keys.add(key)
-        return self._config[key]
+        try:
+            return self._config[key]
+        except KeyError as e:
+            raise ConfigError(e) from e
 
     def get_keys(self) -> list[str]:
         """Return list of keys in config."""
@@ -61,12 +64,12 @@ class Configuration:
         """Return JSON-encoded configuration data."""
         return json.dumps(self._config)
 
-    def update(self, config: dict[str, Any]) -> None:
+    def update(self, config: dict[str, Any], unused_keys: set[str]) -> None:
         """Update the configuration with a new dict."""
         # update key+values of internal dict
         self._config.update(config)
-        # remove all new keys from our set of requested keys
-        for key in config.keys():
+        # remove all unused keys from our set of requested keys
+        for key in unused_keys:
             self._requested_keys.discard(key)
 
 

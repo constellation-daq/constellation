@@ -151,11 +151,14 @@ variables:
 
 .build-cpp:
   stage: build
+  # Select openstack Kubernetes runner for now since they perform better for C++ compilation
+  tags:
+    - openstack
   cache:
     - *meson-wrap-cache
     - *ccache
   script:
-    - meson setup build -Dimpl_cxx=enabled -Dcxx_tests=enabled -Dbuildtype=${BUILD_TYPE} ${BUILD_OPTIONS}
+    - meson setup build -Dcxx_tests=enabled $(scripts/meson_enable_all_components.sh) -Dbuildtype=${BUILD_TYPE} ${BUILD_OPTIONS}
     - meson compile -C build ${NINJA_OPTIONS}
   artifacts:
     paths:
@@ -180,7 +183,7 @@ build:alma9-cern:
     - *ccache
   variables:
     BUILD_TYPE: "release"
-    BUILD_OPTIONS: "-Db_lto=true -Db_lto_mode=thin"
+    BUILD_OPTIONS: "-Db_lto=true -Db_lto_mode=thin -Dqt_version=qt5"
 
 build:debian-clang:
   extends:
@@ -196,7 +199,7 @@ build:debian-clang-libcxx:
     - .debian-clang
   variables:
     BUILD_TYPE: "debugoptimized"
-    BUILD_OPTIONS: "--wrap-mode=forcefallback -Dspdlog:external_fmt=disabled -Db_sanitize=address -Db_lundef=false"
+    BUILD_OPTIONS: "--wrap-mode=forcefallback -Dspdlog:external_fmt=disabled -Db_sanitize=thread -Db_lundef=false"
     CXXFLAGS: "-stdlib=libc++ -fexperimental-library"
 
 build:debian-gcc:
@@ -231,6 +234,7 @@ build:ubuntu-22.04:
     - .ubuntu-22.04
   variables:
     BUILD_TYPE: "debugoptimized"
+    BUILD_OPTIONS: "-Dqt_version=qt5"
     NINJA_OPTIONS: "-l4"
   retry: 2
 
@@ -444,7 +448,7 @@ lint:clang-scan-build:
     CCC_CC: clang
     CCC_CXX: clang++
   script:
-    - meson setup build -Dimpl_cxx=enabled -Dcxx_tests=disabled -Dbuildtype=debug
+    - meson setup build -Dcxx_tests=disabled -Dbuildtype=debug
     - ninja -C build scan-build
     - if [ ! -z "$(ls -A build/meson-logs/scanbuild)" ]; then false; fi
   artifacts:
@@ -464,16 +468,16 @@ lint:coverity-scan:
       artifacts: false
   script:
     - curl -s https://scan.coverity.com/download/linux64 -o /tmp/cov-analysis-linux64.tgz
-        --form project=$COVERITY_SCAN_PROJECT_NAME --form token=$COVERITY_SCAN_TOKEN
+      --form project=$COVERITY_SCAN_PROJECT_NAME --form token=$COVERITY_SCAN_TOKEN
     - tar -xzf /tmp/cov-analysis-linux64.tgz
     - rm -r /tmp/cov-analysis-linux64.tgz
-    - meson setup build -Dimpl_cxx=enabled -Dbuildtype=debug
+    - meson setup build -Dcxx_tests=disabled -Dbuildtype=debug
     - cov-analysis-linux64-*/bin/cov-build --dir cov-int ninja -C build
     - tar -czf cov-int.tgz cov-int
     - curl -s https://scan.coverity.com/builds?project=$COVERITY_SCAN_PROJECT_NAME
-        --form token=$COVERITY_SCAN_TOKEN --form email=$GITLAB_USER_EMAIL
-        --form file=@cov-int.tgz --form version="$CI_COMMIT_REF_NAME"
-        --form description="$CI_COMMIT_REF_NAME / $CI_COMMIT_SHA / $CI_PIPELINE_ID"
+      --form token=$COVERITY_SCAN_TOKEN --form email=$GITLAB_USER_EMAIL
+      --form file=@cov-int.tgz --form version="$CI_COMMIT_REF_NAME"
+      --form description="$CI_COMMIT_REF_NAME / $CI_COMMIT_SHA / $CI_PIPELINE_ID"
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "schedule"
 
@@ -506,7 +510,7 @@ format:clang-format:
     - .format
     - .debian-clang
   script:
-    - meson setup build -Dimpl_cxx=enabled
+    - meson setup build -Dcxx_tests=enabled $(scripts/meson_enable_all_satellites.sh)
     - ninja -C build clang-format-check
 
 format:reuse:

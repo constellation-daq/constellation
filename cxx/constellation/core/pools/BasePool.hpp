@@ -11,7 +11,6 @@
 
 #include <any>
 #include <atomic>
-#include <condition_variable>
 #include <functional>
 #include <map>
 #include <mutex>
@@ -21,34 +20,30 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
-#include "constellation/build.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/log/Logger.hpp"
-#include "constellation/core/message/CHP1Message.hpp"
-#include "constellation/core/message/exceptions.hpp"
 
 namespace constellation::pools {
 
     /**
-     * Abstract Base pool class
+     * @brief Abstract Base pool class
      *
      * This class registers a CHIRP callback for the services defined via the template parameter, listens to incoming
-     * messages and forwards them to a callback registered upon creation of the socket
+     * messages and forwards them to a callback registered upon creation of the socket.
+     *
+     * @tparam MESSAGE Constellation Message class to be decoded
+     * @tparam SERVICE CHIRP service to connect to
+     * @tparam SOCKET_TYPE ZeroMQ socket type of connection
      */
-    template <typename MESSAGE> class BasePool {
+    template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE> class BasePool {
     public:
         /**
          * @brief Construct BasePool
          *
-         * @param service CHIRP service identifier for which a subscription should be made
          * @param log_topic Logger topic to be used for this component
          * @param callback Callback function pointer for received messages
-         * @param socket_type ZMQ socket type to use for connecting to service, e.g. sub or pull
          */
-        BasePool(chirp::ServiceIdentifier service,
-                 std::string_view log_topic,
-                 std::function<void(const MESSAGE&)> callback,
-                 zmq::socket_type socket_type);
+        BasePool(std::string_view log_topic, std::function<void(MESSAGE&&)> callback);
 
         /**
          * @brief Destruct BasePool
@@ -68,14 +63,24 @@ namespace constellation::pools {
          * @brief Check if pool thread has thrown an exception
          * @throw Exception thrown by pool thread, if any
          */
-        void checkException();
+        void checkPoolException();
 
-    protected:
         /**
          * @brief Start the pool thread and send the CHIRP requests
          */
-        void start();
+        void startPool();
 
+        /**
+         * @brief Stop the pool thread
+         */
+        void stopPool();
+
+        /**
+         * @brief Return number of events returned by `poller_.wait()`
+         */
+        std::size_t pollerEvents() { return poller_events_.load(); }
+
+    protected:
         /**
          * @brief Method to select which services to connect to. By default this pool connects to all discovered services,
          * derived pools may implement selection criteria
@@ -98,6 +103,20 @@ namespace constellation::pools {
          * @param socket The socket to be disconnected
          */
         virtual void socket_disconnected(zmq::socket_t& socket);
+
+        /**
+         * @brief Return all connected sockets
+         *
+         * @warning Read access to the sockets needs to be protected with `sockets_mutex_`
+         *
+         * @return Maps that maps the discovered service to the corresponding ZeroMQ sockets
+         */
+        const std::map<chirp::DiscoveredService, zmq::socket_t>& get_sockets() const { return sockets_; }
+
+    protected:
+        std::mutex sockets_mutex_; // NOLINT(*-non-private-member-variables-in-classes)
+
+        log::Logger pool_logger_; // NOLINT(*-non-private-member-variables-in-classes)
 
     private:
         /**
@@ -127,25 +146,19 @@ namespace constellation::pools {
         /** Disconnect from all registered services */
         void disconnect_all();
 
-    protected:
-        std::map<chirp::DiscoveredService, zmq::socket_t> sockets_; // NOLINT(*-non-private-member-variables-in-classes)
-        std::timed_mutex sockets_mutex_;                            // NOLINT(*-non-private-member-variables-in-classes)
-
-        log::Logger logger_; // NOLINT(*-non-private-member-variables-in-classes)
-
     private:
-        chirp::ServiceIdentifier service_;
-
         zmq::active_poller_t poller_;
+        std::atomic_size_t poller_events_;
 
-        std::atomic_flag af_;
+        std::function<void(MESSAGE&&)> message_callback_;
+
+        std::map<chirp::DiscoveredService, zmq::socket_t> sockets_;
+        std::atomic_bool sockets_empty_ {true};
+
         std::jthread pool_thread_;
         std::exception_ptr exception_ptr_ {nullptr};
-
-        std::function<void(const MESSAGE&)> message_callback_;
-        zmq::socket_type socket_type_;
     };
 } // namespace constellation::pools
 
 // Include template members
-#include "BasePool.ipp"
+#include "BasePool.ipp" // IWYU pragma: keep

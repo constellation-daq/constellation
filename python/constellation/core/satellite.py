@@ -8,7 +8,7 @@ This module provides the class for a Constellation Satellite.
 
 import time
 from queue import Empty
-from typing import Tuple, Any
+from typing import Any
 import threading
 import traceback
 from concurrent.futures import Future
@@ -22,7 +22,7 @@ from .cscp import CSCPMessage
 from .chirp import CHIRPServiceIdentifier
 from .broadcastmanager import CHIRPBroadcaster
 from .commandmanager import CommandReceiver, cscp_requestable
-from .configuration import Configuration, make_lowercase
+from .configuration import ConfigError, Configuration, make_lowercase
 from .monitoring import MonitoringSender
 from .error import debug_log, handle_error
 from .base import EPILOG, ConstellationArgumentParser, setup_cli_logging
@@ -55,6 +55,8 @@ class Satellite(
             interface=interface,
         )
 
+        self.run_identifier: str = ""
+
         # give monitoring a chance to start up and catch early messages
         time.sleep(0.1)
 
@@ -85,13 +87,13 @@ class Satellite(
 
     @debug_log
     @cscp_requestable
-    def register(self, request: CSCPMessage) -> Tuple[str, str, None]:
+    def register(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Register a heartbeat via CSCP request."""
         name, ip, port = request.payload.split()
         callback = self.hb_checker.register
         # add to the task queue
         self.task_queue.put((callback, [name, f"tcp://{ip}:{port}", self.context]))
-        return "registering", name, None
+        return "registering", name, {}
 
     def run_satellite(self) -> None:
         """Main Satellite event loop with task handler-routine.
@@ -169,8 +171,13 @@ class Satellite(
         config = make_lowercase(config)
         self.config = Configuration(config)
         # call device-specific user-routine
-        init_msg: str = self.do_initializing(self.config)
-
+        try:
+            init_msg: str = self.do_initializing(self.config)
+        except ConfigError as e:
+            msg = "Caught exception during initialization: "
+            msg += f"missing a required configuration value {e}?"
+            self.log.error(msg)
+            raise RuntimeError(msg) from e
         if self.config.has_unused_values():
             for key in self.config.get_unused_keys():
                 self.log.warning("Satellite ignored configuration value: '%s'", key)
@@ -201,12 +208,12 @@ class Satellite(
 
     @debug_log
     def do_launching(self, payload: Any) -> str:
-        """Prepare Satellite for data acquistions."""
+        """Prepare Satellite for data acquisitions."""
         return "Launched."
 
     @handle_error
     @debug_log
-    def _wrap_reconfigure(self, config: dict[str, Any]) -> str:
+    def _wrap_reconfigure(self, partial_config_dict: dict[str, Any]) -> str:
         """Wrapper for the 'reconfigure' transitional state of the FSM.
 
         This method performs the basic Satellite transition before passing
@@ -214,17 +221,18 @@ class Satellite(
 
         """
 
-        # Merge with existing configuration. This will also update the internal
-        # set of used keys, so the user can choose to either update everything
-        # or only the 'unused'/updated keys.
-        self.config.update(config)
+        partial_config = Configuration(partial_config_dict)
+
         # reconfigure is not necessarily implemented; it is not in the this base
         # class to allow checking for the exististance of the method to
         # determine the reaction to a `reconfigure` CSCP command.
-        init_msg: str = self.do_reconfigure(self.config)  # type: ignore[attr-defined]
+        init_msg: str = self.do_reconfigure(partial_config)  # type: ignore[attr-defined]
 
-        if self.config.has_unused_values():
-            for key in self.config.get_unused_keys():
+        # update config
+        self.config.update(partial_config_dict, partial_config.get_unused_keys())
+
+        if partial_config.has_unused_values():
+            for key in partial_config.get_unused_keys():
                 self.log.warning("Satellite ignored configuration value: '%s'", key)
             init_msg += " IGNORED parameters: "
             init_msg += ",".join(self.config.get_unused_keys())
@@ -318,9 +326,7 @@ class Satellite(
         # the stop_running Event will be set from outside the thread when it is
         # time to close down.
         # assert for mypy static type analysis
-        assert isinstance(
-            self._state_thread_evt, threading.Event
-        ), "Transition thread Event not set up correctly"
+        assert isinstance(self._state_thread_evt, threading.Event), "Transition thread Event not set up correctly"
         while not self._state_thread_evt.is_set():
             time.sleep(0.2)
         return "Finished acquisition."
@@ -343,9 +349,7 @@ class Satellite(
                     try:
                         self._state_thread_fut.result(timeout=1)
                     except TimeoutError:
-                        self.log.error(
-                            "Timeout while joining state thread, continuing."
-                        )
+                        self.log.error("Timeout while joining state thread, continuing.")
             res: str = self.fail_gracefully()
             # close heartbeat checker
             self.hb_checker.close()
@@ -430,9 +434,7 @@ class Satellite(
     # -------------------------- #
 
     @cscp_requestable
-    def get_version(
-        self, _request: CSCPMessage | None = None
-    ) -> Tuple[str, None, None]:
+    def get_version(self, _request: CSCPMessage | None = None) -> tuple[str, Any, dict[str, Any]]:
         """Get Constellation version.
 
         No payload argument.
@@ -441,16 +443,16 @@ class Satellite(
         return value).
 
         """
-        return __version__, None, None
+        return __version__, None, {}
 
     @cscp_requestable
-    def get_run_id(self, _request: CSCPMessage | None = None) -> Tuple[str, None, None]:
-        """Get current run identifier.
+    def get_run_id(self, _request: CSCPMessage | None = None) -> tuple[str, Any, dict[str, Any]]:
+        """Get current/last known run identifier.
 
         No payload argument.
 
         """
-        return self.run_identifier, None, None
+        return self.run_identifier, None, {}
 
 
 # -------------------------------------------------------------------------
@@ -482,8 +484,7 @@ class SatelliteArgumentParser(ConstellationArgumentParser):
             "--heartbeat-port",
             "--chp",
             type=int,
-            help="The port for sending heartbeats via the "
-            "Constellation Heartbeat Protocol (default: %(default)s).",
+            help="The port for sending heartbeats via the " "Constellation Heartbeat Protocol (default: %(default)s).",
         )
 
 

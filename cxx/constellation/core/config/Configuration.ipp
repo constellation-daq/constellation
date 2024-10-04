@@ -39,7 +39,7 @@ namespace constellation::config {
             throw InvalidTypeError(key, config_.at(key_lc).demangle(), utils::demangle<T>());
         } catch(const std::invalid_argument& error) {
             // Value held by the dictionary entry could not be converted to desired type
-            throw InvalidValueError(config_.at(key_lc).str(), key, error.what());
+            throw InvalidValueError(getText(key), key, error.what());
         }
     }
 

@@ -60,6 +60,8 @@ namespace constellation::utils {
      */
     CNSTLN_API inline std::shared_ptr<zmq::context_t>& global_zmq_context() {
         static auto context = std::make_shared<zmq::context_t>();
+        // Switch off blocky behavior of context - corresponds to setting linger = 0 for all sockets
+        context->set(zmq::ctxopt::blocky, 0);
         return context;
     }
 

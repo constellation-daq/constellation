@@ -27,23 +27,22 @@
 namespace constellation::heartbeat {
 
     /**
-     * Receiver class for distributed heartbeats in a constellation
+     * @brief Receiver class for distributed heartbeats in a constellation
      *
      * This class registers a CHIRP callback for heartbeat services, subscribes automatically to all available and appearing
      * services in the constellation and listens for heartbeat and extrasystole messages from remote satellites and forwards
-     * them to a callback registered upon creation of the receiver
+     * them to a callback registered upon creation of the receiver.
+     *
+     * @note Needs to be started with `start()` and stopped with `stop()`
      */
-    class HeartbeatRecv : public pools::SubscriberPool<message::CHP1Message> {
+    class HeartbeatRecv : public pools::SubscriberPool<message::CHP1Message, chirp::HEARTBEAT> {
     public:
         /**
          * @brief Construct heartbeat receiver
          *
          * @param callback Callback function pointer for received heartbeat messages
          */
-        HeartbeatRecv(std::function<void(const message::CHP1Message&)> callback)
-            : SubscriberPool<message::CHP1Message>(chirp::HEARTBEAT, "CHP", std::move(callback), {""}) {
-            // Start the receiver thread
-            start();
-        }
+        HeartbeatRecv(std::function<void(message::CHP1Message&&)> callback)
+            : SubscriberPool<message::CHP1Message, chirp::HEARTBEAT>("CHP", std::move(callback), {""}) {}
     };
 } // namespace constellation::heartbeat

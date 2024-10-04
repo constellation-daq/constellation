@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 Module implementing the Constellation Satellite Control Protocol.
 """
 
-from typing import Any
+from typing import Any, Optional
 import io
 from enum import Enum
 import zmq
@@ -34,15 +34,19 @@ class CSCPMessageVerb(Enum):
 class CSCPMessage:
     """Class holding details of a received CSCP command."""
 
-    msg: str = ""
-    msg_verb: CSCPMessageVerb | None = None
-    from_host: str = ""
-    timestamp: msgpack.Timestamp | None = None
-    header_meta: dict[str, Any] | None = None
-    payload: Any = None
+    def __init__(self) -> None:
+        self.msg: str = ""
+        self.msg_verb: Optional[CSCPMessageVerb] = None
+        self.from_host: str = ""
+        self.timestamp: Optional[msgpack.Timestamp] = None
+        self.header_meta: Optional[dict[str, Any]] = None
+        self.payload: Any = None
 
     def set_header(
-        self, from_host: str, timestamp: msgpack.Timestamp, meta: dict[str, Any] | None
+        self,
+        from_host: str,
+        timestamp: msgpack.Timestamp,
+        meta: Optional[dict[str, Any]],
     ) -> None:
         """Sets information retrieved from a message header."""
         self.from_host = from_host
@@ -70,7 +74,7 @@ class CommandTransmitter:
         self.socket = socket
 
     def send_request(
-        self, command: str, payload: Any = None, meta: dict[str, Any] | None = None
+        self, command: str, payload: Any = None, meta: Optional[dict[str, Any]] = None
     ) -> None:
         """Send a command request to a Satellite with an optional payload.
 
@@ -113,7 +117,7 @@ class CommandTransmitter:
         response: str,
         msgtype: CSCPMessageVerb,
         payload: Any = None,
-        meta: dict[str, Any] | None = None,
+        meta: Optional[dict[str, Any]] = None,
     ) -> None:
         """Send a reply to a previous command with an optional payload.
 
@@ -167,7 +171,7 @@ class CommandTransmitter:
         msg: str,
         msgtype: CSCPMessageVerb,
         payload: Any = None,
-        meta: dict[str, Any] | None = None,
+        meta: Optional[dict[str, Any]] = None,
         flags: int = 0,
     ) -> None:
         """Dispatch a message via ZMQ socket."""

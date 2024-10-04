@@ -97,7 +97,7 @@ namespace constellation::heartbeat {
         /** Maximum heartbeat broadcasting interval */
         std::atomic<std::chrono::milliseconds> interval_;
 
-        std::condition_variable_any cv_;
+        std::condition_variable cv_;
         std::mutex mutex_;
         std::jthread sender_thread_;
     };

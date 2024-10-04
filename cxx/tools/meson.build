@@ -28,5 +28,5 @@ executable('chp_receiver',
 
 executable('dummy_controller',
   sources: 'dummy_controller.cpp',
-  dependencies: [core_dep, cppzmq_dep],
+  dependencies: [core_dep, controller_dep, msgpack_cxx_dep],
 )

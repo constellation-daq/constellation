@@ -27,4 +27,5 @@ install_headers(build_hpp, subdir: 'constellation', )
 
 subdir('core')
 subdir('satellite')
+subdir('controller')
 subdir('exec')

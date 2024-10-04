@@ -56,4 +56,5 @@ howtos/satellite_cxx
 howtos/satellite_py
 howtos/custom_commands
 howtos/port_eudaq
+howtos/data_transmission_speed
 ```

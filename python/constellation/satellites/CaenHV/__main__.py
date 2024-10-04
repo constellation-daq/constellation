@@ -6,6 +6,6 @@ SPDX-License-Identifier: CC-BY-4.0
 This is the entry point for the caenhv satellite.
 """
 
-from .caenhv import main
+from .CaenHV import main
 
 main()

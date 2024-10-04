@@ -149,7 +149,7 @@ class HeartbeatChecker:
         ), "Thread Event not set up correctly"
 
         while not self._stop_threads.is_set():
-            # check for heatbeats ready to be received
+            # check for heartbeats ready to be received
             with self._socket_lock:
                 sockets_ready = dict(self._poller.poll(timeout=50))
                 for socket in sockets_ready.keys():

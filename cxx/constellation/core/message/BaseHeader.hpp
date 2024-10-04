@@ -21,6 +21,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/protocol/Protocol.hpp"
+#include "constellation/core/utils/string.hpp"
 
 namespace constellation::message {
 
@@ -49,11 +50,18 @@ namespace constellation::message {
         /** Return message tags */
         const config::Dictionary& getTags() const { return tags_; }
 
+        /** Return if message has given tag */
+        bool hasTag(const std::string& key) const { return tags_.contains(utils::transform(key, ::tolower)); }
+
         /** Return message tag */
-        template <typename T> T getTag(const std::string& key) const { return tags_.at(key).get<T>(); }
+        template <typename T> T getTag(const std::string& key) const {
+            return tags_.at(utils::transform(key, ::tolower)).get<T>();
+        }
 
         /** Set message tag */
-        void setTag(const std::string& key, config::Value value) { tags_[key] = std::move(value); }
+        void setTag(const std::string& key, config::Value value) {
+            tags_[utils::transform(key, ::tolower)] = std::move(value);
+        }
 
         /** Convert message header to human readable string */
         CNSTLN_API virtual std::string to_string() const;

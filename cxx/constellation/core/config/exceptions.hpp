@@ -66,6 +66,9 @@ namespace constellation::config {
         }
     };
 
+    // Forward declaration of Configuration class
+    class Configuration;
+
     /**
      * @ingroup Exceptions
      * @brief Indicates an error with the contents of value
@@ -77,20 +80,20 @@ namespace constellation::config {
     public:
         /**
          * @brief Construct an error for an invalid value
-         * @param value invalid value in string representation
+         * @param config Configuration object containing the invalid value
          * @param key Name of the problematic key
          * @param reason Reason why the value is invalid (empty if no explicit reason)
          */
-        InvalidValueError(const std::string& value, const std::string& key, const std::string& reason = "") {
-            error_message_ = "Value " + value + " of key '" + key + "' is not valid";
-            if(!reason.empty()) {
-                error_message_ += ": " + reason;
-            }
-        }
-    };
+        InvalidValueError(const Configuration& config, const std::string& key, const std::string& reason = "");
 
-    // Forward declaration of Configuration class
-    class Configuration;
+        /**
+         * @brief Construct an error for an invalid value
+         * @param value invalid value
+         * @param key Name of the problematic key
+         * @param reason Reason why the value is invalid (empty if no explicit reason)
+         */
+        InvalidValueError(const std::string& value, const std::string& key, const std::string& reason = "");
+    };
 
     /**
      * @ingroup Exceptions

@@ -21,9 +21,11 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/networking.hpp"
+#include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
@@ -32,6 +34,7 @@
 using namespace Catch::Matchers;
 using namespace constellation::config;
 using namespace constellation::message;
+using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
@@ -81,7 +84,7 @@ TEST_CASE("Standard commands", "[satellite]") {
     sender.sendCommand("get_commands");
     auto recv_msg_get_commands = sender.recv();
     REQUIRE(recv_msg_get_commands.getVerb().first == CSCP1Message::Type::SUCCESS);
-    REQUIRE_THAT(to_string(recv_msg_get_commands.getVerb().second), Equals("Commands attached in payload"));
+    REQUIRE_THAT(to_string(recv_msg_get_commands.getVerb().second), EndsWith("commands known, list attached in payload"));
     REQUIRE(recv_msg_get_commands.hasPayload());
     const auto get_commands_dict = Dictionary::disassemble(recv_msg_get_commands.getPayload());
     REQUIRE(get_commands_dict.contains("get_commands"));
@@ -100,7 +103,10 @@ TEST_CASE("Standard commands", "[satellite]") {
     auto recv_msg_get_state = sender.recv();
     REQUIRE(recv_msg_get_state.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_get_state.getVerb().second), Equals("NEW"));
-    REQUIRE(!recv_msg_get_state.hasPayload());
+    const auto& recv_get_state_payload = recv_msg_get_state.getPayload();
+    auto recv_get_state_msgpack_state =
+        msgpack::unpack(to_char_ptr(recv_get_state_payload.span().data()), recv_get_state_payload.span().size());
+    REQUIRE(recv_get_state_msgpack_state->as<std::underlying_type_t<CSCP::State>>() == std::to_underlying(CSCP::State::NEW));
 
     // get_status
     sender.sendCommand("get_status");
@@ -376,7 +382,7 @@ TEST_CASE("Catch incorrect payload", "[satellite]") {
 }
 
 TEST_CASE("Catch invalid user command registrations", "[satellite]") {
-    class MySatellite : public DummySatellite {
+    class MySatellite : public DummySatellite<> {
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static,readability-make-member-function-const)
         int cmd() { return 2; }
 
@@ -385,7 +391,7 @@ TEST_CASE("Catch invalid user command registrations", "[satellite]") {
     };
     REQUIRE_THROWS_MATCHES(MySatellite(), LogicError, Message("Command name is invalid"));
 
-    class MySatelliteI : public DummySatellite {
+    class MySatelliteI : public DummySatellite<> {
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static,readability-make-member-function-const)
         int cmd() { return 2; }
 
@@ -394,7 +400,7 @@ TEST_CASE("Catch invalid user command registrations", "[satellite]") {
     };
     REQUIRE_THROWS_MATCHES(MySatelliteI(), LogicError, Message("Command name is invalid"));
 
-    class MySatellite2 : public DummySatellite {
+    class MySatellite2 : public DummySatellite<> {
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static,readability-make-member-function-const)
         int cmd() { return 2; }
 
@@ -406,7 +412,7 @@ TEST_CASE("Catch invalid user command registrations", "[satellite]") {
     };
     REQUIRE_THROWS_MATCHES(MySatellite2(), LogicError, Message("Command \"my_cmd\" is already registered"));
 
-    class MySatellite3 : public DummySatellite {
+    class MySatellite3 : public DummySatellite<> {
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static,readability-make-member-function-const)
         int cmd() { return 2; }
 
@@ -415,7 +421,7 @@ TEST_CASE("Catch invalid user command registrations", "[satellite]") {
     };
     REQUIRE_THROWS_MATCHES(MySatellite3(), LogicError, Message("Satellite transition command with this name exists"));
 
-    class MySatellite4 : public DummySatellite {
+    class MySatellite4 : public DummySatellite<> {
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static,readability-make-member-function-const)
         int cmd() { return 2; }
 
@@ -425,7 +431,7 @@ TEST_CASE("Catch invalid user command registrations", "[satellite]") {
     REQUIRE_THROWS_MATCHES(MySatellite4(), LogicError, Message("Standard satellite command with this name exists"));
 
     // Command registration is case insensitive
-    class MySatellite5 : public DummySatellite {
+    class MySatellite5 : public DummySatellite<> {
         // NOLINTNEXTLINE(readability-convert-member-functions-to-static,readability-make-member-function-const)
         int cmd() { return 2; }
 

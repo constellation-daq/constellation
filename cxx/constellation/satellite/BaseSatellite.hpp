@@ -14,6 +14,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <tuple>
 #include <utility>
 
 #include <zmq.hpp>
@@ -94,7 +95,7 @@ namespace constellation::satellite {
         /**
          * @brief Return the ephemeral port number to which the CSCP socket is bound to
          */
-        constexpr utils::Port getCommandPort() const { return port_; }
+        constexpr utils::Port getCommandPort() const { return cscp_port_; }
 
         /**
          * @brief Return the FSM of the satellite
@@ -128,8 +129,11 @@ namespace constellation::satellite {
          *
          * @param reply_verb CSCP reply verb
          * @param payload Optional message payload
+         * @param tags Header metadata
          */
-        void send_reply(std::pair<message::CSCP1Message::Type, std::string> reply_verb, message::PayloadBuffer payload = {});
+        void send_reply(std::pair<message::CSCP1Message::Type, std::string> reply_verb,
+                        message::PayloadBuffer payload = {},
+                        config::Dictionary tags = {});
 
         /**
          * @brief Handle standard CSCP commands
@@ -137,7 +141,8 @@ namespace constellation::satellite {
          * @param command Command string to try to handle as standard command
          * @return CSCP reply verb and message payload if a standard command
          */
-        std::optional<std::pair<std::pair<message::CSCP1Message::Type, std::string>, message::PayloadBuffer>>
+        std::optional<
+            std::tuple<std::pair<message::CSCP1Message::Type, std::string>, message::PayloadBuffer, config::Dictionary>>
         handle_standard_command(std::string_view command);
 
         /**
@@ -156,6 +161,11 @@ namespace constellation::satellite {
          * @param stop_token Stop token to interrupt the thread
          */
         void cscp_loop(const std::stop_token& stop_token);
+
+        /**
+         * @brief Parse and apply internal parameters for the satellite from the configuration
+         */
+        void apply_internal_config(const config::Configuration& config);
 
         /**
          * @brief Store configuration in satellite
@@ -200,8 +210,8 @@ namespace constellation::satellite {
         log::Logger logger_; // NOLINT(misc-non-private-member-variables-in-classes)
 
     private:
-        zmq::socket_t rep_socket_;
-        utils::Port port_;
+        zmq::socket_t cscp_rep_socket_;
+        utils::Port cscp_port_;
 
         std::string_view satellite_type_;
         std::string_view satellite_name_;

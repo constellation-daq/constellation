@@ -88,14 +88,14 @@ test_exec_dsoloader = executable('test_exec_dsoloader',
 )
 test('Exec DSO Loader test', test_exec_dsoloader,
   args: ['--durations', 'yes', '--verbosity', 'high'],
-  depends: [sputnik_lib],
+  depends: [satellite_sputnik_lib],
 )
 
 # Satellite
 
 test_satellite_base = executable('test_satellite_base',
   sources: 'test_satellite_base.cpp',
-  dependencies: [satellite_dep, cppzmq_dep, msgpack_cxx_dep, catch2_dep],
+  dependencies: [core_dep, satellite_dep, cppzmq_dep, msgpack_cxx_dep, catch2_dep],
 )
 test('Satellite base functionality test', test_satellite_base,
   args: ['--durations', 'yes', '--verbosity', 'high'],
@@ -103,8 +103,27 @@ test('Satellite base functionality test', test_satellite_base,
 
 test_satellite_fsm = executable('test_satellite_fsm',
   sources: 'test_satellite_fsm.cpp',
-  dependencies: [satellite_dep, msgpack_cxx_dep, catch2_dep],
+  dependencies: [core_dep, satellite_dep, msgpack_cxx_dep, catch2_dep],
 )
 test('Satellite FSM test', test_satellite_fsm,
   args: ['--durations', 'yes', '--verbosity', 'high'],
+)
+
+test_satellite_data = executable('test_satellite_data',
+  sources: 'test_satellite_data.cpp',
+  dependencies: [core_dep, satellite_dep, catch2_dep],
+)
+test('Satellite data test', test_satellite_data,
+  args: ['--durations', 'yes', '--verbosity', 'high'],
+)
+
+# Controller
+
+test_controller_config = executable('test_controller_config',
+  sources: 'test_controller_config.cpp',
+  dependencies: [core_dep, controller_dep, catch2_dep],
+)
+test('Controller config test', test_controller_config,
+  args: ['--durations', 'yes', '--verbosity', 'high'],
+  env: ['CXX_TESTS_DIR='+meson.current_source_dir()],
 )

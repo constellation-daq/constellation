@@ -10,6 +10,7 @@ import threading
 from unittest.mock import MagicMock, patch
 
 from constellation.core.cscp import CSCPMessageVerb, CommandTransmitter
+from constellation.core.fsm import SatelliteState
 
 from constellation.core.satellite import Satellite
 
@@ -273,6 +274,82 @@ def test_satellite_fsm_transition_walk(mock_cmd_transmitter, mock_satellite):
         req = sender.get_message()
         assert state.lower() in req.msg.lower()
         assert req.msg_verb == CSCPMessageVerb.SUCCESS
+
+
+@pytest.mark.forked
+def test_satellite_fsm_timestamp(mock_cmd_transmitter, mock_satellite):
+    """Test that FSM timestamps transitions."""
+    transitions = {
+        "initialize": "INIT",
+        "launch": "ORBIT",
+        "start": "RUN",
+        "stop": "ORBIT",
+        "land": "INIT",
+    }
+    sender = mock_cmd_transmitter
+    assert mock_satellite.fsm.last_changed
+    last_changed = mock_satellite.fsm.last_changed
+    for cmd, state in transitions.items():
+        if cmd == "initialize":
+            payload = {"mock_cfg_key": "mock config string"}
+        elif cmd == "start":
+            payload = "5001"
+        else:
+            # send a dict, why not?
+            payload = {"mock key": "mock argument string"}
+        sender.send_request(cmd, payload)
+        time.sleep(0.2)
+        req = sender.get_message()
+        assert "transitioning" in req.msg.lower()
+        assert req.msg_verb == CSCPMessageVerb.SUCCESS
+        # wait for state transition
+
+        wait_for_state(mock_satellite.fsm, state, 4.0)
+        # check state
+        assert (mock_satellite.fsm.last_changed - last_changed).total_seconds() > 0
+        last_changed = mock_satellite.fsm.last_changed
+        sender.send_request("get_state")
+        time.sleep(0.2)
+        req = sender.get_message()
+        assert state.lower() in req.msg.lower()
+        assert req.msg_verb == CSCPMessageVerb.SUCCESS
+        assert req.header_meta["last_changed"].to_datetime() == last_changed
+        assert req.header_meta["last_changed_iso"] == last_changed.isoformat()
+        assert req.payload == getattr(SatelliteState, state).value
+
+
+@pytest.mark.forked
+def test_satellite_run_id_cmd(mock_cmd_transmitter, mock_satellite):
+    """Test that FSM timestamps transitions."""
+    transitions = {
+        "initialize": "INIT",
+        "launch": "ORBIT",
+        "start": "RUN",
+        "stop": "ORBIT",
+        "land": "INIT",
+    }
+    sender = mock_cmd_transmitter
+    run_id = ""
+    assert mock_satellite.run_identifier == run_id
+
+    for cmd, state in transitions.items():
+        if cmd == "initialize":
+            payload = {"mock_cfg_key": "mock config string"}
+        elif cmd == "start":
+            payload = "5001"
+            run_id = "5001"
+        else:
+            # send a dict, why not?
+            payload = {"mock key": "mock argument string"}
+        req = sender.request_get_response(cmd, payload)
+        assert "transitioning" in req.msg.lower()
+        assert req.msg_verb == CSCPMessageVerb.SUCCESS
+        # wait for state transition
+        wait_for_state(mock_satellite.fsm, state, 4.0)
+        # check run id
+        assert mock_satellite.run_identifier == run_id
+        req = sender.request_get_response("get_run_id")
+        assert req.msg == run_id
 
 
 @pytest.mark.forked

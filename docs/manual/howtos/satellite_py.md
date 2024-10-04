@@ -79,7 +79,8 @@ In this example, the callable `self.device.get_current` fetches the current from
 To make the satellite immediately accessible via the command line, add a line with the desired name and the Python path to the module under the `[project.scripts]` header in `pyprojects.toml` file in the Constellation root directory. For the example satellite, this is done via the line
 
 ```TOML
-ExampleSatellite = "constellation.satellites.example.example:main"
+SatelliteMariner = "constellation.satellites.mariner.mariner:main"
 ```
 
-By running `pip install -e .` in the Constellation root directory after adding a line for the satellite makes it directly available to the command line, e.g. as `ExampleSatellite`.
+By running `pip install --no-build-isolation -e .` in the Constellation root directory after adding a line for the satellite
+makes it directly available to the command line, e.g. as `SatelliteMariner`.

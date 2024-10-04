@@ -10,17 +10,12 @@ This how-to describes the procedure of implementing a new Constellation satellit
 for the microcontroller implementation, please refer to the [MicroSat project](https://gitlab.desy.de/constellation/microsat/).
 ```
 
-## Sending or Receiving Data
-
-The first decision that needs to be taken is whether the satellite will produce and transmit data, or if it will receive and
-process data from other satellites.
-
 ## Implementing the FSM Transitions
 
 In Constellation, actions such as device configuration and initialization are realized through so-called transitional states
 which are entered by a command and exited as soon as their action is complete. A more detailed description on this can be found
 in the [satellite section](../concepts/satellite.md) of the framework concepts overview. The actions attached to these
-transitional states are implemented by overriding the virtual methods provided by the `Satellite` base class.
+transitional states are implemented by overriding the virtual methods provided by the {cpp:class}`Satellite <constellation::satellite::Satellite>` base class.
 
 For a new satellite, the following transitional state actions **should be implemented**:
 
@@ -68,7 +63,6 @@ void ExampleSatellite::stopping() {
     // Perform cleanup action here
 }
 ```
-
 
 ## To Reconfigure or Not To Reconfigure
 
@@ -123,68 +117,86 @@ the framework of the problem. The Constellation core library provides different 
 The message provided with the exception should be as descriptive as possible. It will both be logged and will be used as
 status message by the satellite.
 
+## Transmitting Data
+
+The {cpp:class}`TransmitterSatellite <constellation::satellite::TransmitterSatellite>` base class provides functions to transmit
+data. To use it the inheritance can simply be changed from {cpp:class}`Satellite <constellation::satellite::Satellite>`.
+
+To send data in the `RUN` state, a new data message can be created with {cpp:func}`TransmitterSatellite::newDataMessage() <constellation::satellite::TransmitterSatellite::newDataMessage()>`.
+Data can be added to the message as new data frame with {cpp:func}`DataMessage::addFrame() <constellation::satellite::TransmitterSatellite::DataMessage::addFrame()>`,
+which requires requires creating a {cpp:class}`PayloadBuffer <constellation::message::PayloadBuffer>`.
+For the most common C++ ranges like `std::vector` or `std::array`, moving the object into the payload buffer with `std::move()` is sufficient.
+Optionally tags can be added to the data message for additional meta information using {cpp:func}`DataMessage::addTag() <constellation::satellite::TransmitterSatellite::DataMessage::addTag()>`.
+Finally the message can be send using {cpp:func}`TransmitterSatellite::sendDataMessage() <constellation::satellite::TransmitterSatellite::sendDataMessage()>`,
+which returns if the message was sent (or added to the send queue) successfully. This return value has to be checked, since
+a return value of `false` indicates that the message could not be sent due to a slow receiver. In this case, one can either
+discard the message, try to send it again or throw an exception to abort the run.
+
+For performance considerations, please see [Increase Data Rate in C++](data_transmission_speed.md).
+
+### Adding Metadata to a Run
+
+Arbitrary metadata can be attached to the run, which will be send in the EOR message. This might include things like a
+firmware version of a detector. Metadata can be added via
+{cpp:func}`TransmitterSatellite::setRunMetadataTag() <constellation::satellite::TransmitterSatellite::setRunMetadataTag()>`.
+
+## Receiving Data
+
+The {cpp:class}`ReceiverSatellite <constellation::satellite::ReceiverSatellite>` base class provides functions to receive
+data. To use it the inheritance can simply be changed from {cpp:class}`Satellite <constellation::satellite::Satellite>`.
+
+To receive data, the {cpp:func}`receive_bor() <constellation::satellite::ReceiverSatellite::receive_bor()>`,
+{cpp:func}`receive_data() <constellation::satellite::ReceiverSatellite::receive_data()>` and
+{cpp:func}`receive_eor() <constellation::satellite::ReceiverSatellite::receive_eor()>` methods have to be implemented.
+A {cpp:func}`running() <constellation::satellite::Satellite::running()>` method must not be implemented. Files on disk
+should be opened in the {cpp:func}`starting() <constellation::satellite::Satellite::starting()>` method and closed in the
+{cpp:func}`stopping() <constellation::satellite::Satellite::stopping()>` method.
+
+While receiving data, the receiver should also store the tags in the of the messages header. They can be retrieved via
+`data_message.getHeader().getTags()`. Data always arrives sequentially, so file locking is not required.
+
+For performance considerations, please see [Increase Data Rate in C++](data_transmission_speed.md).
+
 ## Building the Satellite
 
 Constellation uses the [Meson build system](https://mesonbuild.com/) and setting up a `meson.build` file is required for the
 code to by compiled. The file should contain the following sections and variable definitions:
 
-* First, potential dependencies of this satellite should be resolved
+* First, the type this satellite identifies as should be defined by setting:
 
   ```meson
-  my_dep = dependency('TheLibrary')
+  satellite_type = 'Example'
   ```
 
-  More details on Meson dependencies can be found [elsewhere](https://mesonbuild.com/Dependencies.html).
+  This will be the type by which new satellites are invoked and which will become part of the canonical name of each
+  instance, e.g. `Example.MySat`.
 
-* Then, the type this satellite identifies as should be defined by setting `satellite_type = 'Example'`. This will be the type
-  by which new satellites are invoked and which will become part of the canonical name of each instance, e.g. `Example.MySat`.
-
-* The source files which need to be compiled for this satellite should be listed in the `satellite_sources` variable:
+* Then the source files which need to be compiled for this satellite should be listed in the `satellite_sources` variable:
 
   ```meson
   satellite_sources = files(
-    'PrototypeSatellite.cpp',
+    'ExampleSatellite.cpp',
   )
   ```
 
-* Constellation automatically generates the shared library for the satellite as well as an executable. This is done by the
-  remainder of the build file, which can be copied verbatim apart from the potential dependency to be added.
+* Lastly, potential dependencies of this satellite should be resolved:
 
-  Setup of satellite configuration, inclusion of the C++ generator file, generation of final sources:
+    ```meson
+    my_dep = dependency('TheLibrary')
+    ```
 
-  ```meson
-  satellite_cfg_data = configuration_data()
-  satellite_cfg_data.set('SATELLITE_TYPE', satellite_type)
-  satellite_generator = configure_file(
-    input: satellite_generator_template,
-    output: 'generator.cpp',
-    configuration: satellite_cfg_data,
-  )
-  satellite_main = configure_file(
-    input: satellite_main_template,
-    output: 'main.cpp',
-    configuration: satellite_cfg_data,
-  )
-  ```
+    More details on Meson dependencies can be found [elsewhere](https://mesonbuild.com/Dependencies.html).
+    Then, all dependencies should be gathered in a list:
 
-  Compilation targets, a shared library for the satellite and the corresponding executable. Here, the dependency stored in
-  `my_dep` has to be added to the list of library dependencies:
+    ```meson
+    satellite_dependencies = [my_dep]
+    ```
+
+* Constellation automatically generates the shared library for the satellite as well as an executable. This requires that the
+  type, the sources and the dependencies are added to the `satellites_to_build` variable like this:
 
   ```meson
-  shared_library(satellite_type,
-    sources: [satellite_generator, satellite_sources],
-    dependencies: [core_dep, satellite_dep, my_dep],
-    gnu_symbol_visibility: 'hidden',
-    install_dir: satellite_libdir,
-    install_rpath: constellation_rpath,
-  )
-
-  executable('satellite' + satellite_type,
-    sources: [satellite_main],
-    dependencies: [exec_dep],
-    install: true,
-    install_rpath: constellation_rpath,
-  )
+  satellites_to_build += [[satellite_type, satellite_sources, satellite_dependencies]]
   ```
 
 * To include the newly created `meson.build` file in the build process, it has to be added to the `cxx/satellite/meson.build`
@@ -193,31 +205,16 @@ code to by compiled. The file should contain the following sections and variable
 * An option can be added to make it selectable if the satellite is build in the top-level `meson_options.txt` file:
 
   ```meson
-  option('satellite_example', type: 'feature', value: 'auto', description: 'Build Example satellite')
+  option('satellite_example', type: 'boolean', value: false, description: 'Build Example satellite')
   ```
 
   In the `meson.build` file for the satellite this option has to be checked.
   These lines at the begging of the `meson.build` file result in a satellite being built by default:
 
   ```meson
-  if get_option('satellite_example').disabled()
+  if not get_option('satellite_example')
     subdir_done()
   endif
   ```
 
-  However most satellite should not be built by default:
-
-  ```meson
-  if not get_option('satellite_example').enabled()
-    subdir_done()
-  endif
-  ```
-
-  The satellite can now be enabled with `meson configure build -Dsatellite_example=enabled`.
-
-* Meson prints a build summary when during setup and reconfiguring, which can print the satellites being built.
-  For this the satellite needs to be added to the corresponding list via:
-
-  ```meson
-  satellites_to_build += satellite_type
-  ```
+  The satellite can now be enabled with `meson configure build -Dsatellite_example=true`.
