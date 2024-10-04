@@ -11,6 +11,8 @@ author: Malinda de Silva (@desilvam)
 import time
 import numpy as np
 import toml
+from pathlib import Path
+import shutil
 
 from threading import Lock
 from threading import Thread
@@ -89,6 +91,10 @@ class ECTstage(DataSender):
         with open(config_file, 'r') as f:
             self.conf = toml.load(f)
 
+        if "save_config" in self.conf["run"]:
+            if self.conf["run"]["save_config"]:
+                self._save_config_file(config_file)
+
         # initialise stage
         if "x" in self.conf["run"]["active_axes"]: self.stage_x = self._init_stage("x")
         if "y" in self.conf["run"]["active_axes"]: self.stage_y = self._init_stage("y")
@@ -108,6 +114,10 @@ class ECTstage(DataSender):
         config_file = cnfg["config_file"]
         with open(config_file, 'r') as f:
             self.conf = toml.load(f)
+
+        if "save_config" in self.conf["run"]:
+            if self.conf["run"]["save_config"]:
+                self._save_config_file(config_file)
 
         # close stages and delete object
         for axis in ["x","y","z","r"]:
@@ -472,7 +482,7 @@ class ECTstage(DataSender):
                     return stage.get_position(channel=self.conf[axis]["chan"],scale=True)
             except NameError:
                 return np.nan
-        else: raise NameError("Stage not found")
+        else: return np.nan
 
     def _move_stage(self,axis,position):
         """
@@ -561,6 +571,15 @@ class ECTstage(DataSender):
                 XYarray[index].sort(reverse=True)
         XYarray = [item for sublist in XYarray for item in sublist]
         return XYarray
+
+    def _save_config_file(self,config_file):
+        outdir = Path.cwd()
+        outdir = outdir/Path("data")
+        outdir.mkdir(parents=True, exist_ok=True)
+        outdir = outdir/Path("t_"+str(time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW))+
+            "_"+config_file.rpartition("/")[2])
+        shutil.copyfile(Path(config_file), outdir)
+        self.log.info(f"Saved config file as {str(outdir)}")
 
     def _send_positions_background(self, event: Event):
         while not event.is_set():
