@@ -21,6 +21,7 @@ core_src = files(
   'message/CMDP1Message.cpp',
   'message/CSCP1Message.cpp',
   'metrics/Metric.cpp',
+  'pools/CMDPPool.cpp',
 )
 
 core_lib = library(
@@ -107,6 +108,7 @@ install_headers(
 install_headers(
   'pools/BasePool.hpp',
   'pools/BasePool.ipp',
+  'pools/CMDPPool.hpp',
   'pools/SubscriberPool.hpp',
   'pools/SubscriberPool.ipp',
   subdir: 'constellation/core/pools',
