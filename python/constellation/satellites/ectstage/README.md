@@ -15,6 +15,14 @@ Python package `pylablib` is required to steer the linear and rotational stages.
 pip install pylablib
 ```
 
+## Initialization Parameters
+
+To initialize `SatelliteECTstage`, two parameters are required.
+
+| Parameter       | Description                                                                                                        | Type      |
+|-----------------|--------------------------------------------------------------------------------------------------------------------|-----------|
+| `config_file`   | Configuration file (`.toml`) containing all required variable. See Configuration File section for more information | string    |                  
+
 
 ## Configuration File
 
@@ -27,8 +35,8 @@ Declare as `[{stage_axis}]` eg: `[x]`,`[y]`,`[z]`,`[r]`. All parameters must be 
 |-----------------|------------------------------------------------------------------------|-----------|-------------------|--------------------------------|
 | `port`          | Serial port name (eg:`"/dev/ttyUSB0"`)                                 | string    | -                 | -                              |
 | `chan`          | Channel number if multiple stages are moved via same serial connection | number    | `0`               | -                              |
-| `velocity`      | Velocity of the stage movement in `mm/s`                               | int/float | -                 | max=`20`                       |
-| `acceleration`  | Acceleration of the stage movement in `mm/s^2`                         | int/float | -                 | max=`10`                       |
+| `velocity`      | Velocity of the stage movement in `mm/s`                               | int/float | `1`               | max=`20`                       |
+| `acceleration`  | Acceleration of the stage movement in `mm/s^2`                         | int/float | `1`               | max=`10`                       |
 | `start_position`| Start Position of all new runs in `mm`. See "Modes of Operations"      | int/float | -                 | `0` to `290` for linear stages |
 
 [+]Use the given default value if unsure of value
@@ -36,14 +44,14 @@ Declare as `[{stage_axis}]` eg: `[x]`,`[y]`,`[z]`,`[r]`. All parameters must be 
 ### Run Parameters
 Declare as `[run]`. All parameters must be defined in config file.
 
-| Parameter               | Description                                  | Type                                   | Default Value [+] | Safety Limit                   |
-|-------------------------|----------------------------------------------|----------------------------------------|------------------ |--------------------------------|
-| `active_axes`           | Axes/stages that must be initialised         | list of axis names eg: `["x","y"]`     | -                 | -                              |
-| `pos_{stage_axis}`      | in `mm`. See "Modes of Operations"           | three-vector list  (int/float)         | -                 | `0` to `290` for linear stages |
-| `stop_time_per_point_s` | wait time at each point (measurement window) in `s` | float                           | -                 | -                              |
-| `readout_freq_s`        | stage position sending frequency (in seconds) to data writer in `s`| float            | -                 | -                              |
+| Parameter               | Description                                  | Type                                   | Safety Limit                   |
+|-------------------------|----------------------------------------------|----------------------------------------|--------------------------------|
+| `active_axes`           | Axes/stages that must be initialised         | list of axis names eg: `["x","y"]`     | -                              |
+| `pos_{stage_axis}`      | in `mm`. See "Modes of Operations"           | three-vector list  (int/float)         | `0` to `290` for linear stages |
+| `stop_time_per_point_s` | wait time at each point (measurement window) in `s` | float                           | -                              |
+| `readout_freq_s`        | stage position sending frequency (in `s`) to data writer | float                      | -                              |
+| `save_config`           | (optional) If True, the configuration file will be saved in `path/to/constellation/data` folder    | bool| -           |
 
-[+]Use the given default value if unsure of value
 
 ### Modes of Operation
 
@@ -98,6 +106,8 @@ pos_y = [10,30,10]
 pos_z = [10,20,10]
 # in deg
 pos_r = [175,185,10]
+
+save_config = true
 ```
 
 ## Usage
