@@ -39,13 +39,13 @@ namespace constellation::pools {
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
     void SubscriberPool<MESSAGE, SERVICE>::scribe(std::string_view host, std::string_view topic, bool subscribe) {
-        // Get host ID from name:
+        // Get host ID from name
         const auto host_id = message::MD5Hash(host);
 
         const std::lock_guard sockets_lock {BasePoolT::sockets_mutex_};
 
-        const auto socket_it = std::ranges::find_if(
-            BasePoolT::get_sockets(), host_id, [&](const auto& s) { return s.first.host_id == host_id; });
+        const auto socket_it = std::ranges::find(
+            BasePoolT::get_sockets(), host_id, [&](const auto& socket_p) { return socket_p.first.host_id; });
         if(socket_it != BasePoolT::get_sockets().end()) {
             if(subscribe) {
                 LOG(BasePoolT::pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic);
