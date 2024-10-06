@@ -10,13 +10,18 @@
 #pragma once
 
 #include <functional>
+#include <map>
 #include <mutex>
 #include <set>
 #include <string>
 #include <string_view>
+#include <utility>
+
+#include <zmq.hpp>
 
 #include "constellation/build.hpp"
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
+#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/pools/SubscriberPool.hpp"
 #include "constellation/core/utils/string_hash_map.hpp"
@@ -115,8 +120,11 @@ namespace constellation::pools {
         CNSTLN_API void socket_connected(const chirp::DiscoveredService& service, zmq::socket_t& socket) override;
 
     private:
-        void scribe(std::string_view host, std::string_view topic, bool subscribe);
-        void scribe_all(std::string_view topic, bool subscribe);
+        using sockets_map = std::map<chirp::DiscoveredService, zmq::socket_t>;
+        using socket_pair = std::pair<chirp::DiscoveredService, zmq::socket_ref>;
+        static socket_pair find_socket(std::string_view host, sockets_map& sockets);
+        void scribe(socket_pair& socket_pair, std::string_view topic, bool subscribe);
+        void scribe_all(sockets_map& sockets, std::string_view topic, bool subscribe);
 
     private:
         std::mutex subscribed_topics_mutex_;

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <memory>
@@ -20,8 +19,6 @@
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/pools/CMDPPool.hpp"
 #include "constellation/core/pools/SubscriberPool.hpp"
-#include "constellation/core/protocol/Protocol.hpp"
-#include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/string.hpp"
 
@@ -31,7 +28,6 @@ using namespace constellation;
 using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::pools;
-using namespace constellation::protocol;
 using namespace constellation::utils;
 
 class CMDPSender {
@@ -59,7 +55,7 @@ public:
 
     bool canRecv() {
         zmq::message_t msg {};
-        pub_socket_.set(zmq::sockopt::rcvtimeo, 100);
+        pub_socket_.set(zmq::sockopt::rcvtimeo, 200);
         auto recv_res = pub_socket_.recv(msg);
         pub_socket_.set(zmq::sockopt::rcvtimeo, -1);
         return recv_res.has_value();
@@ -71,17 +67,19 @@ private:
     Port port_;
 };
 
-bool check_sub_message(zmq::message_t msg, bool subscribe, std::string_view topic) {
-    // First byte is subscribe bool
-    const auto msg_subscribe = static_cast<bool>(*msg.data<uint8_t>());
-    if(msg_subscribe != subscribe) {
-        return false;
+namespace {
+    bool check_sub_message(zmq::message_t msg, bool subscribe, std::string_view topic) {
+        // First byte is subscribe bool
+        const auto msg_subscribe = static_cast<bool>(*msg.data<uint8_t>());
+        if(msg_subscribe != subscribe) {
+            return false;
+        }
+        // Rest is subscription topic
+        auto msg_topic = msg.to_string_view();
+        msg_topic.remove_prefix(1);
+        return msg_topic == topic;
     }
-    // Rest is subscription topic
-    auto msg_topic = msg.to_string_view();
-    msg_topic.remove_prefix(1);
-    return msg_topic == topic;
-}
+} // namespace
 
 TEST_CASE("Message callback", "[core][core::pools]") {
     // Create CHIRP manager for monitoring service discovery
