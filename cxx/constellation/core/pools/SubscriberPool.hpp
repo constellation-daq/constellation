@@ -10,6 +10,7 @@
 #pragma once
 
 #include <functional>
+#include <mutex>
 #include <set>
 #include <string>
 #include <string_view>
