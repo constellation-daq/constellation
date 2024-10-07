@@ -151,6 +151,9 @@ variables:
 
 .build-cpp:
   stage: build
+  # Select openstack Kubernetes runner for now since they perform better for C++ compilation
+  tags:
+    - openstack
   cache:
     - *meson-wrap-cache
     - *ccache

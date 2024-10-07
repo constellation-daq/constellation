@@ -11,6 +11,8 @@
 
 #include <iostream>
 #include <QApplication>
+#include <QDateTime>
+#include <QException>
 #include <QInputDialog>
 
 #include <argparse/argparse.hpp>
@@ -20,28 +22,54 @@
 #include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/utils/casts.hpp"
 
+#include "listeners/Observatory/QLogMessage.hpp"
+
 using namespace constellation;
 using namespace constellation::chirp;
 using namespace constellation::log;
 using namespace constellation::utils;
 
-LogItemDelegate::LogItemDelegate(QLogListener* model) : log_listener_(model) {}
-
-void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const {
-    const auto color = level_colors.at(log_listener_->getMessageLevel(index));
-    painter->fillRect(option.rect, QBrush(color));
-    QItemDelegate::paint(painter, option, index);
+LogDialog::LogDialog(const QLogMessage& msg) {
+    setupUi(this);
+    for(int i = 0; i < QLogMessage::countExtendedColumns(); ++i) {
+        auto* item = new QTreeWidgetItem(treeLogMessage);
+        item->setText(0, QLogMessage::columnName(i));
+        item->setText(1, msg[i].toString());
+    }
+    show();
 }
 
-Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_message_delegate_(&log_listener_) {
+void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const {
+    // Get sibling for column 2 (where the log level is stored) for current row:
+    const QModelIndex lvl_index = index.sibling(index.row(), 2);
+
+    // Get log level color
+    const auto level_str = lvl_index.data().toString().toStdString();
+    const auto color =
+        level_colors_.at(magic_enum::enum_cast<Level>(level_str, magic_enum::case_insensitive).value_or(WARNING));
+
+    painter->fillRect(option.rect, QBrush(color));
+    QStyledItemDelegate::paint(painter, option, index);
+}
+
+QString LogItemDelegate::displayText(const QVariant& value, const QLocale& locale) const {
+    if(value.userType() == QMetaType::QDateTime) {
+        return locale.toString(value.toDateTime(), "yyyy-MM-dd hh:mm:ss");
+    }
+    return QStyledItemDelegate::displayText(value, locale);
+}
+
+Observatory::Observatory(std::string_view group_name) {
 
     qRegisterMetaType<QModelIndex>("QModelIndex");
     setupUi(this);
 
     // Connect signals:
-    connect(&log_listener_, &QLogListener::newMessage, this, &Observatory::new_message_display);
-    connect(&log_listener_, &QLogListener::newSender, this, [&](QString sender) { filterSender->addItem(sender); });
-    connect(&log_listener_, &QLogListener::newTopic, this, [&](QString topic) { filterTopic->addItem(topic); });
+    connect(&log_listener_, &QLogListener::newSender, this, [&](const QString& sender) { filterSender->addItem(sender); });
+    connect(&log_listener_, &QLogListener::newTopic, this, [&](const QString& topic) { filterTopic->addItem(topic); });
+    connect(&log_listener_, &QLogListener::connectionsChanged, this, [&](std::size_t num) {
+        labelNrSatellites->setText("<font color='gray'><b>" + QString::number(num) + "</b></font>");
+    });
 
     // Start the log receiver pool
     log_listener_.startPool();
@@ -49,12 +77,14 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_messa
     // Set up header bar:
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
 
-    viewLog->setModel(&log_listener_);
+    log_filter_.setSourceModel(&log_listener_);
+    viewLog->setModel(&log_filter_);
     viewLog->setItemDelegate(&log_message_delegate_);
-    for(int col = 0; col < LogMessage::countColumns(); ++col) {
-        const int width = LogMessage::columnWidth(col);
-        if(width >= 0)
+    for(int col = 0; col < QLogMessage::countColumns(); ++col) {
+        const int width = QLogMessage::columnWidth(col);
+        if(width >= 0) {
             viewLog->setColumnWidth(col, width);
+        }
     }
 
     // Restore window geometry:
@@ -70,23 +100,21 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_messa
     if(gui_settings_.contains("filters/level")) {
         const auto qlevel = gui_settings_.value("filters/level").toString();
         const auto level = magic_enum::enum_cast<Level>(qlevel.toStdString(), magic_enum::case_insensitive);
-        log_listener_.setFilterLevel(level.value_or(Level::TRACE));
+        log_filter_.setFilterLevel(level.value_or(Level::TRACE));
         filterLevel->setCurrentIndex(std::to_underlying(level.value_or(Level::TRACE)));
     }
     if(gui_settings_.contains("filters/sender")) {
         const auto sender = gui_settings_.value("filters/sender").toString();
-        if(log_listener_.setFilterSender(sender.toStdString())) {
-            filterSender->setCurrentText(sender);
-        }
+        log_filter_.setFilterSender(sender.toStdString());
+        filterSender->setCurrentText(QString::fromStdString(log_filter_.getFilterSender()));
     }
     if(gui_settings_.contains("filters/topic")) {
         const auto topic = gui_settings_.value("filters/topic").toString();
-        if(log_listener_.setFilterTopic(topic.toStdString())) {
-            filterTopic->setCurrentText(topic);
-        }
+        log_filter_.setFilterTopic(topic.toStdString());
+        filterTopic->setCurrentText(QString::fromStdString(log_filter_.getFilterTopic()));
     }
     const auto pattern = gui_settings_.value("filters/search", "");
-    log_listener_.setFilterMessage(pattern.toString());
+    log_filter_.setFilterMessage(pattern.toString());
     filterMessage->setText(pattern.toString());
 
     // Load last subscription:
@@ -96,7 +124,7 @@ Observatory::Observatory(std::string_view group_name) : QMainWindow(), log_messa
     globalLevel->setCurrentIndex(std::to_underlying(slevel.value_or(Level::WARNING)));
 }
 
-Observatory::~Observatory() {
+void Observatory::closeEvent(QCloseEvent* event) {
     // Stop the log receiver
     log_listener_.stopPool();
 
@@ -110,22 +138,21 @@ Observatory::~Observatory() {
     }
 
     // Store filter settings
-    gui_settings_.setValue("filters/level", QString::fromStdString(to_string(log_listener_.getFilterLevel())));
-    gui_settings_.setValue("filters/sender", QString::fromStdString(log_listener_.getFilterSender()));
-    gui_settings_.setValue("filters/topic", QString::fromStdString(log_listener_.getFilterTopic()));
-    gui_settings_.setValue("filters/search", log_listener_.getFilterMessage());
+    gui_settings_.setValue("filters/level", QString::fromStdString(to_string(log_filter_.getFilterLevel())));
+    gui_settings_.setValue("filters/sender", QString::fromStdString(log_filter_.getFilterSender()));
+    gui_settings_.setValue("filters/topic", QString::fromStdString(log_filter_.getFilterTopic()));
+    gui_settings_.setValue("filters/search", log_filter_.getFilterMessage());
 
     // Store subscription settings
     gui_settings_.setValue("subscriptions/level",
                            QString::fromStdString(to_string(log_listener_.getGlobalSubscriptionLevel())));
-}
 
-void Observatory::closeEvent(QCloseEvent*) {
-    QApplication::quit();
+    // Terminate the application
+    event->accept();
 }
 
 void Observatory::on_filterLevel_currentIndexChanged(int index) {
-    log_listener_.setFilterLevel(Level(index));
+    log_filter_.setFilterLevel(Level(index));
 }
 
 void Observatory::on_globalLevel_currentIndexChanged(int index) {
@@ -133,24 +160,21 @@ void Observatory::on_globalLevel_currentIndexChanged(int index) {
 }
 
 void Observatory::on_filterSender_currentTextChanged(const QString& text) {
-    log_listener_.setFilterSender(text.toStdString());
+    log_filter_.setFilterSender(text.toStdString());
 }
 
 void Observatory::on_filterTopic_currentTextChanged(const QString& text) {
-    log_listener_.setFilterTopic(text.toStdString());
+    log_filter_.setFilterTopic(text.toStdString());
 }
 
 void Observatory::on_filterMessage_editingFinished() {
-    log_listener_.setFilterMessage(filterMessage->displayText());
+    log_filter_.setFilterMessage(filterMessage->displayText());
 }
 
 void Observatory::on_viewLog_activated(const QModelIndex& i) {
-    new LogDialog(log_listener_.getMessage(i));
-}
-
-void Observatory::new_message_display(const QModelIndex&) {
-    // FIXME it would be nice to only scroll when at the end and keep position otherwise
-    viewLog->scrollToBottom();
+    // Translate to source index:
+    const QModelIndex index = log_filter_.mapToSource(i);
+    new LogDialog(log_listener_.getMessage(index));
 }
 
 void Observatory::on_clearFilters_clicked() {
@@ -161,7 +185,7 @@ void Observatory::on_clearFilters_clicked() {
 
     // Setting the text does not emit the editingFinished signal, do it manually
     filterMessage->setText("");
-    log_listener_.setFilterMessage("");
+    log_filter_.setFilterMessage("");
 }
 
 // NOLINTNEXTLINE(*-avoid-c-arrays)
@@ -264,7 +288,8 @@ int main(int argc, char** argv) {
     if(parser.is_used("group")) {
         group_name = get_arg(parser, "group");
     } else {
-        QString text = QInputDialog::getText(NULL, "Constellation", "Constellation group to connect to:", QLineEdit::Normal);
+        const QString text =
+            QInputDialog::getText(nullptr, "Constellation", "Constellation group to connect to:", QLineEdit::Normal);
         if(!text.isEmpty()) {
             group_name = text.toStdString();
         } else {
@@ -286,8 +311,12 @@ int main(int argc, char** argv) {
     // Register CMDP in CHIRP and set sender name for CMDP
     SinkManager::getInstance().enableCMDPSending(logger_name);
 
-    Observatory gui(group_name);
-    gui.show();
-
-    return qapp->exec();
+    try {
+        Observatory gui(group_name);
+        gui.show();
+        return QCoreApplication::exec();
+    } catch(QException& e) {
+        std::cerr << "Failed to start UI application" << std::endl;
+        return 1;
+    }
 }

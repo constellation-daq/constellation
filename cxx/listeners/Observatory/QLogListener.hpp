@@ -12,6 +12,7 @@
 #include <deque>
 #include <QAbstractListModel>
 #include <QRegularExpression>
+#include <QVariant>
 #include <vector>
 
 #include "constellation/core/chirp/Manager.hpp"
@@ -19,70 +20,7 @@
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/pools/SubscriberPool.hpp"
 
-/**
- * @class LogMessage
- * @brief Wrapper class around CMDP1 Log messages which provide additional accessors to make them play nice with the
- * QAbstractListModel they are used in.
- */
-class LogMessage : public constellation::message::CMDP1LogMessage {
-public:
-    /**
-     * @brief Constructing a Log message from a CMDP1LogMessage
-     *
-     * @param msg CMDP1 Log Message
-     */
-    explicit LogMessage(constellation::message::CMDP1LogMessage&& msg);
-
-    /**
-     * @brief Operator to fetch column information as string representation from the message
-     *
-     * @param column Column to retrieve the string representation for
-     * @return String representation of the message info
-     */
-    QString operator[](int column) const;
-
-    /**
-     * @brief Obtain number of info columns this message provides
-     * @return Number of columns
-     */
-    static int countColumns() { return headers_.size() - 1; }
-
-    /**
-     * @brief Obtain number of info columns this message provides including extra information
-     * @return Number of all columns
-     */
-    static int countExtendedColumns() { return headers_.size(); }
-
-    /**
-     * @brief Get title of a given column
-     * @param column Column number
-     * @return Header of the column
-     */
-    static QString columnName(int column);
-
-    /**
-     * @brief Obtain predefined width of a column
-     * @param column Column number
-     * @return Width of the column
-     */
-    static int columnWidth(int column);
-
-private:
-    // Column headers of the log details
-    static constexpr std::array<const char*, 6> headers_ {"Time", "Sender", "Level", "Topic", "Message", "Tags"};
-};
-
-class LogSorter {
-public:
-    LogSorter(std::deque<LogMessage>* messages);
-    void SetSort(int col, bool ascending);
-    bool operator()(size_t lhs, size_t rhs);
-
-private:
-    std::deque<LogMessage>* m_msgs;
-    int m_col;
-    bool m_asc;
-};
+#include "listeners/Observatory/QLogMessage.hpp"
 
 class QLogListener : public QAbstractListModel,
                      public constellation::pools::SubscriberPool<constellation::message::CMDP1LogMessage,
@@ -95,69 +33,7 @@ public:
      *
      * @param parent QObject parent
      */
-    explicit QLogListener(QObject* parent = 0);
-
-    /**
-     * @brief Obtain the log level of a message at a given model index
-     *
-     * @param index QModelIndex of the message in question
-     * @return Log level of the message
-     */
-    constellation::log::Level getMessageLevel(const QModelIndex& index) const;
-
-    /**
-     * @brief Set a new log level filter value
-     *
-     * @param level New log level filter
-     */
-    void setFilterLevel(constellation::log::Level level);
-
-    /**
-     * @brief Return the currently set log level filter
-     * @return Log level filter
-     */
-    constellation::log::Level getFilterLevel() const { return filter_level_; }
-
-    /**
-     * @brief Set a new sender filter value
-     *
-     * @param sender Sender filter
-     * @return True if the filter was updated, false otherwise
-     */
-    bool setFilterSender(const std::string& sender);
-
-    /**
-     * @brief Return the currently set sender filter
-     * @return Sender filter
-     */
-    std::string getFilterSender() const { return filter_sender_; }
-
-    /**
-     * @brief Set a new topic filter value
-     *
-     * @param topic Topic filter
-     * @return True if the filter was updated, false otherwise
-     */
-    bool setFilterTopic(const std::string& topic);
-
-    /**
-     * @brief Return the currently set topic filter
-     * @return Topic filter
-     */
-    std::string getFilterTopic() const { return filter_topic_; }
-
-    /**
-     * @brief Set a new message filter value
-     *
-     * @param pattern Message filter pattern
-     */
-    void setFilterMessage(const QString& pattern);
-
-    /**
-     * @brief Return the currently set message filter pattern
-     * @return Message filter pattern
-     */
-    QString getFilterMessage() const { return filter_message_.pattern(); }
+    explicit QLogListener(QObject* parent = nullptr);
 
     /**
      * @brief Update the global subscription log level
@@ -177,7 +53,7 @@ public:
      * @param index QModelIndex of the message
      * @return Constant reference to the message
      */
-    const LogMessage& getMessage(const QModelIndex& index) const;
+    const QLogMessage& getMessage(const QModelIndex& index) const;
 
     /**
      * @brief Subscribe to a given topic at a given log level
@@ -191,18 +67,45 @@ public:
      */
     void subscribeToTopic(constellation::log::Level level, std::string_view topic = "");
 
+    /**
+     * @brief Helper to check if a given sender is known already
+     * This is used to e.g. cross-check filter settings
+     *
+     * @note the comparison here is not case-insensitive.
+     *
+     * @param sender Sender to be checked for
+     * @return True if this sender has been sending messages, false otherwise
+     */
+    bool isSenderKnown(const std::string& sender) const { return sender_list_.contains(sender); }
+
+    /**
+     * @brief Helper to check if a given topic is known already
+     * This is used to e.g. cross-check filter settings
+     *
+     * @note the comparison here is not case-insensitive.
+     *
+     * @param topic Topic to be checked for
+     * @return True if this topic has been found in any message, false otherwise
+     */
+    bool isTopicKnown(const std::string& topic) const { return topic_list_.contains(topic); }
+
     /// @cond doxygen_suppress
 
     /* Qt accessor methods */
-    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex& /*parent*/) const override { return static_cast<int>(message_count_.load()); }
+    int columnCount(const QModelIndex& /*parent*/) const override { return QLogMessage::countColumns(); }
     QVariant data(const QModelIndex& index, int role) const override;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-    void sort(int column, Qt::SortOrder order) override;
+    QVariant headerData(int column, Qt::Orientation orientation, int role) const override;
 
     /// @endcond
 
 signals:
+    /**
+     * @brief Signal emitted whenever a connection changed
+     * @param connections Number of currently held connections
+     */
+    void connectionsChanged(std::size_t connections);
+
     /**
      * @brief Signal emitted whenever a new message has been added
      * @param index QModelIndex at which the message has been inserted
@@ -227,24 +130,12 @@ private:
      * This function inserts the message into storage, checks for new topics or sender names to register, and emits a
      * newMessage signal with the inserted index when the message is displayed.
      *
-     * \param msg Received log message
+     * @param msg Received log message
      */
     void add_message(constellation::message::CMDP1LogMessage&& msg);
 
-    /**
-     * @brief Helper to determine if a message at the given index should be displayed currently.
-     *
-     * This evaluates the currently-configured filters.
-     *
-     * @param index Index of the message in the message storage
-     * @return True if the message is to be displayed, false otherwise
-     */
-    bool is_message_displayed(size_t index) const;
-
-    /**
-     * @brief Helper to update the list of displayed messages
-     */
-    void update_displayed_messages();
+    void socket_connected(zmq::socket_t& socket) override;
+    void socket_disconnected(zmq::socket_t& socket) override;
 
     /**
      * @brief Helper to get all subscription topics given a global subscription log level.This is used to immediately
@@ -258,19 +149,13 @@ private:
     /** Logger to use */
     constellation::log::Logger logger_;
 
-    /** Subscription & storage */
-    std::deque<LogMessage> messages_;
+    /** Log messages & access mutex*/
+    std::deque<QLogMessage> messages_;
+    std::atomic_size_t message_count_;
+    mutable std::mutex message_mutex_;
+
+    /** Subscriptions */
     constellation::log::Level subscription_global_level_ {constellation::log::Level::INFO};
-
-    /** Filter & display */
-    std::vector<size_t> display_indices_;
-    constellation::log::Level filter_level_ {constellation::log::Level::TRACE};
-    std::set<std::string> filter_sender_list_ {"- All -"};
-    std::string filter_sender_ {"- All -"};
-    std::set<std::string> filter_topic_list_ {"- All -"};
-    std::string filter_topic_ {"- All -"};
-    QRegularExpression filter_message_;
-
-    /** Sorting helper */
-    LogSorter m_sorter;
+    std::set<std::string> sender_list_;
+    std::set<std::string> topic_list_;
 };
