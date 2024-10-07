@@ -37,16 +37,14 @@ namespace constellation::pools {
          *
          * @param log_topic Logger topic to be used for this component
          * @param callback Callback function pointer for received messages
-         */
-        SubscriberPool(std::string_view log_topic, std::function<void(MESSAGE&&)> callback);
-
-        /*
-         * @brief Method to update the default topics this pool directly subscribed to when a new socket joins
+         * @param default_topics List of default subscription topics to which this component subscribes directly upon
+         *        opening the socket
          *
-         * @param topics Set of default subscription topics to which this component should subscribe directly upon opening
-         *               the socket.
+         * @note the default topics will be altered by global subscribe calls to all connected peers.
          */
-        void setSubscriptionTopics(std::set<std::string> topics);
+        SubscriberPool(std::string_view log_topic,
+                       std::function<void(MESSAGE&&)> callback,
+                       std::initializer_list<std::string> default_topics = {});
 
         /**
          * @brief Subscribe to a given topic of a specific host
@@ -54,14 +52,14 @@ namespace constellation::pools {
          * @param host Canonical name of the host to subscribe to
          * @param topic Topic to subscribe to
          */
-        void subscribe(std::string_view host, std::string_view topic);
+        void subscribe(std::string_view host, const std::string& topic);
 
         /**
          * @brief Subscribe to a given topic for all connected hosts
          *
          * @param topic Topic to subscribe to
          */
-        void subscribe(std::string_view topic);
+        void subscribe(const std::string& topic);
 
         /**
          * @brief Unsubscribe from a given topic of a specific host
@@ -69,25 +67,26 @@ namespace constellation::pools {
          * @param host Canonical name of the host to unsubscribe from
          * @param topic Topic to unsubscribe
          */
-        void unsubscribe(std::string_view host, std::string_view topic);
+        void unsubscribe(std::string_view host, const std::string& topic);
 
         /**
          * @brief Unsubscribe from a given topic for all hosts
          *
          * @param topic Topic to unsubscribe
          */
-        void unsubscribe(std::string_view topic);
+        void unsubscribe(const std::string& topic);
 
     private:
         void socket_connected(zmq::socket_t& socket) final;
 
         /** Sub- or unsubscribe to a topic for a single host */
-        void scribe(std::string_view host, std::string_view topic, bool subscribe);
+        void scribe(std::string_view host, const std::string& topic, bool subscribe);
 
         /** Sub- or unsubscribe to a topic for all connected hosts */
-        void scribe_all(std::string_view topic, bool subscribe);
+        void scribe_all(const std::string& topic, bool subscribe);
 
         std::set<std::string> default_topics_;
+        std::mutex topics_mutex_;
     };
 } // namespace constellation::pools
 
