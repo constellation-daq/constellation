@@ -41,7 +41,7 @@ public:
      * @brief Obtain number of info columns this message provides
      * @return Number of columns
      */
-    static int countColumns() { return headers_.size() - 1; }
+    static int countColumns() { return headers_.size() - 2; }
 
     /**
      * @brief Obtain number of info columns this message provides including extra information
@@ -65,5 +65,6 @@ public:
 
 private:
     // Column headers of the log details
-    static constexpr std::array<const char*, 6> headers_ {"Time", "Sender", "Level", "Topic", "Message", "Tags"};
+    static constexpr std::array<const char*, 7> headers_ {
+        "Time", "Sender", "Level", "Topic", "Message", "Tags", "Full Message"};
 };
