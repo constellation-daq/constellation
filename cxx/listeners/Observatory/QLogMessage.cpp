@@ -15,6 +15,8 @@
 
 #include "constellation/core/utils/string.hpp"
 
+#include "controllers/MissionControl/qt_utils.hpp"
+
 using namespace constellation::message;
 using namespace constellation::utils;
 
@@ -32,8 +34,7 @@ int QLogMessage::columnWidth(int column) {
 
 QVariant QLogMessage::operator[](int column) const {
     switch(column) {
-    case 0:
-        return QDateTime::fromStdTimePoint(std::chrono::time_point_cast<std::chrono::milliseconds>(getHeader().getTime()));
+    case 0: return constellation::controller::from_timepoint(getHeader().getTime());
     case 1: return QString::fromStdString(std::string(getHeader().getSender()));
     case 2: return QString::fromStdString(to_string(getLogLevel()));
     case 3: return QString::fromStdString(std::string(getLogTopic()));

@@ -11,7 +11,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <format>
 #include <iostream>
 #include <QDateTime>
 #include <QVariant>
