@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <iomanip>
 #include <map>
 #include <memory>
 #include <mutex>
