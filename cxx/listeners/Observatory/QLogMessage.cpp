@@ -37,8 +37,17 @@ QVariant QLogMessage::operator[](int column) const {
     case 1: return QString::fromStdString(std::string(getHeader().getSender()));
     case 2: return QString::fromStdString(to_string(getLogLevel()));
     case 3: return QString::fromStdString(std::string(getLogTopic()));
-    case 4: return QString::fromStdString(std::string(getLogMessage()));
+    case 4: {
+        // Trim string to first line break
+        const auto msg = std::string(getLogMessage());
+        const auto pos = msg.find_first_of('\n');
+        if(pos != std::string::npos) {
+            return QString::fromStdString(msg.substr(0, pos) + " [...]");
+        }
+        return QString::fromStdString(msg);
+    }
     case 5: return QString::fromStdString(getHeader().getTags().to_string());
+    case 6: return QString::fromStdString(std::string(getLogMessage()));
     default: return "";
     }
 }
