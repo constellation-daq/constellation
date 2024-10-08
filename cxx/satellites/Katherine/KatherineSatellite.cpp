@@ -186,6 +186,19 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     data_buffer_depth_ = config.get<int>("data_buffer");
     pixel_buffer_depth_ = config.get<int>("pixel_buffer");
     decode_data_ = config.get<bool>("decode_data");
+
+    // Read and decode masked pixels:
+    if(config.has("masked_pixels")) {
+        const auto pixels = config.getArray<std::string>("masked_pixels");
+        for(const auto& str : pixels) {
+            const auto pos = str.find_first_of(",");
+            if(pos != std::string::npos) {
+                masked_pixels_.emplace(std::stoi(str.substr(0, pos)), std::stoi(str.substr(pos + 1)));
+            } else {
+                LOG(WARNING) << "Could not decode masked pixel " << str;
+            }
+        }
+    }
 }
 
 void KatherineSatellite::launching() {
