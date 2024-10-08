@@ -14,7 +14,8 @@ from constellation.core.cscp import CSCPMessage
 from constellation.core.fsm import SatelliteState
 from constellation.core.satellite import Satellite, SatelliteArgumentParser
 
-from .Keithley2410 import KeithleyInterface, Keithley2410
+from .KeithleyInterface import KeithleyInterface
+from .Keithley2410 import Keithley2410
 
 _SUPPORTED_DEVICES = {
     "2410": Keithley2410,
@@ -131,7 +132,8 @@ class Keithley(Satellite):
     @cscp_requestable
     def in_compliance(self, request: CSCPMessage) -> tuple[str, Any, dict]:
         """Check if current is in compliance"""
-        return f"{self.device.in_compliance()}", None, {}
+        in_compliance = self.device.in_compliance()
+        return f"Device {"is" if in_compliance else "is not"} in compliance", in_compliance, {}
 
     def _in_compliance_is_allowed(self, request: CSCPMessage) -> bool:
         return self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.RUN]
@@ -140,7 +142,7 @@ class Keithley(Satellite):
     def read_output(self, request: CSCPMessage) -> tuple[str, Any, dict]:
         """Read voltage and current output"""
         voltage, current, timestamp = self.device.read_output()
-        return f"Output: {voltage}V, {current}A", None, {}
+        return f"Output: {voltage}V, {current}A", {"voltage": voltage, "current": current, "timestamp": timestamp}, {}
 
     def _read_output_is_allowed(self, request: CSCPMessage) -> bool:
         return self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.RUN]
