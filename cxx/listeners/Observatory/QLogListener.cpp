@@ -9,19 +9,24 @@
 
 #include "QLogListener.hpp"
 
-#include <algorithm>
-#include <chrono>
-#include <format>
-#include <iostream>
+#include <iomanip>
+#include <mutex>
+#include <QAbstractListModel>
 #include <QDateTime>
+#include <QObject>
+#include <QString>
 #include <QVariant>
 #include <set>
 #include <string>
-#include <vector>
+#include <utility>
 
 #include <magic_enum.hpp>
 
+#include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/log/Level.hpp"
+#include "constellation/core/log/log.hpp"
+#include "constellation/core/message/CMDP1Message.hpp"
+#include "constellation/core/pools/SubscriberPool.hpp"
 #include "constellation/core/utils/string.hpp"
 
 #include "listeners/Observatory/QLogMessage.hpp"

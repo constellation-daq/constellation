@@ -9,19 +9,38 @@
 
 #include "Observatory.hpp"
 
+#include <cstddef>
+#include <exception>
 #include <iostream>
+#include <memory>
 #include <QApplication>
+#include <QBrush>
+#include <QCloseEvent>
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QException>
 #include <QInputDialog>
+#include <QMetaType>
+#include <QModelIndex>
+#include <QPainter>
+#include <QStyledItemDelegate>
+#include <QStyleOptionViewItem>
+#include <QTreeWidgetItem>
+#include <string>
+#include <string_view>
+#include <utility>
 
 #include <argparse/argparse.hpp>
 #include <magic_enum.hpp>
 
+#include "constellation/build.hpp"
+#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/log/log.hpp"
+#include "constellation/core/log/Logger.hpp"
 #include "constellation/core/log/SinkManager.hpp"
-#include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/string.hpp"
 
+#include "listeners/Observatory/QLogListener.hpp"
 #include "listeners/Observatory/QLogMessage.hpp"
 
 using namespace constellation;
@@ -188,135 +207,137 @@ void Observatory::on_clearFilters_clicked() {
     log_filter_.setFilterMessage("");
 }
 
-// NOLINTNEXTLINE(*-avoid-c-arrays)
-void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser) {
-    // Listener name (-n)
-    parser.add_argument("-n", "--name").help("controller name").default_value("MissionControl");
+namespace {
+    // NOLINTNEXTLINE(*-avoid-c-arrays)
+    void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser) {
+        // Listener name (-n)
+        parser.add_argument("-n", "--name").help("controller name").default_value("MissionControl");
 
-    // Constellation group (-g)
-    parser.add_argument("-g", "--group").help("group name");
+        // Constellation group (-g)
+        parser.add_argument("-g", "--group").help("group name");
 
-    // Console log level (-l)
-    parser.add_argument("-l", "--level").help("log level").default_value("INFO");
+        // Console log level (-l)
+        parser.add_argument("-l", "--level").help("log level").default_value("INFO");
 
-    // Broadcast address (--brd)
-    std::string default_brd_addr {};
-    try {
-        default_brd_addr = asio::ip::address_v4::broadcast().to_string();
-    } catch(const asio::system_error& error) {
-        default_brd_addr = "255.255.255.255";
-    }
-    parser.add_argument("--brd").help("broadcast address").default_value(default_brd_addr);
+        // Broadcast address (--brd)
+        std::string default_brd_addr {};
+        try {
+            default_brd_addr = asio::ip::address_v4::broadcast().to_string();
+        } catch(const asio::system_error& error) {
+            default_brd_addr = "255.255.255.255";
+        }
+        parser.add_argument("--brd").help("broadcast address").default_value(default_brd_addr);
 
-    // Any address (--any)
-    std::string default_any_addr {};
-    try {
-        default_any_addr = asio::ip::address_v4::any().to_string();
-    } catch(const asio::system_error& error) {
-        default_any_addr = "0.0.0.0";
-    }
-    parser.add_argument("--any").help("any address").default_value(default_any_addr);
+        // Any address (--any)
+        std::string default_any_addr {};
+        try {
+            default_any_addr = asio::ip::address_v4::any().to_string();
+        } catch(const asio::system_error& error) {
+            default_any_addr = "0.0.0.0";
+        }
+        parser.add_argument("--any").help("any address").default_value(default_any_addr);
 
-    // Note: this might throw
-    parser.parse_args(argc, argv);
-}
-
-// parser.get() might throw a logic error, but this never happens in practice
-std::string get_arg(argparse::ArgumentParser& parser, std::string_view arg) noexcept {
-    try {
-        return parser.get(arg);
-    } catch(const std::exception&) {
-        std::unreachable();
-    }
-}
-
-int main(int argc, char** argv) {
-    QCoreApplication* qapp = new QApplication(argc, argv);
-
-    QCoreApplication::setOrganizationName("Constellation");
-    QCoreApplication::setOrganizationDomain("constellation.pages.desy.de");
-    QCoreApplication::setApplicationName("Observatory");
-
-    // Get the default logger
-    auto& logger = Logger::getDefault();
-
-    // CLI parsing
-    argparse::ArgumentParser parser {"Observatory", CNSTLN_VERSION};
-    try {
-        parse_args(argc, argv, parser);
-    } catch(const std::exception& error) {
-        LOG(logger, CRITICAL) << "Argument parsing failed: " << error.what();
-        LOG(logger, CRITICAL) << "Run \""
-                              << "Observatory"
-                              << " --help\" for help";
-        return 1;
+        // Note: this might throw
+        parser.parse_args(argc, argv);
     }
 
-    // Set log level
-    const auto default_level = magic_enum::enum_cast<Level>(get_arg(parser, "level"), magic_enum::case_insensitive);
-    if(!default_level.has_value()) {
-        LOG(logger, CRITICAL) << "Log level \"" << get_arg(parser, "level") << "\" is not valid"
-                              << ", possible values are: " << utils::list_enum_names<Level>();
-        return 1;
-    }
-    SinkManager::getInstance().setConsoleLevels(default_level.value());
-
-    // Check broadcast and any address
-    asio::ip::address_v4 brd_addr {};
-    try {
-        brd_addr = asio::ip::make_address_v4(get_arg(parser, "brd"));
-    } catch(const asio::system_error& error) {
-        LOG(logger, CRITICAL) << "Invalid broadcast address \"" << get_arg(parser, "brd") << "\"";
-        return 1;
-    }
-    asio::ip::address_v4 any_addr {};
-    try {
-        any_addr = asio::ip::make_address_v4(get_arg(parser, "any"));
-    } catch(const asio::system_error& error) {
-        LOG(logger, CRITICAL) << "Invalid any address \"" << get_arg(parser, "any") << "\"";
-        return 1;
-    }
-
-    // Check satellite name
-    const auto logger_name = get_arg(parser, "name");
-
-    // Log the version after all the basic checks are done
-    LOG(logger, STATUS) << "Constellation v" << CNSTLN_VERSION;
-
-    // Get Constellation group:
-    std::string group_name;
-    if(parser.is_used("group")) {
-        group_name = get_arg(parser, "group");
-    } else {
-        const QString text =
-            QInputDialog::getText(nullptr, "Constellation", "Constellation group to connect to:", QLineEdit::Normal);
-        if(!text.isEmpty()) {
-            group_name = text.toStdString();
-        } else {
-            LOG(logger, CRITICAL) << "Invalid or empty constellation group name";
-            return 1;
+    // parser.get() might throw a logic error, but this never happens in practice
+    std::string get_arg(argparse::ArgumentParser& parser, std::string_view arg) noexcept {
+        try {
+            return parser.get(arg);
+        } catch(const std::exception&) {
+            std::unreachable();
         }
     }
+} // namespace
 
-    // Create CHIRP manager and set as default
-    std::unique_ptr<chirp::Manager> chirp_manager {};
+int main(int argc, char** argv) {
     try {
-        chirp_manager = std::make_unique<chirp::Manager>(brd_addr, any_addr, group_name, logger_name);
-        chirp_manager->setAsDefaultInstance();
-        chirp_manager->start();
-    } catch(const std::exception& error) {
-        LOG(logger, CRITICAL) << "Failed to initiate network discovery: " << error.what();
-    }
+        QCoreApplication* qapp = new QApplication(argc, argv);
 
-    // Register CMDP in CHIRP and set sender name for CMDP
-    SinkManager::getInstance().enableCMDPSending(logger_name);
+        QCoreApplication::setOrganizationName("Constellation");
+        QCoreApplication::setOrganizationDomain("constellation.pages.desy.de");
+        QCoreApplication::setApplicationName("Observatory");
 
-    try {
+        // Get the default logger
+        auto& logger = Logger::getDefault();
+
+        // CLI parsing
+        argparse::ArgumentParser parser {"Observatory", CNSTLN_VERSION};
+        try {
+            parse_args(argc, argv, parser);
+        } catch(const std::exception& error) {
+            LOG(logger, CRITICAL) << "Argument parsing failed: " << error.what();
+            LOG(logger, CRITICAL) << "Run \""
+                                  << "Observatory"
+                                  << " --help\" for help";
+            return 1;
+        }
+
+        // Set log level
+        const auto default_level = magic_enum::enum_cast<Level>(get_arg(parser, "level"), magic_enum::case_insensitive);
+        if(!default_level.has_value()) {
+            LOG(logger, CRITICAL) << "Log level \"" << get_arg(parser, "level") << "\" is not valid"
+                                  << ", possible values are: " << utils::list_enum_names<Level>();
+            return 1;
+        }
+        SinkManager::getInstance().setConsoleLevels(default_level.value());
+
+        // Check broadcast and any address
+        asio::ip::address_v4 brd_addr {};
+        try {
+            brd_addr = asio::ip::make_address_v4(get_arg(parser, "brd"));
+        } catch(const asio::system_error& error) {
+            LOG(logger, CRITICAL) << "Invalid broadcast address \"" << get_arg(parser, "brd") << "\"";
+            return 1;
+        }
+        asio::ip::address_v4 any_addr {};
+        try {
+            any_addr = asio::ip::make_address_v4(get_arg(parser, "any"));
+        } catch(const asio::system_error& error) {
+            LOG(logger, CRITICAL) << "Invalid any address \"" << get_arg(parser, "any") << "\"";
+            return 1;
+        }
+
+        // Check satellite name
+        const auto logger_name = get_arg(parser, "name");
+
+        // Log the version after all the basic checks are done
+        LOG(logger, STATUS) << "Constellation v" << CNSTLN_VERSION;
+
+        // Get Constellation group:
+        std::string group_name;
+        if(parser.is_used("group")) {
+            group_name = get_arg(parser, "group");
+        } else {
+            const QString text =
+                QInputDialog::getText(nullptr, "Constellation", "Constellation group to connect to:", QLineEdit::Normal);
+            if(!text.isEmpty()) {
+                group_name = text.toStdString();
+            } else {
+                LOG(logger, CRITICAL) << "Invalid or empty constellation group name";
+                return 1;
+            }
+        }
+
+        // Create CHIRP manager and set as default
+        std::unique_ptr<chirp::Manager> chirp_manager {};
+        try {
+            chirp_manager = std::make_unique<chirp::Manager>(brd_addr, any_addr, group_name, logger_name);
+            chirp_manager->setAsDefaultInstance();
+            chirp_manager->start();
+        } catch(const std::exception& error) {
+            LOG(logger, CRITICAL) << "Failed to initiate network discovery: " << error.what();
+        }
+
+        // Register CMDP in CHIRP and set sender name for CMDP
+        SinkManager::getInstance().enableCMDPSending(logger_name);
+
         Observatory gui(group_name);
         gui.show();
         return QCoreApplication::exec();
-    } catch(QException& e) {
-        std::cerr << "Failed to start UI application" << std::endl;
+    } catch(...) {
+        std::cerr << "Failed to start UI application\n";
         return 1;
     }
 }

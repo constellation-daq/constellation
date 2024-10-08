@@ -9,13 +9,22 @@
 
 #pragma once
 
+#include <cstddef>
 #include <deque>
+#include <mutex>
 #include <QAbstractListModel>
+#include <QObject>
 #include <QRegularExpression>
+#include <QString>
 #include <QVariant>
-#include <vector>
+#include <set>
+#include <string>
+#include <string_view>
 
-#include "constellation/core/chirp/Manager.hpp"
+#include <zmq.hpp>
+
+#include "constellation/core/chirp/CHIRP_definitions.hpp"
+#include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/pools/SubscriberPool.hpp"
