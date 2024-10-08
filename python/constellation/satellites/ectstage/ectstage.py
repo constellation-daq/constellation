@@ -191,7 +191,7 @@ class ECTstage(DataSender):
 
         # updated zigzag movement
         pos = {}
-        for axis in ["x","y","z","r"]:
+        for axis in ["x", "y", "z", "r"]:
             if axis in self.conf["run"]["active_axes"]:
                 param = "position_" + axis
                 if param in self.conf["run"]:
@@ -211,7 +211,8 @@ class ECTstage(DataSender):
 
         self.log.debug(f"pos: {pos}")
         for pos_z in pos["z"]:
-            if pos_z == np.nan: self.log.debug(f"z stage not moved")
+            if pos_z == np.nan:
+                self.log.debug(f"z stage not moved")
             else:
                 self.log.debug(f"z position {pos_z}")
                 self._move_stage("z", pos_z)
@@ -220,7 +221,8 @@ class ECTstage(DataSender):
                     break
 
                 for pos_r in pos["r"]:
-                    if pos_r == np.nan: self.log.debug(f"r stage not moved")
+                    if pos_r == np.nan:
+                        self.log.debug(f"r stage not moved")
                     else:
                         self.log.debug(f"r position {pos_r}")
                         self._move_stage("r", pos_r)
@@ -231,22 +233,24 @@ class ECTstage(DataSender):
                         for pos_x, pos_y in self._generate_zigzagPath(pos["x"], pos["y"]):
                             self.log.info(f"Move to {pos_x} {pos_y} {pos_z} {pos_r}")
 
-                            if pos_y != np.nan: self._move_stage("y", pos_y)
-                            else: self.log.debug(f"y stage not moved")
+                            if pos_y != np.nan:
+                                self._move_stage("y", pos_y)
+                            else:
+                                self.log.debug(f"y stage not moved")
                             self._wait_until_stage_stops_moving(self.stage_y)
                             if self._state_thread_evt.is_set():
                                 break
 
-                            if pos_x != np.nan: self._move_stage("x", pos_x)
-                            else: self.log.debug(f"x stage not moved")
+                            if pos_x != np.nan:
+                                self._move_stage("x", pos_x)
+                            else:
+                                self.log.debug(f"x stage not moved")
                             self._wait_until_stage_stops_moving(self.stage_x)
                             if self._state_thread_evt.is_set():
                                 break
 
                             # measurement time
                             time.sleep(self.conf["run"]["stop_time_per_point_s"])
-
-
 
         # pos = {}
         # for axis in self.conf["run"]["active_axes"]:
