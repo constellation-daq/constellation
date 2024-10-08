@@ -201,12 +201,73 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     }
 }
 
-void KatherineSatellite::launching() {
+void KatherineSatellite::data_received(const char* data, size_t count) {
+    auto msg = newDataMessage();
+    LOG(TRACE) << "Received buffer with " << count << " words";
+
+    if(count % 6 != 0) {
+        std::string msg = "Number of data words doesn't match measurement data granularity";
+        LOG(CRITICAL) << msg;
+        throw CommunicationError(msg);
+    }
+
+    // Measurement data us 6 bytes, pack each in a frame
+    for(size_t i = 0; i < count; i += 6) {
+        msg.addFrame(std::string(data + i, data + i + 6));
+    }
+    // Try to send and retry if it failed:
+    LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
+    trySendDataMessage(msg);
+}
+
+void KatherineSatellite::interrupting(CSCP::State) {
+    if(acquisition_) {
+        LOG(WARNING) << "Acquisition was still running";
+        const std::lock_guard acquisition_lock {katherine_acq_mutex_};
+
+        // Read the current acquisition state:
+        if(!acquisition_->aborted()) {
+            const std::lock_guard device_lock {katherine_cmd_mutex_};
+            // Calls katherine_acq_abort which sends the stop command via CTRL UDP
+            acquisition_->abort();
+        }
+
+        // Wait for acquisition task to finish
+        if(acq_future_.valid()) {
+            acq_future_.wait();
+            acq_future_.get();
+        }
+
+        // Calls katherine_acq_fini which frees data buffers
+        acquisition_.reset();
+    }
+}
+
+void KatherineSatellite::failure(CSCP::State state) {
+    // Currently same as interrupting - what happens if we lose comm with Katherine system?
+    LOG(WARNING) << "Calling failure";
+    interrupting(state);
+}
+
+void KatherineSatellite::frame_started(int frame_idx) {
+    LOG(INFO) << "Started frame " << frame_idx;
+}
+
+void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
+    LOG(STATUS) << "Frame " << frame_idx << " finished, started at " << info.start_time.d << ", ended at " << info.end_time.d
+                << ", completed " << std::boolalpha << completed;
+    LOG_IF(WARNING, info.lost_pixels > 0) << "TPX3 -> Katherine lost " << info.lost_pixels << " pixels";
+    LOG_IF(WARNING, info.sent_pixels > info.received_pixels)
+        << "Katherine -> PC lost " << (info.sent_pixels - info.received_pixels) << " pixels";
+}
+
+void KatherineSatellite::starting(std::string_view) {
+
+    const std::lock_guard acquisition_lock {katherine_acq_mutex_};
+    const std::lock_guard device_lock {katherine_cmd_mutex_};
+
     // If we are in data-driven mode, disable timeout:
     auto timeout = (ro_type_ == katherine::readout_type::data_driven) ? -1s : 10s;
-
-    // Lock the data/acquisition mutex
-    const std::lock_guard acquisition_lock {katherine_acq_mutex_};
 
     // Select acquisition mode and create acquisition object
     // The acquisition object constructor calls katherine_acq_init which
@@ -252,78 +313,6 @@ void KatherineSatellite::launching() {
     acquisition_->set_frame_started_handler(std::bind_front(&KatherineSatellite::frame_started, this));
     acquisition_->set_frame_ended_handler(std::bind_front(&KatherineSatellite::frame_ended, this));
     acquisition_->set_data_received_handler(std::bind_front(&KatherineSatellite::data_received, this));
-}
-
-void KatherineSatellite::data_received(const char* data, size_t count) {
-    auto msg = newDataMessage();
-    LOG(TRACE) << "Received buffer with " << count << " words";
-
-    if(count % 6 != 0) {
-        std::string msg = "Number of data words doesn't match measurement data granularity";
-        LOG(CRITICAL) << msg;
-        throw CommunicationError(msg);
-    }
-
-    // Measurement data us 6 bytes, pack each in a frame
-    for(size_t i = 0; i < count; i += 6) {
-        msg.addFrame(std::string(data + i, data + i + 6));
-    }
-    // Try to send and retry if it failed:
-    LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
-    trySendDataMessage(msg);
-}
-
-void KatherineSatellite::landing() {
-    if(acquisition_) {
-        const std::lock_guard acquisition_lock {katherine_acq_mutex_};
-        // Calls katherine_acq_fini which frees data buffers
-        acquisition_.reset();
-    }
-}
-
-void KatherineSatellite::interrupting(CSCP::State) {
-    if(acquisition_) {
-        const std::lock_guard acquisition_lock {katherine_acq_mutex_};
-
-        // Read the current acquisition state:
-        if(!acquisition_->aborted()) {
-            const std::lock_guard device_lock {katherine_cmd_mutex_};
-            // Calls katherine_acq_abort which sends the stop command via CTRL UDP
-            acquisition_->abort();
-        }
-
-        // Wait for acquisition task to finish
-        if(acq_future_.valid()) {
-            acq_future_.wait();
-            acq_future_.get();
-        }
-
-        // Calls katherine_acq_fini which frees data buffers
-        acquisition_.reset();
-    }
-}
-
-void KatherineSatellite::failure(CSCP::State state) {
-    // Currently same as interrupting - what happens if we lose comm with Katherine system?
-    interrupting(state);
-}
-
-void KatherineSatellite::frame_started(int frame_idx) {
-    LOG(INFO) << "Started frame " << frame_idx;
-}
-
-void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
-    LOG(STATUS) << "Frame " << frame_idx << " finished, started at " << info.start_time.d << ", ended at " << info.end_time.d
-                << ", completed " << std::boolalpha << completed;
-    LOG_IF(WARNING, info.lost_pixels > 0) << "TPX3 -> Katherine lost " << info.lost_pixels << " pixels";
-    LOG_IF(WARNING, info.sent_pixels > info.received_pixels)
-        << "Katherine -> PC lost " << (info.sent_pixels - info.received_pixels) << " pixels";
-}
-
-void KatherineSatellite::starting(std::string_view) {
-
-    const std::lock_guard acquisition_lock {katherine_acq_mutex_};
-    const std::lock_guard device_lock {katherine_cmd_mutex_};
 
     // This needs to be called *before* we start the run thread with acquitions->read
     // otherwise the read function falls through directly with an error
@@ -393,6 +382,8 @@ void KatherineSatellite::stopping() {
                 << "received " << acquisition_->completed_frames() << " complete frames";
     LOG_IF(WARNING, acquisition_->dropped_measurement_data() > 0)
         << "Dropped " << acquisition_->dropped_measurement_data() << " measurement data items";
+
+    acquisition_.reset();
 }
 
 std::vector<std::string> KatherineSatellite::get_hw_info() {
