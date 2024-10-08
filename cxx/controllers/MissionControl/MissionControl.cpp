@@ -210,6 +210,12 @@ void MissionControl::on_btnInit_clicked() {
     }
 }
 
+void MissionControl::on_txtConfigFileName_textChanged() {
+    // Updated config file name, trigger button update:
+    const auto state = runcontrol_.getLowestState();
+    update_button_states(state);
+}
+
 void MissionControl::on_btnShutdown_clicked() {
     // We don't close the GUI but shutdown satellites instead:
     if(QMessageBox::question(this, "Quitting", "Shutdown all satellites?", QMessageBox::Ok | QMessageBox::Cancel) ==
