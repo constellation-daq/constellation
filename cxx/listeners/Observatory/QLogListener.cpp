@@ -23,6 +23,7 @@
 #include <magic_enum.hpp>
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
+#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
@@ -40,10 +41,7 @@ using namespace constellation::utils;
 QLogListener::QLogListener(QObject* parent)
     : QAbstractListModel(parent), SubscriberPool<CMDP1LogMessage, MONITORING>(
                                       "LOGRECV", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }),
-      logger_("QLGRCV") {
-    // Set default subscription topics:
-    setSubscriptionTopics(get_global_subscription_topics());
-}
+      logger_("QLGRCV") {}
 
 std::set<std::string> QLogListener::get_global_subscription_topics() const {
     std::set<std::string> topics;
@@ -59,9 +57,6 @@ std::set<std::string> QLogListener::get_global_subscription_topics() const {
 void QLogListener::subscribeToTopic(constellation::log::Level level, std::string_view topic) {
 
     subscription_global_level_ = level;
-
-    // Update default subscription topics:
-    setSubscriptionTopics(get_global_subscription_topics());
 
     constexpr auto levels = magic_enum::enum_values<Level>();
     for(const auto lvl : levels) {
@@ -106,18 +101,17 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
     emit newMessage(createIndex(pos, 0));
 }
 
-void QLogListener::socket_connected(zmq::socket_t& socket) {
-    // Perform the socket connection & subscription:
-    SubscriberPool<CMDP1LogMessage, MONITORING>::socket_connected(socket);
+void QLogListener::host_connected(const DiscoveredService& service) {
+    // Subscribe to all current global topics:
+    for(const auto& topic : get_global_subscription_topics()) {
+        subscribe(service.host_id, topic);
+    }
 
     // Emit the signal with the current number of connections
     emit connectionsChanged(countSockets());
 }
 
-void QLogListener::socket_disconnected(zmq::socket_t& socket) {
-    // Perform the socket connection & subscription:
-    SubscriberPool<CMDP1LogMessage, MONITORING>::socket_disconnected(socket);
-
+void QLogListener::host_disconnected(const DiscoveredService& /*service*/) {
     // Emit the signal with the current number of connections
     emit connectionsChanged(countSockets());
 }
