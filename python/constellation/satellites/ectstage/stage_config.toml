@@ -4,7 +4,7 @@
 [x]
 serial_no = 45437184
 port = "/dev/ttyUSB3"
-chan = 0
+channel = 0
 # in mm
 velocity = 10
 acceleration = 2
@@ -13,7 +13,7 @@ start_position = 0
 [y]
 serial_no = 45454864
 port = "/dev/ttyUSB2"
-chan = 0
+channel = 0
 # in mm
 velocity = 10
 acceleration = 2
@@ -22,16 +22,16 @@ start_position = 160
 [z]
 serial_no = 45455454
 port = "/dev/ttyUSB1"
-chan = 0
+channel = 0
 # in mm
-velocity = 10
+velocity = 2
 acceleration = 2
-start_position = 0
+start_position = 299
 
 [r]
 serial_no = 27252700
 port = "/dev/ttyUSB4"
-chan = 0
+channel = 0
 # in deg
 velocity = 8
 acceleration = 8
@@ -48,10 +48,10 @@ readout_freq_s = 0.5
 
 
 ## in mm
-#pos_x = [100,200,100]
-#pos_y = [10,30,10]
-#pos_z = [10,20,10]
+#position_x = [100,200,100]
+#position_y = [10,30,10]
+#position_z = [10,20,10]
 ## in deg
-#pos_r = [175,185,10]
+#position_r = [175,185,10]
 
-save_config = false
+save_config = true
