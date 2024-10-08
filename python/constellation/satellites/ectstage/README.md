@@ -14,7 +14,7 @@ This satellite allows the control of the ThorLab LT300C linear and PRM1/MZ8 rota
 
 Python package `pylablib` is required to steer the linear and rotational stages. Install using command:
 
-```
+```shell
 pip install pylablib
 ```
 
@@ -40,9 +40,9 @@ Declare as `[{stage_axis}]` eg: `[x]`,`[y]`,`[z]`,`[r]`. All parameters must be 
 | Parameter       | Description                                                            | Type      | Default Value [+] | Safety Limit                   |
 |-----------------|------------------------------------------------------------------------|-----------|-------------------|--------------------------------|
 | `port`          | Serial port name (eg:`"/dev/ttyUSB0"`)                                 | string    | -                 | -                              |
-| `serial_no`     | Serial number of the stage. Used to make sure the correct stage is moving | 8-bit int| -            | -                              |
+| `serial_no`     | Serial number of the stage. Used to make sure the correct stage is moving | 8-digit number| -            | -                              |
 | `chan`          | Channel number if multiple stages are moved via same serial connection | number    | `0`               | -                              |
-| `velocity`      | Velocity of the stage movement in `mm/s`                               | int/float | `1`               | max=`20`                       |
+| `velocity`      | Velocity of the stage movement in `mm/s`                               | int/float | `1`               | max=`10`                       |
 | `acceleration`  | Acceleration of the stage movement in `mm/s^2`                         | int/float | `1`               | max=`10`                       |
 | `start_position`| Start Position of all new runs in `mm`. See "Modes of Operations"      | int/float | -                 | `0` to `299` for linear stages |
 
@@ -157,6 +157,8 @@ SatelliteECTstage --help
 
 * `stop()`:
   * stops stage movement immediately
+  * Only works inside of start-run loop.
+    (NOTE: For emergency stop while outside run loop, use stage_stop())
 
 * `reconfigure(ConfigurationFile)`
   * disconnects the stages and reinitializes them with values from the renewed config file
@@ -165,66 +167,21 @@ SatelliteECTstage --help
 * `land()`:
   * lands the satellite
 
+## Custom Commands
 
-## Additional Satellite Functions
+In alphabetical order
 
-* `blink(axis)`
-  * Blink test stages.
-  * args: `axis`. Mandatory argument
-
-
-* `disable_axis(axis)`
-  * Disable axis. Once disabled, the stage cannot be moved until re-enabled
-  * args: `axis`. Mandatory Argument
-
-
-* `disconnect(axis=None (optional))`
-  * Disconnects the communication via the serial port to the stages.
-  * args: `axis` (optional). if None: applies to all stages
-  * Can only be executed if in INIT Satellite State
-
-
-* `enable_axis(axis)`
-  * Enable axis
-  * args: `axis`. Mandatory Argument
-
-
-* `get_full_status(axis=None (optional))`
-  * Returns stage full status
-  * args: `axis` (optional). if None: applies to all stages
-
-
-* `get_full_info(axis=None (optional))`
-  * Returns stage information including status, serial port communication information
-  * args: `axis` (optional). if None: applies to all stages
-
-
-* `get_position(axis=None (optional))`
-  * Get stage position
-  * args: `axis` (optional). if None: applies to all stages
-
-
-* `get_status(axis=None (optional))`
-  * Returns stage status as string
-  * args: `axis` (optional). if None: applies to all stages
-
-
-* `get_vel_acc_params(axis=None (optional))`
-  * Get stage max, min velocities and acceleration
-  * args: `axis` (optional). if None: applies to all stages
-
-
-* `go_home(axis=None (optional))`
-  * Goes back to the stage defined home position. Ideally should be 0 mm for linear stages and 0 deg for rotational stage.
-  * args: `axis` (optional). if None: applies to all stages
-
-
-* `go_start_position(axis=None (optional))`
-  * move to start position
-  * args: `axis` (optional). if None: applies to all stages
-
-
-* `stage_stop(axis=None (optional))`
-  * Stops stages. Only works outside of main loop.
-    (NOTE: For emergency stop while within run loop, use stop())
-  * args: `axis` (optional). if None: applies to all stages
+| Command | Description | Arguments | Return Value | Allowed States |
+|---------|-------------|-----------|--------------|----------------|
+| `blink` | Blink test stages                                                              | `axis` | - | `INIT`, `ORBIT`, `RUN` |
+| `disable_axis` | Disable axis. Once disabled, the stage cannot be moved until re-enabled | `axis` | - | `INIT`, `ORBIT`, `RUN` |
+| `disconnect` | Disconnects the communication via the serial port to the stages. If `axis==None`: applies to all stages | `axis=None` (optional) | - | `INIT` |
+| `enable_axis` | Enables axis                                                             | `axis` | - | `INIT`, `ORBIT`, `RUN` |
+| `get_full_status` | Returns stage full status. If `axis==None`: applies to all stages    | `axis=None` (optional) | Str: Full status of stages | `INIT`, `ORBIT`, `RUN` |
+| `get_full_info` | Returns stage information including status, serial port communication information. If `axis==None`: applies to all stages    | `axis=None` (optional) | Str: Full info of stages | `INIT`, `ORBIT`, `RUN` |
+| `get_position` | Get stage position. If `axis==None`: applies to all stages    | `axis=None` (optional) | Str: Full info of stages | `INIT`, `ORBIT`, `RUN` |
+| `get_status` | Returns minimal stage status. If `axis==None`: applies to all stages    | `axis=None` (optional) | Str: Full info of stages | `INIT`, `ORBIT`, `RUN` |
+| `get_vel_acc_params` | Get stage max, min velocities and acceleration. If `axis==None`: applies to all stages    | `axis=None` (optional) | Str:min velocity, max velocity and acceleration | `INIT`, `ORBIT`, `RUN` |
+| `go_home` | Goes back to the stage defined home position. Ideally should be `0` mm for linear stages and `0` deg for rotational stage. If `axis==None`: applies to all stages    | `axis=None` (optional) | - | `INIT`, `ORBIT`, `RUN` |
+| `go_start_position` | Move to start position. If `axis==None`: applies to all stages    | `axis=None` (optional) | - | `INIT`, `ORBIT`, `RUN` |
+| `stage_stop` | Stops stages. **Only works outside of main loop. For emergency stop while within run loop, `use stop()`.** If `axis==None`: applies to all stages    | `axis=None` (optional) | - | `INIT`, `ORBIT` |
