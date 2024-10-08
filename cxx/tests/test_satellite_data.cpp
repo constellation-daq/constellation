@@ -19,7 +19,6 @@
 
 #include "constellation/core/chirp/BroadcastSend.hpp"
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
-#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
@@ -31,6 +30,7 @@
 #include "constellation/satellite/ReceiverSatellite.hpp"
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
+#include "chirp_mock.hpp"
 #include "dummy_satellite.hpp"
 
 using namespace Catch::Matchers;
@@ -115,15 +115,6 @@ public:
     }
 };
 
-namespace {
-    void chirp_mock_service(std::string_view name, Port port) {
-        // Hack: add fake satellite to chirp to find satellite (cannot find from same manager)
-        chirp::BroadcastSend chirp_sender {"0.0.0.0", chirp::CHIRP_PORT};
-        const auto chirp_msg = CHIRPMessage(chirp::MessageType::OFFER, "edda", name, chirp::DATA, port);
-        chirp_sender.sendBroadcast(chirp_msg.assemble());
-    }
-} // namespace
-
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
 
 TEST_CASE("Receiver / No transmitters configured", "[satellite]") {
@@ -148,12 +139,10 @@ TEST_CASE("Transmitter / BOR timeout", "[satellite]") {
 
 TEST_CASE("Transmitter / DATA timeout", "[satellite]") {
     // Create CHIRP manager for data service discovery
-    auto chirp_manager = chirp::Manager("0.0.0.0", "0.0.0.0", "edda", "test");
-    chirp_manager.setAsDefaultInstance();
-    chirp_manager.start();
+    auto chirp_manager = create_chirp_manager();
 
     auto transmitter = Transmitter();
-    chirp_mock_service("Dummy.t1", transmitter.getDataPort());
+    chirp_mock_service("Dummy.t1", chirp::DATA, transmitter.getDataPort());
 
     auto receiver = Receiver();
     auto config_receiver = Configuration();
@@ -185,13 +174,11 @@ TEST_CASE("Transmitter / DATA timeout", "[satellite]") {
 
 TEST_CASE("Successful run", "[satellite]") {
     // Create CHIRP manager for data service discovery
-    auto chirp_manager = chirp::Manager("0.0.0.0", "0.0.0.0", "edda", "test");
-    chirp_manager.setAsDefaultInstance();
-    chirp_manager.start();
+    auto chirp_manager = create_chirp_manager();
 
     auto receiver = Receiver();
     auto transmitter = Transmitter();
-    chirp_mock_service("Dummy.t1", transmitter.getDataPort());
+    chirp_mock_service("Dummy.t1", chirp::DATA, transmitter.getDataPort());
 
     auto config_receiver = Configuration();
     config_receiver.setArray<std::string>("_data_transmitters", {"Dummy.t1"});

@@ -77,9 +77,10 @@ namespace constellation::pools {
          */
         void unsubscribe(const std::string& topic);
 
-    private:
-        void socket_connected(zmq::socket_t& socket) final;
+    protected:
+        void socket_connected(zmq::socket_t& socket) override;
 
+    private:
         /** Sub- or unsubscribe to a topic for a single host */
         void scribe(std::string_view host, const std::string& topic, bool subscribe);
 

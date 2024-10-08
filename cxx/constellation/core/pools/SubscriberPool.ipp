@@ -41,8 +41,8 @@ namespace constellation::pools {
 
         const std::lock_guard sockets_lock {BasePoolT::sockets_mutex_};
 
-        const auto socket_it = std::ranges::find_if(
-            BasePoolT::get_sockets(), host_id, [&](const auto& s) { return s.first.host_id == host_id; });
+        const auto socket_it = std::ranges::find(
+            BasePoolT::get_sockets(), host_id, [&](const auto& socket_p) { return socket_p.first.host_id; });
         if(socket_it != BasePoolT::get_sockets().end()) {
             if(subscribe) {
                 LOG(BasePoolT::pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic);
