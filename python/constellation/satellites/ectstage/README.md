@@ -9,11 +9,15 @@ subtitle: "Satellite controlling the ThorLab LT300C linear and PRM1/MZ8 rotation
 
 This satellite allows the control of the ThorLab LT300C linear and PRM1/MZ8 rotation stages via the `pylablib` python package
 
+
 ## Prerequisites
+
 Python package `pylablib` is required to steer the linear and rotational stages. Install using command:
+
 ```
 pip install pylablib
 ```
+
 
 ## Initialization Parameters
 
@@ -21,33 +25,38 @@ To initialize `SatelliteECTstage`, one parameter is required.
 
 | Parameter       | Description                                                                                                        | Type      |
 |-----------------|--------------------------------------------------------------------------------------------------------------------|-----------|
-| `config_file`   | Configuration file (`.toml`) containing all required variable. See Configuration File section for more information | string    |                  
+| `config_file`   | Configuration file (`.toml`) containing all required variable. See Configuration File section for more information | string    |  
 
 
 ## Configuration File
 
 a `.toml` configuration file is needed to configure the satellite. The following parameters need to be specified in the configuration file. System and connection parameters are required.
 
+
 ### Stage Parameters
+
 Declare as `[{stage_axis}]` eg: `[x]`,`[y]`,`[z]`,`[r]`. All parameters must be defined in config file.
 
 | Parameter       | Description                                                            | Type      | Default Value [+] | Safety Limit                   |
 |-----------------|------------------------------------------------------------------------|-----------|-------------------|--------------------------------|
 | `port`          | Serial port name (eg:`"/dev/ttyUSB0"`)                                 | string    | -                 | -                              |
+| `serial_no`     | Serial number of the stage. Used to make sure the correct stage is moving | 8-bit int| -            | -                              |
 | `chan`          | Channel number if multiple stages are moved via same serial connection | number    | `0`               | -                              |
 | `velocity`      | Velocity of the stage movement in `mm/s`                               | int/float | `1`               | max=`20`                       |
 | `acceleration`  | Acceleration of the stage movement in `mm/s^2`                         | int/float | `1`               | max=`10`                       |
-| `start_position`| Start Position of all new runs in `mm`. See "Modes of Operations"      | int/float | -                 | `0` to `290` for linear stages |
+| `start_position`| Start Position of all new runs in `mm`. See "Modes of Operations"      | int/float | -                 | `0` to `299` for linear stages |
 
 [+]Use the given default value if unsure of value
 
+
 ### Run Parameters
+
 Declare as `[run]`. All parameters must be defined in config file.
 
 | Parameter               | Description                                  | Type                                   | Safety Limit                   |
 |-------------------------|----------------------------------------------|----------------------------------------|--------------------------------|
 | `active_axes`           | Axes/stages that must be initialised         | list of axis names eg: `["x","y"]`     | -                              |
-| `pos_{stage_axis}`      | in `mm`. See "Modes of Operations"           | three-vector list  (int/float)         | `0` to `290` for linear stages |
+| `pos_{stage_axis}`      | in `mm`. See "Modes of Operations"           | three-vector list  (int/float)         | `0` to `299` for linear stages |
 | `stop_time_per_point_s` | wait time at each point (measurement window) in `s` | float                           | -                              |
 | `readout_freq_s`        | stage position sending frequency (in `s`) to data writer | float                      | -                              |
 | `save_config`           | (optional) If True, the configuration file will be saved in `path/to/constellation/data` folder    | bool| -           |
@@ -65,6 +74,7 @@ A minimal configuration would be:
 ```ini
 [x]
 port = "/dev/ttyUSB0"
+serial_no = 45455454
 chan = 0
 # in mm
 velocity = 2
@@ -73,6 +83,7 @@ start_position = 10
 
 [y]
 port = "/dev/ttyUSB1"
+serial_no = 45455454
 chan = 0
 # in mm
 velocity = 2
@@ -81,6 +92,7 @@ start_position = 10
 
 [z]
 port = "/dev/ttyUSB3"
+serial_no = 45455454
 chan = 0
 # in mm
 velocity = 2
@@ -89,6 +101,7 @@ start_position = 10
 
 [r]
 port = "/dev/ttyUSB3"
+serial_no = 45455454
 chan = 0
 # in deg
 velocity = 8
@@ -110,7 +123,9 @@ pos_r = [175,185,10]
 save_config = true
 ```
 
+
 ## Usage
+
 To start the Satellite, run
 
 ``` shell
@@ -122,6 +137,33 @@ or
 ``` shell
 SatelliteECTstage --help
 ```
+
+
+## Main Satellite Functions
+
+* `initialize(ConfigurationFile)`
+  * Configure the Satellite and ThorLab stages
+  * In order of execution:
+    * load conf file and stages
+    * verify if stage returned serial number and user given serial number of the stage match
+    * set velocity and acceleration
+
+* `launch(payload)`:
+  * moves to home position
+
+* `start(run_id)`:
+  * moves to home position
+  * then loads run(run_id) which does the main stage movements while acquiring data
+
+* `stop()`:
+  * stops stage movement immediately
+
+* `reconfigure(ConfigurationFile)`
+  * disconnects the stages and reinitializes them with values from the renewed config file
+  * rest: follows initialize function
+
+* `land()`:
+  * lands the satellite
 
 
 ## Additional Satellite Functions
@@ -157,7 +199,7 @@ SatelliteECTstage --help
   * args: `axis` (optional). if None: applies to all stages
 
 
-*  `get_position(axis=None (optional))`
+* `get_position(axis=None (optional))`
   * Get stage position
   * args: `axis` (optional). if None: applies to all stages
 
