@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
+#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
 #include "constellation/core/pools/SubscriberPool.hpp"
 
@@ -34,6 +35,12 @@ namespace constellation::heartbeat {
          * @param callback Callback function pointer for received heartbeat messages
          */
         HeartbeatRecv(std::function<void(message::CHP1Message&&)> callback)
-            : SubscriberPool<message::CHP1Message, chirp::HEARTBEAT>("CHP", std::move(callback), {""}) {}
+            : SubscriberPool<message::CHP1Message, chirp::HEARTBEAT>("CHP", std::move(callback)) {}
+
+    private:
+        void host_connected(const chirp::DiscoveredService& service) final {
+            // CHP: subscribe to all topics
+            subscribe(service.host_id, "");
+        }
     };
 } // namespace constellation::heartbeat

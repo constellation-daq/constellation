@@ -20,6 +20,7 @@
 #include <zmq_addon.hpp>
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
+#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/pools/SubscriberPool.hpp"
@@ -88,12 +89,12 @@ public:
     }
 
 protected:
-    void socket_connected(zmq::socket_t& /*socket*/) final {
+    void host_connected(const chirp::DiscoveredService& /*service*/) final {
         const std::lock_guard pseudo_lock {pesudo_mutex_};
         cv_.notify_one();
     }
 
-    void socket_disconnected(zmq::socket_t& /*socket*/) final {
+    void host_disconnected(const chirp::DiscoveredService& /*service*/) final {
         const std::lock_guard pseudo_lock {pesudo_mutex_};
         cv_.notify_one();
     }

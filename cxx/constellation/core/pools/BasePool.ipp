@@ -19,6 +19,7 @@
 #include <string_view>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
@@ -84,10 +85,10 @@ namespace constellation::pools {
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
-    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::socket_connected(zmq::socket_t& /*socket*/) {}
+    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::host_connected(const chirp::DiscoveredService& /*service*/) {}
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
-    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::socket_disconnected(zmq::socket_t& /*socket*/) {}
+    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::host_disconnected(const chirp::DiscoveredService& /*service*/) {}
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
     void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::checkPoolException() {
@@ -100,7 +101,7 @@ namespace constellation::pools {
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
     void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::connect(const chirp::DiscoveredService& service) {
-        const std::lock_guard sockets_lock {sockets_mutex_};
+        std::unique_lock sockets_lock {sockets_mutex_};
 
         // Connect
         LOG(pool_logger_, TRACE) << "Connecting to " << service.to_uri() << "...";
@@ -109,13 +110,10 @@ namespace constellation::pools {
             zmq::socket_t socket {*utils::global_zmq_context(), SOCKET_TYPE};
             socket.connect(service.to_uri());
 
-            // Perform connection actions:
-            socket_connected(socket);
-
             /**
-             * This lambda is passed to the ZMQ active_poller_t to be called when a socket has a incoming message pending.
-             * Since this is set per-socket, we can pass a reference to the currently registered socket to the lambda and
-             * then directly access the socket, read the ZMQ message and pass it to the message callback.
+             * This lambda is passed to the ZMQ active_poller_t to be called when a socket has a incoming message
+             * pending. Since this is set per-socket, we can pass a reference to the currently registered socket to the
+             * lambda and then directly access the socket, read the ZMQ message and pass it to the message callback.
              */
             const zmq::active_poller_t::handler_type handler = [this, sock = zmq::socket_ref(socket)](zmq::event_flags ef) {
                 // Check if flags indicate the correct ZMQ event (pollin, incoming message):
@@ -139,25 +137,31 @@ namespace constellation::pools {
             sockets_.emplace(service, std::move(socket));
             socket_count_.store(sockets_.size());
             LOG(pool_logger_, DEBUG) << "Connected to " << service.to_uri();
+
+            // Call connected callback
+            sockets_lock.unlock();
+            host_connected(service);
+
         } catch(const zmq::error_t& error) {
-            // The socket is emplaced in the list only on success of connection and poller registration and goes out of scope
-            // when an exception is thrown. Its  calls close() automatically.
+            // The socket is emplaced in the list only on success of connection and poller registration and goes out of
+            // scope when an exception is thrown. Its  calls close() automatically.
             LOG(pool_logger_, WARNING) << "Error when registering socket for " << service.to_uri() << ": " << error.what();
         }
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
     void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::disconnect_all() {
-        const std::lock_guard sockets_lock {sockets_mutex_};
+        std::vector<chirp::DiscoveredService> services_disconnected_ {};
+        std::unique_lock sockets_lock {sockets_mutex_};
 
         // Unregister all sockets from the poller, then disconnect and close them.
         for(auto& [service, socket] : sockets_) {
+            // Add service for callbacks
+            services_disconnected_.push_back(service);
+
             try {
                 // Remove from poller
                 poller_.remove(zmq::socket_ref(socket));
-
-                // Perform disconnect actions:
-                socket_disconnected(socket);
 
                 // Disconnect and close socket
                 socket.disconnect(service.to_uri());
@@ -168,11 +172,17 @@ namespace constellation::pools {
         }
         sockets_.clear();
         socket_count_.store(sockets_.size());
+
+        // Call disconnected callback for every host
+        sockets_lock.unlock();
+        for(const auto& service : services_disconnected_) {
+            host_disconnected(service);
+        }
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
     void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::disconnect(const chirp::DiscoveredService& service) {
-        const std::lock_guard sockets_lock {sockets_mutex_};
+        std::unique_lock sockets_lock {sockets_mutex_};
 
         // Disconnect the socket
         const auto socket_it = sockets_.find(service);
@@ -181,9 +191,6 @@ namespace constellation::pools {
             try {
                 // Remove from poller
                 poller_.remove(zmq::socket_ref(socket_it->second));
-
-                // Perform disconnect actions:
-                socket_disconnected(socket_it->second);
 
                 // Disconnect the socket and close it
                 socket_it->second.disconnect(service.to_uri());
@@ -196,6 +203,10 @@ namespace constellation::pools {
             sockets_.erase(socket_it);
             socket_count_.store(sockets_.size());
             LOG(pool_logger_, DEBUG) << "Disconnected from " << service.to_uri();
+
+            // Call disconnected callback
+            sockets_lock.unlock();
+            host_disconnected(service);
         }
     }
 

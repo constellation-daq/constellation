@@ -15,7 +15,6 @@
 #include <functional>
 #include <iomanip>
 #include <mutex>
-#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -29,26 +28,22 @@
 namespace constellation::pools {
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
-    SubscriberPool<MESSAGE, SERVICE>::SubscriberPool(std::string_view log_topic,
-                                                     std::function<void(MESSAGE&&)> callback,
-                                                     std::initializer_list<std::string> default_topics)
-        : BasePoolT(log_topic, std::move(callback)), default_topics_(default_topics) {}
+    SubscriberPool<MESSAGE, SERVICE>::SubscriberPool(std::string_view log_topic, std::function<void(MESSAGE&&)> callback)
+        : BasePoolT(log_topic, std::move(callback)) {}
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
-    void SubscriberPool<MESSAGE, SERVICE>::scribe(std::string_view host, const std::string& topic, bool subscribe) {
-        // Get host ID from name:
-        const auto host_id = message::MD5Hash(host);
-
+    void SubscriberPool<MESSAGE, SERVICE>::scribe(message::MD5Hash host_id, const std::string& topic, bool subscribe) {
         const std::lock_guard sockets_lock {BasePoolT::sockets_mutex_};
-
         const auto socket_it = std::ranges::find(
             BasePoolT::get_sockets(), host_id, [&](const auto& socket_p) { return socket_p.first.host_id; });
         if(socket_it != BasePoolT::get_sockets().end()) {
             if(subscribe) {
-                LOG(BasePoolT::pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic);
+                LOG(BasePoolT::pool_logger_, TRACE)
+                    << "Subscribing to " << std::quoted(topic) << " for " << socket_it->first.to_uri();
                 socket_it->second.set(zmq::sockopt::subscribe, topic);
             } else {
-                LOG(BasePoolT::pool_logger_, TRACE) << "Unsubscribing from " << std::quoted(topic);
+                LOG(BasePoolT::pool_logger_, TRACE)
+                    << "Unsubscribing from " << std::quoted(topic) << " for " << socket_it->first.to_uri();
                 socket_it->second.set(zmq::sockopt::unsubscribe, topic);
             }
         }
@@ -56,47 +51,42 @@ namespace constellation::pools {
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
     void SubscriberPool<MESSAGE, SERVICE>::scribe_all(const std::string& topic, bool subscribe) {
-        const std::lock_guard topics_lock {topics_mutex_};
-        if(subscribe) {
-            default_topics_.insert(topic);
-        } else {
-            default_topics_.erase(topic);
-        }
-
         const std::lock_guard sockets_lock {BasePoolT::sockets_mutex_};
         for(auto& [host, socket] : BasePoolT::get_sockets()) {
             if(subscribe) {
-                LOG(BasePoolT::pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic);
+                LOG(BasePoolT::pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic) << " for " << host.to_uri();
                 socket.set(zmq::sockopt::subscribe, topic);
             } else {
-                LOG(BasePoolT::pool_logger_, TRACE) << "Unsubscribing from " << std::quoted(topic);
+                LOG(BasePoolT::pool_logger_, TRACE)
+                    << "Unsubscribing from " << std::quoted(topic) << " for " << host.to_uri();
                 socket.set(zmq::sockopt::unsubscribe, topic);
             }
         }
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
-    void SubscriberPool<MESSAGE, SERVICE>::socket_connected(zmq::socket_t& socket) {
-        // Directly subscribe to default topic list
-        const std::lock_guard topics_lock {topics_mutex_};
-        for(const auto& topic : default_topics_) {
-            socket.set(zmq::sockopt::subscribe, topic);
-        }
-    }
-
-    template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
     void SubscriberPool<MESSAGE, SERVICE>::subscribe(std::string_view host, const std::string& topic) {
-        scribe(host, topic, true);
+        subscribe(message::MD5Hash(host), topic);
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
-    void SubscriberPool<MESSAGE, SERVICE>::unsubscribe(std::string_view host, const std::string& topic) {
-        scribe(host, topic, false);
+    void SubscriberPool<MESSAGE, SERVICE>::subscribe(message::MD5Hash host_id, const std::string& topic) {
+        scribe(host_id, topic, true);
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
     void SubscriberPool<MESSAGE, SERVICE>::subscribe(const std::string& topic) {
         scribe_all(topic, true);
+    }
+
+    template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
+    void SubscriberPool<MESSAGE, SERVICE>::unsubscribe(std::string_view host, const std::string& topic) {
+        unsubscribe(message::MD5Hash(host), topic);
+    }
+
+    template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
+    void SubscriberPool<MESSAGE, SERVICE>::unsubscribe(message::MD5Hash host_id, const std::string& topic) {
+        scribe(host_id, topic, false);
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
