@@ -85,6 +85,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     config.setDefault("data_buffer", 34952533);
     config.setDefault("pixel_buffer", 65536);
     config.setDefault("decode_data", true);
+    config.setDefaultArray("masked_pixels", std::vector<std::string>());
 
     auto ip_address = config.get<std::string>("ip_address");
     LOG(DEBUG) << "Attempting to connect to Katherine system at " << ip_address;
@@ -188,15 +189,12 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     decode_data_ = config.get<bool>("decode_data");
 
     // Read and decode masked pixels:
-    if(config.has("masked_pixels")) {
-        const auto pixels = config.getArray<std::string>("masked_pixels");
-        for(const auto& str : pixels) {
-            const auto pos = str.find_first_of(",");
-            if(pos != std::string::npos) {
-                masked_pixels_.emplace(std::stoi(str.substr(0, pos)), std::stoi(str.substr(pos + 1)));
-            } else {
-                LOG(WARNING) << "Could not decode masked pixel " << str;
-            }
+    for(const auto& str : config.getArray<std::string>("masked_pixels")) {
+        const auto pos = str.find_first_of(",");
+        if(pos != std::string::npos) {
+            masked_pixels_.emplace(std::stoi(str.substr(0, pos)), std::stoi(str.substr(pos + 1)));
+        } else {
+            LOG(WARNING) << "Could not decode masked pixel " << str;
         }
     }
 }
