@@ -498,8 +498,6 @@ def main(args: Any = None) -> None:
 
     """
     parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
-    # this sets the defaults for our "demo" Satellite
-    parser.set_defaults(name="satellite_demo")
     # get a dict of the parsed arguments
     args = vars(parser.parse_args(args))
 

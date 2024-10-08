@@ -67,18 +67,12 @@ class PushThread(threading.Thread):
                 payload, meta = self.queue.get(block=True, timeout=0.5)
                 # if we have data, send it
                 if meta == CDTPMessageIdentifier.BOR:
-                    transmitter.send_start(
-                        payload=payload["payload"], meta=payload["meta"]
-                    )
+                    transmitter.send_start(payload=payload["payload"], meta=payload["meta"])
                 elif meta == CDTPMessageIdentifier.EOR:
-                    transmitter.send_end(
-                        payload=payload["payload"], meta=payload["meta"]
-                    )
+                    transmitter.send_end(payload=payload["payload"], meta=payload["meta"])
                 else:
                     transmitter.send_data(payload=payload, meta=meta)
-                self._logger.debug(
-                    f"Sending packet number {transmitter.sequence_number}"
-                )
+                self._logger.debug(f"Sending packet number {transmitter.sequence_number}")
                 self.queue.task_done()
             except Empty:
                 # nothing to process
@@ -234,9 +228,7 @@ class RandomDataSender(DataSender):
             time.sleep(0.5)
 
         t1 = time.time_ns()
-        self.log.info(
-            f"total time for {num} evt / {num * len(data_load) / 1024 / 1024}MB: {(t1 - t0) / 1000000000}s"
-        )
+        self.log.info(f"total time for {num} evt / {num * len(data_load) / 1024 / 1024}MB: {(t1 - t0) / 1000000000}s")
         return "Finished acquisition"
 
 
@@ -252,8 +244,7 @@ class DataSenderArgumentParser(SatelliteArgumentParser):
             "--data-port",
             "--cdtp-port",
             type=int,
-            help="The port for sending data via the "
-            "Constellation Data Transfer Protocol (default: %(default)s).",
+            help="The port for sending data via the " "Constellation Data Transfer Protocol (default: %(default)s).",
         )
 
 
@@ -265,8 +256,6 @@ def main(args: Any = None) -> None:
 
     """
     parser = DataSenderArgumentParser(description=main.__doc__, epilog=EPILOG)
-    # this sets the defaults for our "demo" Satellite
-    parser.set_defaults(name="random_data_sender")
     args = vars(parser.parse_args(args))
 
     # set up logging

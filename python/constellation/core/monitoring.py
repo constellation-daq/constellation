@@ -414,8 +414,6 @@ def main(args: Any = None) -> None:
         type=str,
         help="The path to write log and metric data to.",
     )
-    # set the default arguments
-    parser.set_defaults(name="basic_monitor")
     # get a dict of the parsed arguments
     args = vars(parser.parse_args(args))
 

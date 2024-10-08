@@ -11,6 +11,7 @@ import logging
 from argparse import ArgumentParser
 from queue import Queue
 from typing import cast, Any
+import socket
 import atexit
 import coloredlogs  # type: ignore[import-untyped]
 from .network import validate_interface, get_interfaces
@@ -40,7 +41,7 @@ class ConstellationArgumentParser(ArgumentParser):
         self.constellation.add_argument(
             "-n",
             "--name",
-            required=True,
+            default=socket.gethostname(),
             type=str,
             help="The name of the Satellite. This has to be unique within "
             "the Constellation group. Together with the Satellite class, "
