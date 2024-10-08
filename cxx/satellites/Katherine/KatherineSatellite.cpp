@@ -373,7 +373,7 @@ void KatherineSatellite::stopping() {
     }
 
     // Add run metadata for end-of-run event:
-    setRunMetadataTag("hw_info", get_hw_info());
+    setEORTag("hw_info", get_hw_info());
 
     // Read status information from acquisition object
     LOG(STATUS) << "Acquisition completed" << std::endl
