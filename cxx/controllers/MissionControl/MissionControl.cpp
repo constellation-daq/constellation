@@ -396,8 +396,20 @@ std::map<std::string, Controller::CommandPayload> MissionControl::parse_config_f
         const auto configs = ControllerConfiguration(std::filesystem::path(file.toStdString()));
         // Convert to CommandPayloads:
         std::map<std::string, Controller::CommandPayload> payloads;
+        std::vector<std::string> sats_without_config;
         for(const auto& satellite : runcontrol_.getConnections()) {
+            if(!configs.hasSatelliteConfiguration(satellite)) {
+                sats_without_config.push_back(satellite);
+            }
             payloads.emplace(satellite, configs.getSatelliteConfiguration(satellite));
+        }
+
+        if(!sats_without_config.empty()) {
+            QMessageBox::warning(nullptr,
+                                 "Warning",
+                                 "The following satellites do not have explicit configuration sections in the selected "
+                                 "configuration file:\n" +
+                                     QString::fromStdString(range_to_string(sats_without_config, "\n")));
         }
         return payloads;
     } catch(ControllerError& err) {
@@ -410,6 +422,13 @@ Controller::CommandPayload MissionControl::parse_config_file(const QString& file
     const auto name = runcontrol_.getQName(index);
     try {
         const auto configs = ControllerConfiguration(std::filesystem::path(file.toStdString()));
+
+        if(!configs.hasSatelliteConfiguration(name)) {
+            QMessageBox::warning(nullptr,
+                                 "Warning",
+                                 QString::fromStdString(name) +
+                                     " has no explicit configuration section in the selected configuration file");
+        }
         return configs.getSatelliteConfiguration(name);
     } catch(ControllerError& err) {
         QMessageBox::warning(nullptr, "ERROR", QString::fromStdString(std::string("Parsing failed: ") + err.what()));
