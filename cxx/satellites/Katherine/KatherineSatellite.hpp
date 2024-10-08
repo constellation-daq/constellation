@@ -46,8 +46,6 @@ public:
 
 public:
     void initializing(constellation::config::Configuration& config) override;
-    void launching() override;
-    void landing() override;
     void starting(std::string_view run_identifier) override;
     void stopping() override;
 
