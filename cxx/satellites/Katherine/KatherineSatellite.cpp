@@ -358,8 +358,8 @@ void KatherineSatellite::stopping() {
     if(!acquisition_->aborted()) {
         const std::lock_guard device_lock {katherine_cmd_mutex_};
         // Calls katherine_acq_abort which sends the stop command via CTRL UDP
-        acquisition_->abort();
-        LOG(DEBUG) << "Aborted acquisition";
+        acquisition_->stop();
+        LOG(DEBUG) << "Stopped acquisition";
     }
 
     // Wait for acquisition task to finish, i.e. after all current measurement data has been processed and the
