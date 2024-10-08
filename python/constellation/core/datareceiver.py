@@ -45,9 +45,7 @@ class DataReceiver(Satellite):
     def do_initializing(self, config: dict[str, Any]) -> str:
         """Initialize and configure the satellite."""
         # what pattern to use for the file names?
-        self.file_name_pattern = self.config.setdefault(
-            "file_name_pattern", "run_{run_identifier}_{date}.h5"
-        )
+        self.file_name_pattern = self.config.setdefault("file_name_pattern", "run_{run_identifier}_{date}.h5")
         # what directory to store files in?
         self.output_path = self.config.setdefault("output_path", "data")
         self._configure_monitoring(2.0)
@@ -69,6 +67,10 @@ class DataReceiver(Satellite):
             self._remove_socket(uuid)
         self.poller = None
         return "Closed connections to data senders."
+
+    def do_starting(self, payload: Any) -> str:
+        self.active_satellites = []
+        return "Started data receiving"
 
     def do_run(self, run_identifier: str) -> str:
         """Handle the data enqueued by the ZMQ Poller.
@@ -101,20 +103,16 @@ class DataReceiver(Satellite):
         try:
             # processing loop
             # assert for mypy static type analysis
-            assert isinstance(
-                self._state_thread_evt, threading.Event
-            ), "State thread Event not set up correctly"
+            assert isinstance(self._state_thread_evt, threading.Event), "State thread Event not set up correctly"
 
-            while not self._state_thread_evt.is_set() or (
-                (datetime.datetime.now() - keep_alive).total_seconds() < 60
-            ):
+            while not self._state_thread_evt.is_set() or ((datetime.datetime.now() - keep_alive).total_seconds() < 60):
                 # refresh keep_alive timestamp
                 if not self._state_thread_evt.is_set():
                     keep_alive = datetime.datetime.now()
                 else:
                     if not self.active_satellites:
                         # no Satellites connected
-                        self.log.info("All EORE received, stopping.")
+                        self.log.info("All EOR received, stopping.")
                         break
                 # request available data from zmq poller; timeout prevents
                 # deadlock when stopping.
@@ -146,12 +144,8 @@ class DataReceiver(Satellite):
                         else:
                             self._write_data(outfile, item)
                     except Exception as e:
-                        self.log.critical(
-                            "Could not write message '%s' to file: %s", item, repr(e)
-                        )
-                        raise RuntimeError(
-                            f"Could not write message '{item}' to file"
-                        ) from e
+                        self.log.critical("Could not write message '%s' to file: %s", item, repr(e))
+                        raise RuntimeError(f"Could not write message '{item}' to file") from e
                     if (datetime.datetime.now() - last_msg).total_seconds() > 2.0:
                         if self._state_thread_evt.is_set():
                             msg = "Finishing with"
@@ -169,7 +163,7 @@ class DataReceiver(Satellite):
             self._close_file(outfile)
             if self.active_satellites:
                 self.log.warning(
-                    "Never received EORE from following Satellites: %s",
+                    "Never received EOR from following Satellites: %s",
                     ", ".join(self.active_satellites),
                 )
             self.active_satellites = []
@@ -206,9 +200,7 @@ class DataReceiver(Satellite):
         return "Finished cleanup."
 
     @cscp_requestable
-    def get_data_sources(
-        self, _request: CSCPMessage | None = None
-    ) -> Tuple[str, list[str], None]:
+    def get_data_sources(self, _request: CSCPMessage | None = None) -> Tuple[str, list[str], None]:
         """Get list of connected data sources.
 
         No payload argument.
@@ -234,9 +226,7 @@ class DataReceiver(Satellite):
         Adds an interface (host, port) to receive data from.
         """
         self._pull_interfaces[service.host_uuid] = (service.address, service.port)
-        self.log.info(
-            "Adding interface tcp://%s:%s to listen to.", service.address, service.port
-        )
+        self.log.info("Adding interface tcp://%s:%s to listen to.", service.address, service.port)
         # handle late-coming satellite offers
         if self.fsm.current_state_value in [
             SatelliteState.ORBIT,
