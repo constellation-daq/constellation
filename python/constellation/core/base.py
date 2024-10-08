@@ -30,6 +30,7 @@ class ConstellationArgumentParser(ArgumentParser):
         super().__init__(*args, **kwargs)
         # generic arguments
         self.add_argument(
+            "-l",
             "--log-level",
             default="info",
             help="The maximum level of log messages to print to the console.",
@@ -37,8 +38,8 @@ class ConstellationArgumentParser(ArgumentParser):
         # add a constellation argument group
         self.constellation = self.add_argument_group("Constellation")
         self.constellation.add_argument(
-            "--name",
             "-n",
+            "--name",
             required=True,
             type=str,
             help="The name of the Satellite. This has to be unique within "
@@ -46,8 +47,8 @@ class ConstellationArgumentParser(ArgumentParser):
             "this forms the Canonical Name.",
         )
         self.constellation.add_argument(
-            "--group",
             "-g",
+            "--group",
             required=True,
             type=str,
             help="The Constellation group to connect to. This separates "
