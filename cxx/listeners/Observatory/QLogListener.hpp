@@ -143,8 +143,8 @@ private:
      */
     void add_message(constellation::message::CMDP1LogMessage&& msg);
 
-    void socket_connected(zmq::socket_t& socket) override;
-    void socket_disconnected(zmq::socket_t& socket) override;
+    void host_connected(const constellation::chirp::DiscoveredService& service) override;
+    void host_disconnected(const constellation::chirp::DiscoveredService& service) override;
 
     /**
      * @brief Helper to get all subscription topics given a global subscription log level.This is used to immediately
