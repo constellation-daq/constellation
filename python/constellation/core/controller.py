@@ -626,6 +626,11 @@ def main(args: Any = None) -> None:
     parser.add_argument("-c", "--config", type=str, help="Path to the TOML configuration file to load.")
     # set the default arguments
     parser.set_defaults(name="controller")
+    if args is None:
+        import sys
+        args = sys.argv[1:] + ["--name=controller"]
+    else:
+        args += ["--name=controller"]
     # get a dict of the parsed arguments
     args = vars(parser.parse_args(args))
 

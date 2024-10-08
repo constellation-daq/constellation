@@ -2,31 +2,35 @@
 # SPDX-License-Identifier: CC-BY-4.0
 
 [x]
-port = "/dev/ttyUSB0"
+serial_no = 45437184
+port = "/dev/ttyUSB3"
 chan = 0
 # in mm
-velocity = 5
-acceleration = 10
-start_position = 15
+velocity = 10
+acceleration = 2
+start_position = 0
 
 [y]
-port = "/dev/ttyUSB1"
-chan = 0
-# in mm
-velocity = 5
-acceleration = 10
-start_position = 15
-
-[z]
+serial_no = 45454864
 port = "/dev/ttyUSB2"
 chan = 0
 # in mm
-velocity = 5
-acceleration = 10
-start_position = 15
+velocity = 10
+acceleration = 2
+start_position = 160
+
+[z]
+serial_no = 45455454
+port = "/dev/ttyUSB1"
+chan = 0
+# in mm
+velocity = 10
+acceleration = 2
+start_position = 0
 
 [r]
-port = "/dev/ttyUSB3"
+serial_no = 27252700
+port = "/dev/ttyUSB4"
 chan = 0
 # in deg
 velocity = 8
@@ -34,8 +38,8 @@ acceleration = 8
 start_position = 180
 
 [run]
+active_axes = ["z"]
 # active_axes = ["x","y","z","r"]
-active_axes = []
 
 # wait time at each point (measurement window)
 stop_time_per_point_s = 3
@@ -43,11 +47,11 @@ stop_time_per_point_s = 3
 readout_freq_s = 0.5
 
 
-# in mm
-pos_x = [10,40,30]
-pos_y = [10,30,10]
+## in mm
+#pos_x = [100,200,100]
+#pos_y = [10,30,10]
 #pos_z = [10,20,10]
-# in deg
-pos_r = [175,185,10]
+## in deg
+#pos_r = [175,185,10]
 
-save_config = true
+save_config = false
