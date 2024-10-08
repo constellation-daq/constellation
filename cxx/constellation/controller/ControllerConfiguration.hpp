@@ -65,6 +65,16 @@ namespace constellation::controller {
         /// @endcond
 
         /**
+         * @brief Check if a configuration exists for a given satellite
+         *
+         * This only checks the specific (named) satellite sections of the configuration file, not any type-bound or global
+         * configuration key-value-pairs.
+         *
+         * @return True if a configuration is available for the satellite with the given name, false otherwise
+         */
+        CNSTLN_API bool hasSatelliteConfiguration(std::string_view canonical_name) const;
+
+        /**
          * @brief Prepare and return configuration dictionary for a given satellite
          *
          * The cached dictionaries from parsed from the input TOML are searched for the given satellite, and keys from the
