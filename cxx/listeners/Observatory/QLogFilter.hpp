@@ -9,15 +9,15 @@
 
 #pragma once
 
+#include <cstddef>
+#include <QModelIndex>
+#include <QObject>
 #include <QRegularExpression>
 #include <QSortFilterProxyModel>
-#include <set>
 #include <string>
-#include <vector>
 
+#include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/Logger.hpp"
-
-#include "QLogListener.hpp"
 
 class QLogFilter : public QSortFilterProxyModel {
 
@@ -101,7 +101,7 @@ private:
      * @param index Index of the message in the message storage
      * @return True if the message is to be displayed, false otherwise
      */
-    bool is_message_displayed(size_t index) const;
+    bool is_message_displayed(std::size_t index) const;
 
 private:
     /** Logger to use */

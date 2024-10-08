@@ -9,10 +9,14 @@
 
 #include "QLogMessage.hpp"
 
+#include <chrono>
 #include <QDateTime>
 #include <QString>
 #include <QVariant>
+#include <string>
+#include <utility>
 
+#include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::message;

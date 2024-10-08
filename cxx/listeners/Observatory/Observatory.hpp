@@ -9,15 +9,27 @@
 
 #pragma once
 
+#include <map>
 #include <QCloseEvent>
+#include <QColor>
+#include <QDialog>
+#include <QLocale>
 #include <QMainWindow>
 #include <QMessageBox>
+#include <QModelIndex>
 #include <QPainter>
 #include <QSettings>
+#include <QString>
 #include <QStyledItemDelegate>
+#include <QStyleOptionViewItem>
+#include <QVariant>
+#include <string_view>
+
+#include "constellation/core/log/Level.hpp"
 
 #include "listeners/Observatory/QLogFilter.hpp"
 #include "listeners/Observatory/QLogListener.hpp"
+#include "listeners/Observatory/QLogMessage.hpp"
 #include "ui_LogDialog.h"
 #include "ui_Observatory.h"
 
