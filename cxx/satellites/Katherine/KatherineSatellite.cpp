@@ -256,6 +256,7 @@ void KatherineSatellite::frame_started(int frame_idx) {
 void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
     LOG(STATUS) << "Frame " << frame_idx << " finished, started at " << info.start_time.d << ", ended at " << info.end_time.d
                 << ", completed " << std::boolalpha << completed;
+    LOG(STATUS) << "Received a total of " << info.sent_pixels << " pixels";
     LOG_IF(WARNING, info.lost_pixels > 0) << "TPX3 -> Katherine lost " << info.lost_pixels << " pixels";
     LOG_IF(WARNING, info.sent_pixels > info.received_pixels)
         << "Katherine -> PC lost " << (info.sent_pixels - info.received_pixels) << " pixels";
@@ -377,9 +378,9 @@ void KatherineSatellite::stopping() {
     setRunMetadataTag("hw_info", get_hw_info());
 
     // Read status information from acquisition object
-    LOG(STATUS) << "Acquisition completed:" << std::endl
-                << "state: " << katherine::str_acq_state(acquisition_->state()) << std::endl
-                << "received " << acquisition_->completed_frames() << " complete frames";
+    LOG(STATUS) << "Acquisition completed" << std::endl
+                << "State: " << katherine::str_acq_state(acquisition_->state()) << std::endl
+                << "Received " << acquisition_->completed_frames() << " complete frames";
     LOG_IF(WARNING, acquisition_->dropped_measurement_data() > 0)
         << "Dropped " << acquisition_->dropped_measurement_data() << " measurement data items";
 
