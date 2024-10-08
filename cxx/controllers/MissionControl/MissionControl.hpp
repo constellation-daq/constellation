@@ -79,6 +79,11 @@ private slots:
     void startup(std::size_t num);
 
     /**
+     * @brief Configuration file editing slot
+     */
+    void on_txtConfigFileName_textChanged();
+
+    /**
      * @brief Private slot for "Init" button
      */
     void on_btnInit_clicked();

@@ -207,7 +207,7 @@ void ReceiverSatellite::handle_cdtp_message(CDTP1Message&& message) {
         handle_bor_message(std::move(message));
         break;
     }
-    [[likely]] case DATA : {
+    [[likely]] case DATA: {
         LOG(cdtp_logger_, TRACE) << "Received data message " << message.getHeader().getSequenceNumber() << " from "
                                  << message.getHeader().getSender();
         handle_data_message(std::move(message));
