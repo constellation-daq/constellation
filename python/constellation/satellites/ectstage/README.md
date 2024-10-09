@@ -148,24 +148,25 @@ SatelliteECTstage --help
     * verify if stage returned serial number and user given serial number of the stage match
     * set velocity and acceleration
 
-* `launch(payload)`:
-  * moves to home position
+* `launch()`:
+  * moves to start position
 
 * `start(run_id)`:
-  * moves to home position
-  * then loads run(run_id) which does the main stage movements while acquiring data
+  * moves to start position
+  * then loads `run(run_id)` which does the main stage movements while acquiring data
 
 * `stop()`:
+  * ends data run
   * stops stage movement immediately
-  * Only works inside of start-run loop.
+  * Only works inside of start-run loop
     (NOTE: For emergency stop while outside run loop, use stage_stop())
 
 * `reconfigure(ConfigurationFile)`
   * disconnects the stages and reinitializes them with values from the renewed config file
-  * rest: follows initialize function
+  * rest: follows initialize function and then relaunches the stages to start position
 
 * `land()`:
-  * lands the satellite
+  * closes the connection to the stage
 
 ## Custom Commands
 
@@ -183,5 +184,4 @@ In alphabetical order
 | `get_status` | Returns minimal stage status. If `axis==None`: applies to all stages    | `axis=None` (optional) | Str: Full info of stages | `INIT`, `ORBIT`, `RUN` |
 | `get_vel_acc_params` | Get stage max, min velocities and acceleration. If `axis==None`: applies to all stages    | `axis=None` (optional) | Str:min velocity, max velocity and acceleration | `INIT`, `ORBIT`, `RUN` |
 | `go_home` | Goes back to the stage defined home position. Ideally should be `0` mm for linear stages and `0` deg for rotational stage. If `axis==None`: applies to all stages    | `axis=None` (optional) | - | `INIT`, `ORBIT`, `RUN` |
-| `go_start_position` | Move to start position. If `axis==None`: applies to all stages    | `axis=None` (optional) | - | `INIT`, `ORBIT`, `RUN` |
 | `stage_stop` | Stops stages. **Only works outside of main loop. For emergency stop while within run loop, `use stop()`.** If `axis==None`: applies to all stages    | `axis=None` (optional) | - | `INIT`, `ORBIT` |
