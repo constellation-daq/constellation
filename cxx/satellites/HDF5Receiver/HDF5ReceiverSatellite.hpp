@@ -18,6 +18,7 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/timers.hpp"
 #include "constellation/satellite/ReceiverSatellite.hpp"
 
@@ -28,6 +29,7 @@ public:
     void initializing(constellation::config::Configuration& config) final;
     void starting(std::string_view run_identifier) final;
     void stopping() final;
+    void failure(constellation::protocol::CSCP::State previous_state) final;
 
 protected:
     void receive_bor(const constellation::message::CDTP1Message::Header& header,
