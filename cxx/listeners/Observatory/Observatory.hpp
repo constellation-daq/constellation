@@ -10,6 +10,8 @@
 #pragma once
 
 #include <map>
+#include <string_view>
+
 #include <QCloseEvent>
 #include <QColor>
 #include <QDialog>
@@ -23,7 +25,6 @@
 #include <QStyledItemDelegate>
 #include <QStyleOptionViewItem>
 #include <QVariant>
-#include <string_view>
 
 #include "constellation/core/log/Level.hpp"
 

@@ -10,11 +10,12 @@
 #pragma once
 
 #include <cstddef>
+#include <string>
+
 #include <QModelIndex>
 #include <QObject>
 #include <QRegularExpression>
 #include <QSortFilterProxyModel>
-#include <string>
 
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/Logger.hpp"

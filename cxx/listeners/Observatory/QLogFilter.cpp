@@ -9,11 +9,12 @@
 
 #include "listeners/Observatory/QLogFilter.hpp"
 
+#include <string>
+
 #include <QModelIndex>
 #include <QObject>
 #include <QSortFilterProxyModel>
 #include <QString>
-#include <string>
 
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/log.hpp"
