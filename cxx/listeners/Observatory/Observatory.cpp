@@ -13,6 +13,13 @@
 #include <exception>
 #include <iostream>
 #include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
+
+#include <argparse/argparse.hpp>
+#include <magic_enum.hpp>
+
 #include <QApplication>
 #include <QBrush>
 #include <QCloseEvent>
@@ -26,12 +33,6 @@
 #include <QStyledItemDelegate>
 #include <QStyleOptionViewItem>
 #include <QTreeWidgetItem>
-#include <string>
-#include <string_view>
-#include <utility>
-
-#include <argparse/argparse.hpp>
-#include <magic_enum.hpp>
 
 #include "constellation/build.hpp"
 #include "constellation/core/chirp/Manager.hpp"

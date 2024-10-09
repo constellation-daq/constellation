@@ -11,16 +11,17 @@
 
 #include <iomanip>
 #include <mutex>
-#include <QAbstractListModel>
-#include <QDateTime>
-#include <QObject>
-#include <QString>
-#include <QVariant>
 #include <set>
 #include <string>
 #include <utility>
 
 #include <magic_enum.hpp>
+
+#include <QAbstractListModel>
+#include <QDateTime>
+#include <QObject>
+#include <QString>
+#include <QVariant>
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
