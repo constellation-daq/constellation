@@ -240,42 +240,50 @@ class ECTstage(DataSender):
                 if self._state_thread_evt.is_set():
                     break
 
-            for pos_r in pos["r"]:
-                if np.isnan(pos_r):
-                    self.log.debug(f"r stage not moved")
-                else:
-                    self.log.debug(f"r position {pos_r}")
+            # for pos_r in pos["r"]:
+            #     if np.isnan(pos_r):
+            #         self.log.debug(f"r stage not moved")
+            #     else:
+            #         self.log.debug(f"r position {pos_r}")
+            #         self._move_stage("r", pos_r)
+            #         self._wait_until_stage_stops_moving(self.stage_r)
+            #         if self._state_thread_evt.is_set():
+            #             break
+
+            for pos_x, pos_y, pos_r in self._generate_zigzagPath(pos["x"], pos["y"], pos["r"]):
+                self.log.info(f"Move to {pos_x} {pos_y} {pos_z} {pos_r}")
+
+                if not np.isnan(pos_r):
                     self._move_stage("r", pos_r)
                     self._wait_until_stage_stops_moving(self.stage_r)
-                    if self._state_thread_evt.is_set():
-                        break
+                else:
+                    self.log.debug(f"r stage not moved")
+                if self._state_thread_evt.is_set():
+                    break
 
-                for pos_x, pos_y in self._generate_zigzagPath(pos["x"], pos["y"]):
-                    self.log.info(f"Move to {pos_x} {pos_y} {pos_z} {pos_r}")
+                if not np.isnan(pos_y):
+                    self._move_stage("y", pos_y)
+                    self._wait_until_stage_stops_moving(self.stage_y)
+                else:
+                    self.log.debug(f"y stage not moved")
+                if self._state_thread_evt.is_set():
+                    break
 
-                    if not np.isnan(pos_y):
-                        self._move_stage("y", pos_y)
-                        self._wait_until_stage_stops_moving(self.stage_y)
-                    else:
-                        self.log.debug(f"y stage not moved")
-                    if self._state_thread_evt.is_set():
-                        break
+                if not np.isnan(pos_x):
+                    self._move_stage("x", pos_x)
+                    self._wait_until_stage_stops_moving(self.stage_x)
+                else:
+                    self.log.debug(f"x stage not moved")
 
-                    if not np.isnan(pos_x):
-                        self._move_stage("x", pos_x)
-                        self._wait_until_stage_stops_moving(self.stage_x)
-                    else:
-                        self.log.debug(f"x stage not moved")
+                if self._state_thread_evt.is_set():
+                    print("is this the issue?")
+                    break
 
-                    if self._state_thread_evt.is_set():
-                        print("is this the issue?")
-                        break
-
-                    if startTime_flag:
-                        self.start_of_loop_time = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW) - self.start_of_run_time
-                        startTime_flag=False
-                    # measurement time
-                    time.sleep(self.conf["run"]["stop_time_per_point_s"])
+                if startTime_flag:
+                    self.start_of_loop_time = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW) - self.start_of_run_time
+                    startTime_flag=False
+                # measurement time
+                time.sleep(self.conf["run"]["stop_time_per_point_s"])
 
         self.log.info("exited loop")
         self.end_of_loop_time = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW) - self.start_of_run_time
@@ -681,16 +689,33 @@ class ECTstage(DataSender):
         list = np.round(np.arange(pos_range[0], pos_range[1] + 1, pos_range[2]), 3)  # mm
         return list
 
-    def _generate_zigzagPath(self, posX_list, posY_list):
+    def _generate_zigzagPath(self, posX_list, posY_list, posR_list):
         """
         creates the zig-zag positions
         """
-        XYarray = [[(i, j) for i in posX_list] for j in posY_list]
+        XYarray = [[(x, y) for x in posX_list] for y in posY_list]
+        XY_rev=[]
         for index in range(len(XYarray)):
-            if index % 2 == 1:  # Check if the row index is odd (i.e., every second row)
-                XYarray[index].sort(reverse=True)
-        XYarray = [item for sublist in XYarray for item in sublist]
-        return XYarray
+            if index % 2 == 1: XY_rev.append(XYarray[index][::-1])
+            else             : XY_rev.append(XYarray[index])
+        XYarray = [item for sublist in XY_rev for item in sublist]
+        XYRarray = [[(x, y, r) for (x, y) in XYarray] for r in posR_list]
+
+        XYR_rev=[]
+        for index in range(len(XYRarray)):
+            if index % 2 == 1: XYR_rev.append(XYRarray[index][::-1])
+            else:
+                XYR_rev.append(XYRarray[index])
+
+        XYRarray = [item for sublist in XYR_rev for item in sublist]
+        return XYRarray
+
+        # XYarray = [[(i, j) for i in posX_list] for j in posY_list]
+        # for index in range(len(XYarray)):
+        #     if index % 2 == 1:  # Check if the row index is odd (i.e., every second row)
+        #         XYarray[index].sort(reverse=True)
+        # XYarray = [item for sublist in XYarray for item in sublist]
+        # return XYarray
 
     def _save_config_file(self, config_file):
         outdir = Path.cwd()
