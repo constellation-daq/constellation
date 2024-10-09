@@ -133,7 +133,8 @@ class Keithley(Satellite):
     def in_compliance(self, request: CSCPMessage) -> tuple[str, Any, dict]:
         """Check if current is in compliance"""
         in_compliance = self.device.in_compliance()
-        return f"Device {"is" if in_compliance else "is not"} in compliance", in_compliance, {}
+        is_str = "is" if in_compliance else "is not"
+        return f"Device {is_str} in compliance", in_compliance, {}
 
     def _in_compliance_is_allowed(self, request: CSCPMessage) -> bool:
         return self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.RUN]
