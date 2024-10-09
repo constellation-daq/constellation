@@ -110,6 +110,7 @@ class ECTstage(DataSender):
             self._get_stage_info(axis)
         return "Initialized"
 
+
     def do_reconfigure(self, cnfg: Configuration) -> str:
         """
         set new position
@@ -124,7 +125,7 @@ class ECTstage(DataSender):
                 self._save_config_file(config_file)
 
         # close stages and delete object
-        for axis in ["x", "y", "z", "r"]:
+        for axis in list(stage_axes.keys()):
             try:
                 stage = self._stage_select(axis)
                 with self._lock:
@@ -160,14 +161,24 @@ class ECTstage(DataSender):
 
     def do_landing(self, payload: any) -> str:
         """
-        Lands satellite
+        Closes connections with stage and lands satellite
         """
-        return "Landed"
+        # close stages and delete object
+        for axis in list(stage_axes.keys()):
+            try:
+                stage = self._stage_select(axis)
+                with self._lock:
+                    stage.close()
+                    del stage
+            except AttributeError:
+                pass
+        return "Connection with stages closed"
 
     def do_starting(self, payload: any) -> str:
         """
         move to data taking position
         """
+        self.start_of_run_time = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)
         for axis in self.conf["run"]["active_axes"]:
             if self.conf[axis]["start_position"] > stage_max[axis]:
                 raise KeyError("Home position in [{}] must be smaller than {}".format(axis, stage_max[axis]))
@@ -191,7 +202,8 @@ class ECTstage(DataSender):
 
         # updated zigzag movement
         pos = {}
-        for axis in ["x", "y", "z", "r"]:
+        startTime_flag = True
+        for axis in list(stage_axes.keys()):
             if axis in self.conf["run"]["active_axes"]:
                 param = "position_" + axis
                 if param in self.conf["run"]:
@@ -211,7 +223,7 @@ class ECTstage(DataSender):
 
         self.log.debug(f"pos: {pos}")
         for pos_z in pos["z"]:
-            if pos_z == np.nan:
+            if np.isnan(pos_z):
                 self.log.debug(f"z stage not moved")
             else:
                 self.log.debug(f"z position {pos_z}")
@@ -220,91 +232,45 @@ class ECTstage(DataSender):
                 if self._state_thread_evt.is_set():
                     break
 
-                for pos_r in pos["r"]:
-                    if pos_r == np.nan:
-                        self.log.debug(f"r stage not moved")
+            for pos_r in pos["r"]:
+                if np.isnan(pos_r):
+                    self.log.debug(f"r stage not moved")
+                else:
+                    self.log.debug(f"r position {pos_r}")
+                    self._move_stage("r", pos_r)
+                    self._wait_until_stage_stops_moving(self.stage_r)
+                    if self._state_thread_evt.is_set():
+                        break
+
+                for pos_x, pos_y in self._generate_zigzagPath(pos["x"], pos["y"]):
+                    self.log.info(f"Move to {pos_x} {pos_y} {pos_z} {pos_r}")
+
+                    if not np.isnan(pos_y):
+                        self._move_stage("y", pos_y)
+                        self._wait_until_stage_stops_moving(self.stage_y)
                     else:
-                        self.log.debug(f"r position {pos_r}")
-                        self._move_stage("r", pos_r)
-                        self._wait_until_stage_stops_moving(self.stage_r)
-                        if self._state_thread_evt.is_set():
-                            break
+                        self.log.debug(f"y stage not moved")
+                    if self._state_thread_evt.is_set():
+                        break
 
-                        for pos_x, pos_y in self._generate_zigzagPath(pos["x"], pos["y"]):
-                            self.log.info(f"Move to {pos_x} {pos_y} {pos_z} {pos_r}")
+                    if not np.isnan(pos_x):
+                        self._move_stage("x", pos_x)
+                        self._wait_until_stage_stops_moving(self.stage_x)
+                    else:
+                        self.log.debug(f"x stage not moved")
 
-                            if pos_y != np.nan:
-                                self._move_stage("y", pos_y)
-                            else:
-                                self.log.debug(f"y stage not moved")
-                            self._wait_until_stage_stops_moving(self.stage_y)
-                            if self._state_thread_evt.is_set():
-                                break
+                    if self._state_thread_evt.is_set():
+                        print("is this the issue?")
+                        break
 
-                            if pos_x != np.nan:
-                                self._move_stage("x", pos_x)
-                            else:
-                                self.log.debug(f"x stage not moved")
-                            self._wait_until_stage_stops_moving(self.stage_x)
-                            if self._state_thread_evt.is_set():
-                                break
-
-                            # measurement time
-                            time.sleep(self.conf["run"]["stop_time_per_point_s"])
-
-        # pos = {}
-        # for axis in self.conf["run"]["active_axes"]:
-        #     param = "position_" + axis
-        #     if param in self.conf["run"]:
-        #         if len(self.conf["run"][param]) == 3:
-        #             pos[axis] = self._list_positions(self.conf["run"][param])
-        #             self.log.debug(f"{axis} {pos[axis]}")
-        #
-        #         else:
-        #             raise KeyError(
-        #                 "{} must be a 3-valued list. To take data at a single point, remove this parameter and use `home_position` instead".format(
-        #                     param
-        #                 )
-        #             )
-        #     else:
-        #         # pos[axis] = self._list_positions(
-        #         #     np.append(np.ones(2) * self.conf[axis]["start_position"], np.array([1]), axis=0)
-        #         # )
-        #
-        #         pos[axis] = [self.conf[axis]["start_position"]]
-        #
-        # if "z" in self.conf["run"]["active_axes"]:
-        #     for pos_z in pos["z"]:
-        #         self.log.debug(f"z position {pos_z}")
-        #         self._move_stage("z", pos_z)
-        #         self._wait_until_stage_stops_moving(self.stage_z)
-        #         if self._state_thread_evt.is_set():
-        #             break
-        #
-        #         if "r" in self.conf["run"]["active_axes"]:
-        #             for pos_r in pos["r"]:
-        #                 self.log.debug(f"r position {pos_r}")
-        #                 self._move_stage("r", pos_r)
-        #                 self._wait_until_stage_stops_moving(self.stage_r)
-        #                 if self._state_thread_evt.is_set():
-        #                     break
-        #
-        #                 for pos_x, pos_y in self._generate_zigzagPath(pos["x"], pos["y"]):
-        #                     self.log.info(f"Move to {pos_x} {pos_y} {pos_z} {pos_r}")
-        #                     self._move_stage("y", pos_y)
-        #                     self._wait_until_stage_stops_moving(self.stage_y)
-        #                     if self._state_thread_evt.is_set():
-        #                         break
-        #
-        #                     self._move_stage("x", pos_x)
-        #                     self._wait_until_stage_stops_moving(self.stage_x)
-        #                     if self._state_thread_evt.is_set():
-        #                         break
-        #
-        #                     # measurement time
-        #                     time.sleep(self.conf["run"]["stop_time_per_point_s"])
+                    if startTime_flag:
+                        self.start_of_loop_time = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW) - self.start_of_run_time
+                        startTime_flag=False
+                    # measurement time
+                    time.sleep(self.conf["run"]["stop_time_per_point_s"])
 
         self.log.info("exited loop")
+        self.end_of_loop_time = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW) - self.start_of_run_time
         run_interrupted = self._state_thread_evt.is_set()
         if run_interrupted:
             self.log.info("Run has been interrupted")
@@ -319,6 +285,15 @@ class ECTstage(DataSender):
             self.log.info("Run has completed")
             self._move_to_start()
             return "Finished acquisition. Stop run to proceed"
+
+    def do_stopping(self, payload: any) -> str:
+        """End the run. Add run metadata for end-of-run event
+        """
+
+        self.EOR = {"start_of_loop_time":self.start_of_loop_time,
+                    "end_of_loop_time":self.end_of_loop_time}
+        return "Stopped. EOR sent"
+
 
     @cscp_requestable
     def go_home(self, request: CSCPMessage) -> tuple[str, any, dict]:
@@ -338,23 +313,6 @@ class ECTstage(DataSender):
                     stage.home()
 
         return "Stage moved to origin", None, {}
-
-    '''
-    @cscp_requestable
-    def go_start_position(self,request: CSCPMessage) -> tuple[str, any, dict]:
-        """
-        move to start position
-        args: `axis` (optional). else: applies to all stages
-        """
-        axis = request.payload
-        try: self._move_to_start(axis=axis)
-        except KeyboardInterrupt: self._stage_stop(stage)
-
-        return "Stage moved to home position", None, {}
-    '''
-
-    def _go_start_position(self, request: CSCPMessage) -> bool:
-        return self.fsm.current_state_value in [SatelliteState.ORBIT]
 
     @cscp_requestable
     def stage_stop(self, request: CSCPMessage) -> tuple[str, any, dict]:
@@ -447,6 +405,7 @@ class ECTstage(DataSender):
         else:
             return "Stage not found. `axis` is a mandatory argument", None, {}
 
+
     @cscp_requestable
     def disconnect(self, request: CSCPMessage) -> tuple[str, any, dict]:
         """
@@ -460,7 +419,7 @@ class ECTstage(DataSender):
         for ax in self.conf["run"]["active_axes"]:
             print_axes = ""
             if ax == axis or axis == None:
-                print_axes += ax + " "
+                print_axes = print_axes + ax + " "
                 stage = self._stage_select(ax)
                 with self._lock:
                     stage.close()
@@ -729,17 +688,20 @@ class ECTstage(DataSender):
         outdir = Path.cwd()
         outdir = outdir / Path("data")
         outdir.mkdir(parents=True, exist_ok=True)
+        formatted_time = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
+
         outdir = outdir / Path(
-            "t_" + str(time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)) + "_" + config_file.rpartition("/")[2]
+            "t_" + str(formatted_time) + "_" + config_file.rpartition("/")[2]
         )
         shutil.copyfile(Path(config_file), outdir)
         self.log.info(f"Saved config file as {str(outdir)}")
 
     def _send_positions_background(self, event: Event):
         while not event.is_set():
+
             payload = np.array(
                 [
-                    time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW),
+                    time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)-self.start_of_run_time,
                     self._get_position("x"),
                     self._get_position("y"),
                     self._get_position("z"),
