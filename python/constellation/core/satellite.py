@@ -206,10 +206,10 @@ class Satellite(
         control to the device-specific public method.
 
         """
-        return str(self.do_launching())
+        return str(self.do_launching(payload))
 
     @debug_log
-    def do_launching(self) -> str:
+    def do_launching(self, payload: Any) -> str:
         """Prepare Satellite for data acquisitions."""
         return "Launched."
 
@@ -249,11 +249,11 @@ class Satellite(
         control to the device-specific public method.
 
         """
-        res: str = self.do_landing()
+        res: str = self.do_landing(payload)
         return res
 
     @debug_log
-    def do_landing(self) -> str:
+    def do_landing(self, payload: Any) -> str:
         """Return Satellite to Initialized state."""
         return "Landed."
 
@@ -274,11 +274,11 @@ class Satellite(
         assert isinstance(self._state_thread_fut, Future)
         res_run: str = self._state_thread_fut.result(timeout=None)
         self.log.debug("RUN thread finished, continue with STOPPING.")
-        res: str = self.do_stopping()
+        res: str = self.do_stopping(payload)
         return f"{res_run}; {res}"
 
     @debug_log
-    def do_stopping(self) -> str:
+    def do_stopping(self, payload: Any) -> str:
         """Stop the data acquisition."""
         return "Acquisition stopped."
 
@@ -301,7 +301,7 @@ class Satellite(
         return res
 
     @debug_log
-    def do_starting(self, run_identifier: str) -> str:
+    def do_starting(self, payload: Any) -> str:
         """Final preparation for acquisition."""
         return "Finished preparations, starting."
 
