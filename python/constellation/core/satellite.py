@@ -205,10 +205,10 @@ class Satellite(
 
         """
         self.hb_checker.start_all()
-        return str(self.do_launching(payload))
+        return str(self.do_launching())
 
     @debug_log
-    def do_launching(self, payload: Any) -> str:
+    def do_launching(self) -> str:
         """Prepare Satellite for data acquisitions."""
         return "Launched."
 
@@ -249,11 +249,11 @@ class Satellite(
 
         """
         self.hb_checker.stop()
-        res: str = self.do_landing(payload)
+        res: str = self.do_landing()
         return res
 
     @debug_log
-    def do_landing(self, payload: Any) -> str:
+    def do_landing(self) -> str:
         """Return Satellite to Initialized state."""
         return "Landed."
 
@@ -274,11 +274,11 @@ class Satellite(
         assert isinstance(self._state_thread_fut, Future)
         res_run: str = self._state_thread_fut.result(timeout=None)
         self.log.debug("RUN thread finished, continue with STOPPING.")
-        res: str = self.do_stopping(payload)
+        res: str = self.do_stopping()
         return f"{res_run}; {res}"
 
     @debug_log
-    def do_stopping(self, payload: Any) -> str:
+    def do_stopping(self) -> str:
         """Stop the data acquisition."""
         return "Acquisition stopped."
 
@@ -301,7 +301,7 @@ class Satellite(
         return res
 
     @debug_log
-    def do_starting(self, payload: Any) -> str:
+    def do_starting(self, run_identifier: str) -> str:
         """Final preparation for acquisition."""
         return "Finished preparations, starting."
 
