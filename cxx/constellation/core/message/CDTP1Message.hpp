@@ -91,6 +91,11 @@ namespace constellation::message {
         const std::vector<message::PayloadBuffer>& getPayload() const { return payload_buffers_; }
 
         /**
+         * @return Reference to the payload of the message
+         */
+        std::vector<message::PayloadBuffer>& getPayload() { return payload_buffers_; }
+
+        /**
          * @param payload Payload buffer containing a payload to be added as ZeroMQ message
          */
         void addPayload(message::PayloadBuffer&& payload) { payload_buffers_.emplace_back(std::move(payload)); }
