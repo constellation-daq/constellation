@@ -28,11 +28,13 @@
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/ReceiverSatellite.hpp"
 
 using namespace constellation::config;
 using namespace constellation::message;
+using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 
@@ -102,6 +104,13 @@ void HDF5ReceiverSatellite::stopping() {
     hdf5_file_->flush();
     hdf5_file_.reset();
     LOG(STATUS) << "Written data to file";
+}
+
+void HDF5ReceiverSatellite::failure(CSCP::State /*state*/) {
+    if(hdf5_file_) {
+        hdf5_file_.reset();
+        LOG(STATUS) << "Written data to file";
+    }
 }
 
 void HDF5ReceiverSatellite::receive_bor(const CDTP1Message::Header& header, Configuration config) {
