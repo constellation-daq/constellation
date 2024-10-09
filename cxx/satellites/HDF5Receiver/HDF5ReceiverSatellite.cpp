@@ -10,11 +10,14 @@
 #include "HDF5ReceiverSatellite.hpp"
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string_view>
+#include <utility>
 #include <variant>
+#include <vector>
 
 #include <highfive/highfive.hpp>
 #include <highfive/span.hpp>
@@ -38,27 +41,41 @@ namespace {
         return "/" + to_string(sender);
     }
 
-    void add_dict_attributes(HighFive::Group& group, const Dictionary& dict) {
+    enum class AddDictAs : std::uint8_t {
+        ATTRIBUTE,
+        DATASET,
+    };
+
+    void add_dict_to(HighFive::Group& group, const Dictionary& dict, AddDictAs add_dict_as) {
         for(const auto& [key, value] : dict) {
+            LOG(DEBUG) << "Adding key " << key << " with value " << value.str() << " as " << to_string(add_dict_as)
+                       << " to group " << group.getPath();
+            auto add_type_to = [&](auto&& value) {
+                switch(add_dict_as) {
+                case AddDictAs::ATTRIBUTE: {
+                    group.createAttribute(key, value);
+                    break;
+                }
+                case AddDictAs::DATASET: {
+                    group.createDataSet(key, value);
+                    break;
+                }
+                default: std::unreachable();
+                }
+            };
             std::visit(
                 [&](auto&& arg) {
                     using T = std::decay_t<decltype(arg)>;
-                    group.createAttribute(key, value.get<T>());
+                    if constexpr(std::is_same_v<T, std::monostate>) {
+                        add_type_to(std::vector<std::byte>());
+                    } else {
+                        add_type_to(value.get<T>());
+                    }
                 },
                 value);
         }
     }
 
-    void add_dict_datasets(HighFive::Group& group, const Dictionary& dict) {
-        for(const auto& [key, value] : dict) {
-            std::visit(
-                [&](auto&& arg) {
-                    using T = std::decay_t<decltype(arg)>;
-                    group.createDataSet(key, value.get<T>());
-                },
-                value);
-        }
-    }
 } // namespace
 
 HDF5ReceiverSatellite::HDF5ReceiverSatellite(std::string_view type, std::string_view name) : ReceiverSatellite(type, name) {
@@ -91,8 +108,8 @@ void HDF5ReceiverSatellite::receive_bor(const CDTP1Message::Header& header, Conf
     LOG(INFO) << "Received BOR from " << header.getSender() << " with config" << config.getDictionary().to_string();
     const auto bor_prefix = get_group_prefix(header.getSender()) + "/BOR";
     auto bor_group = hdf5_file_->createGroup(bor_prefix);
-    add_dict_attributes(bor_group, header.getTags());
-    add_dict_datasets(bor_group, config.getDictionary());
+    add_dict_to(bor_group, header.getTags(), AddDictAs::ATTRIBUTE);
+    add_dict_to(bor_group, config.getDictionary(), AddDictAs::DATASET);
 }
 
 void HDF5ReceiverSatellite::receive_data(
@@ -100,7 +117,7 @@ void HDF5ReceiverSatellite::receive_data(
     const auto& header = data_message.getHeader();
     const auto message_prefix = get_group_prefix(header.getSender()) + "/DATA_" + to_string(header.getSequenceNumber());
     auto group = hdf5_file_->createGroup(message_prefix);
-    add_dict_attributes(group, header.getTags());
+    add_dict_to(group, header.getTags(), AddDictAs::ATTRIBUTE);
 
     // Store frame as datasets in the group
     const auto frame_prefix = message_prefix + "/frame_";
@@ -120,6 +137,6 @@ void HDF5ReceiverSatellite::receive_eor(const CDTP1Message::Header& header, Dict
     LOG(INFO) << "Received EOR from " << header.getSender() << " with metadata" << run_metadata.to_string();
     const auto eor_prefix = get_group_prefix(header.getSender()) + "/EOR";
     auto eor_group = hdf5_file_->createGroup(eor_prefix);
-    add_dict_attributes(eor_group, header.getTags());
-    add_dict_datasets(eor_group, run_metadata);
+    add_dict_to(eor_group, header.getTags(), AddDictAs::ATTRIBUTE);
+    add_dict_to(eor_group, run_metadata, AddDictAs::DATASET);
 }
