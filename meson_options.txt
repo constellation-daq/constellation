@@ -19,5 +19,6 @@ option('listener_observatory', type: 'boolean', value: true, description: 'Build
 # Satellites
 option('satellite_dev_null_receiver', type: 'boolean', value: false, description: 'Build DevNullReceiver satellite')
 option('satellite_eudaq_native_writer', type: 'boolean', value: true, description: 'Build EudaqNativeWriter satellite')
+option('satellite_hdf5_receiver', type: 'boolean', value: false, description: 'Build HDF5Receiver satellite')
 option('satellite_random_transmitter', type: 'boolean', value: false, description: 'Build RandomTransmitter satellite')
 option('satellite_sputnik', type: 'boolean', value: true, description: 'Build Sputnik satellite')
