@@ -74,12 +74,6 @@ private:
                                  << static_cast<int>(px[0].coord.y);
 
         for(size_t i = 0; i < count; ++i) {
-            if(masked_pixels_.contains(std::make_pair(px[i].coord.x, px[i].coord.y))) {
-                LOG(TRACE) << "Dropping masked pixel " << static_cast<int>(px[i].coord.x) << " "
-                           << static_cast<int>(px[i].coord.y);
-                continue;
-            }
-
             msg.addFrame(to_bytes(px[i]));
         }
         // Try to send and retry if it failed:
@@ -88,8 +82,8 @@ private:
     }
 
     template <typename T> std::vector<std::uint8_t> to_bytes(const T& pixel) {
-
         std::vector<std::uint8_t> data;
+
         if constexpr(std::is_same_v<T, katherine::acq::f_toa_tot::pixel_type>) {
             // 2x8b coors, 8b ftoa, 64b toa, 16b tot = 13
             data.reserve(13);
@@ -122,6 +116,4 @@ private:
     int data_buffer_depth_ {};
     int pixel_buffer_depth_ {};
     bool decode_data_ {};
-
-    std::set<std::pair<int, int>> masked_pixels_;
 };
