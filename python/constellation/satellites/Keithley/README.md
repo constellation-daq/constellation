@@ -62,6 +62,13 @@ Possible terminals are `front` and `rear`.
 | `ovp` | Voltage limit for over-voltage protection | Float | - |
 | `compliance` | Current limit in Ampere | Float | - |
 
+## Metrics
+
+| Metric | Description | Type | Interval |
+|--------|-------------|------|----------|
+| `VOLTAGE` | Voltage output | LAST_VALUE | 10s |
+| `CURRENT` | Current output | LAST_VALUE | 10s |
+
 ## Custom Commands
 
 | Command | Description | Arguments | Return Value | Allowed States |
