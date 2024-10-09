@@ -10,8 +10,10 @@ from typing import Any
 from constellation.core.base import setup_cli_logging, EPILOG
 from constellation.core.commandmanager import cscp_requestable
 from constellation.core.configuration import Configuration
+from constellation.core.cmdp import MetricsType
 from constellation.core.cscp import CSCPMessage
 from constellation.core.fsm import SatelliteState
+from constellation.core.monitoring import schedule_metric
 from constellation.core.satellite import Satellite, SatelliteArgumentParser
 
 from .KeithleyInterface import KeithleyInterface
@@ -147,6 +149,20 @@ class Keithley(Satellite):
 
     def _read_output_is_allowed(self, request: CSCPMessage) -> bool:
         return self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.RUN]
+
+    @schedule_metric("V", MetricsType.LAST_VALUE, 10)
+    def Voltage(self) -> Any:
+        print("Voltage metric!")
+        if self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.RUN]:
+            return self.device.read_output()[0]
+        return None
+
+    @schedule_metric("A", MetricsType.LAST_VALUE, 10)
+    def Current(self) -> Any:
+        print("Current metric!")
+        if self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.RUN]:
+            return self.device.read_output()[1]
+        return None
 
 
 def main(args=None):
