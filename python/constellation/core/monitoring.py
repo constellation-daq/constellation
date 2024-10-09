@@ -12,7 +12,7 @@ import pathlib
 from queue import Empty
 from functools import wraps
 from datetime import datetime
-from typing import Callable, cast, ParamSpec, TypeVar, Any, Tuple
+from typing import Callable, cast, ParamSpec, TypeVar, Any
 from queue import Queue
 from logging.handlers import QueueHandler, QueueListener
 
@@ -31,32 +31,22 @@ P = ParamSpec("P")
 B = TypeVar("B", bound=BaseSatelliteFrame)
 
 
-def schedule_metric(
-    handling: MetricsType, interval: float
-) -> Callable[[Callable[P, Metric]], Callable[P, Metric]]:
+def schedule_metric(unit: str, handling: MetricsType, interval: float) -> Callable[[Callable[P, Any]], Callable[P, Metric]]:
     """Schedule a function for callback at interval [s] and send Metric.
 
-    The function should take no arguments and return a value [any] and a unit
-    [str].
-
+    The function should take no arguments and return a value [any]
     """
 
-    def decorator(func: Callable[P, Metric]) -> Callable[P, Metric]:
+    def decorator(func: Callable[P, Any]) -> Callable[P, Metric]:
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> Metric:
-            res = func(*args, **kwargs)
-            if isinstance(res, tuple):
-                val, unit = res
-            else:
-                val = res
-                unit = ""
-            m = Metric(
+            val = func(*args, **kwargs)
+            return Metric(
                 name=func.__name__,
                 unit=unit,
                 handling=handling,
                 value=val,
             )
-            return m
 
         # mark function as chirp callback
         wrapper.metric_scheduled = interval  # type: ignore[attr-defined]
@@ -120,9 +110,10 @@ class MonitoringSender(BaseSatelliteFrame):
     def schedule_metric(
         self,
         name: str,
-        callback: Callable[..., Tuple[Any, str]],
+        unit: str,
+        handling: MetricsType,
         interval: float,
-        handling: MetricsType = MetricsType.LAST_VALUE,
+        callback: Callable[..., Any],
     ) -> None:
         """Schedule a callback at regular intervals.
 
@@ -134,19 +125,13 @@ class MonitoringSender(BaseSatelliteFrame):
         """
 
         def wrapper() -> Metric:
-            res = callback()
-            if isinstance(res, tuple):
-                val, unit = res
-            else:
-                val = res
-                unit = ""
-            m = Metric(
+            val = callback()
+            return Metric(
                 name=name,
                 unit=unit,
                 handling=handling,
                 value=val,
             )
-            return m
 
         self._metrics_callbacks[name] = {"function": wrapper, "interval": interval}
 
@@ -165,31 +150,32 @@ class MonitoringSender(BaseSatelliteFrame):
     def _add_com_thread(self) -> None:
         """Add the metric sender thread to the communication thread pool."""
         super()._add_com_thread()
-        self._com_thread_pool["metric_sender"] = threading.Thread(
-            target=self._send_metrics, daemon=True
-        )
+        self._com_thread_pool["metric_sender"] = threading.Thread(target=self._send_metrics, daemon=True)
         self.log.debug("Metric sender thread prepared and added to the pool.")
 
     def _send_metrics(self) -> None:
         """Metrics sender loop."""
         last_update: dict[str, datetime] = {}
         while self._com_thread_evt and not self._com_thread_evt.is_set():
-            for metric, param in self._metrics_callbacks.items():
+            for metric_name, param in self._metrics_callbacks.items():
                 update = False
                 try:
-                    last = last_update[metric]
+                    last = last_update[metric_name]
                     if (datetime.now() - last).total_seconds() > param["interval"]:
                         update = True
                 except KeyError:
                     update = True
                 if update:
                     try:
-                        self.send_metric(param["function"]())
+                        # Do not send if None type (e.g. currently unavailable)
+                        metric = param["function"]()
+                        if metric.value is not None:
+                            self.send_metric(metric)
+                        else:
+                            self.log.debug(f"Not sending metric {metric_name}: currently None")
                     except Exception as e:
-                        self.log.error(
-                            "Could not retrieve metric %s: %s", metric, repr(e)
-                        )
-                    last_update[metric] = datetime.now()
+                        self.log.error(f"Could not retrieve metric {metric_name}: {repr(e)}")
+                    last_update[metric_name] = datetime.now()
 
             time.sleep(0.1)
         self.log.info("Monitoring metrics thread shutting down.")
@@ -285,9 +271,7 @@ class MonitoringListener(CHIRPBroadcaster):
                 maxBytes=10**7,
                 backupCount=10,
             )
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             handler.setFormatter(formatter)
             handler.setLevel(logging.DEBUG)
             self.log.addHandler(handler)
@@ -301,9 +285,7 @@ class MonitoringListener(CHIRPBroadcaster):
 
         # set up thread to handle incoming tasks (e.g. CHIRP discoveries)
         self._task_handler_event = threading.Event()
-        self._task_handler_thread = threading.Thread(
-            target=self._run_task_handler, daemon=True
-        )
+        self._task_handler_thread = threading.Thread(target=self._run_task_handler, daemon=True)
         self._task_handler_thread.start()
         self._metrics_receiver_shutdown = threading.Event()
         # Set up the metric poller which will monitor all ZMQ metric

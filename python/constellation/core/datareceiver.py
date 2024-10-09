@@ -18,6 +18,7 @@ from typing import Any, Tuple
 
 from .broadcastmanager import chirp_callback, DiscoveredService
 from .cdtp import CDTPMessage, CDTPMessageIdentifier, DataTransmitter
+from .cmdp import MetricsType
 from .chirp import CHIRPServiceIdentifier
 from .commandmanager import cscp_requestable
 from .cscp import CSCPMessage
@@ -277,6 +278,8 @@ class DataReceiver(Satellite):
             # add a callback using partial
             self.schedule_metric(
                 stat,
-                partial(self._get_stat, stat=stat),
+                "",
+                MetricsType.LAST_VALUE,
                 interval,
+                partial(self._get_stat, stat=stat),
             )
