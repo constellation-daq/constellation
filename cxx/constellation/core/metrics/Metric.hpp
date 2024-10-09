@@ -116,7 +116,7 @@ namespace constellation::metrics {
          * @param unit Unit of the metric
          * @param type Type of the metric
          * @param states List of states in which this metric should be distributed
-         * @param value Initial metric value
+         * @param initial_value Initial metric value
          */
         MetricTimer(std::string unit,
                     Type type,
