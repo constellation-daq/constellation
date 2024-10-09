@@ -113,7 +113,8 @@ class ECTstage(DataSender):
 
     def do_reconfigure(self, cnfg: Configuration) -> str:
         """
-        set new position
+        Reconfigures stages using config file,
+        then re-launches the stage to start positions
         """
         # load conf file and save into ECTstage object
         config_file = cnfg["config_file"]
@@ -147,11 +148,18 @@ class ECTstage(DataSender):
         # verbose
         for axis in self.conf["run"]["active_axes"]:
             self._get_stage_info(axis)
+
+        # re-launches satelite to start position
+        for axis in self.conf["run"]["active_axes"]:
+            if self.conf[axis]["start_position"] > stage_max[axis]:
+                raise KeyError("Home position in [{}] must be smaller than {}".format(axis, stage_max[axis]))
+        self._move_to_start()
+
         return "Reconfigured from conf file"
 
     def do_launching(self, payload: any) -> str:
         """
-        move stage to start position (home)
+        move stage to start position
         """
         for axis in self.conf["run"]["active_axes"]:
             if self.conf[axis]["start_position"] > stage_max[axis]:
