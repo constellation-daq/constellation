@@ -30,14 +30,16 @@ namespace constellation::utils {
     /** Timer that can be used to wait for timeouts */
     class TimeoutTimer {
     public:
+        TimeoutTimer() = default;
         TimeoutTimer(std::chrono::nanoseconds timeout) : timeout_(timeout) {}
         void reset() { start_time_ = std::chrono::steady_clock::now(); }
+        void setTimeout(std::chrono::nanoseconds timeout) { timeout_ = timeout; }
         bool timeoutReached() const { return start_time_ + timeout_ < std::chrono::steady_clock::now(); }
         std::chrono::steady_clock::time_point startTime() const { return start_time_; }
 
     private:
         std::chrono::steady_clock::time_point start_time_;
-        std::chrono::nanoseconds timeout_;
+        std::chrono::nanoseconds timeout_ {};
     };
 
 } // namespace constellation::utils
