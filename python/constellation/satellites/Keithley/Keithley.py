@@ -152,14 +152,12 @@ class Keithley(Satellite):
 
     @schedule_metric("V", MetricsType.LAST_VALUE, 10)
     def Voltage(self) -> Any:
-        print("Voltage metric!")
         if self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.RUN]:
             return self.device.read_output()[0]
         return None
 
     @schedule_metric("A", MetricsType.LAST_VALUE, 10)
     def Current(self) -> Any:
-        print("Current metric!")
         if self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.RUN]:
             return self.device.read_output()[1]
         return None
