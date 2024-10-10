@@ -123,6 +123,11 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
     } else {
         // New satellite connection
         Connection conn = {{*utils::global_zmq_context(), zmq::socket_type::req}, service.host_id, uri};
+
+        // Set response reception timeout in milliseconds:
+        conn.req.set(zmq::sockopt::rcvtimeo, static_cast<int>(std::chrono::milliseconds(3000).count()));
+
+        // COnnect the socket:
         conn.req.connect(uri);
 
         // Obtain canonical name:
@@ -291,15 +296,18 @@ CSCP1Message Controller::send_receive(Connection& conn, CSCP1Message& cmd, bool 
     // Possible keep payload, we might send multiple command messages:
     cmd.assemble(keep_payload).send(conn.req);
     zmq::multipart_t recv_zmq_msg {};
-    recv_zmq_msg.recv(conn.req);
+    const auto responded = recv_zmq_msg.recv(conn.req);
 
-    // Disassemble message and update connection information:
-    auto reply = CSCP1Message::disassemble(recv_zmq_msg);
-    const auto verb = reply.getVerb();
-    conn.last_cmd_type = verb.first;
-    conn.last_cmd_verb = verb.second;
-
-    return reply;
+    if(responded) {
+        // Disassemble message and update connection information:
+        auto reply = CSCP1Message::disassemble(recv_zmq_msg);
+        const auto verb = reply.getVerb();
+        conn.last_cmd_type = verb.first;
+        conn.last_cmd_verb = verb.second;
+        return reply;
+    } else {
+        return {{controller_name_}, {CSCP1Message::Type::ERROR, "Response timed out"}};
+    }
 }
 
 CSCP1Message Controller::build_message(std::string verb, const CommandPayload& payload) const {
