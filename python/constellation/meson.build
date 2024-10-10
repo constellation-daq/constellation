@@ -36,6 +36,10 @@ tools_files = files(
   'tools/list_interfaces.py',
 )
 
+controllers_files = files(
+  'controllers/single_button_gui.py',
+)
+
 py.install_sources(core_files,
   subdir: 'constellation/core')
 
@@ -44,5 +48,8 @@ py.install_sources(satellites_files,
 
 py.install_sources(tools_files,
   subdir: 'constellation/tools')
+
+py.install_sources(controllers_files,
+  subdir: 'constellation/controllers')
 
 subdir('satellites')

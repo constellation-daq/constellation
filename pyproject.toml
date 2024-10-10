@@ -37,6 +37,7 @@ dependencies = [
 
 [project.scripts]
 Controller = "constellation.core.controller:main"
+SingleButton = "constellation.controllers.single_button_gui:main"
 Monitor = "constellation.core.monitoring:main"
 DemoDataSender = "constellation.core.datasender:main"
 DemoHeartbeatChecker = "constellation.core.heartbeatchecker:main"
