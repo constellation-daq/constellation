@@ -203,7 +203,15 @@ std::optional<std::string> QController::sendQCommand(const QModelIndex& index,
         try {
             return Dictionary::disassemble(response).to_string();
         } catch(msgpack::type_error&) {
-            return std::string(response.to_string_view());
+            try {
+                return List::disassemble(response).to_string();
+            } catch(msgpack::type_error&) {
+                try {
+                    return Value::disassemble(response).str();
+                } catch(msgpack::type_error&) {
+                    return std::string(response.to_string_view());
+                }
+            }
         }
     }
 
