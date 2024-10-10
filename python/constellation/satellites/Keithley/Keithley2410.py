@@ -32,6 +32,10 @@ class Keithley2410(KeithleyInterface):
             flow_ctrl_xon_xoff=False,
         )
 
+    def __del__(self):
+        # quit from remote mode
+        self._write(":SYST:LOC")
+
     # Device functions
 
     def reset(self):
