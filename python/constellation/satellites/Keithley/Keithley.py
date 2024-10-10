@@ -162,6 +162,12 @@ class Keithley(Satellite):
             return self.device.read_output()[1]
         return None
 
+    @schedule_metric("", MetricsType.LAST_VALUE, 10)
+    def In_compliance(self) -> Any:
+        if self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.RUN]:
+            return self.device.in_compliance()
+        return None
+
 
 def main(args=None):
     parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)

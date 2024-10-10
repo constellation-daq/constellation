@@ -68,6 +68,7 @@ Possible terminals are `front` and `rear`.
 |--------|-------------|------|----------|
 | `VOLTAGE` | Voltage output | LAST_VALUE | 10s |
 | `CURRENT` | Current output | LAST_VALUE | 10s |
+| `IN_COMLIANCE` | If in compliance | LAST_VALUE | 10s |
 
 ## Custom Commands
 
