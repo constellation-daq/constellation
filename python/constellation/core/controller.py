@@ -5,10 +5,11 @@ SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 """
 
+import logging
 import threading
 import time
 from queue import Empty
-from typing import Dict, Callable, Any, Tuple, Optional
+from typing import Dict, Callable, Any, Tuple, Optional, cast
 from enum import Enum
 
 import zmq
@@ -19,7 +20,7 @@ from .cscp import CommandTransmitter
 from .error import debug_log
 from .fsm import SatelliteState
 from .satellite import Satellite
-from .base import EPILOG, ConstellationArgumentParser, setup_cli_logging
+from .base import EPILOG, ConstellationArgumentParser, ConstellationLogger, setup_cli_logging
 from .commandmanager import get_cscp_commands
 from .configuration import load_config, flatten_config
 from .heartbeatchecker import HeartbeatChecker
@@ -270,6 +271,9 @@ class BaseController(CHIRPBroadcaster, HeartbeatChecker):
         - interface :: the interface to connect to
         """
         super().__init__(group=group, **kwargs)
+
+        # Set up own logger with CTRL topic
+        self.log = cast(ConstellationLogger, logging.getLogger("CTRL"))
 
         self._transmitters: Dict[str, CommandTransmitter] = {}
         # lookup table for uuids to (cls, name) tuple

@@ -9,12 +9,14 @@ Constellation Satellites.
 import threading
 import time
 import zmq
+import logging
 from typing import Tuple, Any, Callable, TypeVar, ParamSpec
 from functools import wraps
 from statemachine.exceptions import TransitionNotAllowed
+from typing import cast
 
 from .cscp import CommandTransmitter, CSCPMessageVerb, CSCPMessage
-from .base import BaseSatelliteFrame
+from .base import BaseSatelliteFrame, ConstellationLogger
 
 
 T = TypeVar("T")
@@ -81,6 +83,9 @@ class CommandReceiver(BaseSatelliteFrame):
     def __init__(self, name: str, cmd_port: int, interface: str, **kwds: Any):
         """Initialize the Receiver and set up a ZMQ REP socket on given port."""
         super().__init__(name=name, interface=interface, **kwds)
+
+        # Set up own logger with CSCP topic
+        self.log = cast(ConstellationLogger, logging.getLogger("CSCP"))
 
         # set up the command channel
         sock = self.context.socket(zmq.REP)

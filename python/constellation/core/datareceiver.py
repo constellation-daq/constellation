@@ -10,12 +10,14 @@ import datetime
 import pathlib
 import sys
 import threading
+import logging
 
 import zmq
 from uuid import UUID
 from functools import partial
-from typing import Any, Tuple
+from typing import Any, Tuple, cast
 
+from .base import ConstellationLogger
 from .broadcastmanager import chirp_callback, DiscoveredService
 from .cdtp import CDTPMessage, CDTPMessageIdentifier, DataTransmitter
 from .cmdp import MetricsType
@@ -30,6 +32,9 @@ class DataReceiver(Satellite):
     """Constellation Satellite which receives data via ZMQ."""
 
     def __init__(self, *args: Any, **kwargs: Any):
+        # Set up own logger with RECV topic
+        self.log = cast(ConstellationLogger, logging.getLogger("RECV"))
+
         # define our attributes
         self._pull_interfaces: dict[UUID, Tuple[str, int]] = {}
         self._pull_sockets: dict[UUID, zmq.Socket] = {}  # type: ignore[type-arg]

@@ -6,15 +6,16 @@ BroadcastManger module provides classes for managing CHIRP broadcasts within
 Constellation Satellites.
 """
 
+import logging
 import threading
 from functools import wraps
-from typing import Callable, TypeVar, ParamSpec, Any, Optional
+from typing import Callable, TypeVar, ParamSpec, Any, Optional, cast
 
 import time
 import random
 from uuid import UUID
 
-from .base import BaseSatelliteFrame
+from .base import BaseSatelliteFrame, ConstellationLogger
 
 from .chirp import (
     CHIRPServiceIdentifier,
@@ -128,6 +129,9 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
         self.group = group
         self._stop_broadcasting = threading.Event()
         self._beacon = CHIRPBeaconTransmitter(self.name, group, interface)
+
+        # Set up own logger with CHIRP topic
+        self.log = cast(ConstellationLogger, logging.getLogger("CHIRP"))
 
         # Offered and discovered services
         self._registered_services: dict[int, CHIRPServiceIdentifier] = {}

@@ -140,7 +140,7 @@ class BaseSatelliteFrame:
         # add type name to create the canonical name
         self.name = f"{self.type}.{name}"
         logging.setLoggerClass(ConstellationLogger)
-        self.log = cast(ConstellationLogger, logging.getLogger(name))
+        self.log = cast(ConstellationLogger, logging.getLogger("SATELLITE"))
         self.context = zmq.Context()
 
         self.interface = interface

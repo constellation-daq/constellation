@@ -5,11 +5,13 @@ SPDX-License-Identifier: CC-BY-4.0
 
 import time
 import threading
+import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import zmq
 
+from .base import ConstellationLogger
 from .chp import CHPTransmitter
 from .fsm import SatelliteStateHandler
 
@@ -27,6 +29,9 @@ class HeartbeatSender(SatelliteStateHandler):
 
         super().__init__(name=name, interface=interface, **kwargs)
         self.heartbeat_period = 1000
+
+        # Set up own logger with CHP topic
+        self.log = cast(ConstellationLogger, logging.getLogger("CHP"))
 
         # register and start heartbeater
         socket = self.context.socket(zmq.PUB)

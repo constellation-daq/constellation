@@ -4,6 +4,7 @@ SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 """
 
+import logging
 import re
 from typing import Callable, Any, Tuple
 from threading import Event
@@ -14,10 +15,11 @@ from statemachine import StateMachine
 from statemachine.exceptions import TransitionNotAllowed
 from statemachine.states import States
 from msgpack import Timestamp  # type: ignore[import-untyped]
+from typing import cast
 
 from .cscp import CSCPMessage
 from .error import debug_log, handle_error
-from .base import BaseSatelliteFrame
+from .base import BaseSatelliteFrame, ConstellationLogger
 from .commandmanager import cscp_requestable
 
 
@@ -143,6 +145,9 @@ class SatelliteFSM(StateMachine):
 class SatelliteStateHandler(BaseSatelliteFrame):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
+
+        # Set up own logger with FSM topic
+        self.log = cast(ConstellationLogger, logging.getLogger("FSM"))
 
         # instantiate state machine
         self.fsm = SatelliteFSM()

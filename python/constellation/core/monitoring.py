@@ -19,6 +19,7 @@ from logging.handlers import QueueHandler, QueueListener
 from .base import (
     BaseSatelliteFrame,
     ConstellationArgumentParser,
+    ConstellationLogger,
     EPILOG,
     setup_cli_logging,
 )
@@ -79,6 +80,9 @@ class MonitoringSender(BaseSatelliteFrame):
     def __init__(self, name: str, mon_port: int, interface: str, **kwds: Any):
         """Set up logging and metrics transmitters."""
         super().__init__(name=name, interface=interface, **kwds)
+
+        # Set up own logger with STAT topic
+        self.log = cast(ConstellationLogger, logging.getLogger("STAT"))
 
         # Create monitoring socket and bind interface
         socket = self.context.socket(zmq.PUB)
