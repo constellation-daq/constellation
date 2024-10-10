@@ -116,7 +116,7 @@ class ConstellationLogger(logging.getLoggerClass()):  # type: ignore[misc]
 
 def setup_cli_logging(name: str, level: str) -> ConstellationLogger:
     logging.setLoggerClass(ConstellationLogger)
-    logger = cast(ConstellationLogger, logging.getLogger(name))
+    logger = cast(ConstellationLogger, logging.getLogger(None))
     log_level = level
     coloredlogs.install(level=log_level.upper(), logger=logger)
     return logger
