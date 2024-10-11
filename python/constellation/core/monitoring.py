@@ -82,7 +82,7 @@ class MonitoringSender(BaseSatelliteFrame):
         super().__init__(name=name, interface=interface, **kwds)
 
         # Set up own logger with STAT topic
-        self.log = cast(ConstellationLogger, logging.getLogger("STAT"))
+        self.log = cast(ConstellationLogger, logging.getLogger("MONITOR"))
 
         # Create monitoring socket and bind interface
         socket = self.context.socket(zmq.PUB)

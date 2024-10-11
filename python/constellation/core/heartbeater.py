@@ -31,7 +31,7 @@ class HeartbeatSender(SatelliteStateHandler):
         self.heartbeat_period = 1000
 
         # Set up own logger with CHP topic
-        self.log = cast(ConstellationLogger, logging.getLogger("CHP"))
+        self.hb_log = cast(ConstellationLogger, logging.getLogger("CHP"))
 
         # register and start heartbeater
         socket = self.context.socket(zmq.PUB)
@@ -41,14 +41,14 @@ class HeartbeatSender(SatelliteStateHandler):
             socket.bind(f"tcp://{interface}:{hb_port}")
             self.hb_port = hb_port
 
-        self.log.info(f"Setting up heartbeater on port {self.hb_port}")
+        self.hb_log.info(f"Setting up heartbeater on port {self.hb_port}")
         self._hb_tm = CHPTransmitter(self.name, socket)
 
     def _add_com_thread(self) -> None:
         """Add the CHIRP broadcaster thread to the communication thread pool."""
         super()._add_com_thread()
         self._com_thread_pool["heartbeat"] = threading.Thread(target=self._run_heartbeat, daemon=True)
-        self.log.debug("Heartbeat sender thread prepared and added to the pool.")
+        self.hb_log.debug("Heartbeat sender thread prepared and added to the pool.")
 
     def _run_heartbeat(self) -> None:
         self.log.info("Starting heartbeat sender thread")
@@ -63,6 +63,6 @@ class HeartbeatSender(SatelliteStateHandler):
                 self.fsm.transitioned = False
             else:
                 time.sleep(0.1)
-        self.log.info("HeartbeatSender thread shutting down.")
+        self.hb_log.info("HeartbeatSender thread shutting down.")
         # clean up
         self._hb_tm.close()

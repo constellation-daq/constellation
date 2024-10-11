@@ -45,6 +45,7 @@ class PushThread(threading.Thread):
         """
         super().__init__(*args, **kwargs)
         self.name = name
+        # FIXME
         self._logger = logging.getLogger(__name__)
         self.stopevt = stopevt
         self.queue = queue
@@ -104,6 +105,8 @@ class DataSender(Satellite):
         # run CHIRP
         self.register_offer(CHIRPServiceIdentifier.DATA, self.data_port)
         self.broadcast_offers()
+        # Set up own logger with CSCP topic
+        self.log = cast(ConstellationLogger, logging.getLogger("DATA"))
 
     def reentry(self) -> None:
         # close the socket

@@ -140,7 +140,7 @@ class BaseSatelliteFrame:
         # add type name to create the canonical name
         self.name = f"{self.type}.{name}"
         logging.setLoggerClass(ConstellationLogger)
-        self.log = cast(ConstellationLogger, logging.getLogger("SATELLITE"))
+        self.base_log = cast(ConstellationLogger, logging.getLogger("SATELLITE"))
         self.context = zmq.Context()
 
         self.interface = interface
@@ -169,14 +169,14 @@ class BaseSatelliteFrame:
         Does nothing in the base class.
 
         """
-        self.log.debug("Satellite Base class _add_thread called")
+        self.base_log.debug("Satellite Base class _add_thread called")
         pass
 
     def _start_com_threads(self) -> None:
         """Start all background communication threads."""
         self._com_thread_evt = threading.Event()
         for component, thread in self._com_thread_pool.items():
-            self.log.debug("Starting thread for %s communication", component)
+            self.base_log.debug("Starting thread for %s communication", component)
             thread.start()
 
     def _stop_com_threads(self, timeout: float = 1.5) -> None:
@@ -188,7 +188,7 @@ class BaseSatelliteFrame:
                     thread.join(timeout)
                     # check if thread is still alive
                     if thread.is_alive():
-                        self.log.error(
+                        self.base_log.error(
                             "Could not join background communication thread for %s within timeout",
                             component,
                         )
@@ -198,9 +198,9 @@ class BaseSatelliteFrame:
 
     def reentry(self) -> None:
         """Orderly destroy the satellite."""
-        self.log.debug("Stopping all communication threads.")
+        self.base_log.debug("Stopping all communication threads.")
         self._stop_com_threads()
-        self.log.debug("Terminating ZMQ context.")
+        self.base_log.debug("Terminating ZMQ context.")
         self.context.term()
 
 
