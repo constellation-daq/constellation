@@ -7,7 +7,6 @@ Stage movement in X,Y,Z,theta(R) for electronCT
 author: Malinda de Silva (@desilvam)
 
 """
-
 import time
 import numpy as np
 import toml
@@ -73,7 +72,6 @@ while_loop_pause_time = 1e-3  # time in s before re-evaluate while conditions
 
 ##################################################################
 
-
 class ECTstage(DataSender):
     """Stage movements in XYZR"""
 
@@ -109,7 +107,6 @@ class ECTstage(DataSender):
         for axis in self.conf["run"]["active_axes"]:
             self._get_stage_info(axis)
         return "Initialized"
-
 
     def do_reconfigure(self, cnfg: Configuration) -> str:
         """
@@ -240,16 +237,6 @@ class ECTstage(DataSender):
                 if self._state_thread_evt.is_set():
                     break
 
-            # for pos_r in pos["r"]:
-            #     if np.isnan(pos_r):
-            #         self.log.debug(f"r stage not moved")
-            #     else:
-            #         self.log.debug(f"r position {pos_r}")
-            #         self._move_stage("r", pos_r)
-            #         self._wait_until_stage_stops_moving(self.stage_r)
-            #         if self._state_thread_evt.is_set():
-            #             break
-
             for pos_x, pos_y, pos_r in self._generate_zigzagPath(pos["x"], pos["y"], pos["r"]):
                 self.log.info(f"Move to {pos_x} {pos_y} {pos_z} {pos_r}")
 
@@ -337,15 +324,18 @@ class ECTstage(DataSender):
         FYI: For emergency stop while within run loop, use stop()
         args: `axis` (optional). else: applies to all stages
         """
-        axis = request.payload
-        if axis not in self.conf["run"]["active_axes"] and axis != None:
-            return "Stage not found", None, {}
+        if self.fsm.current_state_value in [SatelliteState.RUN]:
+            self._state_thread_evt.set()
+        else:
+            axis = request.payload
+            if axis not in self.conf["run"]["active_axes"] and axis != None:
+                return "Stage not found", None, {}
 
-        for ax in self.conf["run"]["active_axes"]:
-            if ax == axis or axis == None:
-                stage = self._stage_select(ax)
-                if self._stage_moving(stage):
-                    self._stage_stop(stage)
+            for ax in self.conf["run"]["active_axes"]:
+                if ax == axis or axis == None:
+                    stage = self._stage_select(ax)
+                    if self._stage_moving(stage):
+                        self._stage_stop(stage)
 
         return "Stage Stopped", None, {}
 
@@ -420,7 +410,6 @@ class ECTstage(DataSender):
             return "Blinking {} axis".format(axis), None, {}
         else:
             return "Stage not found. `axis` is a mandatory argument", None, {}
-
 
     @cscp_requestable
     def disconnect(self, request: CSCPMessage) -> tuple[str, any, dict]:
@@ -710,13 +699,6 @@ class ECTstage(DataSender):
         XYRarray = [item for sublist in XYR_rev for item in sublist]
         return XYRarray
 
-        # XYarray = [[(i, j) for i in posX_list] for j in posY_list]
-        # for index in range(len(XYarray)):
-        #     if index % 2 == 1:  # Check if the row index is odd (i.e., every second row)
-        #         XYarray[index].sort(reverse=True)
-        # XYarray = [item for sublist in XYarray for item in sublist]
-        # return XYarray
-
     def _save_config_file(self, config_file):
         outdir = Path.cwd()
         outdir = outdir / Path("data")
@@ -747,9 +729,7 @@ class ECTstage(DataSender):
             self.log.debug(f"Position: x={payload[1]}, y={payload[2]}, z={payload[3]}, r={payload[4]}, t={payload[0]}")
             event.wait(timeout=self.conf["run"]["readout_freq_s"])
 
-
 # -------------------------------------------------------------------------
-
 
 def main(args=None):
     """Start an example satellite.
@@ -761,7 +741,7 @@ def main(args=None):
     print(pll.list_backend_resources("serial"))
 
     parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
-    # this sets the defaults for our "demo" Satellite
+    # this sets the defaults for our Stage Satellite
     parser.set_defaults(name="FirstStage")
     args = vars(parser.parse_args(args))
 
@@ -770,5 +750,4 @@ def main(args=None):
 
     # start server with remaining args
     s = ECTstage(**args)
-    # s = eCTstage(**args)
     s.run_satellite()
