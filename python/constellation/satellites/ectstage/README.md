@@ -159,7 +159,7 @@ SatelliteECTstage --help
   * ends data run
   * stops stage movement immediately
   * Only works inside of start-run loop
-    (NOTE: For emergency stop while outside run loop, use stage_stop())
+    (NOTE: For emergency stop, use stage_stop())
 
 * `reconfigure(ConfigurationFile)`
   * disconnects the stages and reinitializes them with values from the renewed config file
@@ -184,4 +184,4 @@ In alphabetical order
 | `get_status` | Returns minimal stage status. If `axis==None`: applies to all stages    | `axis=None` (optional) | Str: Full info of stages | `INIT`, `ORBIT`, `RUN` |
 | `get_vel_acc_params` | Get stage max, min velocities and acceleration. If `axis==None`: applies to all stages    | `axis=None` (optional) | Str:min velocity, max velocity and acceleration | `INIT`, `ORBIT`, `RUN` |
 | `go_home` | Goes back to the stage defined home position. Ideally should be `0` mm for linear stages and `0` deg for rotational stage. If `axis==None`: applies to all stages    | `axis=None` (optional) | - | `INIT`, `ORBIT`, `RUN` |
-| `stage_stop` | Stops stages. **Only works outside of main loop. For emergency stop while within run loop, `use stop()`.** If `axis==None`: applies to all stages    | `axis=None` (optional) | - | `INIT`, `ORBIT` |
+| `stage_stop` | Stops stages. If `axis==None`: applies to all stages    | `axis=None` (optional) | - | `INIT`, `ORBIT` |
