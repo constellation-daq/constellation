@@ -270,7 +270,7 @@ class ECTstage(DataSender):
 
                 if startTime_flag:
                     self.start_of_loop_time = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW) - self.start_of_run_time
-                    startTime_flag=False
+                    startTime_flag = False
                 # measurement time
                 time.sleep(self.conf["run"]["stop_time_per_point_s"])
 
@@ -295,8 +295,8 @@ class ECTstage(DataSender):
         """End the run. Add run metadata for end-of-run event
         """
 
-        self.EOR = {"start_of_loop_time":self.start_of_loop_time,
-                    "end_of_loop_time":self.end_of_loop_time}
+        self.EOR = {"start_of_loop_time" : self.start_of_loop_time,
+                    "end_of_loop_time" : self.end_of_loop_time}
         return "Stopped. EOR sent"
 
     @cscp_requestable
@@ -307,11 +307,11 @@ class ECTstage(DataSender):
         args: `axis` (optional). else: applies to all stages
         """
         axis = request.payload
-        if axis not in self.conf["run"]["active_axes"] and axis != None:
+        if axis not in self.conf["run"]["active_axes"] and axis is not None:
             return "Stage not found", None, {}
 
         for ax in self.conf["run"]["active_axes"]:
-            if ax == axis or axis == None:
+            if ax == axis or axis is None:
                 stage = self._stage_select(ax)
                 with self._lock:
                     stage.home()
@@ -470,7 +470,6 @@ class ECTstage(DataSender):
         val = ""
         for ax in self.conf["run"]["active_axes"]:
             if ax == axis or axis is None:
-                stage = self._stage_select(ax)
                 val = val + ax + ":" + str(self._get_position(ax))
                 if ax in stage_axes["r"]:
                     val = val + " deg; \n"
@@ -522,19 +521,16 @@ class ECTstage(DataSender):
 
                 if self.conf[axis]["serial_no"] != stage.get_full_info()["device_info"][0]:
                     raise KeyError(
-                        "Serial Number of {}-stage does not match the device. Device serial number:{}, serial number in config:{}".format(
-                            axis, stage.get_full_info()["device_info"][0], self.conf[axis]["serial_no"]
-                        )
-                    )
+                        (f"Serial Number of {axis}-stage does not match the device.",
+                         f"Device serial number:{stage.get_full_info()['device_info'][0]},",
+                         f"serial number in config:{self.conf[axis]['serial_no']}"))
 
                 if self.conf[axis]["velocity"] > max_velocity:
                     raise KeyError(
-                        "Velocity must be smaller than {}. Got {}".format(max_velocity, self.conf[axis]["velocity"])
-                    )
+                        f"Velocity must be smaller than {max_velocity}. Got {self.conf[axis]['velocity']}")
                 if self.conf[axis]["acceleration"] > max_aclrtn:
                     raise KeyError(
-                        "Acceleration must be smaller than {}. Got {}".format(max_aclrtn, self.conf[axis]["acceleration"])
-                    )
+                        f"Acceleration must be smaller than {max_aclrtn}. Got {self.conf[axis]['acceleration']}")
                 stage.setup_velocity(
                     channel=self.conf[axis]["channel"],
                     max_velocity=self.conf[axis]["velocity"],
@@ -553,19 +549,16 @@ class ECTstage(DataSender):
 
                 if self.conf[axis]["serial_no"] != stage.get_full_info()["device_info"][0]:
                     raise KeyError(
-                        "Serial Number of {}-stage does not match the device. Device serial number:{}, serial number in config:{}".format(
-                            axis, stage.get_full_info()["device_info"][0], self.conf[axis]["serial_no"]
-                        )
-                    )
+                        (f"Serial Number of {axis}-stage does not match the device.",
+                         f"Device serial number:{stage.get_full_info()['device_info'][0]},",
+                         f"serial number in config:{self.conf[axis]['serial_no']}"))
 
                 if self.conf[axis]["velocity"] > max_velocity_r:
                     raise KeyError(
-                        "Velocity must be smaller than {}. Got {}".format(max_velocity_r, self.conf[axis]["velocity"])
-                    )
+                        f"Velocity must be smaller than {max_velocity_r}. Got {self.conf[axis]['velocity']}")
                 if self.conf[axis]["acceleration"] > max_aclrtn_r:
                     raise KeyError(
-                        "Acceleration must be smaller than {}. Got {}".format(max_aclrtn_r, self.conf[axis]["acceleration"])
-                    )
+                        f"Acceleration must be smaller than {max_aclrtn_r}. Got {self.conf[axis]['acceleration']}")
                 stage.setup_velocity(
                     channel=self.conf[axis]["channel"],
                     max_velocity=self.conf[axis]["velocity"],
@@ -661,7 +654,7 @@ class ECTstage(DataSender):
         self.log.info("")
 
     def _stage_select(self, axis):
-        if axis in stage_axes["x"]:   return self.stage_x
+        if axis in stage_axes["x"]  : return self.stage_x
         elif axis in stage_axes["y"]: return self.stage_y
         elif axis in stage_axes["z"]: return self.stage_z
         elif axis in stage_axes["r"]: return self.stage_r
