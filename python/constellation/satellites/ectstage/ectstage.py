@@ -527,10 +527,10 @@ class ECTstage(DataSender):
 
                 if self.conf[axis]["velocity"] > max_velocity:
                     raise KeyError(
-                        f"Velocity must be smaller than {max_velocity}. Got {self.conf[axis]['velocity']}")
+                        (f"Velocity must be smaller than {max_velocity}. Got {self.conf[axis]['velocity']}"))
                 if self.conf[axis]["acceleration"] > max_aclrtn:
                     raise KeyError(
-                        f"Acceleration must be smaller than {max_aclrtn}. Got {self.conf[axis]['acceleration']}")
+                        (f"Acceleration must be smaller than {max_aclrtn}. Got {self.conf[axis]['acceleration']}"))
                 stage.setup_velocity(
                     channel=self.conf[axis]["channel"],
                     max_velocity=self.conf[axis]["velocity"],
@@ -555,10 +555,10 @@ class ECTstage(DataSender):
 
                 if self.conf[axis]["velocity"] > max_velocity_r:
                     raise KeyError(
-                        f"Velocity must be smaller than {max_velocity_r}. Got {self.conf[axis]['velocity']}")
+                        (f"Velocity must be smaller than {max_velocity_r}. Got {self.conf[axis]['velocity']}"))
                 if self.conf[axis]["acceleration"] > max_aclrtn_r:
                     raise KeyError(
-                        f"Acceleration must be smaller than {max_aclrtn_r}. Got {self.conf[axis]['acceleration']}")
+                        (f"Acceleration must be smaller than {max_aclrtn_r}. Got {self.conf[axis]['acceleration']}"))
                 stage.setup_velocity(
                     channel=self.conf[axis]["channel"],
                     max_velocity=self.conf[axis]["velocity"],
