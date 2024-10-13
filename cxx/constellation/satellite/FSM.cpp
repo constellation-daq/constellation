@@ -221,6 +221,14 @@ void FSM::unregisterStateCallback(const std::string& identifier) {
     state_callbacks_.erase(identifier);
 }
 
+void FSM::registerStoppingRemote(const std::string& remote) {
+    stopping_remotes_.emplace(remote);
+}
+
+void FSM::clearStoppingRemotes() {
+    stopping_remotes_.clear();
+}
+
 void FSM::call_state_callbacks() {
     const std::lock_guard state_callbacks_lock {state_callbacks_mutex_};
     std::vector<std::future<void>> futures {};

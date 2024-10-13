@@ -14,6 +14,7 @@
 #include <functional>
 #include <map>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <utility>
@@ -161,6 +162,21 @@ namespace constellation::satellite {
          */
         CNSTLN_API void unregisterStateCallback(const std::string& identifier);
 
+        /**
+         * @brief Register a new remote satellite from which a stopping transition is accepted
+         *
+         * This function registers a new remote satellite by canonical name which this satellite will follow in a stopping
+         * transition.
+         *
+         * @param remote Remote satellite for which this satellite follows stopping
+         */
+        CNSTLN_API void registerStoppingRemote(const std::string& remote);
+
+        /**
+         * @brief Clears all stopping conditions for this satellite
+         */
+        CNSTLN_API void clearStoppingRemotes();
+
     private:
         /**
          * @brief Find the transition function for a given transition in the current state
@@ -293,6 +309,9 @@ namespace constellation::satellite {
         /** State update callback */
         std::map<std::string, std::function<void(State)>> state_callbacks_;
         std::mutex state_callbacks_mutex_;
+
+        /** Remote satellites for which autonomous stopping is enabled */
+        std::set<std::string> stopping_remotes_;
     };
 
 } // namespace constellation::satellite
