@@ -196,6 +196,12 @@ void FSM::requestInterrupt(std::string_view remote, std::string_view reason) {
 void FSM::requestStop(std::string_view remote, std::string_view reason) {
     LOG(logger_, DEBUG) << "Attempting to stop run: " << remote << " " << reason;
 
+    // Check if this is an accepted remote transition:
+    if(stopping_remotes_.empty() || !stopping_remotes_.contains(utils::transform(remote, ::tolower))) {
+        LOG(logger_, DEBUG) << "Ignoring remote stopping transition, not am accepted remote.";
+        return;
+    }
+
     //  Wait until we are in a steady state
     while(!is_steady(state_.load())) {
         LOG_ONCE(logger_, DEBUG) << "Waiting for a steady state...";
@@ -222,7 +228,7 @@ void FSM::unregisterStateCallback(const std::string& identifier) {
 }
 
 void FSM::registerStoppingRemote(const std::string& remote) {
-    stopping_remotes_.emplace(remote);
+    stopping_remotes_.emplace(utils::transform(remote, ::tolower));
 }
 
 void FSM::clearStoppingRemotes() {

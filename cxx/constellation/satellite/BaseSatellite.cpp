@@ -402,7 +402,7 @@ void BaseSatellite::apply_internal_config(const config::Configuration& config) {
     fsm_.clearStoppingRemotes();
 
     if(config.has("_accept_stopping_from")) {
-        auto register_stopping = [this, &config](auto& remote) {
+        auto register_stopping = [this](auto& remote) {
             if(transform(remote, ::tolower) != transform(getCanonicalName(), ::tolower)) {
                 fsm_.registerStoppingRemote(remote);
             }
