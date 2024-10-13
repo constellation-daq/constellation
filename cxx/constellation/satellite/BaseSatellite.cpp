@@ -60,11 +60,12 @@ using namespace std::chrono_literals;
 BaseSatellite::BaseSatellite(std::string_view type, std::string_view name)
     : logger_("SATELLITE"), cscp_rep_socket_(*global_zmq_context(), zmq::socket_type::rep),
       cscp_port_(bind_ephemeral_port(cscp_rep_socket_)), satellite_type_(type), satellite_name_(name), fsm_(this),
-      cscp_logger_("CSCP"), heartbeat_manager_(
-                                getCanonicalName(),
-                                [&]() { return fsm_.getState(); },
-                                [&](std::string_view reason) { fsm_.requestInterrupt(reason); },
-                                [&](std::string_view reason) { fsm_.requestStop(reason); }) {
+      cscp_logger_("CSCP"),
+      heartbeat_manager_(
+          getCanonicalName(),
+          [&]() { return fsm_.getState(); },
+          [&](std::string_view remote, std::string_view reason) { fsm_.requestInterrupt(remote, reason); },
+          [&](std::string_view remote, std::string_view reason) { fsm_.requestStop(remote, reason); }) {
 
     // Check name
     if(!CSCP::is_valid_satellite_name(to_string(name))) {
@@ -109,7 +110,7 @@ void BaseSatellite::terminate() {
     // We cannot join the CSCP thread here since this method might be called from there and would result in a race condition
 
     // Tell the FSM to interrupt as soon as possible, which will go to SAFE in case of ORBIT or RUN state:
-    fsm_.requestInterrupt("Shutting down satellite");
+    fsm_.requestInterrupt("", "Shutting down satellite");
 }
 
 std::optional<CSCP1Message> BaseSatellite::get_next_command() {

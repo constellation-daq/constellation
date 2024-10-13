@@ -118,11 +118,12 @@ namespace constellation::satellite {
          * This function waits for the next steady state and performs an interrupt if in ORBIT or RUN state, otherwise
          * nothing is done. It guarantees that the FSM is in a state where the satellite can be safely shut down.
          *
+         * @param remote Canonical name of remote satellite which requested the state change
          * @param reason Reason for the requested interrupt
          *
          * @warning This function is not thread safe, meaning that no other react command should be called during execution.
          */
-        CNSTLN_API void requestInterrupt(std::string_view reason);
+        CNSTLN_API void requestInterrupt(std::string_view remote, std::string_view reason);
 
         /**
          * @brief Try to perform a run stop operation as soon as possible
@@ -130,11 +131,12 @@ namespace constellation::satellite {
          * This function waits for the next steady state and performs a run stop if in RUN state, otherwise
          * nothing is done.
          *
+         * @param remote Canonical name of remote satellite which requested the state change
          * @param reason Reason for the requested stop
          *
          * @warning This function is not thread safe, meaning that no other react command should be called during execution.
          */
-        CNSTLN_API void requestStop(std::string_view reason);
+        CNSTLN_API void requestStop(std::string_view remote, std::string_view reason);
 
         /**
          * @brief Registering a callback to be executed when a new state was entered

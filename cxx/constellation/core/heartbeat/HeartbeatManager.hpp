@@ -54,8 +54,8 @@ namespace constellation::heartbeat {
          */
         CNSTLN_API HeartbeatManager(std::string sender,
                                     std::function<protocol::CSCP::State()> state_callback,
-                                    std::function<void(std::string_view)> interrupt_callback,
-                                    std::function<void(std::string_view)> stopping_callback);
+                                    std::function<void(std::string_view, std::string_view)> interrupt_callback,
+                                    std::function<void(std::string_view, std::string_view)> stopping_callback);
 
         /** Deconstruct the manager. This stops the watchdog thread */
         CNSTLN_API virtual ~HeartbeatManager();
@@ -133,10 +133,10 @@ namespace constellation::heartbeat {
         HeartbeatSend sender_;
 
         /** Interrupt callback invoked upon remote failure condition and missing heartbeats */
-        std::function<void(std::string_view)> interrupt_callback_;
+        std::function<void(std::string_view, std::string_view)> interrupt_callback_;
 
         /** Stopping callback invoked upon detection of remote run-end sequence */
-        std::function<void(std::string_view)> stopping_callback_;
+        std::function<void(std::string_view, std::string_view)> stopping_callback_;
 
         /**
          * @struct Remote

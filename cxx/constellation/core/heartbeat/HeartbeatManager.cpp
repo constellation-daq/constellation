@@ -38,8 +38,8 @@ using namespace std::chrono_literals;
 
 HeartbeatManager::HeartbeatManager(std::string sender,
                                    std::function<CSCP::State()> state_callback,
-                                   std::function<void(std::string_view)> interrupt_callback,
-                                   std::function<void(std::string_view)> stopping_callback)
+                                   std::function<void(std::string_view, std::string_view)> interrupt_callback,
+                                   std::function<void(std::string_view, std::string_view)> stopping_callback)
     : HeartbeatRecv([this](auto&& arg) { process_heartbeat(std::forward<decltype(arg)>(arg)); }),
       sender_(std::move(sender), std::move(state_callback), 5000ms), interrupt_callback_(std::move(interrupt_callback)),
       stopping_callback_(std::move(stopping_callback)), logger_("CHP"),
@@ -112,7 +112,7 @@ void HeartbeatManager::process_heartbeat(const CHP1Message& msg) {
                 if(interrupt_callback_) {
                     LOG(logger_, DEBUG) << "Detected state " << msg.getState() << " at " << remote_it->first
                                         << ", interrupting";
-                    interrupt_callback_(remote_it->first + " reports state " + to_string(msg.getState()));
+                    interrupt_callback_(remote_it->first, "reports state " + to_string(msg.getState()));
                 }
             }
 
@@ -121,7 +121,7 @@ void HeartbeatManager::process_heartbeat(const CHP1Message& msg) {
                (remote_it->second.last_state == CSCP::State::RUN)) {
                 if(stopping_callback_) {
                     LOG(logger_, INFO) << "Detected stopped run at " << remote_it->first << ", stopping too";
-                    stopping_callback_(remote_it->first + " has stopped a run, following");
+                    stopping_callback_(remote_it->first, +"has stopped a run");
                 }
             }
         }
@@ -166,7 +166,7 @@ void HeartbeatManager::run(const std::stop_token& stop_token) {
                 if(remote.lives == 0 && interrupt_callback_) {
                     // This parrot is dead, it is no more
                     LOG(logger_, DEBUG) << "Missed heartbeats from " << key << ", no lives left";
-                    interrupt_callback_("No signs of life detected anymore from " + key);
+                    interrupt_callback_(key, "No signs of life detected anymore");
                 }
             }
 
