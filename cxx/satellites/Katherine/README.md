@@ -137,6 +137,8 @@ The following custom commands are exposed to the command interface by this satel
 | `get_temperature_sensor` | Read the current temperature from the temperature sensor | - | Temperature in degree Celsius, `double` | `INIT`, `ORBIT`, `RUN` |
 | `get_adc_voltage` | Read the voltage from the ADC channel provided as parameter | channel number, `int` | channel reading, `double` | `INIT`, `ORBIT`, `RUN` |
 | `get_chip_id` | Read the chip ID of the attached sensor | - | Chip ID, `string` | `INIT`, `ORBIT`, `RUN` |
+| `get_hw_info` | Read hardware revision and other information from the device | - | List of strings with HW type, revision, serial number and firmware version | `INIT`, `ORBIT`, `RUN` |
+| `get_link_status` | Read chip communication link status from the device | - | List of strings with line mask, data rate and chip presence flag | `INIT`, `ORBIT`, `RUN` |
 
 ## Miscellaneous Information
 
