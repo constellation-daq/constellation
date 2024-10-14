@@ -14,26 +14,17 @@ uhal_uhal_dep = cpp.find_library('cactus_uhal_uhal',
                                  dirs : cactus_root / 'lib',
                                  has_headers : ['uhal/uhal.hpp'],
                                  header_include_directories : include_directories(cactus_root / 'include'),
-                                 required : false, )
+                                 required : true,
+                                 )
 uhal_grammars_dep = cpp.find_library('cactus_uhal_grammars',
                                      dirs : cactus_root / 'lib',
-                                     required : false, )
+                                     required : true,
+                                     )
 
 uhal_log_dep = cpp.find_library('cactus_uhal_log',
-                                  dirs : cactus_root / 'lib',
-                                  required : false, )
-
-if not uhal_uhal_dep.found()
-  error('Need uhal')
-endif
-
-if not uhal_grammars_dep.found()
-  error('Need uhal')
-endif
-
-if not uhal_log_dep.found()
-  error('Need uhal')
-endif
+                                dirs : cactus_root / 'lib',
+                                required : true,
+                                )
 
 # Type this satellite identifies as
 satellite_type = 'AidaTLU'
