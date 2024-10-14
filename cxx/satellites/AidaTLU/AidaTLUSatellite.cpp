@@ -264,6 +264,10 @@ void AidaTLUSatellite::landing() {
 
 void AidaTLUSatellite::starting(std::string_view run_identifier) {
     LOG(logger_, INFO) << "Starting run " << run_identifier << "...";
+
+    // Set tags for the begin-of-run message:
+    setBORTag("FirmwareID", m_tlu->GetFirmwareVersion());
+    setBORTag("BoardID", m_tlu->GetBoardID());
 }
 
 void AidaTLUSatellite::stopping() {
@@ -287,8 +291,10 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
 
     while(!stop_token.stop_requested()) {
         m_lasttime = m_tlu->GetCurrentTimestamp() * 25;
-        if(isbegin)
+        if(isbegin) {
+            isbegin = false;
             m_starttime = m_lasttime;
+        }
 
         m_tlu->ReceiveEvents(m_launch_config.verbose);
         while(!m_tlu->IsBufferEmpty()) {
@@ -299,6 +305,7 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
             if(!(trigger_n % 100)) {
                 LOG(logger_, INFO) << "  Received trigger " << trigger_n << " after " << ts_ns / 1e9 << " s.";
             }
+
             /* ToDo: how to store data?
             auto ev = eudaq::Event::MakeUnique("TluRawDataEvent");
             ev->SetTimestamp(ts_ns, ts_ns+25, false);
@@ -339,14 +346,6 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
                 */
             }
 
-            if(isbegin) {
-                isbegin = false;
-                /*  ToDo: how to store data?
-                ev->SetBORE();
-                ev->SetTag("FirmwareID", std::to_string(m_tlu->GetFirmwareVersion()));
-                ev->SetTag("BoardID", std::to_string(m_tlu->GetBoardID()));
-                */
-            }
             // SendEvent(std::move(ev));
             delete data;
         }
