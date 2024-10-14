@@ -25,6 +25,7 @@
 #include <QStyledItemDelegate>
 #include <QStyleOptionViewItem>
 #include <QVariant>
+#include <QWidget>
 
 #include "constellation/core/log/Level.hpp"
 
@@ -41,6 +42,21 @@
 class LogDialog : public QDialog, Ui::dlgLogMessage {
 public:
     LogDialog(const QLogMessage& msg);
+};
+
+class LogStatusBar : public QWidget {
+public:
+    LogStatusBar();
+    void countMessage(constellation::log::Level level);
+
+private:
+    QHBoxLayout* layout_;
+    std::size_t msg_all_ {0};
+    QLabel* label_all_;
+    std::size_t msg_critical_ {0};
+    QLabel* label_critical_;
+    std::size_t msg_warning_ {0};
+    QLabel* label_warning_;
 };
 
 /**

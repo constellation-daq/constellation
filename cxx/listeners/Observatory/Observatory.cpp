@@ -59,6 +59,35 @@ LogDialog::LogDialog(const QLogMessage& msg) {
     show();
 }
 
+LogStatusBar::LogStatusBar() {
+    layout_ = new QHBoxLayout(this);
+    label_all_ = new QLabel("0 messages");
+    label_all_->setStyleSheet("QLabel { font-size: 12px; font-weight: normal; color: gray; }");
+
+    label_critical_ = new QLabel();
+    label_critical_->setStyleSheet("QLabel { font-size: 12px; font-weight: normal; color: red; }");
+
+    label_warning_ = new QLabel();
+    label_warning_->setStyleSheet("QLabel { font-size: 12px; font-weight: bold; color: orange; }");
+
+    layout_->addWidget(label_critical_);
+    layout_->addWidget(label_warning_);
+    layout_->addWidget(label_all_);
+}
+
+void LogStatusBar::countMessage(Level level) {
+
+    label_all_->setText(QString::number(++msg_all_) + " messages");
+
+    if(level == Level::WARNING) {
+        label_warning_->setText(QString::number(++msg_warning_) + " warnings");
+    }
+
+    if(level == Level::CRITICAL) {
+        label_critical_->setText(QString::number(++msg_critical_) + " errors");
+    }
+}
+
 void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const {
     // Get sibling for column 2 (where the log level is stored) for current row:
     const QModelIndex lvl_index = index.sibling(index.row(), 2);
