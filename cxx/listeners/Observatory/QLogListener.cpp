@@ -89,6 +89,8 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
         emit newTopic(QString::fromStdString(std::string(msg.getLogTopic())));
     }
 
+    const auto level = msg.getLogLevel();
+
     const std::lock_guard message_lock {message_mutex_};
 
     // We always add new messages to the end of the deque:
@@ -99,7 +101,7 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
     endInsertRows();
 
     // send signal:
-    emit newMessage(createIndex(pos, 0));
+    emit newMessage(createIndex(pos, 0), level);
 }
 
 void QLogListener::host_connected(const DiscoveredService& service) {
