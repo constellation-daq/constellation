@@ -181,6 +181,9 @@ private:
     /** Item delegate for painting log message rows in the view */
     LogItemDelegate log_message_delegate_;
 
+    /** Status bar for message count display */
+    LogStatusBar status_bar_;
+
     /** UI Settings */
     QSettings gui_settings_;
 };

@@ -30,6 +30,7 @@
 #include <QMetaType>
 #include <QModelIndex>
 #include <QPainter>
+#include <QStatusBar>
 #include <QStyledItemDelegate>
 #include <QStyleOptionViewItem>
 #include <QTreeWidgetItem>
@@ -171,6 +172,12 @@ Observatory::Observatory(std::string_view group_name) {
     const auto slevel = magic_enum::enum_cast<Level>(qslevel.toStdString(), magic_enum::case_insensitive);
     log_listener_.setGlobalSubscriptionLevel(slevel.value_or(Level::WARNING));
     globalLevel->setCurrentIndex(std::to_underlying(slevel.value_or(Level::WARNING)));
+
+    // Set up status bar:
+    statusBar()->addPermanentWidget(&status_bar_);
+    connect(
+        &log_listener_, &QLogListener::newMessage, this, [&](QModelIndex, Level level) { status_bar_.countMessage(level); });
+    statusBar()->showMessage("Startup Complete", 2000);
 }
 
 void Observatory::closeEvent(QCloseEvent* event) {
