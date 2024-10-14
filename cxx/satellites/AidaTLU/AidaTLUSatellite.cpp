@@ -306,47 +306,34 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
                 LOG(logger_, INFO) << "  Received trigger " << trigger_n << " after " << ts_ns / 1e9 << " s.";
             }
 
-            /* ToDo: how to store data?
-            auto ev = eudaq::Event::MakeUnique("TluRawDataEvent");
-            ev->SetTimestamp(ts_ns, ts_ns+25, false);
-            ev->SetTriggerN(trigger_n);
+            // Store data:
+            auto msg = newDataMessage();
 
-            std::stringstream triggerss;
-            //triggerss<< data->input5 << data->input4 << data->input3 << data->input2 << data->input1 << data->input0;
-            triggerss<< std::to_string(data->input5) << std::to_string(data->input4) << std::to_string(data->input3) <<
-            std::to_string(data->input2) << std::to_string(data->input1) << std::to_string(data->input0);
-            ev->SetTag("TRIGGER", triggerss.str());
-            ev->SetTag("FINE_TS0", std::to_string(data->sc0));
-            ev->SetTag("FINE_TS1", std::to_string(data->sc1));
-            ev->SetTag("FINE_TS2", std::to_string(data->sc2));
-            ev->SetTag("FINE_TS3", std::to_string(data->sc3));
-            ev->SetTag("FINE_TS4", std::to_string(data->sc4));
-            ev->SetTag("FINE_TS5", std::to_string(data->sc5));
-            ev->SetTag("TYPE", std::to_string(data->eventtype));
-            */
+            // Add timestamps in picoseconds and trigger number
+            msg.addTag("timestamp_begin", ts_ns * 1000);
+            msg.addTag("timestamp_end", (ts_ns + 25) * 1000);
+            msg.addTag("trigger", trigger_n);
 
-            if(m_tlu->IsBufferEmpty()) {
-                uint32_t sl0, sl1, sl2, sl3, sl4, sl5, pt;
-                m_tlu->GetScaler(sl0, sl1, sl2, sl3, sl4, sl5);
-                pt = m_tlu->GetPreVetoTriggers();
-                if(!(trigger_n % 100)) {
-                    LOG(logger_, INFO) << "  Received particle " << pt;
-                }
-                /* ToDo: how to store data?
-                ev->SetTag("PARTICLES", std::to_string(pt));
-                ev->SetTag("SCALER0", std::to_string(sl0));
-                ev->SetTag("SCALER1", std::to_string(sl1));
-                ev->SetTag("SCALER2", std::to_string(sl2));
-                ev->SetTag("SCALER3", std::to_string(sl3));
-                ev->SetTag("SCALER4", std::to_string(sl4));
-                ev->SetTag("SCALER5", std::to_string(sl5));
-                if(!stop_token.stop_requested()){
-                    ev->SetEORE();
-                }
-                */
-            }
+            // Using "compact" binary data format here:
+            std::vector<uint8_t> datablock;
+            // 6 (fineTS) + 1 (6x triggers, but that is only a single bit each,so one uint8 should be fine) + 4
+            // (32bit eventtype) + 7*4 scalers (dropped for now ???)
+            datablock.reserve(7);
+            datablock.push_back(static_cast<uint8_t>(data->sc0));
+            datablock.push_back(static_cast<uint8_t>(data->sc1));
+            datablock.push_back(static_cast<uint8_t>(data->sc2));
+            datablock.push_back(static_cast<uint8_t>(data->sc3));
+            datablock.push_back(static_cast<uint8_t>(data->sc4));
+            datablock.push_back(static_cast<uint8_t>(data->sc5));
+            datablock.push_back(((data->input5 & 0x1) << 5) + ((data->input4 & 0x1) << 4) + ((data->input3 & 0x1) << 3) +
+                                ((data->input2 & 0x1) << 2) + ((data->input1 & 0x1) << 1) + (data->input0 & 0x1));
 
-            // SendEvent(std::move(ev));
+            // Add data to message frame
+            msg.addFrame(std::move(datablock));
+
+            // Send the data off - or fail:
+            trySendDataMessage(msg);
+
             delete data;
         }
     }
