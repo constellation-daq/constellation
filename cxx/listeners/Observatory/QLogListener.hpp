@@ -119,8 +119,9 @@ signals:
     /**
      * @brief Signal emitted whenever a new message has been added
      * @param index QModelIndex at which the message has been inserted
+     * @param level The log level of the newly added message
      */
-    void newMessage(QModelIndex index);
+    void newMessage(QModelIndex index, constellation::log::Level level);
 
     /**
      * @brief Signal emitted whenever a message from a new sender has been received
