@@ -10,7 +10,7 @@
 #include "AidaTluHardware.hh"
 #include "AidaTluI2c.hh"
 #include "AidaTluPowerModule.hh"
-#include "constellation/core/logging/Logger.hpp"
+#include "constellation/core/log/Logger.hpp"
 
 typedef unsigned char uchar_t;
 

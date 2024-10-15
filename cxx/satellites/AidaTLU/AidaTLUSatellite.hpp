@@ -11,7 +11,7 @@
 
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
-#include "aida_include/AidaTluController.hh"
+#include "AidaTLU/aida_include/AidaTluController.hh"
 
 using namespace constellation::config;
 using namespace constellation::satellite;

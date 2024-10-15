@@ -1,4 +1,4 @@
-#include "aida_include/AidaTluPowerModule.hh"
+#include "AidaTLU/aida_include/AidaTluPowerModule.hh"
 #include <chrono>
 #include <fstream>
 #include <iomanip>
@@ -8,8 +8,8 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include "aida_include/AidaTluHardware.hh"
-#include "uhal/uhal.hpp"
+#include "AidaTLU/aida_include/AidaTluHardware.hh"
+#include <uhal/uhal.hpp>
 
 void PWRLED::testme() {
     std::cout << "TEST TEST TEST" << std::endl;

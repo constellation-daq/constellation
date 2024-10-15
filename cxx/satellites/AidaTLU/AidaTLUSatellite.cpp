@@ -11,7 +11,7 @@
 
 #include <unistd.h>
 
-#include "constellation/core/logging/log.hpp"
+#include "constellation/core/log/log.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 AidaTLUSatellite::AidaTLUSatellite(std::string_view type, std::string_view name)

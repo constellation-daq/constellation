@@ -9,7 +9,7 @@
 #include "../aida_include/AidaTluHardware.hh"
 #include "../aida_include/AidaTluI2c.hh"
 #include "../aida_include/AidaTluPowerModule.hh"
-#include "constellation/core/logging/log.hpp"
+#include "constellation/core/log/log.hpp"
 
 #include "uhal/uhal.hpp"
 
