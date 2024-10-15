@@ -15,7 +15,7 @@
 #include "constellation/satellite/Satellite.hpp"
 
 AidaTLUSatellite::AidaTLUSatellite(std::string_view type, std::string_view name)
-    : Satellite(type, name), m_starttime(0), m_lasttime(0), m_duration(0) {
+    : TransmitterSatellite(type, name), m_starttime(0), m_lasttime(0), m_duration(0) {
     LOG(logger_, STATUS) << "TluSatellite " << getCanonicalName() << " created";
 }
 

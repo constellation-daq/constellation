@@ -9,14 +9,14 @@
 
 #pragma once
 
-#include "constellation/satellite/Satellite.hpp"
+#include "constellation/satellite/TransmitterSatellite.hpp"
 
 #include "aida_include/AidaTluController.hh"
 
 using namespace constellation::config;
 using namespace constellation::satellite;
 
-class AidaTLUSatellite : public Satellite {
+class AidaTLUSatellite : public TransmitterSatellite {
 public:
     AidaTLUSatellite(std::string_view type, std::string_view name);
 
