@@ -94,7 +94,8 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
 
     // Downcast event sequence for message header, use the same for trigger number
     write_int(static_cast<std::uint32_t>(header.getSequenceNumber()));
-    write_int(static_cast<std::uint32_t>(header.getSequenceNumber()));
+    write_int(tags.contains("trigger_number") ? tags.at("tigger_number").get<std::uint32_t>()
+                                              : static_cast<std::uint32_t>(header.getSequenceNumber()));
 
     // Take event descriptor tag from sender name:
     auto canonical_name = std::string(header.getSender());
