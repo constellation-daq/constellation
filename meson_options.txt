@@ -19,4 +19,4 @@ option('satellite_random_transmitter', type: 'boolean', value: false, descriptio
 option('satellite_sputnik', type: 'boolean', value: true, description: 'Build Sputnik satellite')
 option('satellite_aidatlu', type: 'boolean', value: false, description: 'Build AidaTLU satellite')
 
-option('cactus_root', type: 'string', description: 'IPbus protocol for TLU communication')
+option('cactus_root', type: 'string', value: '/opt/cactus', description: 'IPbus protocol for TLU communication')
