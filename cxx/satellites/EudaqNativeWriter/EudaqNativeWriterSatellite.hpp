@@ -10,6 +10,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <string_view>
@@ -21,6 +22,11 @@
 #include "constellation/satellite/ReceiverSatellite.hpp"
 
 class EudaqNativeWriterSatellite final : public constellation::satellite::ReceiverSatellite {
+
+    enum class EUDAQFlags : std::uint32_t {
+        BORE = 0x1,
+        EORE = 0x2,
+    };
 
     class FileSerializer {
     public:
@@ -48,7 +54,8 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
 
     private:
         void serialize_header(const constellation::message::CDTP1Message::Header& header,
-                              const constellation::config::Dictionary& tags);
+                              const constellation::config::Dictionary& tags,
+                              std::uint32_t flags = 0x0);
 
         void write(const uint8_t* data, size_t len);
 

@@ -77,13 +77,14 @@ void EudaqNativeWriterSatellite::FileSerializer::write_block(std::uint32_t key, 
 }
 
 void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constellation::message::CDTP1Message::Header& header,
-                                                                  const constellation::config::Dictionary& tags) {
+                                                                  const constellation::config::Dictionary& tags,
+                                                                  std::uint32_t flags) {
     LOG(DEBUG) << "Writing event header";
 
     // Type, version and flags
     write_int(cstr2hash("RawEvent"));
     write_int<std::uint32_t>(0);
-    write_int<std::uint32_t>(0);
+    write_int<std::uint32_t>(flags);
 
     // Number of devices/streams/planes - seems rarely used
     write_int<std::uint32_t>(0);
