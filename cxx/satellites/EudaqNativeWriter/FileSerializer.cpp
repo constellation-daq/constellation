@@ -119,12 +119,6 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDT
     LOG(DEBUG) << "Writing delimiter event";
     serialize_header(header, config);
 
-    // Event description string
-    write_str(descriptor_);
-
-    // Write dictionary or metadata - event tags are ignored
-    write_tags(config);
-
     // BOR does not contain data - write empty blocks and empty subevent count:
     write_blocks({});
     write_int<std::uint32_t>(0);
