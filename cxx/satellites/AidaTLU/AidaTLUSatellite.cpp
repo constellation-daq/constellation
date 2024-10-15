@@ -332,7 +332,7 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
             msg.addFrame(std::move(datablock));
 
             // Send the data off - or fail:
-            trySendDataMessage(msg);
+            sendDataMessage(msg);
 
             delete data;
         }
