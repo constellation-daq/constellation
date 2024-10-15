@@ -13,6 +13,9 @@
 
 #include "constellation/core/log/log.hpp"
 #include "constellation/satellite/Satellite.hpp"
+#include "constellation/core/config/Value.hpp"
+
+using namespace constellation::config;
 
 AidaTLUSatellite::AidaTLUSatellite(std::string_view type, std::string_view name)
     : TransmitterSatellite(type, name), m_starttime(0), m_lasttime(0), m_duration(0) {
@@ -300,8 +303,8 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
         while(!m_tlu->IsBufferEmpty()) {
             tlu::fmctludata* data = m_tlu->PopFrontEvent();
             uint32_t trigger_n = data->eventnumber;
-            uint64_t ts_raw = data->timestamp;
-            uint64_t ts_ns = ts_raw * 25;
+            int64_t ts_raw = data->timestamp;
+            int64_t ts_ns = ts_raw * 25;
             if(!(trigger_n % 100)) {
                 LOG(logger_, INFO) << "  Received trigger " << trigger_n << " after " << ts_ns / 1e9 << " s.";
             }
