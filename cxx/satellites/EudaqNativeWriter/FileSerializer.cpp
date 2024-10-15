@@ -98,7 +98,7 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
     // Take event descriptor tag from sender name:
     auto canonical_name = std::string(header.getSender());
     const auto separator_pos = canonical_name.find_first_of('.');
-    const auto descriptor = canonical_name.substr(separator_pos);
+    const auto descriptor = canonical_name.substr(separator_pos + 1);
 
     // Writing ExtendWord (event description, used to identify decoder later on)
     write_int(cstr2hash(descriptor.c_str()));
