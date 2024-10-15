@@ -27,10 +27,7 @@ EudaqNativeWriterSatellite::EudaqNativeWriterSatellite(std::string_view type, st
     support_reconfigure();
 }
 
-void EudaqNativeWriterSatellite::initializing(Configuration& config) {
-    descriptor_ = config.get<std::string>("descriptor");
-    LOG(STATUS) << "Initialized for file descriptor " << descriptor_;
-}
+void EudaqNativeWriterSatellite::initializing(Configuration&) {}
 
 void EudaqNativeWriterSatellite::starting(std::string_view run_identifier) {
 
@@ -46,7 +43,7 @@ void EudaqNativeWriterSatellite::starting(std::string_view run_identifier) {
     const auto file_path = std::filesystem::path("data_file_" + std::string(run_identifier) + ".raw");
 
     LOG(STATUS) << "Starting run with identifier " << run_identifier << ", sequence " << sequence;
-    serializer_ = std::make_unique<FileSerializer>(file_path, descriptor_, sequence, true, true);
+    serializer_ = std::make_unique<FileSerializer>(file_path, sequence, true, true);
 }
 
 void EudaqNativeWriterSatellite::stopping() {

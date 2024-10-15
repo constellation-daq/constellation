@@ -25,7 +25,6 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
     class FileSerializer {
     public:
         FileSerializer(const std::filesystem::path& path,
-                       std::string desc,
                        std::uint32_t run_sequence,
                        bool frames_as_blocks = true,
                        bool overwrite = false);
@@ -77,7 +76,6 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
 
         std::ofstream file_;
         std::uint64_t bytes_written_ {};
-        std::string descriptor_;
         std::uint32_t run_sequence_;
         bool frames_as_blocks_;
     };
@@ -98,5 +96,4 @@ protected:
 
 private:
     std::unique_ptr<FileSerializer> serializer_;
-    std::string descriptor_;
 };

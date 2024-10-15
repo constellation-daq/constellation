@@ -13,10 +13,11 @@ using namespace constellation::config;
 using namespace constellation::message;
 using namespace constellation::satellite;
 
-EudaqNativeWriterSatellite::FileSerializer::FileSerializer(
-    const std::filesystem::path& path, std::string desc, std::uint32_t run_sequence, bool frames_as_blocks, bool overwrite)
-    : file_(path, std::ios::binary), descriptor_(std::move(desc)), run_sequence_(run_sequence),
-      frames_as_blocks_(frames_as_blocks) {
+EudaqNativeWriterSatellite::FileSerializer::FileSerializer(const std::filesystem::path& path,
+                                                           std::uint32_t run_sequence,
+                                                           bool frames_as_blocks,
+                                                           bool overwrite)
+    : file_(path, std::ios::binary), run_sequence_(run_sequence), frames_as_blocks_(frames_as_blocks) {
     if(std::filesystem::exists(path) && !overwrite) {
         throw SatelliteError("File path exists: " + path.string());
     }
@@ -94,15 +95,20 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
     write_int(static_cast<std::uint32_t>(header.getSequenceNumber()));
     write_int(static_cast<std::uint32_t>(header.getSequenceNumber()));
 
+    // Take event descriptor tag from sender name:
+    auto canonical_name = std::string(header.getSender());
+    const auto separator_pos = canonical_name.find_first_of('.');
+    const auto descriptor = canonical_name.substr(separator_pos);
+
     // Writing ExtendWord (event description, used to identify decoder later on)
-    write_int(cstr2hash(descriptor_.c_str()));
+    write_int(cstr2hash(descriptor.c_str()));
 
     // Timestamps from header tags if available - we get them in ps and write them in ns
     write_int(tags.contains("timestamp_begin") ? tags.at("timestamp_begin").get<std::uint64_t>() : std::uint64_t());
     write_int(tags.contains("timestamp_end") ? tags.at("timestamp_end").get<std::uint64_t>() : std::uint64_t());
 
     // Event description string
-    write_str(descriptor_);
+    write_str(descriptor);
 
     // Header tags
     write_tags(tags);
@@ -144,7 +150,6 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDataMsg(CDTP1Message&&
 
         // Write zero blocks:
         write_int<std::uint32_t>(0);
-        LOG_ONCE(WARNING) << "Writing sub-events currently not implemented - discarding data";
 
         // Write subevents:
         const auto& payload = data_message.getPayload();
