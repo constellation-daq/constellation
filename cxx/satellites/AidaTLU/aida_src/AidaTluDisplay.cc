@@ -10,7 +10,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include "uhal/uhal.hpp"
+#include <uhal/uhal.hpp>
 
 LCD09052::LCD09052() {
     // std::cout << "  AIDA_TLU DISPLAY: Instantiated" << std::endl;

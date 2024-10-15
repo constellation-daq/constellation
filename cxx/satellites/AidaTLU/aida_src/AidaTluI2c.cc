@@ -3,7 +3,7 @@
 #include <ostream>
 #include <thread>
 #include <vector>
-#include "uhal/uhal.hpp"
+#include <uhal/uhal.hpp>
 
 i2cCore::i2cCore(HwInterface* hw_int) {
     i2c_hw = hw_int;

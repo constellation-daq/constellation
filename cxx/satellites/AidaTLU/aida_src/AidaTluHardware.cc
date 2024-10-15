@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include "uhal/uhal.hpp"
+#include <uhal/uhal.hpp>
 
 /*
   This file contains classes for chips used on the new TLU design.

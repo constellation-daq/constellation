@@ -11,7 +11,7 @@
 #include "../aida_include/AidaTluPowerModule.hh"
 #include "constellation/core/log/log.hpp"
 
-#include "uhal/uhal.hpp"
+#include <uhal/uhal.hpp>
 
 using namespace constellation;
 
