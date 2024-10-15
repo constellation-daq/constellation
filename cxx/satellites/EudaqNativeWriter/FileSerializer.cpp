@@ -7,6 +7,18 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
+#include <cstdint>
+#include <filesystem>
+#include <ios>
+#include <utility>
+#include <vector>
+
+#include "constellation/core/config/Dictionary.hpp"
+#include "constellation/core/log/log.hpp"
+#include "constellation/core/message/CDTP1Message.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/satellite/exceptions.hpp"
+
 #include "EudaqNativeWriterSatellite.hpp"
 
 using namespace constellation::config;
@@ -32,7 +44,7 @@ EudaqNativeWriterSatellite::FileSerializer::~FileSerializer() {
     }
 }
 
-void EudaqNativeWriterSatellite::FileSerializer::write(const uint8_t* data, size_t len) {
+void EudaqNativeWriterSatellite::FileSerializer::write(const std::uint8_t* data, std::size_t len) {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     file_.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(len));
     if(!file_.good()) {
@@ -44,7 +56,7 @@ void EudaqNativeWriterSatellite::FileSerializer::write(const uint8_t* data, size
 void EudaqNativeWriterSatellite::FileSerializer::write_str(const std::string& t) {
     write_int(static_cast<std::uint32_t>(t.length()));
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    write(reinterpret_cast<const uint8_t*>(t.data()), t.length());
+    write(reinterpret_cast<const std::uint8_t*>(t.data()), t.length());
 }
 
 void EudaqNativeWriterSatellite::FileSerializer::write_tags(const Dictionary& dict) {
@@ -62,7 +74,7 @@ void EudaqNativeWriterSatellite::FileSerializer::write_blocks(const std::vector<
 
     // EUDAQ expects a map with frame number as key and vector of uint8_t as value:
     write_int(static_cast<std::uint32_t>(payload.size()));
-    for(std::uint32_t key = 0; key < static_cast<uint32_t>(payload.size()); key++) {
+    for(std::uint32_t key = 0; key < static_cast<std::uint32_t>(payload.size()); key++) {
         write_block(key, payload.at(key));
     }
 }
@@ -70,7 +82,7 @@ void EudaqNativeWriterSatellite::FileSerializer::write_blocks(const std::vector<
 void EudaqNativeWriterSatellite::FileSerializer::write_block(std::uint32_t key, const PayloadBuffer& payload) {
     write_int(key);
     const auto frame = payload.span();
-    write_int(static_cast<uint32_t>(frame.size_bytes()));
+    write_int(static_cast<std::uint32_t>(frame.size_bytes()));
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     write(reinterpret_cast<const std::uint8_t*>(frame.data()), frame.size_bytes());
 }
@@ -161,7 +173,7 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDT
     write_int<std::uint32_t>(0);
 }
 
-void EudaqNativeWriterSatellite::FileSerializer::serializeDataMsg(CDTP1Message&& data_message) {
+void EudaqNativeWriterSatellite::FileSerializer::serializeDataMsg(const CDTP1Message& data_message) {
 
     LOG(DEBUG) << "Writing data event";
 

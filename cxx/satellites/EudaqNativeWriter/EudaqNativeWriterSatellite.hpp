@@ -10,20 +10,24 @@
 #pragma once
 
 #include <array>
-#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <memory>
+#include <string>
 #include <string_view>
+#include <vector>
 
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
-#include "constellation/core/utils/timers.hpp"
+#include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/satellite/ReceiverSatellite.hpp"
 
 class EudaqNativeWriterSatellite final : public constellation::satellite::ReceiverSatellite {
 
-    enum class EUDAQFlags : std::uint32_t {
+    /** Event flags */
+    enum class EUDAQFlags : std::uint32_t { // NOLINT(performance-enum-size)
         BORE = 0x1,
         EORE = 0x2,
     };
@@ -42,9 +46,9 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
         /// @endcond
 
         void flush();
-        uint64_t bytesWritten() const { return bytes_written_; }
+        std::uint64_t bytesWritten() const { return bytes_written_; }
 
-        void serializeDataMsg(constellation::message::CDTP1Message&& data_message);
+        void serializeDataMsg(const constellation::message::CDTP1Message& data_message);
 
         void serializeDelimiterMsg(const constellation::message::CDTP1Message::Header& header,
                                    const constellation::config::Dictionary& config);
@@ -54,7 +58,7 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
                               const constellation::config::Dictionary& tags,
                               std::uint32_t flags = 0x0);
 
-        void write(const uint8_t* data, size_t len);
+        void write(const std::uint8_t* data, std::size_t len);
 
         void write_blocks(const std::vector<constellation::message::PayloadBuffer>& payload);
         void write_block(std::uint32_t key, const constellation::message::PayloadBuffer& payload);
@@ -74,8 +78,8 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
 
         void write_tags(const constellation::config::Dictionary& dict);
 
-        constexpr uint32_t cstr2hash(const char* str, uint32_t h = 0) {
-            return !str[h] ? 5381 : (cstr2hash(str, h + 1) * 33ULL) ^ str[h]; // NOLINT
+        constexpr std::uint32_t cstr2hash(const char* str, std::uint32_t h = 0) { // NOLINT(misc-no-recursion)
+            return !str[h] ? 5381 : (cstr2hash(str, h + 1) * 33ULL) ^ str[h];     // NOLINT
         }
 
     private:

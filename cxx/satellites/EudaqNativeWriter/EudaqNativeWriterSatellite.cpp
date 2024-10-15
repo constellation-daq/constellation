@@ -9,8 +9,13 @@
 
 #include "EudaqNativeWriterSatellite.hpp"
 
-#include <chrono>
+#include <cstdint>
+#include <filesystem>
+#include <memory>
+#include <stdexcept>
+#include <string>
 #include <string_view>
+#include <utility>
 
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
@@ -23,11 +28,9 @@ using namespace constellation::message;
 using namespace constellation::satellite;
 
 EudaqNativeWriterSatellite::EudaqNativeWriterSatellite(std::string_view type, std::string_view name)
-    : ReceiverSatellite(type, name) {
-    support_reconfigure();
-}
+    : ReceiverSatellite(type, name) {}
 
-void EudaqNativeWriterSatellite::initializing(Configuration&) {}
+void EudaqNativeWriterSatellite::initializing(Configuration& /*config*/) {}
 
 void EudaqNativeWriterSatellite::starting(std::string_view run_identifier) {
 
@@ -37,6 +40,7 @@ void EudaqNativeWriterSatellite::starting(std::string_view run_identifier) {
     try {
         sequence = (pos != std::string::npos ? std::stoi(std::string(run_identifier).substr(pos + 1)) : 0);
     } catch(std::invalid_argument&) {
+        LOG(DEBUG) << "Could not determine run sequence from run identifier, assuming 0";
     }
 
     // Build target file path:
@@ -58,7 +62,7 @@ void EudaqNativeWriterSatellite::receive_bor(const CDTP1Message::Header& header,
 void EudaqNativeWriterSatellite::receive_data(CDTP1Message&& data_message) {
     const auto& header = data_message.getHeader();
     LOG(DEBUG) << "Received data message from " << header.getSender();
-    serializer_->serializeDataMsg(std::move(data_message));
+    serializer_->serializeDataMsg(data_message);
 }
 
 void EudaqNativeWriterSatellite::receive_eor(const CDTP1Message::Header& header, Dictionary run_metadata) {
