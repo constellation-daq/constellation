@@ -20,16 +20,21 @@
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/satellite/ReceiverSatellite.hpp"
 
 using namespace constellation::config;
 using namespace constellation::message;
+using namespace constellation::protocol;
 using namespace constellation::satellite;
 
 EudaqNativeWriterSatellite::EudaqNativeWriterSatellite(std::string_view type, std::string_view name)
     : ReceiverSatellite(type, name) {}
 
-void EudaqNativeWriterSatellite::initializing(Configuration& /*config*/) {}
+void EudaqNativeWriterSatellite::initializing(Configuration& config) {
+    allow_overwriting_ = config.get<bool>("allow_overwriting", false);
+    base_path_ = config.getPath("output_path", {});
+}
 
 void EudaqNativeWriterSatellite::starting(std::string_view run_identifier) {
 
@@ -43,13 +48,21 @@ void EudaqNativeWriterSatellite::starting(std::string_view run_identifier) {
     }
 
     // Build target file path:
-    const auto file_path = std::filesystem::path("data_file_" + std::string(run_identifier) + ".raw");
+    const auto file_path = base_path_ / std::filesystem::path("data_" + std::string(run_identifier) + ".raw");
 
     LOG(STATUS) << "Starting run with identifier " << run_identifier << ", sequence " << sequence;
     serializer_ = std::make_unique<FileSerializer>(file_path, sequence, true);
 }
 
 void EudaqNativeWriterSatellite::stopping() {
+    serializer_.reset();
+}
+
+void EudaqNativeWriterSatellite::interrupting(CSCP::State /*previous_state*/) {
+    serializer_.reset();
+}
+
+void EudaqNativeWriterSatellite::failure(CSCP::State /*previous_state*/) {
     serializer_.reset();
 }
 

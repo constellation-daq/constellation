@@ -24,6 +24,7 @@
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/satellite/ReceiverSatellite.hpp"
 
 class EudaqNativeWriterSatellite final : public constellation::satellite::ReceiverSatellite {
@@ -47,7 +48,6 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
         FileSerializer& operator=(FileSerializer&& other) = delete;
         /// @endcond
 
-        void flush();
         std::uint64_t bytesWritten() const { return bytes_written_; }
 
         void serializeDataMsg(const constellation::message::CDTP1Message& data_message);
@@ -99,6 +99,8 @@ public:
     void initializing(constellation::config::Configuration& config) final;
     void starting(std::string_view run_identifier) final;
     void stopping() final;
+    void interrupting(constellation::protocol::CSCP::State previous_state) final;
+    void failure(constellation::protocol::CSCP::State previous_state) final;
 
 protected:
     void receive_bor(const constellation::message::CDTP1Message::Header& header,
@@ -109,4 +111,6 @@ protected:
 
 private:
     std::unique_ptr<FileSerializer> serializer_;
+    bool allow_overwriting_ {false};
+    std::filesystem::path base_path_;
 };

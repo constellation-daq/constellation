@@ -42,6 +42,7 @@ EudaqNativeWriterSatellite::FileSerializer::FileSerializer(const std::filesystem
 
 EudaqNativeWriterSatellite::FileSerializer::~FileSerializer() {
     if(file_.is_open()) {
+        file_.flush();
         file_.close();
     }
 }
@@ -210,8 +211,4 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDataMsg(const CDTP1Mes
             write_block(0, frame);
         }
     }
-}
-
-void EudaqNativeWriterSatellite::FileSerializer::flush() {
-    file_.flush();
 }
