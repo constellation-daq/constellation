@@ -276,6 +276,10 @@ void CaribouSatellite::starting(std::string_view) {
         setBORTag(reg.first, reg.second);
     }
 
+    // Add compatibility tags for EUDAQ data format:
+    setBORTag("eudaq_event", "Caribou" + device_class_ + "Event");
+    setBORTag("frames_as_blocks", false);
+
     // Start DAQ:
     device_->daqStart();
 }
