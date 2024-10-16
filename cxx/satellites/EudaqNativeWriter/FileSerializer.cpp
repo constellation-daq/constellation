@@ -97,12 +97,9 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
     write_int(tags.contains("trigger_number") ? tags.at("tigger_number").get<std::uint32_t>()
                                               : static_cast<std::uint32_t>(header.getSequenceNumber()));
 
-    // Take event descriptor tag from sender name:
-    auto canonical_name = std::string(header.getSender());
-    const auto separator_pos = canonical_name.find_first_of('.');
-    const auto descriptor = canonical_name.substr(separator_pos + 1);
-
     // Writing ExtendWord (event description, used to identify decoder later on)
+    const auto canonical_name = std::string(header.getSender());
+    const auto descriptor = eudaq_event_descriptors_.at(canonical_name);
     write_int(cstr2hash(descriptor.c_str()));
 
     // Timestamps from header tags if available - we get them in ps and write them in ns
@@ -126,6 +123,21 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDT
         flags |= std::to_underlying(EUDAQFlags::BORE);
     } else if(header.getType() == CDTP1Message::Type::EOR) {
         flags |= std::to_underlying(EUDAQFlags::EORE);
+    }
+
+    // Check for event type flags:
+    const auto tags = header.getTags();
+    auto canonical_name = std::string(header.getSender());
+    if(tags.contains("eudaq_event")) {
+        const auto eudaq_event = tags.at("eudaq_event").get<std::string>();
+        LOG(INFO) << "Using EUDAQ event type " << std::quoted(eudaq_event) << " for sender " << canonical_name;
+        eudaq_event_descriptors_.emplace(canonical_name, eudaq_event);
+    } else {
+        // Take event descriptor tag from sender name:
+        const auto separator_pos = canonical_name.find_first_of('.');
+        const auto descriptor = canonical_name.substr(separator_pos + 1);
+        LOG(WARNING) << "BOR message does not provide EUDAQ event type - will use sender name " << descriptor << " instead";
+        eudaq_event_descriptors_.emplace(canonical_name, descriptor);
     }
 
     // Serialize header with event flags

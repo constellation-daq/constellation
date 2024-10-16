@@ -81,10 +81,13 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
             return !str[h] ? 5381 : (cstr2hash(str, h + 1) * 33ULL) ^ str[h]; // NOLINT
         }
 
+    private:
         std::ofstream file_;
         std::uint64_t bytes_written_ {};
         std::uint32_t run_sequence_;
         bool frames_as_blocks_;
+
+        std::map<std::string, std::string> eudaq_event_descriptors_;
     };
 
 public:
