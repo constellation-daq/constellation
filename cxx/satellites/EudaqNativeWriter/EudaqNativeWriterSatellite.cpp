@@ -15,7 +15,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <utility>
 
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
@@ -59,7 +58,8 @@ void EudaqNativeWriterSatellite::receive_bor(const CDTP1Message::Header& header,
     serializer_->serializeDelimiterMsg(header, config.getDictionary());
 }
 
-void EudaqNativeWriterSatellite::receive_data(CDTP1Message&& data_message) {
+void EudaqNativeWriterSatellite::receive_data(
+    CDTP1Message&& data_message) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
     const auto& header = data_message.getHeader();
     LOG(DEBUG) << "Received data message from " << header.getSender();
     serializer_->serializeDataMsg(data_message);
@@ -67,5 +67,5 @@ void EudaqNativeWriterSatellite::receive_data(CDTP1Message&& data_message) {
 
 void EudaqNativeWriterSatellite::receive_eor(const CDTP1Message::Header& header, Dictionary run_metadata) {
     LOG(INFO) << "Received EOR from " << header.getSender() << " with metadata" << run_metadata.to_string();
-    serializer_->serializeDelimiterMsg(header, std::move(run_metadata));
+    serializer_->serializeDelimiterMsg(header, run_metadata);
 }

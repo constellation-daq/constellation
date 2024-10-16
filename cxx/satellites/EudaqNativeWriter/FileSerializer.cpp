@@ -7,8 +7,10 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <iomanip>
 #include <ios>
 #include <utility>
 #include <vector>
@@ -136,7 +138,7 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDT
         flags |= std::to_underlying(EUDAQFlags::EORE);
     }
 
-    const auto tags = header.getTags();
+    const auto& tags = header.getTags();
     auto canonical_name = std::string(header.getSender());
 
     // Check for event type flag:
