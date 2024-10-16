@@ -43,7 +43,7 @@ void EudaqNativeWriterSatellite::starting(std::string_view run_identifier) {
     const auto file_path = std::filesystem::path("data_file_" + std::string(run_identifier) + ".raw");
 
     LOG(STATUS) << "Starting run with identifier " << run_identifier << ", sequence " << sequence;
-    serializer_ = std::make_unique<FileSerializer>(file_path, sequence, true, true);
+    serializer_ = std::make_unique<FileSerializer>(file_path, sequence, true);
 }
 
 void EudaqNativeWriterSatellite::stopping() {

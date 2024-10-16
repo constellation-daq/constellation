@@ -15,9 +15,8 @@ using namespace constellation::satellite;
 
 EudaqNativeWriterSatellite::FileSerializer::FileSerializer(const std::filesystem::path& path,
                                                            std::uint32_t run_sequence,
-                                                           bool frames_as_blocks,
                                                            bool overwrite)
-    : file_(path, std::ios::binary), run_sequence_(run_sequence), frames_as_blocks_(frames_as_blocks) {
+    : file_(path, std::ios::binary), run_sequence_(run_sequence) {
     if(std::filesystem::exists(path) && !overwrite) {
         throw SatelliteError("File path exists: " + path.string());
     }
@@ -125,9 +124,10 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDT
         flags |= std::to_underlying(EUDAQFlags::EORE);
     }
 
-    // Check for event type flags:
     const auto tags = header.getTags();
     auto canonical_name = std::string(header.getSender());
+
+    // Check for event type flag:
     if(tags.contains("eudaq_event")) {
         const auto eudaq_event = tags.at("eudaq_event").get<std::string>();
         LOG(INFO) << "Using EUDAQ event type " << std::quoted(eudaq_event) << " for sender " << canonical_name;
@@ -136,8 +136,21 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDT
         // Take event descriptor tag from sender name:
         const auto separator_pos = canonical_name.find_first_of('.');
         const auto descriptor = canonical_name.substr(separator_pos + 1);
-        LOG(WARNING) << "BOR message does not provide EUDAQ event type - will use sender name " << descriptor << " instead";
+        LOG(WARNING) << "BOR message of " << canonical_name << " does not provide EUDAQ event type - will use sender name "
+                     << descriptor << " instead";
         eudaq_event_descriptors_.emplace(canonical_name, descriptor);
+    }
+
+    // Check for tag describing treatment of frames:
+    if(tags.contains("frames_as_blocks")) {
+        const auto frames_as_blocks = tags.at("frames_as_blocks").get<bool>();
+        LOG(INFO) << "Sender " << canonical_name << " requests treatment of frames as "
+                  << (frames_as_blocks ? "blocks" : "sub-events");
+        frames_as_blocks_.emplace(canonical_name, frames_as_blocks);
+    } else {
+        LOG(WARNING) << "BOR message of " << canonical_name
+                     << " does not provide information on frame treatment - defaulting to \"frames as sb-events\"";
+        frames_as_blocks_.emplace(canonical_name, false);
     }
 
     // Serialize header with event flags
@@ -155,7 +168,8 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDataMsg(CDTP1Message&&
     const auto& header = data_message.getHeader();
     serialize_header(header, header.getTags());
 
-    if(frames_as_blocks_) {
+    auto canonical_name = std::string(header.getSender());
+    if(frames_as_blocks_.at(canonical_name)) {
         // Interpret multiple frames as individual blocks of EUDAQ data:
 
         // Write block data:
