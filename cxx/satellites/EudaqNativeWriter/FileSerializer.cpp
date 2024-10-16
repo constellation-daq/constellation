@@ -128,7 +128,7 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
 }
 
 void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDTP1Message::Header& header,
-                                                                       const Dictionary& config) {
+                                                                       const Dictionary& payload) {
     LOG(DEBUG) << "Writing delimiter event";
 
     // Set correct flags for BORE and EORE:
@@ -169,7 +169,7 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDT
     }
 
     // Serialize header with event flags
-    serialize_header(header, config, flags);
+    serialize_header(header, payload, flags);
 
     // BOR does not contain data - write empty blocks and empty subevent count:
     write_blocks({});

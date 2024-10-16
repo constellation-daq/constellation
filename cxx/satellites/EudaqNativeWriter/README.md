@@ -22,6 +22,12 @@ satellites should set in order to ensure the data can be correctly decoded:
   `false`, respectively. If the tag is not provided, this satellite defaults to interpreting them as sub-events, repeating
   the message header for all of the attached frames.
 
+BOR and EOR messages which arrive before the start of a run and after its end are treated differently from regular data
+messages. The corresponding EUDAQ events are marked as BORE and EORE, respectively. The header of the EUDAQ event will
+contain the payload frame of the corresponding Constellation message, which is the satellite configuration for the BOR
+message and the run metadata for the EOR message. The additional header tags of the Constellation messages are not stored but
+only used for configuration of the serializer as described above.
+
 ```{note}
 It should be noted that this satellite requires the sending satellites to receive data from to be configured via the
 `_data_transmitters` parameter, just as any Constellation receiver satellite deriving from the
