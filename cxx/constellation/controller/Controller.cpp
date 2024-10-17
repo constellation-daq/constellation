@@ -293,21 +293,28 @@ CSCP1Message Controller::send_receive(Connection& conn, CSCP1Message& cmd, bool 
         return {{controller_name_}, {CSCP1Message::Type::ERROR, "Can only send command messages of type REQUEST"}};
     }
 
-    // Possible keep payload, we might send multiple command messages:
-    cmd.assemble(keep_payload).send(conn.req);
-    zmq::multipart_t recv_zmq_msg {};
-    const auto responded = recv_zmq_msg.recv(conn.req);
+    try {
+        // Possible keep payload, we might send multiple command messages:
+        cmd.assemble(keep_payload).send(conn.req);
+        zmq::multipart_t recv_zmq_msg {};
+        const auto responded = recv_zmq_msg.recv(conn.req);
 
-    if(responded) {
-        // Disassemble message and update connection information:
-        auto reply = CSCP1Message::disassemble(recv_zmq_msg);
-        const auto verb = reply.getVerb();
-        conn.last_cmd_type = verb.first;
-        conn.last_cmd_verb = verb.second;
-        return reply;
-    } else {
-        return {{controller_name_}, {CSCP1Message::Type::ERROR, "Response timed out"}};
+        if(responded) {
+            // Disassemble message and update connection information:
+            auto reply = CSCP1Message::disassemble(recv_zmq_msg);
+            const auto verb = reply.getVerb();
+            conn.last_cmd_type = verb.first;
+            conn.last_cmd_verb = verb.second;
+            return reply;
+        }
+    } catch(const zmq::error_t& error) {
+        LOG(logger_, CRITICAL) << "ZeroMQ error during message exchange: " << error.what();
     }
+
+    conn.last_cmd_type = CSCP1Message::Type::ERROR;
+    conn.last_cmd_verb = "Response timed out";
+    LOG(logger_, CRITICAL) << "Response from satellite timed out";
+    return {{controller_name_}, {CSCP1Message::Type::ERROR, "Response timed out"}};
 }
 
 CSCP1Message Controller::build_message(std::string verb, const CommandPayload& payload) const {
