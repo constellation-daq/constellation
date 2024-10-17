@@ -122,6 +122,10 @@ def setup_cli_logging(name: str, level: str) -> ConstellationLogger:
     return logger
 
 
+def log(name: str) -> ConstellationLogger:
+    return cast(ConstellationLogger, logging.getLogger(name))
+
+
 class BaseSatelliteFrame:
     """Base class for all Satellite components to inherit from.
 
@@ -140,7 +144,6 @@ class BaseSatelliteFrame:
         # add type name to create the canonical name
         self.name = f"{self.type}.{name}"
         logging.setLoggerClass(ConstellationLogger)
-        self.base_log = cast(ConstellationLogger, logging.getLogger("SATELLITE"))
         self.context = zmq.Context()
 
         self.interface = interface
@@ -169,14 +172,14 @@ class BaseSatelliteFrame:
         Does nothing in the base class.
 
         """
-        self.base_log.debug("Satellite Base class _add_thread called")
+        log("SATELLITE").debug("Satellite Base class _add_thread called")
         pass
 
     def _start_com_threads(self) -> None:
         """Start all background communication threads."""
         self._com_thread_evt = threading.Event()
         for component, thread in self._com_thread_pool.items():
-            self.base_log.debug("Starting thread for %s communication", component)
+            log("SATELLITE").debug("Starting thread for %s communication", component)
             thread.start()
 
     def _stop_com_threads(self, timeout: float = 1.5) -> None:
@@ -188,7 +191,7 @@ class BaseSatelliteFrame:
                     thread.join(timeout)
                     # check if thread is still alive
                     if thread.is_alive():
-                        self.base_log.error(
+                        log("SATELLITE").error(
                             "Could not join background communication thread for %s within timeout",
                             component,
                         )
@@ -198,9 +201,9 @@ class BaseSatelliteFrame:
 
     def reentry(self) -> None:
         """Orderly destroy the satellite."""
-        self.base_log.debug("Stopping all communication threads.")
+        log("SATELLITE").debug("Stopping all communication threads.")
         self._stop_com_threads()
-        self.base_log.debug("Terminating ZMQ context.")
+        log("SATELLITE").debug("Terminating ZMQ context.")
         self.context.term()
 
 
