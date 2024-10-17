@@ -10,14 +10,13 @@ import datetime
 import pathlib
 import sys
 import threading
-import logging
 
 import zmq
 from uuid import UUID
 from functools import partial
-from typing import Any, Tuple, cast
+from typing import Any, Tuple
 
-from .base import ConstellationLogger
+from .base import log
 from .broadcastmanager import chirp_callback, DiscoveredService
 from .cdtp import CDTPMessage, CDTPMessageIdentifier, DataTransmitter
 from .cmdp import MetricsType
@@ -32,8 +31,6 @@ class DataReceiver(Satellite):
     """Constellation Satellite which receives data via ZMQ."""
 
     def __init__(self, *args: Any, **kwargs: Any):
-        # Set up own logger with RECV topic
-        self.log = cast(ConstellationLogger, logging.getLogger("RECV"))
 
         # define our attributes
         self._pull_interfaces: dict[UUID, Tuple[str, int]] = {}
@@ -118,7 +115,7 @@ class DataReceiver(Satellite):
                 else:
                     if not self.active_satellites:
                         # no Satellites connected
-                        self.log.info("All EOR received, stopping.")
+                        log("RECV").info("All EOR received, stopping.")
                         break
                 # request available data from zmq poller; timeout prevents
                 # deadlock when stopping.
@@ -134,7 +131,7 @@ class DataReceiver(Satellite):
                     try:
                         item = transmitter.decode(binmsg)
                     except Exception as e:
-                        self.log.critical(
+                        log("RECV").critical(
                             "Could not decode message '%s' due to exception: %s",
                             binmsg,
                             repr(e),
@@ -150,14 +147,14 @@ class DataReceiver(Satellite):
                         else:
                             self._write_data(outfile, item)
                     except Exception as e:
-                        self.log.critical("Could not write message '%s' to file: %s", item, repr(e))
+                        log("RECV").critical("Could not write message '%s' to file: %s", item, repr(e))
                         raise RuntimeError(f"Could not write message '{item}' to file") from e
                     if (datetime.datetime.now() - last_msg).total_seconds() > 2.0:
                         if self._state_thread_evt.is_set():
                             msg = "Finishing with"
                         else:
                             msg = "Processing"
-                        self.log.status(
+                        log("RECV").status(
                             "%s data packet %s from %s",
                             msg,
                             item.sequence_number,
@@ -168,7 +165,7 @@ class DataReceiver(Satellite):
         finally:
             self._close_file(outfile)
             if self.active_satellites:
-                self.log.warning(
+                log("RECV").warning(
                     "Never received EOR from following Satellites: %s",
                     ", ".join(self.active_satellites),
                 )
@@ -232,7 +229,7 @@ class DataReceiver(Satellite):
         Adds an interface (host, port) to receive data from.
         """
         self._pull_interfaces[service.host_uuid] = (service.address, service.port)
-        self.log.info("Adding interface tcp://%s:%s to listen to.", service.address, service.port)
+        log("RECV").info("Adding interface tcp://%s:%s to listen to.", service.address, service.port)
         # handle late-coming satellite offers
         if self.fsm.current_state_value in [
             SatelliteState.ORBIT,
@@ -250,7 +247,7 @@ class DataReceiver(Satellite):
 
     def _add_socket(self, uuid: UUID, address: str, port: int) -> None:
         interface = f"tcp://{address}:{port}"
-        self.log.info("Connecting to %s", interface)
+        log("RECV").info("Connecting to %s", interface)
         socket = self.context.socket(zmq.PULL)
         socket.connect(interface)
         self._pull_sockets[uuid] = socket
@@ -279,7 +276,7 @@ class DataReceiver(Satellite):
         self.reset_scheduled_metrics()
         self._reset_receiver_stats()
         for stat in self.receiver_stats:
-            self.log.info("Configuring monitoring for '%s' metric", stat)
+            log("RECV").info("Configuring monitoring for '%s' metric", stat)
             # add a callback using partial
             self.schedule_metric(
                 stat,

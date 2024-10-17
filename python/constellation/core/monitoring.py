@@ -19,9 +19,9 @@ from logging.handlers import QueueHandler, QueueListener
 from .base import (
     BaseSatelliteFrame,
     ConstellationArgumentParser,
-    ConstellationLogger,
     EPILOG,
     setup_cli_logging,
+    log,
 )
 from .cmdp import CMDPTransmitter, Metric, MetricsType
 from .chirp import CHIRPServiceIdentifier
@@ -82,7 +82,7 @@ class MonitoringSender(BaseSatelliteFrame):
         super().__init__(name=name, interface=interface, **kwds)
 
         # Set up own logger with STAT topic
-        self.log = cast(ConstellationLogger, logging.getLogger("MONITOR"))
+        self.log = log("MONITOR")
 
         # Create monitoring socket and bind interface
         socket = self.context.socket(zmq.PUB)
@@ -259,7 +259,7 @@ class StatListener(CHIRPBroadcaster):
 
     def metric_callback(self, metric: Metric) -> None:
         """Metric callback."""
-        self.log.debug(f"Received metric {metric.name} from {metric.sender}: {metric.value} {metric.unit}")
+        log("CMDP").debug(f"Received metric {metric.name} from {metric.sender}: {metric.value} {metric.unit}")
 
     @chirp_callback(CHIRPServiceIdentifier.MONITORING)
     def _add_satellite_callback(self, service: DiscoveredService) -> None:
@@ -272,7 +272,7 @@ class StatListener(CHIRPBroadcaster):
     def _add_satellite(self, service: DiscoveredService) -> None:
         address = "tcp://" + service.address + ":" + str(service.port)
         uuid = str(service.host_uuid)
-        self.log.debug("Connecting to %s, address %s...", uuid, address)
+        log("CMDP").debug("Connecting to %s, address %s...", uuid, address)
 
         # create socket for metrics
         socket = self.context.socket(zmq.SUB)
@@ -283,7 +283,7 @@ class StatListener(CHIRPBroadcaster):
 
     def _remove_satellite(self, service: DiscoveredService) -> None:
         uuid = str(service.host_uuid)
-        self.log.debug("Departure of %s.", service.host_uuid)
+        log("CMDP").debug("Departure of %s.", service.host_uuid)
         try:
             with self._metric_poller_lock:
                 socket = self._metric_sockets.pop(uuid)
@@ -296,7 +296,7 @@ class StatListener(CHIRPBroadcaster):
         """Add the metric receiver thread to the communication thread pool."""
         super()._add_com_thread()
         self._com_thread_pool["metric_receiver"] = threading.Thread(target=self._receive_metrics, daemon=True)
-        self.log.debug("Metric receiver thread prepared and added to the pool.")
+        log("CMDP").debug("Metric receiver thread prepared and added to the pool.")
 
     def _receive_metrics(self) -> None:
         """Main loop to receive metrics."""
@@ -335,7 +335,7 @@ class StatListener(CHIRPBroadcaster):
             try:
                 time.sleep(250e-3)
             except KeyboardInterrupt:
-                self.log.warning("Listener caught KeyboardInterrupt, shutting down.")
+                log("CMDP").warning("Listener caught KeyboardInterrupt, shutting down.")
                 break
 
 
@@ -365,7 +365,7 @@ class MonitoringListener(StatListener):
         socket.setsockopt_string(zmq.SUBSCRIBE, "LOG/")
         listener = ZeroMQSocketLogListener(
             CMDPTransmitter(self.name, socket),
-            *self.log.handlers,
+            *log("CMDP").handlers,
             respect_handler_level=True,  # handlers can have different log lvls
         )
         self._log_listeners[uuid] = listener
@@ -393,7 +393,7 @@ class MonitoringListener(StatListener):
                 try:
                     callback(*args)
                 except Exception as e:
-                    self.log.exception(e)
+                    log("CMDP").exception(e)
             except Empty:
                 # nothing to process
                 pass
@@ -431,7 +431,7 @@ class FileMonitoringListener(MonitoringListener):
         formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         handler.setLevel(logging.DEBUG)
-        self.log.addHandler(handler)
+        log("CMDP").addHandler(handler)
 
     def metric_callback(self, metric: Metric) -> None:
         super().metric_callback(metric)
