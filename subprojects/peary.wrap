@@ -1,0 +1,8 @@
+[wrap-git]
+url = https://gitlab.cern.ch/Caribou/peary.git
+revision = v0.14.2
+depth = 1
+method = cmake
+
+[provide]
+peary = peary_dep
