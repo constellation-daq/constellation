@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<connections>
+    <connection id="aida_tlu.controlhub" uri="chtcp-2.0://localhost:10203?target=192.168.200.30:50001"
+        address_table="file://./aida_tlu_address-fw_version_25.xml" />
+
+    <connection id="aida_tlu.udp" uri="ipbusudp-2.0://192.168.200.30:50001"
+        address_table="file://./aida_tlu_address-fw_version_25.xml" />
+
+    <!-- on Ubuntu very slow: causing timeouts
+    <connection id="aida_tlu.tcp" uri="ipbustcp-2.0://192.168.200.30:50001"
+        address_table="file://./aida_tlu_address.xml" />
+    -->
+</connections>
