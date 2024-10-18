@@ -33,6 +33,7 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
     enum class EUDAQFlags : std::uint32_t { // NOLINT(performance-enum-size)
         BORE = 0x1,
         EORE = 0x2,
+        TRIGGER = 0x10,
     };
 
     /** Serializer class for EUDAQ native binary files */

@@ -95,6 +95,10 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
                                                                   std::uint32_t flags) {
     LOG(DEBUG) << "Writing event header";
 
+    // If we have a trigger number tag set, also add the corresponding flag:
+    const auto trigger_number_it = tags.find("trigger_number");
+    flags |= trigger_number_it != tags.end() ? std::to_underlying(EUDAQFlags::TRIGGER) : 0;
+
     // Type, version and flags
     write_int(cstr2hash("RawEvent"));
     write_int<std::uint32_t>(0);
@@ -108,7 +112,6 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
 
     // Downcast event sequence for message header, use the same for trigger number
     write_int(static_cast<std::uint32_t>(header.getSequenceNumber()));
-    const auto trigger_number_it = tags.find("trigger_number");
     write_int(trigger_number_it != tags.end() ? trigger_number_it->second.get<std::uint32_t>()
                                               : static_cast<std::uint32_t>(header.getSequenceNumber()));
 
