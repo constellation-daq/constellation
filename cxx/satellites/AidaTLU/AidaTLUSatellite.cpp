@@ -11,9 +11,9 @@
 
 #include <unistd.h>
 
+#include "constellation/core/config/Value.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/satellite/Satellite.hpp"
-#include "constellation/core/config/Value.hpp"
 
 using namespace constellation::config;
 
@@ -271,6 +271,10 @@ void AidaTLUSatellite::starting(std::string_view run_identifier) {
     // Set tags for the begin-of-run message:
     setBORTag("FirmwareID", m_tlu->GetFirmwareVersion());
     setBORTag("BoardID", m_tlu->GetBoardID());
+
+    // For EudaqNativeWriter
+    setBORTag("eudaq_event", "TluRawDataEvent");
+    setBORTag("frames_as_blocks", true);
 }
 
 void AidaTLUSatellite::stopping() {
