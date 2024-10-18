@@ -65,6 +65,7 @@ class SatelliteFSM(StateMachine):
     # - NEW <=> INIT
     initialize = states.NEW.to(states.initializing) | states.INIT.to(states.initializing)
     initialize |= states.ERROR.to(states.initializing)
+    initialize |= states.SAFE.to(states.initializing)
 
     initialized = states.initializing.to(states.INIT)
 
