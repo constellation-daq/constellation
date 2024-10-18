@@ -14,7 +14,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <map>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -25,6 +24,7 @@
 #include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/string_hash_map.hpp"
 #include "constellation/satellite/ReceiverSatellite.hpp"
 
 class EudaqNativeWriterSatellite final : public constellation::satellite::ReceiverSatellite {
@@ -106,6 +106,9 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
                               const constellation::config::Dictionary& tags,
                               std::uint32_t flags = 0x0);
 
+        /** Set eudaq event descriptors and frame handling from BOR tags */
+        void parse_bor_tags(const constellation::message::CDTP1Message::Header& header);
+
         /** Write data to file */
         void write(const std::uint8_t* data, std::size_t len);
 
@@ -119,7 +122,7 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
         template <typename T> void write_int(const T& v) {
             static_assert(sizeof(v) > 1, "Only supports integers of size > 1 byte");
             T t = v;
-            std::array<uint8_t, sizeof v> buf;
+            std::array<std::uint8_t, sizeof v> buf;
             for(std::size_t i = 0; i < sizeof v; ++i) {
                 buf[i] = static_cast<std::uint8_t>(t & 0xff);
                 t >>= 8;
@@ -143,8 +146,8 @@ class EudaqNativeWriterSatellite final : public constellation::satellite::Receiv
         std::uint64_t bytes_written_ {};
         std::uint32_t run_sequence_;
 
-        std::map<std::string, std::string> eudaq_event_descriptors_;
-        std::map<std::string, bool> frames_as_blocks_;
+        constellation::utils::string_hash_map<std::string> eudaq_event_descriptors_;
+        constellation::utils::string_hash_map<bool> frames_as_blocks_;
     };
 
 public:

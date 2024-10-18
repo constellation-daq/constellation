@@ -108,7 +108,8 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
 
     // Downcast event sequence for message header, use the same for trigger number
     write_int(static_cast<std::uint32_t>(header.getSequenceNumber()));
-    write_int(tags.contains("trigger_number") ? tags.at("trigger_number").get<std::uint32_t>()
+    const auto trigger_number_it = tags.find("trigger_number");
+    write_int(trigger_number_it != tags.end() ? trigger_number_it->second.get<std::uint32_t>()
                                               : static_cast<std::uint32_t>(header.getSequenceNumber()));
 
     // Writing ExtendWord (event description, used to identify decoder later on)
@@ -117,14 +118,49 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
     write_int(cstr2hash(descriptor.c_str()));
 
     // Timestamps from header tags if available - we get them in ps and write them in ns
-    write_int(tags.contains("timestamp_begin") ? tags.at("timestamp_begin").get<std::uint64_t>() : std::uint64_t());
-    write_int(tags.contains("timestamp_end") ? tags.at("timestamp_end").get<std::uint64_t>() : std::uint64_t());
+    const auto timestamp_begin_it = tags.find("timestamp_begin");
+    write_int(timestamp_begin_it != tags.end() ? timestamp_begin_it->second.get<std::uint64_t>() : std::uint64_t());
+    const auto timestamp_end_it = tags.find("timestamp_end");
+    write_int(timestamp_end_it != tags.end() ? timestamp_end_it->second.get<std::uint64_t>() : std::uint64_t());
 
     // Event description string
     write_str(descriptor);
 
     // Header tags
     write_tags(tags);
+}
+
+void EudaqNativeWriterSatellite::FileSerializer::parse_bor_tags(const CDTP1Message::Header& header) {
+    const auto& tags = header.getTags();
+    const auto canonical_name = header.getSender();
+
+    // Check for event type flag:
+    const auto eudaq_event_it = tags.find("eudaq_event");
+    if(eudaq_event_it != tags.end()) {
+        const auto eudaq_event = eudaq_event_it->second.get<std::string>();
+        LOG(INFO) << "Using EUDAQ event type " << std::quoted(eudaq_event) << " for sender " << canonical_name;
+        eudaq_event_descriptors_.emplace(canonical_name, eudaq_event);
+    } else {
+        // Take event descriptor tag from sender name:
+        const auto separator_pos = canonical_name.find_first_of('.');
+        const auto descriptor = canonical_name.substr(separator_pos + 1);
+        LOG(WARNING) << "BOR message of " << canonical_name << " does not provide EUDAQ event type - will use sender name "
+                     << descriptor << " instead";
+        eudaq_event_descriptors_.emplace(canonical_name, descriptor);
+    }
+
+    // Check for tag describing treatment of frames:
+    const auto frames_as_blocks_it = tags.find("frames_as_blocks");
+    if(frames_as_blocks_it != tags.end()) {
+        const auto frames_as_blocks = frames_as_blocks_it->second.get<bool>();
+        LOG(INFO) << "Sender " << canonical_name << " requests treatment of frames as "
+                  << (frames_as_blocks ? "blocks" : "sub-events");
+        frames_as_blocks_.emplace(canonical_name, frames_as_blocks);
+    } else {
+        LOG(WARNING) << "BOR message of " << canonical_name
+                     << " does not provide information on frame treatment - defaulting to \"frames as sub-events\"";
+        frames_as_blocks_.emplace(canonical_name, false);
+    }
 }
 
 void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDTP1Message::Header& header,
@@ -139,33 +175,9 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDelimiterMsg(const CDT
         flags |= std::to_underlying(EUDAQFlags::EORE);
     }
 
-    const auto& tags = header.getTags();
-    auto canonical_name = std::string(header.getSender());
-
-    // Check for event type flag:
-    if(tags.contains("eudaq_event")) {
-        const auto eudaq_event = tags.at("eudaq_event").get<std::string>();
-        LOG(INFO) << "Using EUDAQ event type " << std::quoted(eudaq_event) << " for sender " << canonical_name;
-        eudaq_event_descriptors_.emplace(canonical_name, eudaq_event);
-    } else {
-        // Take event descriptor tag from sender name:
-        const auto separator_pos = canonical_name.find_first_of('.');
-        const auto descriptor = canonical_name.substr(separator_pos + 1);
-        LOG(WARNING) << "BOR message of " << canonical_name << " does not provide EUDAQ event type - will use sender name "
-                     << descriptor << " instead";
-        eudaq_event_descriptors_.emplace(canonical_name, descriptor);
-    }
-
-    // Check for tag describing treatment of frames:
-    if(tags.contains("frames_as_blocks")) {
-        const auto frames_as_blocks = tags.at("frames_as_blocks").get<bool>();
-        LOG(INFO) << "Sender " << canonical_name << " requests treatment of frames as "
-                  << (frames_as_blocks ? "blocks" : "sub-events");
-        frames_as_blocks_.emplace(canonical_name, frames_as_blocks);
-    } else {
-        LOG(WARNING) << "BOR message of " << canonical_name
-                     << " does not provide information on frame treatment - defaulting to \"frames as sb-events\"";
-        frames_as_blocks_.emplace(canonical_name, false);
+    // Parse BOR tags to set event descriptor and frame handling
+    if(header.getType() == CDTP1Message::Type::BOR) {
+        parse_bor_tags(header);
     }
 
     // Serialize header with event flags
