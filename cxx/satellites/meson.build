@@ -6,6 +6,7 @@ satellites_to_build = []
 
 # Subdirs with satellites
 subdir('DevNullReceiver')
+subdir('EudaqNativeWriter')
 subdir('RandomTransmitter')
 subdir('Sputnik')
 
