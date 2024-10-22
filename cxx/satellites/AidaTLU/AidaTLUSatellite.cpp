@@ -320,6 +320,7 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
             msg.addTag("timestamp_begin", ts_ns * 1000);
             msg.addTag("timestamp_end", (ts_ns + 25) * 1000);
             msg.addTag("trigger", trigger_n);
+            msg.addTag("flag_trigger", true);
 
             // Using "compact" binary data format here:
             std::vector<uint8_t> datablock;
