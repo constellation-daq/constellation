@@ -52,6 +52,7 @@ using namespace constellation;
 using namespace constellation::config;
 using namespace constellation::heartbeat;
 using namespace constellation::message;
+using namespace constellation::metrics;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
@@ -60,10 +61,11 @@ using namespace std::chrono_literals;
 BaseSatellite::BaseSatellite(std::string_view type, std::string_view name)
     : logger_("SATELLITE"), cscp_rep_socket_(*global_zmq_context(), zmq::socket_type::rep),
       cscp_port_(bind_ephemeral_port(cscp_rep_socket_)), satellite_type_(type), satellite_name_(name), fsm_(this),
-      cscp_logger_("CSCP"), heartbeat_manager_(
-                                getCanonicalName(),
-                                [&]() { return fsm_.getState(); },
-                                [&](std::string_view reason) { fsm_.requestInterrupt(reason); }) {
+      cscp_logger_("CSCP"), metrics_manager_([&]() { return fsm_.getState(); }),
+      heartbeat_manager_(
+          getCanonicalName(),
+          [&]() { return fsm_.getState(); },
+          [&](std::string_view reason) { fsm_.requestInterrupt(reason); }) {
 
     // Check name
     if(!CSCP::is_valid_satellite_name(to_string(name))) {

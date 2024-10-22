@@ -18,6 +18,7 @@
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
 
+using namespace constellation::metrics;
 using namespace constellation::protocol::CSCP;
 using namespace constellation::satellite;
 using namespace constellation::utils;
