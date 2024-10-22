@@ -95,9 +95,11 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
                                                                   std::uint32_t flags) {
     LOG(DEBUG) << "Writing event header";
 
-    // If we have a trigger number tag set, also add the corresponding flag:
-    const auto trigger_number_it = tags.find("trigger_number");
-    flags |= trigger_number_it != tags.end() ? std::to_underlying(EUDAQFlags::TRIGGER) : 0;
+    // If we have a trigger flag set, also add the corresponding EUDAQ flag:
+    const auto trigger_flag_it = tags.find("flag_trigger");
+    if(trigger_flag_it != tags.end()) {
+        flags |= trigger_flag_it->second.get<bool>() ? std::to_underlying(EUDAQFlags::TRIGGER) : 0;
+    }
 
     // Type, version and flags
     write_int(cstr2hash("RawEvent"));
@@ -112,6 +114,7 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
 
     // Downcast event sequence for message header, use the same for trigger number
     write_int(static_cast<std::uint32_t>(header.getSequenceNumber()));
+    const auto trigger_number_it = tags.find("trigger_number");
     write_int(trigger_number_it != tags.end() ? trigger_number_it->second.get<std::uint32_t>()
                                               : static_cast<std::uint32_t>(header.getSequenceNumber()));
 
@@ -120,11 +123,12 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
     const auto descriptor = eudaq_event_descriptors_.at(canonical_name);
     write_int(cstr2hash(descriptor.c_str()));
 
-    // Timestamps from header tags if available - we get them in ps and write them in ns
+    // Timestamps from header tags if available - we get them in ps form the Constellation header tags and write them in ns
+    // to the EUDAQ event
     const auto timestamp_begin_it = tags.find("timestamp_begin");
-    write_int(timestamp_begin_it != tags.end() ? timestamp_begin_it->second.get<std::uint64_t>() : std::uint64_t());
+    write_int(timestamp_begin_it != tags.end() ? timestamp_begin_it->second.get<std::uint64_t>() / 1000 : std::uint64_t());
     const auto timestamp_end_it = tags.find("timestamp_end");
-    write_int(timestamp_end_it != tags.end() ? timestamp_end_it->second.get<std::uint64_t>() : std::uint64_t());
+    write_int(timestamp_end_it != tags.end() ? timestamp_end_it->second.get<std::uint64_t>() / 1000 : std::uint64_t());
 
     // Event description string
     write_str(descriptor);
