@@ -33,7 +33,7 @@ EudaqNativeWriterSatellite::EudaqNativeWriterSatellite(std::string_view type, st
 
 void EudaqNativeWriterSatellite::initializing(Configuration& config) {
     allow_overwriting_ = config.get<bool>("allow_overwriting", false);
-    base_path_ = config.getPath("output_path", {});
+    base_path_ = config.getPath("output_directory", {});
 }
 
 void EudaqNativeWriterSatellite::starting(std::string_view run_identifier) {
