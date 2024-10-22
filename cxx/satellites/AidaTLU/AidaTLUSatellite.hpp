@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
 #include "AidaTLU/aida_include/AidaTluController.hh"
@@ -87,8 +89,7 @@ private:
     std::unique_ptr<tlu::AidaTluController> m_tlu;
     std::mutex m_tlu_mutex;
 
-    // can we remove them?
-    uint64_t m_starttime = 0;
-    uint64_t m_lasttime = 0;
-    double m_duration = 0;
+    std::atomic_uint32_t m_trigger_n;
+    std::atomic_uint64_t m_starttime;
+    std::atomic_uint64_t m_lasttime;
 };

@@ -16,9 +16,21 @@
 #include "constellation/satellite/Satellite.hpp"
 
 using namespace constellation::config;
+using namespace constellation::protocol;
 
-AidaTLUSatellite::AidaTLUSatellite(std::string_view type, std::string_view name)
-    : TransmitterSatellite(type, name), m_starttime(0), m_lasttime(0), m_duration(0) {
+AidaTLUSatellite::AidaTLUSatellite(std::string_view type, std::string_view name) : TransmitterSatellite(type, name) {
+
+    register_timed_metric(
+        "TRIGGER_NUMBER", "", metrics::Type::LAST_VALUE, std::chrono::seconds(1), {CSCP::State::RUN}, [this]() {
+            return m_trigger_n.load();
+        });
+
+    register_timed_metric(
+        "TRIGGER_RATE", "Hz", metrics::Type::LAST_VALUE, std::chrono::seconds(1), {CSCP::State::RUN}, [this]() {
+            return 1e-9 * static_cast<double>(m_trigger_n.load()) /
+                   static_cast<double>(m_lasttime.load() - m_starttime.load());
+        });
+
     LOG(logger_, STATUS) << "TluSatellite " << getCanonicalName() << " created";
 }
 
@@ -285,7 +297,6 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
     std::lock_guard<std::mutex> lock {m_tlu_mutex};
 
     LOG(logger_, INFO) << "Starting run loop...";
-    bool isbegin = true;
     m_tlu->ResetCounters();
     m_tlu->ResetEventsBuffer();
     m_tlu->ResetFIFO();
@@ -296,12 +307,10 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
     m_tlu->SetTriggerVeto(0);
     LOG(logger_, INFO) << "Running, ";
 
+    m_starttime.store(m_tlu->GetCurrentTimestamp() * 25);
+
     while(!stop_token.stop_requested()) {
-        m_lasttime = m_tlu->GetCurrentTimestamp() * 25;
-        if(isbegin) {
-            isbegin = false;
-            m_starttime = m_lasttime;
-        }
+        m_lasttime.store(m_tlu->GetCurrentTimestamp() * 25);
 
         m_tlu->ReceiveEvents(m_launch_config.verbose);
         while(!m_tlu->IsBufferEmpty()) {
@@ -312,6 +321,9 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
             if(!(trigger_n % 100)) {
                 LOG(logger_, INFO) << "  Received trigger " << trigger_n << " after " << ts_ns / 1e9 << " s.";
             }
+
+            // Store trigger number
+            m_trigger_n.store(trigger_n);
 
             // Store data:
             auto msg = newDataMessage();
