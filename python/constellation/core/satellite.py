@@ -275,7 +275,7 @@ class Satellite(
         assert isinstance(self._state_thread_fut, Future)
         res_run: str = self._state_thread_fut.result(timeout=None)
         self.log.debug("RUN thread finished, continue with STOPPING.")
-        res: str = self.do_stopping()
+        res: str = self.do_stopping(payload)
         return f"{res_run}; {res}"
 
     @debug_log
