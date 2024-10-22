@@ -26,6 +26,7 @@
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/core/metrics/MetricsManager.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/networking.hpp"
 #include "constellation/satellite/CommandRegistry.hpp"
@@ -226,7 +227,7 @@ namespace constellation::satellite {
         std::string run_identifier_;
 
         CommandRegistry user_commands_;
-
+        metrics::MetricsManager metrics_manager_;
         heartbeat::HeartbeatManager heartbeat_manager_;
     };
 

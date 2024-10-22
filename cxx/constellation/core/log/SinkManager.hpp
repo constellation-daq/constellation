@@ -27,6 +27,7 @@
 #include "constellation/build.hpp"
 #include "constellation/core/log/CMDPSink.hpp"
 #include "constellation/core/log/Level.hpp"
+#include "constellation/core/metrics/Metric.hpp"
 #include "constellation/core/utils/networking.hpp"
 
 namespace constellation::log {
@@ -81,6 +82,16 @@ namespace constellation::log {
          * @param sender_name Canonical name of the satellite
          */
         CNSTLN_API void enableCMDPSending(std::string sender_name);
+
+        /**
+         * Send metric via the CMDP sink
+         *
+         * @param key Metric key
+         * @param metric Metric object
+         */
+        void sendCMDPMetric(const std::string& key, const std::shared_ptr<metrics::Metric>& metric) {
+            return cmdp_sink_->sinkStats(key, metric);
+        }
 
         /**
          * @brief Get an asynchronous spdlog logger with a given topic

@@ -23,6 +23,7 @@
 
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/Logger.hpp"
+#include "constellation/core/metrics/Metric.hpp"
 #include "constellation/core/utils/networking.hpp"
 
 namespace constellation::log {
@@ -65,6 +66,14 @@ namespace constellation::log {
          * @param sender_name Canonical name of the sender
          */
         void enableSending(std::string sender_name);
+
+        /**
+         * Sink metric
+         *
+         * @param key Name of the metric
+         * @param metric Metric to sink
+         */
+        void sinkStats(std::string key, const std::shared_ptr<metrics::Metric>& metric);
 
     protected:
         void sink_it_(const spdlog::details::log_msg& msg) final;
