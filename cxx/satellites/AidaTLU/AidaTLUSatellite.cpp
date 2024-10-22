@@ -27,8 +27,11 @@ AidaTLUSatellite::AidaTLUSatellite(std::string_view type, std::string_view name)
 
     register_timed_metric(
         "TRIGGER_RATE", "Hz", metrics::Type::LAST_VALUE, std::chrono::seconds(1), {CSCP::State::RUN}, [this]() {
-            return 1e-9 * static_cast<double>(m_trigger_n.load()) /
-                   static_cast<double>(m_lasttime.load() - m_starttime.load());
+            const auto time_diff = 1e-9 * static_cast<double>(m_lasttime.load() - m_starttime.load());
+            if(time_diff == 0.) {
+                return 0.;
+            }
+            return static_cast<double>(m_trigger_n.load()) / time_diff;
         });
 
     LOG(logger_, STATUS) << "TluSatellite " << getCanonicalName() << " created";
