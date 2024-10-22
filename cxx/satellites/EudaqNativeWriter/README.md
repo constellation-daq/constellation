@@ -36,10 +36,12 @@ flags or event configurations:
   compound information. This flag is necessary e.g. for the AIDA TLU.
 * `trigger_number` (integer): If set, the trigger number of the current EUDAQ event will be set from this, if not set the
   Constellation message sequence is used instead.
-* `timestamp_begin` (integer): Timestamp of the event start. If the tag is not set, `0` will be set as timestamp. This
-  prompts analysis software to use the trigger number instead.
-* `timestamp_begin` (integer): Timestamp of the event end. If the tag is not set, `0` will be set as timestamp. This
-  prompts analysis software to use the trigger number instead.
+* `timestamp_begin` (integer): Timestamp of the event start in units of picoseconds. If the tag is available from the
+  Constellation message header, the value will be translated to nanoseconds and stored as EUDAQ event timestamp. If the tag
+  is not set, `0` will be set as timestamp. This prompts analysis software to use the trigger number instead.
+* `timestamp_begin` (integer): Timestamp of the event end in units of picoseconds. If the tag is available from the
+  Constellation message header, the value will be translated to nanoseconds and stored as EUDAQ event timestamp. If the tag
+  is not set, `0` will be set as timestamp. This prompts analysis software to use the trigger number instead.
 
 ```{note}
 It should be noted that this satellite requires the sending satellites to receive data from to be configured via the

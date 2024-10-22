@@ -123,11 +123,12 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
     const auto descriptor = eudaq_event_descriptors_.at(canonical_name);
     write_int(cstr2hash(descriptor.c_str()));
 
-    // Timestamps from header tags if available - we get them in ps and write them in ns
+    // Timestamps from header tags if available - we get them in ps form the Constellation header tags and write them in ns
+    // to the EUDAQ event
     const auto timestamp_begin_it = tags.find("timestamp_begin");
-    write_int(timestamp_begin_it != tags.end() ? timestamp_begin_it->second.get<std::uint64_t>() : std::uint64_t());
+    write_int(timestamp_begin_it != tags.end() ? timestamp_begin_it->second.get<std::uint64_t>() / 1000 : std::uint64_t());
     const auto timestamp_end_it = tags.find("timestamp_end");
-    write_int(timestamp_end_it != tags.end() ? timestamp_end_it->second.get<std::uint64_t>() : std::uint64_t());
+    write_int(timestamp_end_it != tags.end() ? timestamp_end_it->second.get<std::uint64_t>() / 1000 : std::uint64_t());
 
     // Event description string
     write_str(descriptor);
