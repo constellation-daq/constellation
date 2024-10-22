@@ -25,7 +25,7 @@ _SUPPORTED_DEVICES = {
 
 
 class Keithley(Satellite):
-    device: KeithleyInterface
+    device: KeithleyInterface | None = None
 
     def do_initializing(self, config: Configuration) -> None:
         device_name = config["device"]
@@ -111,7 +111,8 @@ class Keithley(Satellite):
         return f"Keithley at {self.device.get_voltage()}V"
 
     def reentry(self) -> None:
-        self.device.release()
+        if self.device:
+            self.device.release()
         super().reentry()
 
     def _set_ovp(self):

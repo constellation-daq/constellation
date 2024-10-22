@@ -207,7 +207,7 @@ class Satellite(
         control to the device-specific public method.
 
         """
-        return str(self.do_launching())
+        return str(self.do_launching(payload))
 
     @debug_log
     def do_launching(self) -> str:
@@ -250,7 +250,7 @@ class Satellite(
         control to the device-specific public method.
 
         """
-        res: str = self.do_landing()
+        res: str = self.do_landing(payload)
         return res
 
     @debug_log
