@@ -96,7 +96,7 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
     LOG(DEBUG) << "Writing event header";
 
     // If we have a trigger flag set, also add the corresponding EUDAQ flag:
-    const auto trigger_flag_it = tags.find("trigger_flag");
+    const auto trigger_flag_it = tags.find("flag_trigger");
     if(trigger_flag_it != tags.end()) {
         flags |= trigger_flag_it->second.get<bool>() ? std::to_underlying(EUDAQFlags::TRIGGER) : 0;
     }

@@ -28,6 +28,19 @@ contain the payload frame of the corresponding Constellation message, which is t
 message and the run metadata for the EOR message. The additional header tags of the Constellation messages are not stored but
 only used for configuration of the serializer as described above.
 
+The data events can contain the following header flags which will be interpreted and translated to the corresponding EUDAQ
+flags or event configurations:
+
+* `flag_trigger` (boolean): if this flag is set to `true`, the corresponding EUDAQ `FLAG_TRIG` is set on the event. This will
+  cause analysis software to treat the information as trigger information, i.e. use the trigger number and timestamp as
+  compound information. This flag is necessary e.g. for the AIDA TLU.
+* `trigger_number` (integer): If set, the trigger number of the current EUDAQ event will be set from this, if not set the
+  Constellation message sequence is used instead.
+* `timestamp_begin` (integer): Timestamp of the event start. If the tag is not set, `0` will be set as timestamp. This
+  prompts analysis software to use the trigger number instead.
+* `timestamp_begin` (integer): Timestamp of the event end. If the tag is not set, `0` will be set as timestamp. This
+  prompts analysis software to use the trigger number instead.
+
 ```{note}
 It should be noted that this satellite requires the sending satellites to receive data from to be configured via the
 `_data_transmitters` parameter, just as any Constellation receiver satellite deriving from the
