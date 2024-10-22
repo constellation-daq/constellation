@@ -173,7 +173,7 @@ void Controller::process_heartbeat(const message::CHP1Message& msg) {
 
         const auto deviation = std::chrono::duration_cast<std::chrono::seconds>(now - msg.getTime());
         if(std::chrono::abs(deviation) > 3s) [[unlikely]] {
-            LOG(logger_, WARNING) << "Detected time deviation of " << deviation << " to " << msg.getSender();
+            LOG(logger_, DEBUG) << "Detected time deviation of " << deviation << " to " << msg.getSender();
         }
 
         // Check if a state has changed and we need to calculate and propagate updates:
