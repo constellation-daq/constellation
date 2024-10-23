@@ -121,8 +121,6 @@ void EudaqNativeWriterSatellite::FileSerializer::serialize_header(const constell
     // Writing ExtendWord (event description, used to identify decoder later on)
     const auto canonical_name = std::string(header.getSender());
     const auto descriptor = eudaq_event_descriptors_.at(canonical_name);
-    LOG(DEBUG) << "Using event type " << std::quoted(descriptor) << "(" << cstr2hash(descriptor.c_str()) << ") for sender "
-               << std::quoted(canonical_name);
     write_int(cstr2hash(descriptor.c_str()));
 
     // Timestamps from header tags if available - we get them in ps form the Constellation header tags and write them in ns
@@ -217,7 +215,7 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDataMsg(const CDTP1Mes
         // Interpret each payload frame as a EUDAQ sub-event:
 
         // Write zero blocks:
-        write_int<std::uint32_t>(0);
+        write_blocks({});
 
         // Write subevents:
         const auto& payload = data_message.getPayload();
@@ -230,6 +228,9 @@ void EudaqNativeWriterSatellite::FileSerializer::serializeDataMsg(const CDTP1Mes
             // Write number of blocks and the block itself
             write_int<std::uint32_t>(1);
             write_block(0, frame);
+
+            // Zero sub-sub-events:
+            write_int<std::uint32_t>(0);
         }
     }
 }
