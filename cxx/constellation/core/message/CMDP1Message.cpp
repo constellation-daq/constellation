@@ -35,6 +35,9 @@ using namespace constellation::metrics;
 using namespace constellation::utils;
 using namespace std::string_literals;
 
+CMDP1Message::CMDP1Message(std::string topic, CMDP1Message::Header header)
+    : topic_(std::move(topic)), header_(std::move(header)) {}
+
 CMDP1Message::CMDP1Message(std::string topic, CMDP1Message::Header header, message::PayloadBuffer&& payload)
     : topic_(std::move(topic)), header_(std::move(header)), payload_(std::move(payload)) {}
 

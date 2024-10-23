@@ -20,11 +20,13 @@
 
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std_future.hpp"
 
 using namespace constellation::metrics;
 using namespace constellation::message;
+using namespace constellation::protocol;
 using namespace constellation::utils;
 
 PayloadBuffer Metric::assemble() const {
@@ -56,4 +58,86 @@ Metric Metric::disassemble(const message::PayloadBuffer& message) {
     }
 
     return {unit, type.value(), std::move(value)};
+}
+
+void MetricTimer::update(config::Value&& value) {
+    set(std::move(value));
+    changed_ = true;
+}
+
+bool MetricTimer::check(CSCP::State state) {
+
+    // First check the metric condition to update internals
+    if(!condition()) {
+        return false;
+    }
+
+    // If the metric has not been changed, there is no need to send it again
+    if(!changed_) {
+        return false;
+    }
+
+    // Check if we are supposed to distribute this metric from the current state:
+    // Note: empty state list means that it is always distributed.
+    if(!states_.empty() && !states_.contains(state)) {
+        return false;
+    }
+
+    // All checks passed, send metric
+    changed_ = false;
+    return true;
+}
+
+bool TimedMetric::condition() {
+
+    auto duration = std::chrono::high_resolution_clock::now() - last_trigger_;
+
+    if(duration >= interval_) {
+        last_trigger_ += interval_;
+        return true;
+    }
+
+    last_check_ = std::chrono::high_resolution_clock::now();
+    return false;
+}
+
+std::chrono::high_resolution_clock::time_point TimedMetric::nextTrigger() const {
+    return last_check_ + interval_;
+}
+
+TriggeredMetric::TriggeredMetric(std::string unit,
+                                 Type type,
+                                 std::size_t triggers,
+                                 std::initializer_list<CSCP::State> states,
+                                 config::Value&& initial_value)
+    : MetricTimer(std::move(unit), type, states, std::move(initial_value)), triggers_(triggers) {
+    // We have an initial value, let's log it directly
+    if(!std::holds_alternative<std::monostate>(initial_value)) {
+        current_triggers_ = triggers_;
+    }
+}
+
+bool TimedAutoMetric::condition() {
+    auto expired = TimedMetric::condition();
+
+    if(expired) {
+        // Update the metrics value from the function
+        update(func_());
+    }
+    return expired;
+}
+
+void TriggeredMetric::update(config::Value&& value) {
+    MetricTimer::update(std::move(value));
+    current_triggers_++;
+}
+
+bool TriggeredMetric::condition() {
+
+    if(current_triggers_ >= triggers_) {
+        current_triggers_ = 0;
+        return true;
+    }
+
+    return false;
 }

@@ -19,8 +19,10 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Configuration.hpp"
+#include "constellation/core/metrics/Metric.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
+#include "constellation/satellite/CommandRegistry.hpp"
 
 namespace constellation::satellite {
 
@@ -146,6 +148,78 @@ namespace constellation::satellite {
          * @param enable If online reconfiguration support should be enabled
          */
         constexpr void support_reconfigure(bool enable = true) { support_reconfigure_ = enable; }
+
+        /**
+         * @brief Register a metric which will be emitted in regular intervals
+         *
+         * @param name Unique topic of the metric
+         * @param unit Unit of the provided value
+         * @param type Type of the metric
+         * @param interval Minimum interval between consecutive emissions
+         * @param states States in which this metric will be emitted, empty list will always broadcast this metric
+         * @param value Initial value of the metric
+         */
+        void register_timed_metric(std::string name,
+                                   std::string unit,
+                                   metrics::Type type,
+                                   std::chrono::high_resolution_clock::duration interval,
+                                   std::initializer_list<protocol::CSCP::State> states = {},
+                                   config::Value&& initial_value = {}) {
+            metrics_manager_.registerMetric(
+                std::move(name),
+                std::make_shared<metrics::TimedMetric>(std::move(unit), type, interval, states, std::move(initial_value)));
+        }
+
+        /**
+         * @brief Register a metric which will be emitted in regular intervals, evaluated from the provided function
+         *
+         * @param name Unique topic of the metric
+         * @param unit Unit of the provided value
+         * @param type Type of the metric
+         * @param interval Minimum interval between consecutive emissions
+         * @param states States in which this metric will be emitted, empty list will always broadcast this metric
+         * @param func Function to evaluate for this metric
+         */
+        void register_timed_metric(std::string name,
+                                   std::string unit,
+                                   metrics::Type type,
+                                   std::chrono::high_resolution_clock::duration interval,
+                                   std::initializer_list<protocol::CSCP::State> states,
+                                   const std::function<config::Value()>& func) {
+            metrics_manager_.registerMetric(
+                std::move(name), std::make_shared<metrics::TimedAutoMetric>(std::move(unit), type, interval, states, func));
+        }
+
+        /**
+         * @brief Register a metric which will be emitted after having been triggered a given number of times
+         *
+         * @param name Unique topic of the metric
+         * @param unit Unit of the provided value
+         * @param type Type of the metric
+         * @param triggers Minimum number of triggers between consecutive emissions
+         * @param states States in which this metric will be emitted, empty list will always broadcast this metric
+         * @param value Initial value of the metric
+         */
+        void register_triggered_metric(std::string name,
+                                       std::string unit,
+                                       metrics::Type type,
+                                       std::size_t triggers,
+                                       std::initializer_list<protocol::CSCP::State> states = {},
+                                       config::Value&& initial_value = {}) {
+            metrics_manager_.registerMetric(std::move(name),
+                                            std::make_shared<metrics::TriggeredMetric>(
+                                                std::move(unit), type, triggers, states, std::move(initial_value)));
+        }
+
+        /**
+         * @brief Update the value cached for the given metric
+         *
+         * @param topic Unique topic of the metric
+         * @param value New value of the metric
+         */
+        void set_metric(const std::string& topic, config::Value&& value) {
+            metrics_manager_.setMetric(topic, std::move(value));
+        }
 
         /**
          * @brief Register a new user command
