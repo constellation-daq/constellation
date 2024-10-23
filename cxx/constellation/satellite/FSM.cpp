@@ -15,6 +15,8 @@
 #include <future>
 #include <iomanip>
 #include <mutex>
+#include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -32,6 +34,7 @@
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/core/utils/timers.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
 #include "constellation/satellite/exceptions.hpp"
 
@@ -202,6 +205,29 @@ void FSM::unregisterStateCallback(const std::string& identifier) {
     state_callbacks_.erase(identifier);
 }
 
+void FSM::registerRemoteCallback(std::function<std::optional<State>(std::string_view)> callback) {
+    remote_callback_ = std::move(callback);
+}
+
+void FSM::registerRemoteCondition(const std::string& remote, State transitional) {
+
+    // Check that the requested remote is not this satellite:
+    if(utils::transform(remote, ::tolower) == utils::transform(satellite_->getCanonicalName(), ::tolower)) {
+        throw std::invalid_argument("Conditions cannot be applied to same satellite");
+    }
+
+    // Check that the state is not a steady state but a transitional state:
+    if(is_steady(transitional)) {
+        throw std::invalid_argument("Conditions cannot be applied to steady state " + to_string(transitional));
+    }
+
+    remote_conditions_.emplace(remote, transitional);
+}
+
+void FSM::clearRemoteCondition() {
+    remote_conditions_.clear();
+}
+
 void FSM::call_state_callbacks() {
     const std::lock_guard state_callbacks_lock {state_callbacks_mutex_};
     std::vector<std::future<void>> futures {};
@@ -239,6 +265,66 @@ void FSM::join_failure_thread() {
 template <typename Func, typename... Args>
 FSM::Transition FSM::call_satellite_function(Func func, Transition success_transition, Args&&... args) {
     std::string error_message {};
+
+    // Check if transition conditions are satisfied:
+    if(remote_callback_ && !remote_conditions_.empty()) {
+
+        const TimeoutTimer timer {remote_condition_timeout_};
+        while(true) {
+            bool satisfied = true;
+            for(const auto& condition : remote_conditions_) {
+                // Check if this condition applies to current state:
+                if(condition.applies(state_.load())) {
+                    // Get remote state:
+                    auto remote_state = remote_callback_(condition.remote);
+
+                    // Fail if the satellite to which this condition applies is not present in the constellation
+                    if(!remote_state.has_value()) {
+                        error_message = "Dependent remote satellite " + condition.remote + " not present";
+                        LOG(logger_, CRITICAL) << "Critical failure during transition: " << error_message;
+                        satellite_->set_status("Critical failure during transition: " + error_message);
+                        return Transition::failure;
+                    }
+
+                    // Check if state is ERROR:
+                    if(remote_state.value() == State::ERROR) {
+                        error_message = "Dependent remote satellite " + condition.remote + " reports state " +
+                                        to_string(remote_state.value());
+                        LOG(logger_, CRITICAL) << "Critical failure during transition: " << error_message;
+                        satellite_->set_status("Critical failure during transition: " + error_message);
+                        return Transition::failure;
+                    }
+
+                    // Check if condition is fulfilled:
+                    if(!condition.isSatisfied(remote_state.value())) {
+                        LOG(logger_, DEBUG) << "Awaiting state from " << condition.remote
+                                            << ", currently: " << to_string(remote_state.value());
+                        satisfied = false;
+                        break;
+                    }
+                }
+            }
+
+            // If all conditions are satisfied, continue:
+            if(satisfied) {
+                LOG(logger_, DEBUG) << "Satisfied with all remote conditions, continuing";
+                break;
+            }
+
+            // If timeout reached, throw
+            if(timer.timeoutReached()) {
+                error_message = "Could not satisfy remote conditions within timeout";
+                LOG(logger_, CRITICAL) << "Critical failure during transition: " << error_message;
+                satellite_->set_status("Critical failure during transition: " + error_message);
+                return Transition::failure;
+            }
+
+            // Wait a bit before checking again
+            using namespace std::literals::chrono_literals;
+            std::this_thread::sleep_for(100ms);
+        }
+    }
+
     try {
         // Call transition function of satellite
         (satellite_->*func)(std::forward<Args>(args)...);

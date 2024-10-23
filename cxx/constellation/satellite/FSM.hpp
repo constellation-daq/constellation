@@ -14,6 +14,8 @@
 #include <functional>
 #include <map>
 #include <mutex>
+#include <optional>
+#include <set>
 #include <string>
 #include <thread>
 #include <utility>
@@ -46,6 +48,17 @@ namespace constellation::satellite {
 
         /** Maps state to transition maps for that state */
         using StateTransitionMap = std::map<State, TransitionMap>;
+
+        struct Condition {
+            std::string remote;
+            State transitional;
+
+            bool operator<(const Condition& a) const { return (remote < a.remote || transitional < a.transitional); }
+
+            bool applies(const State state) const { return protocol::CSCP::transitions_from(transitional, state); }
+
+            bool isSatisfied(const State state) const { return protocol::CSCP::transitions_to(transitional, state); }
+        };
 
     public:
         /**
@@ -146,6 +159,40 @@ namespace constellation::satellite {
          * @param identifier Identifier string for this callback
          */
         CNSTLN_API void unregisterStateCallback(const std::string& identifier);
+
+        /**
+         * @brief Registering a callback which allows to fetch the state of a remote satellite
+         *
+         * This function registers a remote state callback which allows the FSM to query the last known state of a remote
+         * satellite, e.g. for conditional transitions
+         *
+         * @param callback Callback taking the name of the remote satellite as argument and returning an optional with its
+         * state, if known, or a std::nullopt if not known
+         */
+        CNSTLN_API void registerRemoteCallback(std::function<std::optional<State>(std::string_view)> callback);
+
+        /**
+         * @brief Register a new condition for a remote satellite
+         *
+         * This function registers a new transition condition for a remote satellite. The FSM will query remote states from
+         * its remote callback to satisfy these conditions before locally executing the requested transition.
+         *
+         * @param remote Remote satellite to which this condition applies
+         * @param transitional The transitional state the remote satellite has to successfully conclude
+         */
+        CNSTLN_API void registerRemoteCondition(const std::string& remote, State transitional);
+
+        /**
+         * @brief Set timeout for remote conditions of transitions
+         *
+         * @param timeout Timeout in seconds for the conditional transition to time out
+         */
+        CNSTLN_API void setRemoteConditionTimeout(std::chrono::seconds timeout) { remote_condition_timeout_ = timeout; };
+
+        /**
+         * @brief Clears all remote conditions for this satellite
+         */
+        CNSTLN_API void clearRemoteCondition();
 
     private:
         /**
@@ -279,6 +326,11 @@ namespace constellation::satellite {
         /** State update callback */
         std::map<std::string, std::function<void(State)>> state_callbacks_;
         std::mutex state_callbacks_mutex_;
+
+        /** Remote state callback */
+        std::function<std::optional<State>(std::string_view)> remote_callback_;
+        std::set<Condition> remote_conditions_;
+        std::chrono::seconds remote_condition_timeout_ {60};
     };
 
 } // namespace constellation::satellite
