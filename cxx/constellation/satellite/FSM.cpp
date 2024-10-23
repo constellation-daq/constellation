@@ -275,6 +275,9 @@ FSM::Transition FSM::call_satellite_function(Func func, Transition success_trans
             for(const auto& condition : remote_conditions_) {
                 // Check if this condition applies to current state:
                 if(condition.applies(state_.load())) {
+                    LOG_ONCE(INFO) << "Awaiting condition for state " << to_string(state_.load()) << " of remote "
+                                   << condition.remote;
+
                     // Get remote state:
                     auto remote_state = remote_callback_(condition.remote);
 
@@ -302,6 +305,9 @@ FSM::Transition FSM::call_satellite_function(Func func, Transition success_trans
                         satisfied = false;
                         break;
                     }
+                } else {
+                    LOG_ONCE(INFO) << "Condition on state " << to_string(state_.load()) << " of remote " << condition.remote
+                                   << " does not apply, skipping";
                 }
             }
 
