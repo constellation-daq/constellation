@@ -55,7 +55,7 @@ namespace constellation::satellite {
 
             bool operator<(const Condition& a) const { return (remote < a.remote || transitional < a.transitional); }
 
-            bool applies(const State state) const { return protocol::CSCP::transitions_from(transitional, state); }
+            bool applies(const State state) const { return (transitional == state); }
 
             bool isSatisfied(const State state) const { return protocol::CSCP::transitions_to(transitional, state); }
         };
