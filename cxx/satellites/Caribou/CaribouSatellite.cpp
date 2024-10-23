@@ -316,8 +316,8 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
                 msg.addFrame(std::move(data));
 
                 // Query ADC if wanted:
-                if(current_frames % adc_freq_ == 0) {
-                    if(!adc_signal_.empty()) {
+                if(!adc_signal_.empty()) {
+                    if(current_frames % adc_freq_ == 0) {
                         auto adc_value = device_->getADC(adc_signal_);
                         LOG(DEBUG) << "ADC reading: " << adc_signal_ << " =  " << std::to_string(adc_value);
                         msg.addTag(adc_signal_, adc_value);
