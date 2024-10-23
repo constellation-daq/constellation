@@ -207,7 +207,7 @@ class Satellite(
         control to the device-specific public method.
 
         """
-        return str(self.do_launching(payload))
+        return str(self.do_launching())
 
     @debug_log
     def do_launching(self) -> str:
@@ -250,7 +250,7 @@ class Satellite(
         control to the device-specific public method.
 
         """
-        res: str = self.do_landing(payload)
+        res: str = self.do_landing()
         return res
 
     @debug_log
@@ -275,7 +275,7 @@ class Satellite(
         assert isinstance(self._state_thread_fut, Future)
         res_run: str = self._state_thread_fut.result(timeout=None)
         self.log.debug("RUN thread finished, continue with STOPPING.")
-        res: str = self.do_stopping(payload)
+        res: str = self.do_stopping()
         return f"{res_run}; {res}"
 
     @debug_log
@@ -388,17 +388,17 @@ class Satellite(
             res_run = self._state_thread_fut.result(timeout=None)
             self._state_thread_evt = None
         self.log.debug("RUN thread finished, continue with INTERRUPTING.")
-        res: str = self.do_interrupting(payload)
+        res: str = self.do_interrupting()
         return f"{res_run}; {res}"
 
     @debug_log
-    def do_interrupting(self, payload: Any) -> str:
+    def do_interrupting(self) -> str:
         """Interrupt data acquisition and move to Safe state.
 
         Defaults to calling the stop and land handlers.
         """
-        self.do_stopping(payload)
-        self.do_landing(payload)
+        self.do_stopping()
+        self.do_landing()
         return "Interrupted."
 
     @handle_error
