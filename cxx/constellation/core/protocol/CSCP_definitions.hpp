@@ -108,21 +108,21 @@ namespace constellation::protocol::CSCP {
     }
 
     /**
-     * @brief Check if state1 is a transitional state from steady state2 to a new steady state
+     * @brief Check if "transition" is a transitional state from steady state "steady" to a new steady state
      */
-    constexpr bool transitions_from(State state1, State state2) {
+    constexpr bool transitions_from(State transition, State steady) {
         // Origin steady states indicated by the upper four bits
-        return (static_cast<unsigned int>(std::to_underlying(state1)) & 0xF0U) ==
-               (static_cast<unsigned int>(std::to_underlying(state2)) & 0xF0U);
+        return (static_cast<unsigned int>(std::to_underlying(transition)) & 0xF0U) ==
+               (static_cast<unsigned int>(std::to_underlying(steady)));
     }
 
     /**
-     * @brief Check if state1 is a transitional state from a former state into steady state2
+     * @brief Check if "transition" is a transitional state from a former state into steady state "steady"
      */
-    constexpr bool transitions_to(State state1, State state2) {
+    constexpr bool transitions_to(State transition, State steady) {
         // Target steady state indicated by the lower four bits
-        return (static_cast<unsigned int>(std::to_underlying(state1)) & 0x0FU) ==
-               ((static_cast<unsigned int>(std::to_underlying(state2)) & 0xF0U) >> 4U);
+        return ((static_cast<unsigned int>(std::to_underlying(transition)) & 0x0FU) << 4U) ==
+               (static_cast<unsigned int>(std::to_underlying(steady)));
     }
 
     /**
