@@ -270,6 +270,7 @@ FSM::Transition FSM::call_satellite_function(Func func, Transition success_trans
 
     // Check if transition conditions are satisfied:
     if(remote_callback_ && !remote_conditions_.empty()) {
+        LOG(INFO) << "Checking remote conditions...";
 
         const TimeoutTimer timer {remote_condition_timeout_};
         while(true) {
@@ -309,7 +310,7 @@ FSM::Transition FSM::call_satellite_function(Func func, Transition success_trans
 
             // If all conditions are satisfied, continue:
             if(satisfied) {
-                LOG(logger_, DEBUG) << "Satisfied with all remote conditions, continuing";
+                LOG(logger_, INFO) << "Satisfied with all remote conditions, continuing";
                 break;
             }
 

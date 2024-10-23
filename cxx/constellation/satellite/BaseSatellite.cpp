@@ -514,13 +514,13 @@ void BaseSatellite::apply_internal_config(const config::Configuration& config) {
 
             try {
                 const auto remotes = config.getArray<std::string>(key);
-                LOG(logger_, INFO) << "Registering condition for transitional state " << to_string(state) << " and remotes "
-                                   << range_to_string(remotes);
+                LOG(logger_, INFO) << "Registering condition for transitional state " << std::quoted(to_string(state))
+                                   << " and remotes " << range_to_string(remotes);
                 std::ranges::for_each(remotes, register_condition);
             } catch(InvalidTypeError&) {
                 const auto remote = config.get<std::string>(key);
-                LOG(logger_, INFO) << "Registering condition for transitional state " << to_string(state) << " and remote "
-                                   << remote;
+                LOG(logger_, INFO) << "Registering condition for transitional state " << std::quoted(to_string(state))
+                                   << " and remote " << remote;
                 register_condition(remote);
             }
         }
