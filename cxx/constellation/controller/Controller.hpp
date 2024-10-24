@@ -218,6 +218,14 @@ namespace constellation::controller {
         std::set<std::string> getConnections() const;
 
         /**
+         * @brief Get set of all available commands for the given satellite
+         *
+         * @param satellite_name Canonical name of the satellite
+         * @return Dictionary of commands and their description that the satellite in question provides
+         */
+        config::Dictionary getConnectionCommands(std::string_view satellite_name) const;
+
+        /**
          * @brief Get total number of currently active connected satellites
          * @return Number of currently connected satellites
          */

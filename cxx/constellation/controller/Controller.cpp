@@ -234,6 +234,18 @@ std::set<std::string> Controller::getConnections() const {
     return connections;
 }
 
+Dictionary Controller::getConnectionCommands(std::string_view satellite_name) const {
+    const std::lock_guard connection_lock {connection_mutex_};
+
+    // Find satellite by canonical name:
+    const auto sat = connections_.find(satellite_name);
+    if(sat != connections_.end()) {
+        return sat->second.commands;
+    }
+
+    return {};
+}
+
 std::string Controller::getRunIdentifier() {
     const std::lock_guard connection_lock {connection_mutex_};
     for(auto& [name, sat] : connections_) {
