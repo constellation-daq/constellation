@@ -9,16 +9,25 @@
 
 #include "AidaTLUSatellite.hpp"
 
+#include <sstream>
+
 #include <unistd.h>
 
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/log/log.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 using namespace constellation::config;
 using namespace constellation::protocol;
 
 AidaTLUSatellite::AidaTLUSatellite(std::string_view type, std::string_view name) : TransmitterSatellite(type, name) {
+
+    register_command("get_tlu_status",
+                     "Read current TLU status (trigger ID, number of particles, scalars)",
+                     {CSCP::State::ORBIT, CSCP::State::RUN},
+                     &AidaTLUSatellite::get_tlu_status,
+                     this);
 
     register_timed_metric(
         "TRIGGER_NUMBER", "", metrics::Type::LAST_VALUE, std::chrono::seconds(1), {CSCP::State::RUN}, [this]() {
@@ -34,7 +43,7 @@ AidaTLUSatellite::AidaTLUSatellite(std::string_view type, std::string_view name)
             return static_cast<double>(m_trigger_n.load()) / time_diff;
         });
 
-    LOG(logger_, STATUS) << "TluSatellite " << getCanonicalName() << " created";
+    LOG(STATUS) << getCanonicalName() << " created";
 }
 
 void AidaTLUSatellite::initializing(constellation::config::Configuration& config) {
@@ -45,9 +54,9 @@ void AidaTLUSatellite::initializing(constellation::config::Configuration& config
     m_tlu.reset();
 
     // start with initialization procedure, as in EUDAQ
-    LOG(logger_, INFO) << "Reset successful; start initializing " << getCanonicalName();
+    LOG(INFO) << "Reset successful; start initializing " << getCanonicalName();
 
-    LOG(logger_, INFO) << "TLU INITIALIZE ID: " + std::to_string(config.get<int>("confid", 0));
+    LOG(INFO) << "TLU INITIALIZE ID: " + std::to_string(config.get<int>("confid", 0));
     std::string uhal_conn = "file://cxx/satellites/AidaTLU/default_config/aida_tlu_connection.xml";
     std::string uhal_node = "aida_tlu.controlhub";
     uhal_conn = config.get<std::string>("ConnectionFile", uhal_conn);
@@ -55,10 +64,10 @@ void AidaTLUSatellite::initializing(constellation::config::Configuration& config
     m_tlu = std::unique_ptr<tlu::AidaTluController>(new tlu::AidaTluController(uhal_conn, uhal_node));
 
     if(config.get<bool>("skipini", false)) {
-        LOG(logger_, INFO) << "TLU SKIPPING INITIALIZATION (skipini = 1)";
+        LOG(INFO) << "TLU SKIPPING INITIALIZATION (skipini = 1)";
     } else {
         uint8_t verbose = config.get<uint8_t>("verbose", 0);
-        LOG(logger_, INFO) << "TLU VERBOSITY SET TO: " + std::to_string(verbose);
+        LOG(INFO) << "TLU VERBOSITY SET TO: " + std::to_string(verbose);
 
         // Define constants
         m_tlu->DefineConst(config.get<int>("nDUTs", 4), config.get<int>("nTrgIn", 6));
@@ -93,13 +102,12 @@ void AidaTLUSatellite::initializing(constellation::config::Configuration& config
             std::string defaultCfgFile = "cxx/satellites/AidaTLU/default_config/aida_tlu_clk_config.txt";
             clkConfFile = config.get<std::string>("CLOCK_CFG_FILE", defaultCfgFile);
             if(clkConfFile == defaultCfgFile) {
-                LOG(logger_, WARNING)
+                LOG(WARNING)
                     << "TLU: Could not find the parameter for clock configuration in the INI file. Using the default.";
             }
-            int clkres;
-            clkres = m_tlu->InitializeClkChip(clkConfFile, verbose);
+            int clkres = m_tlu->InitializeClkChip(clkConfFile, verbose);
             if(clkres == -1) {
-                LOG(logger_, CRITICAL) << "TLU: clock configuration failed.";
+                LOG(CRITICAL) << "TLU: clock configuration failed.";
                 // ToDo throw something at someone
             }
         }
@@ -173,19 +181,19 @@ void AidaTLUSatellite::load_launch_config(constellation::config::Configuration& 
 }
 
 void AidaTLUSatellite::launching() {
-    LOG(logger_, INFO) << "Launching " << getCanonicalName();
+    LOG(INFO) << "Launching " << getCanonicalName();
 
-    LOG(logger_, INFO) << "CONFIG ID: " + std::to_string(m_launch_config.confid);
-    LOG(logger_, INFO) << "TLU VERBOSITY SET TO: " + std::to_string(m_launch_config.verbose);
-    LOG(logger_, INFO) << "TLU DELAY START SET TO: " + std::to_string(m_launch_config.delayStart) + " ms";
+    LOG(INFO) << "CONFIG ID: " + std::to_string(m_launch_config.confid);
+    LOG(INFO) << "TLU VERBOSITY SET TO: " + std::to_string(m_launch_config.verbose);
+    LOG(INFO) << "TLU DELAY START SET TO: " + std::to_string(m_launch_config.delayStart) + " ms";
 
     std::lock_guard<std::mutex> lock {m_tlu_mutex};
     m_tlu->SetTriggerVeto(1);
     if(m_launch_config.skipconf) {
-        LOG(logger_, INFO) << "TLU SKIPPING CONFIGURATION (skipconf = 1)";
+        LOG(INFO) << "TLU SKIPPING CONFIGURATION (skipconf = 1)";
     } else {
         // Enable HDMI connectors
-        LOG(logger_, INFO) << " -DUT CONFIGURATION";
+        LOG(INFO) << " -DUT CONFIGURATION";
         m_tlu->configureHDMI(1, m_launch_config.HDMI1_set, m_launch_config.verbose);
         m_tlu->configureHDMI(2, m_launch_config.HDMI2_set, m_launch_config.verbose);
         m_tlu->configureHDMI(3, m_launch_config.HDMI3_set, m_launch_config.verbose);
@@ -198,11 +206,11 @@ void AidaTLUSatellite::launching() {
         m_tlu->SetDutClkSrc(4, m_launch_config.HDMI4_clk, m_launch_config.verbose);
 
         // Set lemo clock
-        LOG(logger_, INFO) << " -CLOCK OUTPUT CONFIGURATION";
+        LOG(INFO) << " -CLOCK OUTPUT CONFIGURATION";
         m_tlu->enableClkLEMO(m_launch_config.LEMOclk, m_launch_config.verbose);
 
         // Set thresholds
-        LOG(logger_, INFO) << " -DISCRIMINATOR THRESHOLDS CONFIGURATION";
+        LOG(INFO) << " -DISCRIMINATOR THRESHOLDS CONFIGURATION";
         m_tlu->SetThresholdValue(0, m_launch_config.DACThreshold0, m_launch_config.verbose);
         m_tlu->SetThresholdValue(1, m_launch_config.DACThreshold1, m_launch_config.verbose);
         m_tlu->SetThresholdValue(2, m_launch_config.DACThreshold2, m_launch_config.verbose);
@@ -225,35 +233,35 @@ void AidaTLUSatellite::launching() {
                                               m_launch_config.in4_DEL,
                                               m_launch_config.in5_DEL};
 
-        LOG(logger_, INFO) << " -ADJUST STRETCH AND DELAY";
+        LOG(INFO) << " -ADJUST STRETCH AND DELAY";
         m_tlu->SetPulseStretchPack(stretcVec, m_launch_config.verbose);
         m_tlu->SetPulseDelayPack(delayVec, m_launch_config.verbose);
 
         // Set triggerMask
         // The conf function does not seem happy with a 32-bit default. Need to check.
-        LOG(logger_, INFO) << " -DEFINE TRIGGER MASK";
+        LOG(INFO) << " -DEFINE TRIGGER MASK";
         m_tlu->SetTriggerMask(m_launch_config.trigMaskHi, m_launch_config.trigMaskLo);
 
         // Set triggerPolarity
-        LOG(logger_, INFO) << " -DEFINE TRIGGER POLARITY";
+        LOG(INFO) << " -DEFINE TRIGGER POLARITY";
         m_tlu->SetTriggerPolarity(m_launch_config.trigPol);
 
         // Set PMT power
-        LOG(logger_, INFO) << " -PMT OUTPUT VOLTAGES";
+        LOG(INFO) << " -PMT OUTPUT VOLTAGES";
         m_tlu->pwrled_setVoltages(m_launch_config.PMT1_V,
                                   m_launch_config.PMT2_V,
                                   m_launch_config.PMT3_V,
                                   m_launch_config.PMT4_V,
                                   m_launch_config.verbose);
 
-        LOG(logger_, INFO) << " -DUT OPERATION MODE";
+        LOG(INFO) << " -DUT OPERATION MODE";
         m_tlu->SetDUTMask(m_launch_config.DUTMask, m_launch_config.verbose);         // Which DUTs are on
         m_tlu->SetDUTMaskMode(m_launch_config.DUTMaskMode, m_launch_config.verbose); // AIDA (x1) or EUDET (x0)
         m_tlu->SetDUTMaskModeModifier(m_launch_config.DUTMaskModeModifier, m_launch_config.verbose); // Only for EUDET
         m_tlu->SetDUTIgnoreBusy(m_launch_config.DUTIgnoreBusy, m_launch_config.verbose); // Ignore busy in AIDA mode
         m_tlu->SetDUTIgnoreShutterVeto(m_launch_config.DUTIgnoreShutterVeto, m_launch_config.verbose); //
 
-        LOG(logger_, INFO) << " -SHUTTER OPERATION MODE";
+        LOG(INFO) << " -SHUTTER OPERATION MODE";
         m_tlu->SetShutterParameters(m_launch_config.EnableShutterMode,
                                     m_launch_config.ShutterSource,
                                     m_launch_config.ShutterOnTime,
@@ -261,10 +269,10 @@ void AidaTLUSatellite::launching() {
                                     m_launch_config.ShutterVetoOffTime,
                                     m_launch_config.InternalShutterInterval,
                                     m_launch_config.verbose);
-        LOG(logger_, INFO) << " -AUTO TRIGGER SETTINGS";
+        LOG(INFO) << " -AUTO TRIGGER SETTINGS";
         m_tlu->SetInternalTriggerFrequency(m_launch_config.InternalTriggerFreq, m_launch_config.verbose);
 
-        LOG(logger_, INFO) << " -FINALIZING TLU CONFIGURATION";
+        LOG(INFO) << " -FINALIZING TLU CONFIGURATION";
         m_tlu->SetEnableRecordData(m_launch_config.EnableRecordData);
         m_tlu->GetEventFifoCSR();
         m_tlu->GetEventFifoFillLevel();
@@ -272,16 +280,16 @@ void AidaTLUSatellite::launching() {
 }
 
 void AidaTLUSatellite::landing() {
-    LOG(logger_, INFO) << "Landing TLU";
+    LOG(INFO) << "Landing TLU";
 
     std::lock_guard<std::mutex> lock {m_tlu_mutex};
 
-    LOG(logger_, INFO) << "  Set all PMT_V = 0";
+    LOG(INFO) << "Set all PMT_V = 0";
     m_tlu->pwrled_setVoltages(0, 0, 0, 0, m_launch_config.verbose);
 }
 
 void AidaTLUSatellite::starting(std::string_view run_identifier) {
-    LOG(logger_, INFO) << "Starting run " << run_identifier << "...";
+    LOG(INFO) << "Starting run " << run_identifier << "...";
 
     // Set tags for the begin-of-run message:
     setBORTag("FirmwareID", m_tlu->GetFirmwareVersion());
@@ -290,25 +298,25 @@ void AidaTLUSatellite::starting(std::string_view run_identifier) {
     // For EudaqNativeWriter
     setBORTag("eudaq_event", "TluRawDataEvent");
     setBORTag("frames_as_blocks", true);
+
+    std::lock_guard<std::mutex> lock {m_tlu_mutex};
+    m_tlu->ResetCounters();
+    m_tlu->ResetEventsBuffer();
+    m_tlu->ResetFIFO();
+    std::this_thread::sleep_for(std::chrono::milliseconds(m_launch_config.delayStart));
 }
 
 void AidaTLUSatellite::stopping() {
-    LOG(logger_, INFO) << "Stopping run...";
+    LOG(INFO) << "Stopped run";
 }
 
 void AidaTLUSatellite::running(const std::stop_token& stop_token) {
     std::lock_guard<std::mutex> lock {m_tlu_mutex};
 
-    LOG(logger_, INFO) << "Starting run loop...";
-    m_tlu->ResetCounters();
-    m_tlu->ResetEventsBuffer();
-    m_tlu->ResetFIFO();
-    std::this_thread::sleep_for(std::chrono::milliseconds(m_launch_config.delayStart));
-
+    LOG(INFO) << "Starting TLU...";
     // Send reset pulse to all DUTs and reset internal counters
     m_tlu->SetRunActive(1);
     m_tlu->SetTriggerVeto(0);
-    LOG(logger_, INFO) << "Running, ";
 
     m_starttime.store(m_tlu->GetCurrentTimestamp() * 25);
 
@@ -319,11 +327,9 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
         while(!m_tlu->IsBufferEmpty()) {
             tlu::fmctludata* data = m_tlu->PopFrontEvent();
             uint32_t trigger_n = data->eventnumber;
-            int64_t ts_raw = data->timestamp;
-            int64_t ts_ns = ts_raw * 25;
-            if(!(trigger_n % 100)) {
-                LOG(logger_, INFO) << "  Received trigger " << trigger_n << " after " << ts_ns / 1e9 << " s.";
-            }
+            uint64_t ts_raw = data->timestamp;
+            uint64_t ts_ns = ts_raw * 25;
+            LOG_IF(DEBUG, trigger_n % 1000 == 0) << "Received trigger " << trigger_n << " after " << ts_ns / 1e9 << " s.";
 
             // Store trigger number
             m_trigger_n.store(trigger_n);
@@ -361,8 +367,19 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
         }
     }
 
-    m_tlu->SetTriggerVeto(1);
+    LOG(INFO) << "Stopping TLU...";
     // Set TLU internal logic to stop.
+    m_tlu->SetTriggerVeto(1);
     m_tlu->SetRunActive(0);
-    LOG(logger_, INFO) << "Exiting run loop";
+}
+
+std::string AidaTLUSatellite::get_tlu_status() {
+    uint32_t sl0, sl1, sl2, sl3, sl4, sl5, pret, post;
+    pret = m_tlu->GetPreVetoTriggers();
+    post = m_tlu->GetPostVetoTriggers();
+    m_tlu->GetScaler(sl0, sl1, sl2, sl3, sl4, sl5);
+    std::stringstream out {};
+    out << "IDTrig: " << post << ", Particles " << pret << ", Scalars " << sl0 << ":" << sl1 << ":" << sl2 << ":" << sl3
+        << ":" << sl4 << ":" << sl5;
+    return out.str();
 }

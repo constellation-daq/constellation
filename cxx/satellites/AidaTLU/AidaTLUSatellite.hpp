@@ -31,6 +31,9 @@ public:
     void running(const std::stop_token& stop_token) override;
 
 private:
+    std::string get_tlu_status();
+
+private:
     struct launch_configuration {
         unsigned int confid;
         uint8_t verbose;
