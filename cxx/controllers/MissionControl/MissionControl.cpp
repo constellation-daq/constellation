@@ -109,8 +109,12 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     : runcontrol_(std::move(controller_name)), logger_("GUI"), user_logger_("OP"),
       run_id_validator_(QRegularExpression("^[\\w-]+$"), this), config_file_fs_(&config_file_completer_) {
 
+    // Register types used in signals & slots:
     qRegisterMetaType<QModelIndex>("QModelIndex");
     qRegisterMetaType<constellation::protocol::CSCP::State>("constellation::protocol::CSCP::State");
+    qRegisterMetaType<std::size_t>("std::size_t");
+
+    // Set up the user interface
     setupUi(this);
 
     // Set initial values for header bar

@@ -8,7 +8,7 @@ project('Constellation',
 )
 
 # C++ implementation
-impl_cxx = add_languages('cpp', required: get_option('impl_cxx'))
+impl_cxx = add_languages('cpp', native: false, required: get_option('impl_cxx'))
 if impl_cxx
   message('Enabled C++ implementation')
   subdir('cxx')
