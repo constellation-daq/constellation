@@ -300,23 +300,30 @@ void AidaTLUSatellite::starting(std::string_view run_identifier) {
     setBORTag("frames_as_blocks", true);
 
     std::lock_guard<std::mutex> lock {m_tlu_mutex};
+
+    LOG(DEBUG) << "Resetting TLU counters...";
     m_tlu->ResetCounters();
     m_tlu->ResetEventsBuffer();
     m_tlu->ResetFIFO();
     std::this_thread::sleep_for(std::chrono::milliseconds(m_launch_config.delayStart));
+
+    // Send reset pulse to all DUTs and reset internal counters
+    LOG(INFO) << "Starting TLU...";
+    m_tlu->SetRunActive(1);
+    m_tlu->SetTriggerVeto(0);
 }
 
 void AidaTLUSatellite::stopping() {
-    LOG(INFO) << "Stopped run";
+    std::lock_guard<std::mutex> lock {m_tlu_mutex};
+
+    // Set TLU internal logic to stop
+    LOG(INFO) << "Stopping TLU...";
+    m_tlu->SetTriggerVeto(1);
+    m_tlu->SetRunActive(0);
 }
 
 void AidaTLUSatellite::running(const std::stop_token& stop_token) {
     std::lock_guard<std::mutex> lock {m_tlu_mutex};
-
-    LOG(INFO) << "Starting TLU...";
-    // Send reset pulse to all DUTs and reset internal counters
-    m_tlu->SetRunActive(1);
-    m_tlu->SetTriggerVeto(0);
 
     m_starttime.store(m_tlu->GetCurrentTimestamp() * 25);
 
@@ -366,11 +373,6 @@ void AidaTLUSatellite::running(const std::stop_token& stop_token) {
             delete data;
         }
     }
-
-    LOG(INFO) << "Stopping TLU...";
-    // Set TLU internal logic to stop.
-    m_tlu->SetTriggerVeto(1);
-    m_tlu->SetRunActive(0);
 }
 
 std::string AidaTLUSatellite::get_tlu_status() {
