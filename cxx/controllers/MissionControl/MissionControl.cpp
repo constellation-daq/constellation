@@ -273,6 +273,11 @@ void MissionControl::startup(std::size_t num) {
 void MissionControl::update_satellite_dropdown() {
     comboBoxSatellites->clear();
     for(const auto& sat : runcontrol_.getConnections()) {
+        // Only add satellites which allow reconfiguration:
+        if(!runcontrol_.getConnectionCommands(sat).contains("reconfigure")) {
+            LOG(logger_, TRACE) << "Satellite " << sat << " does not support reconfiguration";
+            continue;
+        }
         comboBoxSatellites->addItem(QString::fromStdString(sat));
     }
 }
