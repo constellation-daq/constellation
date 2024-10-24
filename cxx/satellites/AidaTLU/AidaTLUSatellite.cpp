@@ -379,7 +379,7 @@ std::string AidaTLUSatellite::get_tlu_status() {
     post = m_tlu->GetPostVetoTriggers();
     m_tlu->GetScaler(sl0, sl1, sl2, sl3, sl4, sl5);
     std::stringstream out {};
-    out << "IDTrig: " << post << ", Particles " << pret << ", Scalars " << sl0 << ":" << sl1 << ":" << sl2 << ":" << sl3
-        << ":" << sl4 << ":" << sl5;
+    out << "Trigger ID: " << post << ", Particles: " << pret << ", Scalars: " << sl0 << ":" << sl1 << ":" << sl2 << ":"
+        << sl3 << ":" << sl4 << ":" << sl5;
     return out.str();
 }
