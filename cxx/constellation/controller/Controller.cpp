@@ -125,7 +125,7 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
         Connection conn = {{*utils::global_zmq_context(), zmq::socket_type::req}, service.host_id, uri};
 
         // Set response reception timeout in milliseconds:
-        conn.req.set(zmq::sockopt::rcvtimeo, static_cast<int>(std::chrono::milliseconds(3000).count()));
+        conn.req.set(zmq::sockopt::rcvtimeo, static_cast<int>(std::chrono::milliseconds(1500).count()));
 
         // COnnect the socket:
         conn.req.connect(uri);
