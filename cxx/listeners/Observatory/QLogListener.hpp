@@ -66,6 +66,11 @@ public:
     const QLogMessage& getMessage(const QModelIndex& index) const;
 
     /**
+     * @brief Clear all currently stored messages
+     */
+    void clearMessages();
+
+    /**
      * @brief Subscribe to a given topic at a given log level
      * @details This method subscribes automatically to all log levels higher than the chosen level. If no topic is provided,
      * the method subscribes to the global logging at the given level, i.e. all topics available.

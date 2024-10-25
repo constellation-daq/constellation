@@ -76,6 +76,16 @@ LogStatusBar::LogStatusBar() {
     layout_->addWidget(label_all_);
 }
 
+void LogStatusBar::resetMessageCounts() {
+    msg_all_ = 0;
+    msg_warning_ = 0;
+    msg_critical_ = 0;
+
+    label_all_->setText(QString::number(msg_all_) + " messages");
+    label_warning_->setText("");
+    label_critical_->setText("");
+}
+
 void LogStatusBar::countMessage(Level level) {
 
     label_all_->setText(QString::number(++msg_all_) + " messages");
@@ -242,6 +252,11 @@ void Observatory::on_clearFilters_clicked() {
     // Setting the text does not emit the editingFinished signal, do it manually
     filterMessage->setText("");
     log_filter_.setFilterMessage("");
+}
+
+void Observatory::on_clearMessages_clicked() {
+    log_listener_.clearMessages();
+    status_bar_.resetMessageCounts();
 }
 
 namespace {

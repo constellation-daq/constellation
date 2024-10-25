@@ -48,6 +48,7 @@ class LogStatusBar : public QWidget {
 public:
     LogStatusBar();
     void countMessage(constellation::log::Level level);
+    void resetMessageCounts();
 
 private:
     QHBoxLayout* layout_;
@@ -162,9 +163,14 @@ private slots:
     void on_filterMessage_editingFinished();
 
     /**
-     * @brief Private slot for "Clear" button of the filter settings
+     * @brief Private slot for "Reset" button of the filter settings
      */
     void on_clearFilters_clicked();
+
+    /**
+     * @brief Private slot for "Clear messages" button
+     */
+    void on_clearMessages_clicked();
 
     /**
      * @brief Private slot for selecting items from the log view and displaying a dialog with details

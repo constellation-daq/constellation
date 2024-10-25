@@ -55,6 +55,15 @@ std::set<std::string> QLogListener::get_global_subscription_topics() const {
     return topics;
 }
 
+void QLogListener::clearMessages() {
+    const std::lock_guard message_lock {message_mutex_};
+    if(!messages_.empty()) {
+        beginRemoveRows(QModelIndex(), 0, static_cast<int>(messages_.size() - 1));
+        messages_.clear();
+        endRemoveRows();
+    }
+}
+
 void QLogListener::subscribeToTopic(constellation::log::Level level, std::string_view topic) {
 
     subscription_global_level_ = level;
