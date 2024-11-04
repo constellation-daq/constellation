@@ -1,11 +1,13 @@
 /**
  * @file
- * @brief Future C++ library features for C++20 and older compilers
+ * @brief Future C++ library features for C++20 and newer on older compilers
  *
  * @copyright Copyright (c) 2023 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
  * SPDX-License-Identifier: EUPL-1.2
  */
+
+// IWYU pragma: always_keep
 
 #pragma once
 
@@ -87,7 +89,7 @@ namespace std::ranges {
                                                                         std::ranges::iterator_t<R>,
                                                                         std::ranges::sentinel_t<R>,
                                                                         Args...>
-    C<std::ranges::range_value_t<R>> to(R&& range, Args&&... args) {
+    C<std::ranges::range_value_t<R>> to(R range, Args&&... args) {
         return {std::ranges::begin(range), std::ranges::end(range), std::forward<Args>(args)...};
     }
 

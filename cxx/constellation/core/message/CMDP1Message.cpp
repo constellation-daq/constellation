@@ -10,6 +10,7 @@
 #include "CMDP1Message.hpp"
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -32,7 +33,7 @@ using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::metrics;
 using namespace constellation::utils;
-using namespace std::literals::string_literals;
+using namespace std::string_literals;
 
 CMDP1Message::CMDP1Message(std::string topic, CMDP1Message::Header header, message::PayloadBuffer&& payload)
     : topic_(std::move(topic)), header_(std::move(header)), payload_(std::move(payload)) {}

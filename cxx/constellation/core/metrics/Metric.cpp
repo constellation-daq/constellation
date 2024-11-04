@@ -9,16 +9,18 @@
 
 #include "Metric.hpp"
 
+#include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 #include <utility>
-#include <variant>
 
 #include <magic_enum.hpp>
 #include <msgpack.hpp>
 
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/std_future.hpp"
 
 using namespace constellation::metrics;

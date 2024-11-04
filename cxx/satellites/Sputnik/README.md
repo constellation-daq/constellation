@@ -50,8 +50,8 @@ command as well as all of its arguments, the return value and the allowed states
 
 The following metrics are distributed by this satellite and can be subscribed to. Timed metrics provide an interval in units of time, triggered metrics in number of calls.
 
-| Metric | Description | Interval | Type |
-|--------|-------------|----------|------|
-| `STAT/CPULOAD` | Current CPU load of the satellite host machine | 3s | AVERAGE |
-| `STAT/TEMP` | Highest reported system temperature of the satellite | 5s | AVERAGE |
-| `STAT/EVENTS` | Currently processed event number | 100 | LAST_VALUE |
+| Metric | Description | Value Type | Metric Type | Interval |
+|--------|-------------|------------|-------------|----------|
+| `CPULOAD` | Current CPU load of the satellite host machine | Float | `AVERAGE` | 3s |
+| `TEMP` | Highest reported system temperature of the satellite | Float | `AVERAGE` | 5s |
+| `EVENTS` | Currently processed event number | Unsigned integer | `LAST_VALUE` | 100 |

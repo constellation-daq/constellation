@@ -17,6 +17,8 @@
 #include <thread>
 #include <utility>
 
+#include <zmq.hpp>
+
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/message/CHP1Message.hpp"

@@ -10,7 +10,9 @@
 #include "CHP1Message.hpp"
 
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -28,7 +30,7 @@
 using namespace constellation::message;
 using namespace constellation::utils;
 using namespace constellation::protocol;
-using namespace std::literals::string_view_literals;
+using namespace std::string_view_literals;
 
 CHP1Message CHP1Message::disassemble(zmq::multipart_t& frames) {
     if(frames.size() != 1) {

@@ -15,7 +15,6 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/utils/exceptions.hpp"
-#include "constellation/core/utils/type.hpp"
 
 namespace constellation::config {
     /**

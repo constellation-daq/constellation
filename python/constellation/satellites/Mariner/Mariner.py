@@ -17,8 +17,10 @@ from constellation.core.fsm import SatelliteState
 from constellation.core.base import setup_cli_logging
 from constellation.core.base import EPILOG
 
+from constellation.core.cmdp import MetricsType
 from constellation.core.cscp import CSCPMessage
 from constellation.core.commandmanager import cscp_requestable
+from constellation.core.monitoring import schedule_metric
 
 
 class CanopusStarTracker:
@@ -36,19 +38,19 @@ class CanopusStarTracker:
         self.locked = True
         self.attitude = 0
 
-    def get_current_brightness(self):
+    def get_current_brightness(self) -> int:
         """Determine brightness of current field of view.
 
         Will be static when locked to Canopus."""
         if self.locked:
-            return 95
+            return random.randint(94, 96)
         return random.randint(0, 100)
 
-    def canopus_in_view(self):
+    def canopus_in_view(self) -> bool:
         """Determine whether Canopus is in view."""
         return self.get_current_brightness() > 90
 
-    def get_attitude(self):
+    def get_attitude(self) -> int:
         """Determine and return the current roll attitude."""
         if not self.locked:
             # have not yet found Canopus; search and lock
@@ -105,6 +107,18 @@ class Mariner(Satellite):
         ]:
             return "Canopus Star Tracker not ready", None, {}
         return "Canopus Star Tracker locked and ready", self.device.get_attitude(), {}
+
+    @schedule_metric("lm", MetricsType.LAST_VALUE, 10)
+    def brightness(self) -> int | None:
+        if self.fsm.current_state_value in [
+            SatelliteState.NEW,
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return None
+        return self.device.get_current_brightness()
 
 
 # -------------------------------------------------------------------------

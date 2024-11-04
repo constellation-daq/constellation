@@ -10,11 +10,14 @@ from typing import Any
 from constellation.core.base import setup_cli_logging, EPILOG
 from constellation.core.commandmanager import cscp_requestable
 from constellation.core.configuration import Configuration
+from constellation.core.cmdp import MetricsType
 from constellation.core.cscp import CSCPMessage
 from constellation.core.fsm import SatelliteState
+from constellation.core.monitoring import schedule_metric
 from constellation.core.satellite import Satellite, SatelliteArgumentParser
 
-from .Keithley2410 import KeithleyInterface, Keithley2410
+from .KeithleyInterface import KeithleyInterface
+from .Keithley2410 import Keithley2410
 
 _SUPPORTED_DEVICES = {
     "2410": Keithley2410,
@@ -49,9 +52,12 @@ class Keithley(Satellite):
 
         self.log.info(f"Initializing Keithley {device_name}")
         self.device.initialize()
-        self.log.info(f"Device: {self.device.identify()}")
+        identify = self.device.identify()
+        if not identify:
+            raise ConnectionError("No connection to Keithley")
+        self.log.info("Device: %s", identify)
 
-    def do_launching(self, payload: Any) -> str:
+    def do_launching(self) -> str:
         self.device.set_terminal(self.terminal)
         self._set_ovp()
         self._set_compliance()
@@ -66,7 +72,7 @@ class Keithley(Satellite):
 
         return f"Keithley at {self.device.get_voltage()}V"
 
-    def do_landing(self, payload: Any) -> str:
+    def do_landing(self) -> str:
         # Ramp to zero, then disable output
         self._ramp(0)
         self.device.enable_output(False)
@@ -104,6 +110,10 @@ class Keithley(Satellite):
 
         return f"Keithley at {self.device.get_voltage()}V"
 
+    def reentry(self) -> None:
+        self.device.release()
+        super().reentry()
+
     def _set_ovp(self):
         self.log.info(f"Setting OVP to {self.ovp}V")
         self.device.set_ovp(self.ovp)
@@ -131,19 +141,39 @@ class Keithley(Satellite):
     @cscp_requestable
     def in_compliance(self, request: CSCPMessage) -> tuple[str, Any, dict]:
         """Check if current is in compliance"""
-        return f"{self.device.in_compliance()}", None, {}
+        in_compliance = self.device.in_compliance()
+        is_str = "is" if in_compliance else "is not"
+        return f"Device {is_str} in compliance", in_compliance, {}
 
     def _in_compliance_is_allowed(self, request: CSCPMessage) -> bool:
-        return self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.RUN]
+        return self.fsm.current_state_value not in [SatelliteState.NEW, SatelliteState.ERROR]
 
     @cscp_requestable
     def read_output(self, request: CSCPMessage) -> tuple[str, Any, dict]:
         """Read voltage and current output"""
         voltage, current, timestamp = self.device.read_output()
-        return f"Output: {voltage}V, {current}A", None, {}
+        return f"Output: {voltage}V, {current}A", {"voltage": voltage, "current": current, "timestamp": timestamp}, {}
 
     def _read_output_is_allowed(self, request: CSCPMessage) -> bool:
-        return self.fsm.current_state_value in [SatelliteState.ORBIT, SatelliteState.RUN]
+        return self.fsm.current_state_value not in [SatelliteState.NEW, SatelliteState.ERROR]
+
+    @schedule_metric("V", MetricsType.LAST_VALUE, 5)
+    def VOLTAGE(self) -> Any:
+        if self.fsm.current_state_value not in [SatelliteState.NEW, SatelliteState.ERROR]:
+            return self.device.read_output()[0]
+        return None
+
+    @schedule_metric("A", MetricsType.LAST_VALUE, 5)
+    def CURRENT(self) -> Any:
+        if self.fsm.current_state_value not in [SatelliteState.NEW, SatelliteState.ERROR]:
+            return self.device.read_output()[1]
+        return None
+
+    @schedule_metric("", MetricsType.LAST_VALUE, 5)
+    def IN_COMPLIANCE(self) -> Any:
+        if self.fsm.current_state_value not in [SatelliteState.NEW, SatelliteState.ERROR]:
+            return self.device.in_compliance()
+        return None
 
 
 def main(args=None):

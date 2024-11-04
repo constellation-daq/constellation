@@ -82,7 +82,7 @@ namespace constellation::protocol::CSCP {
     /**
      * @brief Check if a state is steady
      */
-    inline constexpr bool is_steady(State state) {
+    constexpr bool is_steady(State state) {
         // In steady states the lower four bytes are 0
         return (static_cast<unsigned int>(std::to_underlying(state)) & 0x0FU) == 0x00U;
     }
@@ -92,9 +92,29 @@ namespace constellation::protocol::CSCP {
      *
      * Shutdown is only allowed from NEW, INIT, SAFE and ERROR.
      */
-    inline constexpr bool is_shutdown_allowed(State state) {
+    constexpr bool is_shutdown_allowed(State state) {
         using enum State;
         return (state == NEW || state == INIT || state == SAFE || state == ERROR);
+    }
+
+    /**
+     * @brief Check if given state is in one of template states list
+     *
+     * @param state State to check
+     * @return True if `state` equals one of the states given in the template parameters
+     */
+    template <State... states> constexpr bool is_one_of_states(State state) {
+        return ((state == states) || ...);
+    }
+
+    /**
+     * @brief Check if given state is not in one of template states list
+     *
+     * @param state State to check
+     * @return True if `state` equals none of the states given in the template parameters
+     */
+    template <State... states> static constexpr bool is_not_one_of_states(State state) {
+        return ((state != states) && ...);
     }
 
     /**

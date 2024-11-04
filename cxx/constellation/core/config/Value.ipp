@@ -9,18 +9,19 @@
 
 #pragma once
 
-#include "Value.hpp"
+#include "Value.hpp" // NOLINT(misc-header-include-cycle)
 
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include <magic_enum.hpp>
 
-#include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/type.hpp"
 

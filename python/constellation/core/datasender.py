@@ -9,7 +9,7 @@ A base module for a Constellation Satellite that sends data.
 import time
 import threading
 import logging
-from typing import Optional, Any
+from typing import Any
 from queue import Queue, Empty
 
 import random
@@ -29,11 +29,9 @@ class PushThread(threading.Thread):
         self,
         name: str,
         stopevt: threading.Event,
-        interface: str,
-        port: int,
+        socket: zmq.Socket,  # type: ignore[type-arg]
         queue: Queue,  # type: ignore[type-arg]
         *args: Any,
-        context: Optional[zmq.Context] = None,  # type: ignore[type-arg]
         **kwargs: Any,
     ):
         """Initialize values.
@@ -50,13 +48,7 @@ class PushThread(threading.Thread):
         self._logger = logging.getLogger(__name__)
         self.stopevt = stopevt
         self.queue = queue
-        ctx = context or zmq.Context()
-        self._socket = ctx.socket(zmq.PUSH)
-
-        if not port:
-            port = self._socket.bind_to_random_port(f"tcp://{interface}")
-        else:
-            self._socket.bind(f"tcp://{interface}:{port}")
+        self._socket = socket
 
     def run(self) -> None:
         """Start sending data."""
@@ -67,25 +59,18 @@ class PushThread(threading.Thread):
                 payload, meta = self.queue.get(block=True, timeout=0.5)
                 # if we have data, send it
                 if meta == CDTPMessageIdentifier.BOR:
-                    transmitter.send_start(
-                        payload=payload["payload"], meta=payload["meta"]
-                    )
+                    transmitter.send_start(payload=payload["payload"], meta=payload["meta"])
                 elif meta == CDTPMessageIdentifier.EOR:
-                    transmitter.send_end(
-                        payload=payload["payload"], meta=payload["meta"]
-                    )
+                    transmitter.send_end(payload=payload["payload"], meta=payload["meta"])
                 else:
                     transmitter.send_data(payload=payload, meta=meta)
-                self._logger.debug(
-                    f"Sending packet number {transmitter.sequence_number}"
-                )
+                self._logger.debug(f"Sending packet number {transmitter.sequence_number}")
                 self.queue.task_done()
             except Empty:
                 # nothing to process
                 pass
 
     def join(self, *args: Any, **kwargs: Any) -> Any:
-        self._socket.close()
         return super().join(*args, **kwargs)
 
 
@@ -101,11 +86,27 @@ class DataSender(Satellite):
         # via ZMQ socket
         self.data_queue: Queue = Queue()  # type: ignore[type-arg]
         self.data_port = data_port
+
         # initialize satellite
         super().__init__(*args, **kwargs)
+
+        ctx = self.context or zmq.Context()
+        self.socket = ctx.socket(zmq.PUSH)
+
+        if not self.data_port:
+            self.data_port = self.socket.bind_to_random_port(f"tcp://{self.interface}")
+        else:
+            self.socket.bind(f"tcp://{self.interface}:{self.data_port}")
+
         # run CHIRP
-        self.register_offer(CHIRPServiceIdentifier.DATA, data_port)
+        self.register_offer(CHIRPServiceIdentifier.DATA, self.data_port)
         self.broadcast_offers()
+
+    def reentry(self) -> None:
+        # close the socket
+        self.socket.close()
+        self.log.debug("Closed data socket")
+        super().reentry()
 
     @property
     def EOR(self) -> Any:
@@ -137,10 +138,8 @@ class DataSender(Satellite):
         self._push_thread = PushThread(
             name=self.name,
             stopevt=self._stop_pusher,
-            interface=self.interface,
-            port=self.data_port,
+            socket=self.socket,
             queue=self.data_queue,
-            context=self.context,
             daemon=True,  # terminate with the main thread
         )
         # self._push_thread.name = f"{self.name}_Pusher-thread"
@@ -234,9 +233,7 @@ class RandomDataSender(DataSender):
             time.sleep(0.5)
 
         t1 = time.time_ns()
-        self.log.info(
-            f"total time for {num} evt / {num * len(data_load) / 1024 / 1024}MB: {(t1 - t0) / 1000000000}s"
-        )
+        self.log.info(f"total time for {num} evt / {num * len(data_load) / 1024 / 1024}MB: {(t1 - t0) / 1000000000}s")
         return "Finished acquisition"
 
 
@@ -252,8 +249,7 @@ class DataSenderArgumentParser(SatelliteArgumentParser):
             "--data-port",
             "--cdtp-port",
             type=int,
-            help="The port for sending data via the "
-            "Constellation Data Transfer Protocol (default: %(default)s).",
+            help="The port for sending data via the " "Constellation Data Transfer Protocol (default: %(default)s).",
         )
 
 
@@ -265,8 +261,6 @@ def main(args: Any = None) -> None:
 
     """
     parser = DataSenderArgumentParser(description=main.__doc__, epilog=EPILOG)
-    # this sets the defaults for our "demo" Satellite
-    parser.set_defaults(name="random_data_sender")
     args = vars(parser.parse_args(args))
 
     # set up logging

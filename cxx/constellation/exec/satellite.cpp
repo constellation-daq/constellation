@@ -9,7 +9,7 @@
 
 #include "satellite.hpp"
 
-#include <cctype>
+#include <algorithm>
 #include <csignal>
 #include <cstdlib>
 #include <exception>
@@ -38,73 +38,81 @@
 #include "constellation/exec/exceptions.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
+#include "zmq.hpp"
+
 using namespace constellation;
 using namespace constellation::exec;
 using namespace constellation::log;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 
-// Use global std::function to work around C linkage
-std::function<void(int)> signal_handler_f {}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+namespace {
+    // Use global std::function to work around C linkage
+    std::function<void(int)> signal_handler_f {}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+} // namespace
 
 extern "C" void signal_hander(int signal) {
     signal_handler_f(signal);
 }
 
-// NOLINTNEXTLINE(modernize-avoid-c-arrays)
-void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser, bool needs_type) {
-    // If not a predefined type, requires that the satellite type is specified
-    if(needs_type) {
-        parser.add_argument("-t", "--type").help("satellite type").required();
+namespace {
+    // NOLINTNEXTLINE(modernize-avoid-c-arrays)
+    void parse_args(int argc, char* argv[], argparse::ArgumentParser& parser, bool needs_type) {
+        // If not a predefined type, requires that the satellite type is specified
+        if(needs_type) {
+            parser.add_argument("-t", "--type").help("satellite type").required();
+        }
+
+        // Satellite name (-n)
+        // Note: canonical satellite name = type_name.satellite_name
+        try {
+            // Try to use host name as default, replace hyphens with underscores:
+            auto default_name = asio::ip::host_name();
+            std::ranges::replace(default_name, '-', '_');
+            parser.add_argument("-n", "--name").help("satellite name").default_value(default_name);
+        } catch(const asio::system_error& error) {
+            parser.add_argument("-n", "--name").help("satellite name").required();
+        }
+
+        // Constellation group (-g)
+        parser.add_argument("-g", "--group").help("group name").required();
+
+        // Console log level (-l)
+        parser.add_argument("-l", "--level").help("log level").default_value("INFO");
+
+        // TODO(stephan.lachnit): module specific console log level
+
+        // Broadcast address (--brd)
+        std::string default_brd_addr {};
+        try {
+            default_brd_addr = asio::ip::address_v4::broadcast().to_string();
+        } catch(const asio::system_error& error) {
+            default_brd_addr = "255.255.255.255";
+        }
+        parser.add_argument("--brd").help("broadcast address").default_value(default_brd_addr);
+
+        // Any address (--any)
+        std::string default_any_addr {};
+        try {
+            default_any_addr = asio::ip::address_v4::any().to_string();
+        } catch(const asio::system_error& error) {
+            default_any_addr = "0.0.0.0";
+        }
+        parser.add_argument("--any").help("any address").default_value(default_any_addr);
+
+        // Note: this might throw
+        parser.parse_args(argc, argv);
     }
 
-    // Satellite name (-n)
-    // Note: canonical satellite name = type_name.satellite_name
-    try {
-        // Ty to use host name as default
-        parser.add_argument("-n", "--name").help("satellite name").default_value(asio::ip::host_name());
-    } catch(const asio::system_error& error) {
-        parser.add_argument("-n", "--name").help("satellite name").required();
+    // parser.get() might throw a logic error, but this never happens in practice
+    std::string get_arg(argparse::ArgumentParser& parser, std::string_view arg) noexcept {
+        try {
+            return parser.get(arg);
+        } catch(const std::exception&) {
+            std::unreachable();
+        }
     }
-
-    // Constellation group (-g)
-    parser.add_argument("-g", "--group").help("group name").required();
-
-    // Console log level (-l)
-    parser.add_argument("-l", "--level").help("log level").default_value("INFO");
-
-    // TODO(stephan.lachnit): module specific console log level
-
-    // Broadcast address (--brd)
-    std::string default_brd_addr {};
-    try {
-        default_brd_addr = asio::ip::address_v4::broadcast().to_string();
-    } catch(const asio::system_error& error) {
-        default_brd_addr = "255.255.255.255";
-    }
-    parser.add_argument("--brd").help("broadcast address").default_value(default_brd_addr);
-
-    // Any address (--any)
-    std::string default_any_addr {};
-    try {
-        default_any_addr = asio::ip::address_v4::any().to_string();
-    } catch(const asio::system_error& error) {
-        default_any_addr = "0.0.0.0";
-    }
-    parser.add_argument("--any").help("any address").default_value(default_any_addr);
-
-    // Note: this might throw
-    parser.parse_args(argc, argv);
-}
-
-// parser.get() might throw a logic error, but this never happens in practice
-std::string get_arg(argparse::ArgumentParser& parser, std::string_view arg) noexcept {
-    try {
-        return parser.get(arg);
-    } catch(const std::exception&) {
-        std::unreachable();
-    }
-}
+} // namespace
 
 int constellation::exec::satellite_main(int argc,
                                         char* argv[], // NOLINT(modernize-avoid-c-arrays)
@@ -113,8 +121,8 @@ int constellation::exec::satellite_main(int argc,
     // Ensure that ZeroMQ doesn't fail creating the CMDP sink
     try {
         SinkManager::getInstance();
-    } catch(const ZMQInitError& error) {
-        std::cerr << "Failed to initialize logging: " << error.what() << std::endl;
+    } catch(const zmq::error_t& error) {
+        std::cerr << "Failed to initialize logging: " << error.what() << "\n" << std::flush;
         return 1;
     }
 

@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 #include <catch2/catch_test_macros.hpp>
@@ -37,8 +38,8 @@ using namespace constellation::message;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
-using namespace std::literals::chrono_literals;
-using namespace std::literals::string_literals;
+using namespace std::chrono_literals;
+using namespace std::string_literals;
 
 class CSCPSender {
 public:
@@ -119,7 +120,8 @@ TEST_CASE("Standard commands", "[satellite]") {
     sender.sendCommand("get_config");
     auto recv_msg_get_config = sender.recv();
     REQUIRE(recv_msg_get_config.getVerb().first == CSCP1Message::Type::SUCCESS);
-    REQUIRE_THAT(to_string(recv_msg_get_config.getVerb().second), Equals("Configuration attached in payload"));
+    REQUIRE_THAT(to_string(recv_msg_get_config.getVerb().second),
+                 Equals("0 configuration keys, dictionary attached in payload"));
     REQUIRE(recv_msg_get_config.hasPayload());
     const auto config = Configuration(Dictionary::disassemble(recv_msg_get_config.getPayload()));
     REQUIRE(config.size() == 0);
@@ -145,7 +147,7 @@ TEST_CASE("User commands", "[satellite]") {
     sender.sendCommand("my_cmd");
     auto recv_msg_usr_cmd = sender.recv();
     REQUIRE(recv_msg_usr_cmd.getVerb().first == CSCP1Message::Type::SUCCESS);
-    REQUIRE_THAT(to_string(recv_msg_usr_cmd.getVerb().second), Equals(""));
+    REQUIRE_THAT(to_string(recv_msg_usr_cmd.getVerb().second), Equals("Command returned: 2"));
     REQUIRE(recv_msg_usr_cmd.hasPayload());
     const auto& usrmsgpayload = recv_msg_usr_cmd.getPayload();
     const auto usrpayload = msgpack::unpack(to_char_ptr(usrmsgpayload.span().data()), usrmsgpayload.span().size());
@@ -155,7 +157,7 @@ TEST_CASE("User commands", "[satellite]") {
     sender.sendCommand("mY_cMd");
     auto recv_msg_usr_cmd_case = sender.recv();
     REQUIRE(recv_msg_usr_cmd_case.getVerb().first == CSCP1Message::Type::SUCCESS);
-    REQUIRE_THAT(to_string(recv_msg_usr_cmd_case.getVerb().second), Equals(""));
+    REQUIRE_THAT(to_string(recv_msg_usr_cmd_case.getVerb().second), Equals("Command returned: 2"));
     REQUIRE(recv_msg_usr_cmd_case.hasPayload());
     const auto& usrmsgpayload_case = recv_msg_usr_cmd_case.getPayload();
     const auto usrpayload_case =
@@ -173,7 +175,7 @@ TEST_CASE("User commands", "[satellite]") {
 
     auto recv_msg_usr_cmd_arg = sender.recv();
     REQUIRE(recv_msg_usr_cmd_arg.getVerb().first == CSCP1Message::Type::SUCCESS);
-    REQUIRE_THAT(to_string(recv_msg_usr_cmd_arg.getVerb().second), Equals(""));
+    REQUIRE_THAT(to_string(recv_msg_usr_cmd_arg.getVerb().second), Equals("Command returned: 8"));
     REQUIRE(recv_msg_usr_cmd_arg.hasPayload());
     const auto& usrargmsgpayload = recv_msg_usr_cmd_arg.getPayload();
     const auto usrargpayload = msgpack::unpack(to_char_ptr(usrargmsgpayload.span().data()), usrargmsgpayload.span().size());
@@ -183,7 +185,7 @@ TEST_CASE("User commands", "[satellite]") {
     sender.sendCommand("my_cmd_void");
     auto recv_msg_usr_cmd_void = sender.recv();
     REQUIRE(recv_msg_usr_cmd_void.getVerb().first == CSCP1Message::Type::SUCCESS);
-    REQUIRE_THAT(to_string(recv_msg_usr_cmd_void.getVerb().second), Equals(""));
+    REQUIRE_THAT(to_string(recv_msg_usr_cmd_void.getVerb().second), Equals("Command returned: NIL"));
     REQUIRE(!recv_msg_usr_cmd_void.hasPayload());
 }
 

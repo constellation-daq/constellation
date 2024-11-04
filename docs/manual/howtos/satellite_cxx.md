@@ -99,6 +99,104 @@ and the corresponding transition function `reconfiguring(const config::Configura
 The payload of this method is a partial configuration which contains only the keys to be changed. The satellite
 implementation should check for the validity of all keys and report in case invalid keys are found.
 
+## Transmitting Data
+
+Any satellite that wishes to transmit measurement data for storage should inherit from the {cpp:class}`TransmitterSatellite <constellation::satellite::TransmitterSatellite>` class instead of the regular {cpp:class}`Satellite <constellation::satellite::Satellite>` class.
+This class implements the connection and transmission to data receivers in the Constellation in a transparent way.
+
+Data will only be transmitted in the `RUN` state. It is always preceded by a begin-of-run (BOR) message sent by the framework
+after the `starting()` function has successfully been executed, and it is followed by a end-of-run (EOR) message send
+automatically after the `stopping()` function has succeeded.
+
+Data messages are created and sent in three steps. First, the data message is created, optionally allocating the number of
+frames it will contain if known already. Subsequently, these frames are added to the message:
+
+```cpp
+// Creating a new data message with two frames pre-allocated:
+auto msg = newDataMessage(2);
+msg.addFrame(std::move(frame0));
+msg.addFrame(std::move(frame1));
+```
+
+It should be noted that `std::move` semantics is strongly encouraged here in order to avoid copying memory as described below.
+Finally, the message is send to the connected receiver via one of the following two methods:
+
+* The data can be sent with a pre-configured timeout. If the transmitter fails to send the data within this configured time
+  window, an exception is thrown and the satellite transitions into the `ERROR` state. This is the most commonly used method
+  of transmitting data and ensuring that there is no data loss.
+
+  ```cpp
+  sendDataMessage(msg);
+  ```
+
+* The second option is to handle potential issues in transmitting the data in satellite code. In this case, the message
+  should be sent via
+
+  ```cpp
+  auto sent = trySendDataMessage(msg);
+  ```
+
+  The boolean return value indicates if the sending was successful or failed. Either another attempt of sending the message
+  can be undertaken, or the message can be discarded. It should be noted that the {cpp:func}`trySendDataMessage() <constellation::satellite::TransmitterSatellite::trySendDataMessage()>` method is annotated
+  with the `[[nodiscard]]` keyword, indicating that the return value cannot be discarded and *has* to be used.
+
+Data messages contain a header with the canonical name of the sending satellite, the current system time when creating the
+message and a continuous sequence number. This means there is no need to separately count messages in user code.
+
+
+### Data Format & Performance Considerations
+
+Constellation makes no assumption on the data stored in message frames. All data is stored in frames, handled as binary blob and transmitted as such.
+The message frames of data messages are designed for minimum data copy and maximum speed.
+A data message can contain any number of frames.
+
+The {cpp:func}`DataMessage::addFrame() <constellation::satellite::TransmitterSatellite::DataMessage::addFrame()>` function takes so-called payload buffer as argument.
+Consequently, the data to be transmitted has to be converted into such a {cpp:class}`PayloadBuffer <constellation::message::PayloadBuffer>`.
+For the most common C++ ranges like `std::vector` or `std::array`, moving the object into the payload buffer with `std::move()` is sufficient.
+
+Since the data transmission protocol as well as the event metadata come with additional overhead, the largest data throughput
+depends on the frame size as well as on the number of frames transmitted by a single message. For performance considerations,
+it is advised to read [Increase Data Rate in C++](data_transmission_speed.md).
+
+### Metadata
+
+Constellation provides the option to attach metadata to each message sent by the satellite. There are three possibilities:
+
+* Metadata available at the beginning of the run such as additional hardware information or firmware revisions can be attached
+  to the begin-of-run (BOR) message. This has to be performed in the `starting()` function:
+
+  ```cpp
+  void ExampleSatellite::starting(std::string_view /*run_identifier*/) {
+      setBORTag("firmware_version", version);
+  }
+  ```
+
+  In addition to these user-provided tags, the payload of the BOR message contains the full satellite configuration.
+
+* Similarly, for metadata only available at the end of the run such as aggregate statistics, end-of-run (EOR) tags can be set
+  in the `stopping()` function:
+
+  ```cpp
+  void ExampleSatellite::stopping() {
+      setEORTag("total_pixels", pixel_count);
+  }
+  ```
+
+  In addition to these user-provided tags, the payload of the EOR message contains aggregate data on the run provided by the
+  framework such as the total number of messages sent.
+
+* Finally, metadata can be attached to each individual data message sent during the run:
+
+  ```cpp
+  // Create a new message
+  auto msg = newDataMessage();
+
+  // Add timestamps in picoseconds
+  msg.addTag("timestamp_begin", ts_start_pico);
+  msg.addTag("timestamp_end", ts_end_pico);
+  ```
+
+
 ## Error Handling
 
 Any error that prevents the satellite from functioning (or from functioning *properly*) should throw an exception to notify
@@ -117,45 +215,6 @@ the framework of the problem. The Constellation core library provides different 
 The message provided with the exception should be as descriptive as possible. It will both be logged and will be used as
 status message by the satellite.
 
-## Transmitting Data
-
-The {cpp:class}`TransmitterSatellite <constellation::satellite::TransmitterSatellite>` base class provides functions to transmit
-data. To use it the inheritance can simply be changed from {cpp:class}`Satellite <constellation::satellite::Satellite>`.
-
-To send data in the `RUN` state, a new data message can be created with {cpp:func}`TransmitterSatellite::newDataMessage() <constellation::satellite::TransmitterSatellite::newDataMessage()>`.
-Data can be added to the message as new data frame with {cpp:func}`DataMessage::addFrame() <constellation::satellite::TransmitterSatellite::DataMessage::addFrame()>`,
-which requires requires creating a {cpp:class}`PayloadBuffer <constellation::message::PayloadBuffer>`.
-For the most common C++ ranges like `std::vector` or `std::array`, moving the object into the payload buffer with `std::move()` is sufficient.
-Optionally tags can be added to the data message for additional meta information using {cpp:func}`DataMessage::addTag() <constellation::satellite::TransmitterSatellite::DataMessage::addTag()>`.
-Finally the message can be send using {cpp:func}`TransmitterSatellite::sendDataMessage() <constellation::satellite::TransmitterSatellite::sendDataMessage()>`,
-which returns if the message was sent (or added to the send queue) successfully. This return value has to be checked, since
-a return value of `false` indicates that the message could not be sent due to a slow receiver. In this case, one can either
-discard the message, try to send it again or throw an exception to abort the run.
-
-For performance considerations, please see [Increase Data Rate in C++](data_transmission_speed.md).
-
-### Adding Metadata to a Run
-
-Arbitrary metadata can be attached to the run, which will be send in the EOR message. This might include things like a
-firmware version of a detector. Metadata can be added via
-{cpp:func}`TransmitterSatellite::setRunMetadataTag() <constellation::satellite::TransmitterSatellite::setRunMetadataTag()>`.
-
-## Receiving Data
-
-The {cpp:class}`ReceiverSatellite <constellation::satellite::ReceiverSatellite>` base class provides functions to receive
-data. To use it the inheritance can simply be changed from {cpp:class}`Satellite <constellation::satellite::Satellite>`.
-
-To receive data, the {cpp:func}`receive_bor() <constellation::satellite::ReceiverSatellite::receive_bor()>`,
-{cpp:func}`receive_data() <constellation::satellite::ReceiverSatellite::receive_data()>` and
-{cpp:func}`receive_eor() <constellation::satellite::ReceiverSatellite::receive_eor()>` methods have to be implemented.
-A {cpp:func}`running() <constellation::satellite::Satellite::running()>` method must not be implemented. Files on disk
-should be opened in the {cpp:func}`starting() <constellation::satellite::Satellite::starting()>` method and closed in the
-{cpp:func}`stopping() <constellation::satellite::Satellite::stopping()>` method.
-
-While receiving data, the receiver should also store the tags in the of the messages header. They can be retrieved via
-`data_message.getHeader().getTags()`. Data always arrives sequentially, so file locking is not required.
-
-For performance considerations, please see [Increase Data Rate in C++](data_transmission_speed.md).
 
 ## Building the Satellite
 

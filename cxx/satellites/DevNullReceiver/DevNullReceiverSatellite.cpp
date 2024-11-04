@@ -47,7 +47,8 @@ void DevNullReceiverSatellite::receive_bor(const CDTP1Message::Header& header, C
     LOG(INFO) << "Received BOR from " << header.getSender() << " with config" << config.getDictionary().to_string();
 }
 
-void DevNullReceiverSatellite::receive_data(CDTP1Message&& data_message) {
+void DevNullReceiverSatellite::receive_data(
+    CDTP1Message&& data_message) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
     for(const auto& msg : data_message.getPayload()) {
         bytes_received_ += msg.span().size();
     }

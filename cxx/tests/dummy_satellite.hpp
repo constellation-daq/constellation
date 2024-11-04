@@ -12,6 +12,7 @@
 #include <stop_token>
 #include <string_view>
 #include <thread>
+#include <utility>
 
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/log/log.hpp"

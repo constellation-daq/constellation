@@ -70,6 +70,9 @@ LOG_N(STATUS, 3) << "This message is logged at most 3 times.";
 // Logging only when a condition evaluates to true:
 LOG_IF(WARNING, parameter == 5) << "Parameter 5 is set "
                                << "- be careful when opening the box!";
+
+// Logging a message only every Nth time:
+LOG_NTH(STATUS, 100) << "This message is logged every 100th call to the logging macro.";
 ```
 
 There is also a possibility of setting up individual loggers with different topics as described in the [developer guide](../../reference/cxx/core/log).

@@ -15,7 +15,6 @@
 #include <memory>
 #include <ranges>
 #include <span>
-#include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -78,7 +77,7 @@ namespace constellation::message {
          */
         template <typename R>
             requires std::ranges::contiguous_range<R> && (!std::ranges::constant_range<R>)
-        PayloadBuffer(R&& range) // NOLINT(bugprone-forwarding-reference-overload) FIXME: remove on clang-tidy>=17
+        PayloadBuffer(R&& range)
             : PayloadBuffer(std::forward<R>(range),
                             [](R& range_ref) -> std::span<std::byte> { return utils::to_byte_span(range_ref); }) {}
 

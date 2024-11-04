@@ -96,7 +96,7 @@ namespace constellation::config {
          * @brief Demangle type held by the Value
          * @return Demangled name of the currently held type
          */
-        inline std::string demangle() const {
+        std::string demangle() const {
             return std::visit([&](auto&& arg) { return utils::demangle<std::decay_t<decltype(arg)>>(); }, *this);
         }
 
@@ -115,4 +115,4 @@ namespace constellation::config {
 } // namespace constellation::config
 
 // Include template members
-#include "Value.ipp"
+#include "Value.ipp" // IWYU pragma: keep

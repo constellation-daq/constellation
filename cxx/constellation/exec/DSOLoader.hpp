@@ -52,7 +52,7 @@ namespace constellation::exec {
 
         std::string getDSOName() { return dso_name_; }
 
-        inline static std::string to_dso_file_name(const std::string& dso_name) {
+        static std::string to_dso_file_name(const std::string& dso_name) {
             return CNSTLN_DSO_PREFIX + dso_name + CNSTLN_DSO_SUFFIX;
         }
 

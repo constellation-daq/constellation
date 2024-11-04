@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <mutex>
+#include <utility>
 
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/sink.h>

@@ -16,7 +16,7 @@
 
 #include <exception>
 #include <string>
-#include <string_view>
+#include <utility>
 
 #include "constellation/build.hpp"
 
@@ -92,25 +92,4 @@ namespace constellation::utils {
         LogicError() = default;
     };
 
-    /**
-     * @ingroup Exceptions
-     * @brief Errors related to the creation of ZeroMQ sockets
-     */
-    class CNSTLN_API ZMQInitError : public RuntimeError {
-    public:
-        /**
-         * @brief Creates exception with the given ZeroMQ problem
-         * @param what_arg Text describing the problem
-         */
-        explicit ZMQInitError(std::string_view what_arg) {
-            error_message_ = "Error initializing network connection via ZeroMQ: ";
-            error_message_ += what_arg;
-        }
-
-    protected:
-        /**
-         * @brief Internal constructor for exceptions setting the error message indirectly
-         */
-        ZMQInitError() = default;
-    };
 } // namespace constellation::utils

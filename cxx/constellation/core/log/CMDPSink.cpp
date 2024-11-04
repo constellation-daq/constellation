@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <iomanip>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -44,26 +45,28 @@ using namespace constellation;
 using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::utils;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 
-// Find path relative to cxx/, otherwise path without any parent
-std::string get_rel_file_path(std::string file_path_char) {
-    auto file_path = to_platform_string(std::move(file_path_char));
-    const auto src_dir =
-        std::filesystem::path::preferred_separator + to_platform_string("cxx") + std::filesystem::path::preferred_separator;
-    const auto src_dir_pos = file_path.find(src_dir);
-    if(src_dir_pos != std::filesystem::path::string_type::npos) {
-        // found /cxx/, start path after pattern
-        file_path = file_path.substr(src_dir_pos + src_dir.length());
-    } else {
-        // try to find last / for filename
-        const auto file_pos = file_path.find_last_of(std::filesystem::path::preferred_separator);
-        if(file_pos != std::filesystem::path::string_type::npos) {
-            file_path = file_path.substr(file_pos + 1);
+namespace {
+    // Find path relative to cxx/, otherwise path without any parent
+    std::string get_rel_file_path(std::string file_path_char) {
+        auto file_path = to_platform_string(std::move(file_path_char));
+        const auto src_dir = std::filesystem::path::preferred_separator + to_platform_string("cxx") +
+                             std::filesystem::path::preferred_separator;
+        const auto src_dir_pos = file_path.find(src_dir);
+        if(src_dir_pos != std::filesystem::path::string_type::npos) {
+            // found /cxx/, start path after pattern
+            file_path = file_path.substr(src_dir_pos + src_dir.length());
+        } else {
+            // try to find last / for filename
+            const auto file_pos = file_path.find_last_of(std::filesystem::path::preferred_separator);
+            if(file_pos != std::filesystem::path::string_type::npos) {
+                file_path = file_path.substr(file_pos + 1);
+            }
         }
+        return to_std_string(std::move(file_path));
     }
-    return to_std_string(std::move(file_path));
-}
+} // namespace
 
 CMDPSink::CMDPSink(std::shared_ptr<zmq::context_t> context)
     : context_(std::move(context)), pub_socket_(*context_, zmq::socket_type::xpub), port_(bind_ephemeral_port(pub_socket_)) {
@@ -106,6 +109,7 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
         // Log topic is message body stripped by first byte
         auto body = frame.to_string_view();
         body.remove_prefix(1);
+        LOG(*logger_, TRACE) << "Received " << (subscribe ? "" : "un") << "subscribe message for " << body;
 
         // TODO(simonspa) At some point we also have to treat STAT here
         if(!body.starts_with("LOG/")) {
@@ -121,11 +125,14 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
 
         // Only accept valid levels
         if(!level.has_value()) {
+            LOG(*logger_, TRACE) << "Invalid log level " << std::quoted(level_str) << ", ignoring";
             continue;
         }
 
         const auto topic = (level_endpos != std::string::npos ? body.substr(level_endpos + 1) : std::string_view());
         const auto topic_uc = transform(topic, ::toupper);
+        LOG(*logger_, TRACE) << "In/decrementing subscription counters for topic " << std::quoted(topic_uc);
+
         if(subscribe) {
             log_subscriptions_[topic_uc][level.value()] += 1;
         } else {
@@ -138,8 +145,8 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
         auto cmdp_global_level = Level::OFF;
         std::map<std::string_view, Level> cmdp_sub_topic_levels;
         for(const auto& [logger, levels] : log_subscriptions_) {
-            auto it = std::find_if(std::begin(levels), std::end(levels), [](const auto& i) { return i.second > 0; });
-            if(it != std::end(levels)) {
+            auto it = std::ranges::find_if(levels, [](const auto& i) { return i.second > 0; });
+            if(it != levels.end()) {
                 if(!logger.empty()) {
                     cmdp_sub_topic_levels[logger] = it->first;
                 } else {
@@ -147,6 +154,8 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
                 }
             }
         }
+
+        LOG(*logger_, TRACE) << "Lowest global log level: " << std::quoted(to_string(cmdp_global_level));
 
         // Update subscriptions
         SinkManager::getInstance().updateCMDPLevels(cmdp_global_level, std::move(cmdp_sub_topic_levels));
@@ -187,7 +196,10 @@ void CMDPSink::sink_it_(const spdlog::details::log_msg& msg) {
     }
 
     // Create and send CMDP message
-    CMDP1LogMessage(from_spdlog_level(msg.level), to_string(msg.logger_name), std::move(msghead), to_string(msg.payload))
+    CMDP1LogMessage(from_spdlog_level(msg.level),
+                    to_string(msg.logger_name), // NOLINT(misc-include-cleaner) might be fmt string
+                    std::move(msghead),
+                    to_string(msg.payload))
         .assemble()
         .send(pub_socket_);
 }

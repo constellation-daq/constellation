@@ -19,7 +19,7 @@ namespace constellation::log {
      * The chosen values allows for direct casting to spdlog::level::level_enum and correspond to the levels defined in the
      * CMDP protocol.
      */
-    enum class Level : int {
+    enum class Level : int { // NOLINT(performance-enum-size)
         /** verbose information which allows to follow the call stack of the host program. */
         TRACE = 0,
 

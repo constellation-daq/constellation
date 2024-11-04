@@ -23,9 +23,7 @@ offer_data_666 = b"CHIRP\x01\x02\xd4fl\x89\x14g7=*b#\xeb4fy\xda\x17\x7f\xd1\xa7t
 @pytest.fixture
 def mock_bm(mock_chirp_socket):
     """Create mock BroadcastManager."""
-    bm = CHIRPBroadcaster(
-        name="mock-satellite", group="mockstellation", interface="127.0.0.1"
-    )
+    bm = CHIRPBroadcaster(name="mock_satellite", group="mockstellation", interface="127.0.0.1")
     bm._add_com_thread()
     bm._start_com_threads()
     yield bm
@@ -42,9 +40,7 @@ def mock_bm_parent(mock_chirp_socket):
         def service_callback(self, service):
             self.callback_triggered = True
 
-    bm = MockBroadcaster(
-        name="mock-satellite", group="mockstellation", interface="127.0.0.1"
-    )
+    bm = MockBroadcaster(name="mock_satellite", group="mockstellation", interface="127.0.0.1")
     bm._add_com_thread()
     bm._start_com_threads()
     yield bm
@@ -64,9 +60,7 @@ def mock_bm_alt_parent(mock_chirp_socket):
         def alt_service_callback(self, service):
             self.alt_callback_triggered = True
 
-    bm = MockAltBroadcaster(
-        name="mock-satellite", group="mockstellation", interface="127.0.0.1"
-    )
+    bm = MockAltBroadcaster(name="mock_satellite", group="mockstellation", interface="127.0.0.1")
     bm._add_com_thread()
     bm._start_com_threads()
     yield bm

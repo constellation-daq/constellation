@@ -10,10 +10,13 @@
 #pragma once
 
 #include <concepts>
+#include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <map>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
@@ -21,9 +24,6 @@
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
-#include "constellation/core/utils/casts.hpp"
-#include "constellation/core/utils/type.hpp"
-#include "constellation/satellite/exceptions.hpp"
 
 namespace constellation::satellite {
 
@@ -145,9 +145,8 @@ namespace constellation::satellite {
          * @tparam Args Argument types
          * @return Call object
          */
-        template <typename R, typename... Args>
-        inline CommandRegistry::Call generate_call(std::function<R(Args...)>&& function) {
-            return Wrapper<R, Args...>(std::forward<std::function<R(Args...)>>(function));
+        template <typename R, typename... Args> CommandRegistry::Call generate_call(std::function<R(Args...)>&& function) {
+            return Wrapper<R, Args...>(std::forward<std::function<R(Args...)>>(std::move(function)));
         }
 
     private:
@@ -158,4 +157,4 @@ namespace constellation::satellite {
 } // namespace constellation::satellite
 
 // Include template members
-#include "CommandRegistry.ipp"
+#include "CommandRegistry.ipp" // IWYU pragma: keep

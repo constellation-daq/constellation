@@ -30,7 +30,7 @@ using namespace constellation::config;
 using namespace constellation::message;
 using namespace constellation::utils;
 using namespace constellation::protocol;
-using namespace std::literals::string_view_literals;
+using namespace std::string_view_literals;
 
 // Similar to CDTP1Header::disassemble in CDTP1Header.cpp, check when modifying
 BaseHeader BaseHeader::disassemble(Protocol protocol, std::span<const std::byte> data) {

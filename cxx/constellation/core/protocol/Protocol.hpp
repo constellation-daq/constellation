@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -20,7 +21,7 @@
 namespace constellation::protocol {
 
     /** Protocol Enum (excluding CHIRP) */
-    enum class Protocol {
+    enum class Protocol : std::uint8_t {
         /** Constellation Satellite Control Protocol v1 */
         CSCP1,
         /** Constellation Monitoring Distribution Protocol v1 */

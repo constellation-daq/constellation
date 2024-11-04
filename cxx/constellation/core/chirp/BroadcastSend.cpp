@@ -9,6 +9,10 @@
 
 #include "BroadcastSend.hpp"
 
+#include <cstddef>
+#include <span>
+#include <string_view>
+
 using namespace constellation::chirp;
 
 BroadcastSend::BroadcastSend(const asio::ip::address_v4& brd_address, asio::ip::port_type port)

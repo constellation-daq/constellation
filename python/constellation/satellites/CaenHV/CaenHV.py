@@ -12,6 +12,7 @@ from pycaenhv import CaenHVModule  # type: ignore[import-untyped]
 from .lib_caen_ndt1470 import CaenNDT1470Manager
 
 from constellation.core.satellite import Satellite, SatelliteArgumentParser
+from constellation.core.cmdp import MetricsType
 from constellation.core.fsm import SatelliteState
 from constellation.core.configuration import Configuration
 from constellation.core.commandmanager import cscp_requestable, CSCPMessage
@@ -108,12 +109,12 @@ class CaenHVSatellite(Satellite):
     #    self.do_initializing(configuration)
     #    return self.do_launching(None)
 
-    def do_launching(self, payload: Any) -> str:
+    def do_launching(self) -> str:
         """Power up the HV."""
         nch = self._power_up()
         return f"Launched and powered {nch} channels."
 
-    def do_interrupting(self, payload: Any) -> str:
+    def do_interrupting(self) -> str:
         """Power down but do not disconnect (e.g. keep monitoring)."""
         self._power_down()
         return "Interrupted and stopped HV."
@@ -246,24 +247,28 @@ class CaenHVSatellite(Satellite):
                         # add a callback using partial
                         self.schedule_metric(
                             f"b{brdno}_ch{chno}_{par}",
+                            "",
+                            MetricsType.LAST_VALUE,
+                            metrics_poll_rate,
                             partial(
                                 self.get_channel_value,
                                 board=brdno,
                                 channel=chno,
                                 par=par,
                             ),
-                            metrics_poll_rate,
                         )
-                    self.schedule_metric(
-                        f"b{brdno}_ch{chno}_status",
-                        partial(
-                            self.get_channel_status,
-                            board=brdno,
-                            channel=chno,
-                            par=par,
-                        ),
-                        metrics_poll_rate,
-                    )
+                        self.schedule_metric(
+                            f"b{brdno}_ch{chno}_{par}_status",
+                            "",
+                            MetricsType.LAST_VALUE,
+                            metrics_poll_rate,
+                            partial(
+                                self.get_channel_status,
+                                board=brdno,
+                                channel=chno,
+                                par=par,
+                            ),
+                        )
 
     def _power_up(self) -> int:
         """Loop over channels and enable them according to configuration."""

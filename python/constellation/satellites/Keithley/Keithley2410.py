@@ -12,6 +12,8 @@ Keithley needs to be set to RS-232 mode with:
 - FLOW_CONTROL: NONE
 """
 
+import threading
+
 import serial
 
 from .KeithleyInterface import KeithleyInterface
@@ -31,6 +33,7 @@ class Keithley2410(KeithleyInterface):
             terminator="\r\n",
             flow_ctrl_xon_xoff=False,
         )
+        self._output_lock = threading.Lock()
 
     # Device functions
 
@@ -41,8 +44,13 @@ class Keithley2410(KeithleyInterface):
         return self._write_read("*IDN?")
 
     def enable_output(self, enable: bool):
-        on_off = "ON" if enable else "OFF"
-        self._write(f":OUTP {on_off}")
+        with self._output_lock:
+            on_off = "ON" if enable else "OFF"
+            self._write(f":OUTP {on_off}")
+
+    def output_enabled(self) -> bool:
+        ret = self._write_read(":OUTP?")
+        return ret != "0"
 
     def get_terminals(self) -> list[str]:
         return ["front", "rear"]
@@ -77,13 +85,19 @@ class Keithley2410(KeithleyInterface):
         return float(self._write_read(":SENS:CURR:PROT:LEV?"))
 
     def in_compliance(self) -> bool:
-        tripped = self._write_read(":SENS:CURR:PROT:TRIP?")
-        # Returns "0" for no, "1" for yes
-        return tripped != "0"
+        with self._output_lock:
+            if self.output_enabled():
+                tripped = self._write_read(":SENS:CURR:PROT:TRIP?")
+                # Returns "0" for no, "1" for yes
+                return tripped != "0"
+        return False
 
     def read_output(self) -> tuple[float, float, float]:
-        voltage, current, timestamp = self._write_read(":READ?").split(",")
-        return float(voltage), float(current), float(timestamp)
+        with self._output_lock:
+            if self.output_enabled():
+                voltage, current, timestamp = self._write_read(":READ?").split(",")
+                return float(voltage), float(current), float(timestamp)
+        return 0.0, 0.0, 0.0
 
     # Device helper functions
 
@@ -97,3 +111,6 @@ class Keithley2410(KeithleyInterface):
         self._write(":TRAC:POIN 1")  # codespell:ignore poin
         # Set trigger to take one reading
         self._write(":TRIG:COUN 1")
+
+    def release(self):
+        self._write(":SYST:LOC")

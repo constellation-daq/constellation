@@ -56,15 +56,23 @@ Possible terminals are `front` and `rear`.
 | `device` | Device | String | - |
 | `port` | Serial port to connect to | String | - |
 | `terminal` | Terminal output to control | String | - |
-| `voltage` | Target output voltage | Floating Point Number | - |
-| `voltage_step` | Voltage step in which to ramp to target voltage | Floating Point Number | - |
-| `settle_time` | Time to wait before continuing with the next voltage step | Floating Point Number | - |
-| `ovp` | Voltage limit for over-voltage protection | Floating Point Number | - |
-| `compliance` | Current limit in Ampere | Floating Point Number | - |
+| `voltage` | Target output voltage | Float | - |
+| `voltage_step` | Voltage step in which to ramp to target voltage | Float | - |
+| `settle_time` | Time to wait before continuing with the next voltage step | Float | - |
+| `ovp` | Voltage limit for over-voltage protection | Float | - |
+| `compliance` | Current limit in Ampere | Float | - |
+
+## Metrics
+
+| Metric | Description | Value Type | Metric Type | Interval |
+|--------|-------------|------------|-------------|----------|
+| `VOLTAGE` | Voltage output | Float | `LAST_VALUE` | 10s |
+| `CURRENT` | Current output | Float | `LAST_VALUE` | 10s |
+| `IN_COMLIANCE` | If in compliance | Bool | `LAST_VALUE` | 10s |
 
 ## Custom Commands
 
 | Command | Description | Arguments | Return Value | Allowed States |
 |---------|-------------|-----------|--------------|----------------|
-| `read_output` | Reads voltage and current output | - | - | `ORBIT`, `RUN` |
-| `in_compliance` | Check if the current is in compliance | - | - | `ORBIT`, `RUN` |
+| `in_compliance` | Check if the current is in compliance | - | Bool | `ORBIT`, `RUN` |
+| `read_output` | Reads voltage, current and timestamp | - | Dictionary | `ORBIT`, `RUN` |

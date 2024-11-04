@@ -542,7 +542,16 @@ libzmq_dep = declare_dependency(
   include_directories: libzmq_inc_public,
   link_with: libzmq_lib,
   compile_args: libzmq_flags_public,
-  dependencies: libzmq_deps_public
+  dependencies: libzmq_deps_public,
+)
+
+install_headers('include/zmq.h', 'include/zmq_utils.h')
+
+pkg = import('pkgconfig')
+pkg.generate(libzmq_lib,
+  name: 'libzmq',
+  description: '0MQ c++ library',
+  extra_cflags: libzmq_flags_public,
 )
 
 summary({

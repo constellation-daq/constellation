@@ -38,31 +38,31 @@ TEST_CASE("Basic logging", "[logging]") {
     SinkManager::getInstance().setConsoleLevels(TRACE);
     REQUIRE(logger.shouldLog(TRACE));
 
-    LOG(logger, TRACE) << "trace"sv;
-    LOG(logger, DEBUG) << "debug"sv;
-    LOG(logger, INFO) << "info"sv;
-    LOG(logger, STATUS) << "status"sv;
-    LOG(logger, WARNING) << "warning"sv;
-    LOG(logger, CRITICAL) << "critical"sv;
+    LOG(logger, TRACE) << "trace";
+    LOG(logger, DEBUG) << "debug";
+    LOG(logger, INFO) << "info";
+    LOG(logger, STATUS) << "status";
+    LOG(logger, WARNING) << "warning";
+    LOG(logger, CRITICAL) << "critical";
 }
 
 TEST_CASE("Logging with default logger", "[logging]") {
 
     SinkManager::getInstance().setConsoleLevels(TRACE);
 
-    LOG(TRACE) << "trace"sv;
-    LOG(DEBUG) << "debug"sv;
-    LOG(INFO) << "info"sv;
-    LOG(STATUS) << "status"sv;
-    LOG(WARNING) << "warning"sv;
-    LOG(CRITICAL) << "critical"sv;
+    LOG(TRACE) << "trace";
+    LOG(DEBUG) << "debug";
+    LOG(INFO) << "info";
+    LOG(STATUS) << "status";
+    LOG(WARNING) << "warning";
+    LOG(CRITICAL) << "critical";
 }
 
 TEST_CASE("Logging from const function", "[logging]") {
 
     class LogTest {
     public:
-        void log() const { LOG(logger_, CRITICAL) << "const critical"sv; }
+        void log() const { LOG(logger_, CRITICAL) << "const critical"; }
 
     private:
         Logger logger_ {"ConstLogging"};
@@ -81,16 +81,19 @@ TEST_CASE("Logging macros", "[logging]") {
     int count_once {0};
     int count_n {0};
     int count_if {0};
+    int count_nth {0};
 
     for(int i = 0; i < 5; ++i) {
-        LOG_ONCE(logger, STATUS) << "log once, i="sv << i << ", count "sv << ++count_once;
-        LOG_N(logger, STATUS, 3) << "log n, i="sv << i << ", count "sv << ++count_n;
-        LOG_IF(logger, STATUS, i % 2 == 1) << "log if, i=" << i << ", count "sv << ++count_if;
+        LOG_ONCE(logger, STATUS) << "log once, i=" << i << ", count " << ++count_once;
+        LOG_N(logger, STATUS, 3) << "log n, i=" << i << ", count " << ++count_n;
+        LOG_IF(logger, STATUS, i % 2 == 1) << "log if, i=" << i << ", count " << ++count_if;
+        LOG_NTH(logger, STATUS, 2) << "log_nth, i=" << i << ", count " << ++count_nth;
     }
 
     REQUIRE(count_once == 1);
     REQUIRE(count_n == 3);
     REQUIRE(count_if == 2);
+    REQUIRE(count_nth == 3);
 }
 
 TEST_CASE("Logging macros with default logger", "[logging]") {
@@ -102,9 +105,9 @@ TEST_CASE("Logging macros with default logger", "[logging]") {
     int count_if {0};
 
     for(int i = 0; i < 5; ++i) {
-        LOG_ONCE(STATUS) << "log once, i="sv << i << ", count "sv << ++count_once;
-        LOG_N(STATUS, 3) << "log n, i="sv << i << ", count "sv << ++count_n;
-        LOG_IF(STATUS, i % 2 == 1) << "log if, i=" << i << ", count "sv << ++count_if;
+        LOG_ONCE(STATUS) << "log once, i=" << i << ", count " << ++count_once;
+        LOG_N(STATUS, 3) << "log n, i=" << i << ", count " << ++count_n;
+        LOG_IF(STATUS, i % 2 == 1) << "log if, i=" << i << ", count " << ++count_if;
     }
 
     REQUIRE(count_once == 1);

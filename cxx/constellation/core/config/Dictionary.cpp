@@ -58,6 +58,14 @@ List List::disassemble(const PayloadBuffer& message) {
     return msgpack_dict->as<List>();
 }
 
+std::string List::to_string() const {
+    std::string out {};
+    for(const auto& value : *this) {
+        out += "\n " + value.str();
+    }
+    return out;
+}
+
 void Dictionary::msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpack_packer) const {
     msgpack_packer.pack_map(this->size());
 

@@ -9,15 +9,22 @@
 
 #include "ControllerConfiguration.hpp"
 
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <optional>
 #include <sstream>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include <toml++/toml.hpp>
 
 #include "constellation/controller/exceptions.hpp"
 #include "constellation/core/config/Dictionary.hpp"
+#include "constellation/core/config/Value.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/utils/string.hpp"
 
@@ -173,6 +180,10 @@ void ControllerConfiguration::parse_toml(std::string_view toml) {
     } else {
         LOG(config_parser_logger_, WARNING) << "Could not find base node for satellites";
     }
+}
+
+bool ControllerConfiguration::hasSatelliteConfiguration(std::string_view canonical_name) const {
+    return satellite_configs_.contains(transform(canonical_name, ::tolower));
 }
 
 Dictionary ControllerConfiguration::getSatelliteConfiguration(std::string_view canonical_name) const {

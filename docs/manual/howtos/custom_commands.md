@@ -35,6 +35,8 @@ int MySatellite::get_channel_reading(int channel) {
 In the constructor of `MySatellite`, the command is registered with the command registry as follows:
 
 ```cpp
+using constellation::protocol::CSCP;
+
 MySatellite::MySatellite(std::string_view type, std::string_view name) : Satellite(type, name) {
     register_command("get_channel_reading",
                      "This command reads the current device value from the channel number provided as argument. Since this"

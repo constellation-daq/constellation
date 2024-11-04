@@ -13,6 +13,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Value.hpp"

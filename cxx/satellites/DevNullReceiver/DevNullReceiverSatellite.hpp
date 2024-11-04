@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <string_view>
 
 #include "constellation/core/config/Configuration.hpp"

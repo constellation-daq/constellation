@@ -5,16 +5,18 @@
  */
 
 #include <chrono>
-#include <ctime>
+#include <cstdint>
 #include <limits>
 #include <numbers>
 #include <string>
+#include <utility>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_exception.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <msgpack.hpp>
+#include <zmq.hpp>
 
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
@@ -29,7 +31,7 @@ using namespace constellation::config;
 using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::utils;
-using namespace std::literals::string_literals;
+using namespace std::string_literals;
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
 
@@ -58,7 +60,7 @@ TEST_CASE("Basic Header Functions (CDTP1)", "[core][core::message]") {
 
 TEST_CASE("Header String Output", "[core][core::message]") {
     // Get fixed timepoint (unix epoch)
-    auto tp = std::chrono::system_clock::from_time_t(std::time_t(0));
+    const std::chrono::system_clock::time_point tp {};
 
     CMDP1Message::Header cmdp1_header {"senderCMDP", tp};
 
@@ -72,12 +74,12 @@ TEST_CASE("Header String Output", "[core][core::message]") {
 
     REQUIRE_THAT(string_out, ContainsSubstring("Header: CMDP1"));
     REQUIRE_THAT(string_out, ContainsSubstring("Sender: senderCMDP"));
-    REQUIRE_THAT(string_out, ContainsSubstring("Time:   1970-01-01 00:00:00.000000000"));
+    REQUIRE_THAT(string_out, ContainsSubstring("Time:   1970-01-01 00:00:00.000000"));
     REQUIRE_THAT(string_out, ContainsSubstring("test_b: true"));
     REQUIRE_THAT(string_out, ContainsSubstring("test_i: 7"));
     REQUIRE_THAT(string_out, ContainsSubstring("test_d: 1.5"));
     REQUIRE_THAT(string_out, ContainsSubstring("test_s: String"));
-    REQUIRE_THAT(string_out, ContainsSubstring("test_t: 1970-01-01 00:00:00.000000000"));
+    REQUIRE_THAT(string_out, ContainsSubstring("test_t: 1970-01-01 00:00:00.000000"));
 }
 
 TEST_CASE("Header String Output (CDTP1)", "[core][core::message]") {

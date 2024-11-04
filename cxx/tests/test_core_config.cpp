@@ -4,15 +4,21 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
+#include <array>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_exception.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <msgpack.hpp>
@@ -20,13 +26,15 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
+#include "constellation/core/config/Value.hpp"
 
 using namespace Catch::Matchers;
 using namespace constellation::config;
 using namespace constellation::utils;
-using namespace std::literals::string_view_literals;
+using namespace std::string_view_literals;
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
+// NOLINTBEGIN(google-readability-casting,readability-redundant-casting)
 
 TEST_CASE("Set & Get Values", "[core][core::config]") {
     Configuration config {};
@@ -42,10 +50,10 @@ TEST_CASE("Set & Get Values", "[core][core::config]") {
     config.set("float", float(3.14));
 
     config.set("string", std::string("a"));
-    config.set("string_view", "b"sv);
+    config.set("string_view", std::string_view("b"));
     config.set("char_array", "c");
 
-    enum MyEnum {
+    enum MyEnum : std::uint8_t {
         ONE,
         TWO,
     };
@@ -96,7 +104,7 @@ TEST_CASE("Keys Are Case-Insensitive", "[core][core::config]") {
 TEST_CASE("Enum Values Are Case-Insensitive", "[core][core::config]") {
     Configuration config {};
 
-    enum MyEnum {
+    enum MyEnum : std::uint8_t {
         ONE,
         TWO,
     };
@@ -128,7 +136,7 @@ TEST_CASE("Set & Get Array Values", "[core][core::config]") {
 
     config.setArray<std::string>("string", {"a", "b", "c"});
 
-    enum MyEnum {
+    enum MyEnum : std::uint8_t {
         ONE,
         TWO,
     };
@@ -235,7 +243,7 @@ TEST_CASE("Access Values as Text", "[core][core::config]") {
     config.set("float", float(7.5));
     config.set("string", std::string("a"));
 
-    enum MyEnum {
+    enum MyEnum : std::uint8_t {
         ONE,
         TWO,
     };
@@ -254,7 +262,7 @@ TEST_CASE("Access Values as Text", "[core][core::config]") {
     REQUIRE(config.getText("float") == "7.5");
     REQUIRE(config.getText("string") == "a");
     REQUIRE(config.getText("myenum") == "ONE");
-    REQUIRE(config.getText("time") == "1970-01-01 00:00:00.000000000");
+    REQUIRE_THAT(config.getText("time"), ContainsSubstring("1970-01-01 00:00:00.000000"));
 }
 
 TEST_CASE("Access Arrays as Text", "[core][core::config]") {
@@ -274,7 +282,7 @@ TEST_CASE("Access Arrays as Text", "[core][core::config]") {
 
     config.setArray<std::string>("string", {"a", "b", "c"});
 
-    enum MyEnum {
+    enum MyEnum : std::uint8_t {
         ONE,
         TWO,
     };
@@ -292,8 +300,8 @@ TEST_CASE("Access Arrays as Text", "[core][core::config]") {
     REQUIRE(config.getText("float") == "[1, 7.5]");
     REQUIRE(config.getText("binary") == "[ 0x01 0x0A 0x1F ]");
     REQUIRE(config.getText("string") == "[a, b, c]");
-    REQUIRE(config.getText("time") ==
-            "[1970-01-01 00:00:00.000000000, 1970-01-01 00:00:00.000000000, 1970-01-01 00:00:00.000000000]");
+    REQUIRE_THAT(config.getText("time"),
+                 RegexMatcher("\\[1970-01-01 00:00:00.0{6,}, 1970-01-01 00:00:00.0{6,}, 1970-01-01 00:00:00.0{6,}\\]", {}));
 }
 
 TEST_CASE("Count Key Appearances", "[core][core::config]") {
@@ -450,7 +458,7 @@ TEST_CASE("Invalid Key Access", "[core][core::config]") {
                            Message("Could not convert value of type 'bool' to type 'double' for key 'key'"));
 
     // Check for invalid enum value conversion:
-    enum MyEnum {
+    enum MyEnum : std::uint8_t {
         ONE,
         TWO,
     };
@@ -617,4 +625,5 @@ TEST_CASE("Assemble ZMQ Message from Configuration", "[core][core::config]") {
     REQUIRE(config_unpacked.get<std::int64_t>("int64") == 63);
 }
 
+// NOLINTEND(google-readability-casting,readability-redundant-casting)
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace)

@@ -9,8 +9,8 @@
 
 #include "BaseSatellite.hpp"
 
-#include <cctype>
 #include <chrono>
+#include <cstdint>
 #include <exception>
 #include <functional>
 #include <optional>
@@ -20,6 +20,7 @@
 #include <string_view>
 #include <thread>
 #include <tuple>
+#include <typeinfo>
 #include <utility>
 #include <variant>
 
@@ -41,7 +42,7 @@
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/networking.hpp"
-#include "constellation/core/utils/std_future.hpp" // IWYU pragma: keep
+#include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/ReceiverSatellite.hpp"
@@ -54,7 +55,7 @@ using namespace constellation::message;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 
 BaseSatellite::BaseSatellite(std::string_view type, std::string_view name)
     : logger_("SATELLITE"), cscp_rep_socket_(*global_zmq_context(), zmq::socket_type::rep),
@@ -130,7 +131,7 @@ std::optional<CSCP1Message> BaseSatellite::get_next_command() {
     auto message = CSCP1Message::disassemble(recv_msg);
 
     LOG(cscp_logger_, DEBUG) << "Received CSCP message of type " << to_string(message.getVerb().first) << " with verb \""
-                             << message.getVerb().second << "\"" << (message.hasPayload() ? " and a payload"sv : ""sv)
+                             << message.getVerb().second << "\"" << (message.hasPayload() ? " and a payload" : "")
                              << " from " << message.getHeader().getSender();
 
     return message;
@@ -212,8 +213,10 @@ BaseSatellite::handle_standard_command(std::string_view command) {
         break;
     }
     case get_config: {
-        return_verb = {CSCP1Message::Type::SUCCESS, "Configuration attached in payload"};
-        return_payload = config_.getDictionary(Configuration::Group::ALL, Configuration::Usage::USED).assemble();
+        const auto config_dict = config_.getDictionary(Configuration::Group::ALL, Configuration::Usage::USED);
+        return_verb = {CSCP1Message::Type::SUCCESS,
+                       to_string(config_dict.size()) + " configuration keys, dictionary attached in payload"};
+        return_payload = config_dict.assemble();
         break;
     }
     case get_run_id: {
@@ -258,7 +261,7 @@ BaseSatellite::handle_user_command(std::string_view command, const message::Payl
             msgpack::pack(sbuf, retval);
             return_payload = {std::move(sbuf)};
         }
-        return_verb = {CSCP1Message::Type::SUCCESS, {}};
+        return_verb = {CSCP1Message::Type::SUCCESS, "Command returned: " + retval.str()};
     } catch(const std::bad_cast&) {
         // Issue with obtaining parameters from payload
         return_verb = {CSCP1Message::Type::INCOMPLETE, "Could not convert command payload to argument list"};

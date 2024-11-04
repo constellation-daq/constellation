@@ -9,11 +9,18 @@
 
 #include "CHIRPMessage.hpp"
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <span>
+#include <string>
+#include <string_view>
 #include <utility>
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/external/md5.h"
 #include "constellation/core/message/exceptions.hpp"
+#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
@@ -39,7 +46,7 @@ std::string MD5Hash::to_string() const {
         ret.at(2 * n) = static_cast<char>(hash_upper < 10 ? hash_upper + '0' : hash_upper - 10 + 'a');
         // Second character of byte hex representation
         const auto hash_lower = this->at(n) & 0x0FU;
-        ret.at(2 * n + 1) = static_cast<char>(hash_lower < 10 ? hash_lower + '0' : hash_lower - 10 + 'a');
+        ret.at((2 * n) + 1) = static_cast<char>(hash_lower < 10 ? hash_lower + '0' : hash_lower - 10 + 'a');
     }
     return ret;
 }

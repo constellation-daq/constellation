@@ -9,15 +9,19 @@
 
 #pragma once
 
-#include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <initializer_list>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "constellation/build.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
+#include "constellation/core/config/Value.hpp"
 #include "constellation/core/utils/string.hpp"
 
 namespace constellation::config {
@@ -34,7 +38,7 @@ namespace constellation::config {
          */
         class ConfigValue : public Value {
         public:
-            using Value::Value;
+            using Value::Value; // NOLINT(misc-include-cleaner)
             using Value::operator=;
 
             /**
@@ -327,4 +331,4 @@ namespace constellation::config {
 } // namespace constellation::config
 
 // Include template members
-#include "Configuration.ipp"
+#include "Configuration.ipp" // IWYU pragma: keep

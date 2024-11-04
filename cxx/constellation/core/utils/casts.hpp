@@ -15,8 +15,6 @@
 #include <ranges>
 #include <span>
 
-#include <magic_enum.hpp>
-
 #include "constellation/core/utils/std_future.hpp"
 
 namespace constellation::utils {

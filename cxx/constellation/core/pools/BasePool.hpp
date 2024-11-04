@@ -11,15 +11,19 @@
 
 #include <any>
 #include <atomic>
+#include <cstddef>
+#include <exception>
 #include <functional>
 #include <map>
 #include <mutex>
 #include <stop_token>
+#include <string_view>
 #include <thread>
 
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
+#include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/log/Logger.hpp"
 
@@ -48,9 +52,9 @@ namespace constellation::pools {
         /**
          * @brief Destruct BasePool
          *
-         * This closes all connections and unregisters the CHIRP service discovery callback
+         * @warning `stop_pool()` has to be called before the pool can be safely destructed
          */
-        virtual ~BasePool();
+        virtual ~BasePool() = default;
 
         /// @cond doxygen_suppress
         BasePool(const BasePool& other) = delete;
@@ -80,6 +84,11 @@ namespace constellation::pools {
          */
         std::size_t pollerEvents() { return poller_events_.load(); }
 
+        /**
+         * @brief Return the number of currently connected sockets
+         */
+        std::size_t countSockets() { return socket_count_.load(); }
+
     protected:
         /**
          * @brief Method to select which services to connect to. By default this pool connects to all discovered services,
@@ -91,18 +100,18 @@ namespace constellation::pools {
         virtual bool should_connect(const chirp::DiscoveredService& service);
 
         /**
-         * @brief Method for derived classes to act on newly connected sockets
+         * @brief Method for derived classes to act on newly connected hosts
          *
-         * @param socket The newly connected socket
+         * @param service Service of the newly connected host
          */
-        virtual void socket_connected(zmq::socket_t& socket);
+        virtual void host_connected(const chirp::DiscoveredService& service);
 
         /**
          * @brief Method for derived classes to act on sockets before disconnecting
          *
-         * @param socket The socket to be disconnected
+         * @param service Service of the disconnected host
          */
-        virtual void socket_disconnected(zmq::socket_t& socket);
+        virtual void host_disconnected(const chirp::DiscoveredService& service);
 
         /**
          * @brief Return all connected sockets
@@ -111,7 +120,7 @@ namespace constellation::pools {
          *
          * @return Maps that maps the discovered service to the corresponding ZeroMQ sockets
          */
-        const std::map<chirp::DiscoveredService, zmq::socket_t>& get_sockets() const { return sockets_; }
+        std::map<chirp::DiscoveredService, zmq::socket_t>& get_sockets() { return sockets_; }
 
     protected:
         std::mutex sockets_mutex_; // NOLINT(*-non-private-member-variables-in-classes)
@@ -153,7 +162,7 @@ namespace constellation::pools {
         std::function<void(MESSAGE&&)> message_callback_;
 
         std::map<chirp::DiscoveredService, zmq::socket_t> sockets_;
-        std::atomic_bool sockets_empty_ {true};
+        std::atomic_size_t socket_count_ {0};
 
         std::jthread pool_thread_;
         std::exception_ptr exception_ptr_ {nullptr};

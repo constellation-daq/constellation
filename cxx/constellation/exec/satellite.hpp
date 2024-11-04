@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "constellation/build.hpp"
 
@@ -26,7 +27,7 @@ namespace constellation::exec {
         std::string type_name;
 
         /** Path to the Dynamic Shared Object (DSO) that contains the satellite */
-        std::filesystem::path dso_path {};
+        std::filesystem::path dso_path;
     };
 
     /**

@@ -334,7 +334,7 @@ def test_receiver_stats(
         wait_for_state(receiver.fsm, "RUN", 1)
         time.sleep(0.2)
         commander.request_get_response("stop")
-        # send EORE
+        # send EOR
         tx.send_end({"mock_end": 22})
         wait_for_state(receiver.fsm, "ORBIT", 1)
     timeout = 4
@@ -345,11 +345,12 @@ def test_receiver_stats(
     assert len(receiver._metrics_callbacks) > 1
     assert len(ml._metric_sockets) == 1
     assert os.path.exists(os.path.join(tmpdir, "stats")), "Stats output directory not created"
-    statfile = os.path.join(tmpdir, "stats", "mock_receiver_nbytes.csv")
-    timeout = 4
+    statfile = os.path.join(tmpdir, "stats", "MockReceiverSatellite.mock_receiver.nbytes.csv")
+    timeout = 5
     while timeout > 0 and not os.path.exists(statfile):
         time.sleep(0.05)
         timeout -= 0.05
     assert os.path.exists(statfile), "Expected output metrics csv not found"
     # close thread and connections to allow temp dir to be removed
-    ml._monitor_shutdown()
+    ml._log_listening_shutdown()
+    ml._metrics_listening_shutdown()

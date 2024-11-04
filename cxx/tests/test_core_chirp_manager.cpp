@@ -9,7 +9,8 @@
 
 #include <any>
 #include <atomic>
-#include <chrono>
+#include <chrono> // IWYU pragma: keep
+#include <cstddef>
 #include <future>
 #include <thread>
 #include <utility>
@@ -19,12 +20,13 @@
 
 #include "constellation/core/chirp/BroadcastRecv.hpp"
 #include "constellation/core/chirp/BroadcastSend.hpp"
+#include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 
 using namespace constellation::chirp;
 using namespace constellation::message;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
 

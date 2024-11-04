@@ -9,16 +9,16 @@
 
 #pragma once
 
-#include "Configuration.hpp"
+#include "Configuration.hpp" // NOLINT(misc-header-include-cycle)
 
 #include <stdexcept>
 #include <string>
+#include <typeinfo>
+#include <variant>
 #include <vector>
 
-#include <magic_enum.hpp>
-
-#include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
+#include "constellation/core/config/Value.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/type.hpp"
 

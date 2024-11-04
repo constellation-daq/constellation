@@ -10,26 +10,38 @@
 #include "Controller.hpp"
 
 #include <algorithm>
+#include <any>
 #include <chrono>
+#include <cstddef>
+#include <functional>
+#include <future>
+#include <iomanip>
 #include <iterator>
+#include <map>
 #include <mutex>
 #include <optional>
+#include <set>
+#include <stop_token>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include <magic_enum.hpp>
 #include <msgpack.hpp>
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
+#include "constellation/core/chirp/CHIRP_definitions.hpp"
+#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/protocol/CHP_definitions.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
@@ -37,12 +49,14 @@ using namespace constellation::controller;
 using namespace constellation::message;
 using namespace constellation::protocol;
 using namespace constellation::utils;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 
 Controller::Controller(std::string controller_name)
     : logger_("CTRL"), controller_name_(std::move(controller_name)),
       heartbeat_receiver_([this](auto&& arg) { process_heartbeat(std::forward<decltype(arg)>(arg)); }),
-      watchdog_thread_(std::bind_front(&Controller::controller_loop, this)) {
+      watchdog_thread_(std::bind_front(&Controller::controller_loop, this)) {}
+
+void Controller::start() {
     LOG(logger_, DEBUG) << "Registering controller callback";
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
     if(chirp_manager != nullptr) {
@@ -54,7 +68,7 @@ Controller::Controller(std::string controller_name)
     heartbeat_receiver_.startPool();
 }
 
-Controller::~Controller() {
+void Controller::stop() {
     heartbeat_receiver_.stopPool();
 
     // Unregister callback
@@ -88,9 +102,8 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
     // Add or drop, depending on message:
     const auto uri = service.to_uri();
     if(depart) {
-        const auto it = std::find_if(connections_.begin(), connections_.end(), [&](const auto& sat) {
-            return sat.second.host_id == service.host_id;
-        });
+        const auto it =
+            std::ranges::find(connections_, service.host_id, [&](const auto& sat) { return sat.second.host_id; });
         if(it != connections_.end()) {
             // Note the position of the removed item:
             const auto position = std::distance(connections_.begin(), it);
@@ -122,6 +135,11 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
         const auto recv_msg_state = send_receive(conn, send_msg_state);
         conn.state = magic_enum::enum_cast<CSCP::State>(recv_msg_state.getVerb().second).value_or(CSCP::State::NEW);
 
+        // Get list of commands
+        auto send_msg_cmd = CSCP1Message({controller_name_}, {CSCP1Message::Type::REQUEST, "get_commands"});
+        const auto recv_msg_cmd = send_receive(conn, send_msg_cmd);
+        conn.commands = Dictionary::disassemble(recv_msg_cmd.getPayload());
+
         // Add to map of open connections
         const auto [it, success] = connections_.emplace(name, std::move(conn));
         connection_count_.store(connections_.size());
@@ -142,7 +160,7 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
     }
 }
 
-void Controller::process_heartbeat(message::CHP1Message&& msg) {
+void Controller::process_heartbeat(const message::CHP1Message& msg) {
 
     std::unique_lock<std::mutex> lock {connection_mutex_};
     const auto now = std::chrono::system_clock::now();
@@ -155,7 +173,7 @@ void Controller::process_heartbeat(message::CHP1Message&& msg) {
 
         const auto deviation = std::chrono::duration_cast<std::chrono::seconds>(now - msg.getTime());
         if(std::chrono::abs(deviation) > 3s) [[unlikely]] {
-            LOG(logger_, WARNING) << "Detected time deviation of " << deviation << " to " << msg.getSender();
+            LOG(logger_, DEBUG) << "Detected time deviation of " << deviation << " to " << msg.getSender();
         }
 
         // Check if a state has changed and we need to calculate and propagate updates:
@@ -398,12 +416,12 @@ void Controller::controller_loop(const std::stop_token& stop_token) {
                 remote.last_checked = now;
                 LOG(logger_, TRACE) << "Missed heartbeat from " << key << ", reduced lives to " << to_string(remote.lives);
 
+                // Note position of item:
+                const auto position = std::distance(connections_.begin(), conn);
+
                 if(remote.lives == 0) {
                     // This parrot is dead, it is no more
                     LOG(logger_, DEBUG) << "Missed heartbeats from " << key << ", no lives left";
-
-                    // Note position of removed item:
-                    const auto position = std::distance(connections_.begin(), conn);
 
                     // Close connection, remove from list:
                     remote.req.close();
@@ -417,6 +435,9 @@ void Controller::controller_loop(const std::stop_token& stop_token) {
                     // Propagate state change of the constellation
                     reached_state(getLowestState(), isInGlobalState());
                     lock.lock();
+                } else {
+                    // Trigger method for propagation of connection list updates in derived controller classes
+                    propagate_update(UpdateType::UPDATED, position, connection_count_.load());
                 }
             }
 

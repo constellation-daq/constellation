@@ -10,24 +10,34 @@
 #include "Manager.hpp"
 
 #include <algorithm>
+#include <any>
 #include <chrono>
+#include <compare>
 #include <cstdint>
 #include <functional>
+#include <future>
 #include <iterator>
+#include <mutex>
+#include <set>
 #include <stop_token>
+#include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
+#include <vector>
 
+#include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/message/exceptions.hpp"
+#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::chirp;
 using namespace constellation::message;
 using namespace constellation::utils;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 
 bool RegisteredService::operator<(const RegisteredService& other) const {
     // Sort first by service id
@@ -190,7 +200,7 @@ void Manager::forgetDiscoveredServices() {
 std::vector<DiscoveredService> Manager::getDiscoveredServices() {
     std::vector<DiscoveredService> ret {};
     const std::lock_guard discovered_services_lock {discovered_services_mutex_};
-    std::copy(discovered_services_.begin(), discovered_services_.end(), std::back_inserter(ret));
+    std::ranges::copy(discovered_services_, std::back_inserter(ret));
     return ret;
 }
 
@@ -214,6 +224,21 @@ void Manager::send_message(MessageType type, RegisteredService service) {
                         << service.port;
     const auto asm_msg = CHIRPMessage(type, group_id_, host_id_, service.identifier, service.port).assemble();
     sender_.sendBroadcast(asm_msg);
+}
+
+void Manager::call_discover_callbacks(const DiscoveredService& discovered_service, bool depart) {
+    const std::lock_guard discover_callbacks_lock {discover_callbacks_mutex_};
+    std::vector<std::future<void>> futures {};
+    futures.reserve(discover_callbacks_.size());
+    for(const auto& callback : discover_callbacks_) {
+        if(callback.service_id == discovered_service.identifier) {
+            futures.emplace_back(
+                std::async(std::launch::async, callback.callback, discovered_service, depart, callback.user_data));
+        }
+    }
+    for(const auto& future : futures) {
+        future.wait();
+    }
 }
 
 void Manager::main_loop(const std::stop_token& stop_token) {
@@ -272,14 +297,7 @@ void Manager::main_loop(const std::stop_token& stop_token) {
                     LOG(logger_, DEBUG) << to_string(chirp_msg.getServiceIdentifier()) << " service at "
                                         << raw_msg.address.to_string() << ":" << chirp_msg.getPort() << " discovered";
 
-                    // Acquire lock for discover_callbacks_
-                    const std::lock_guard discover_callbacks_lock {discover_callbacks_mutex_};
-                    // Loop over callback and run as detached threads
-                    for(const auto& cb_entry : discover_callbacks_) {
-                        if(cb_entry.service_id == discovered_service.identifier) {
-                            std::thread(cb_entry.callback, discovered_service, false, cb_entry.user_data).detach();
-                        }
-                    }
+                    call_discover_callbacks(discovered_service, false);
                 }
                 break;
             }
@@ -294,14 +312,7 @@ void Manager::main_loop(const std::stop_token& stop_token) {
                     LOG(logger_, DEBUG) << to_string(chirp_msg.getServiceIdentifier()) << " service at "
                                         << raw_msg.address.to_string() << ":" << chirp_msg.getPort() << " departed";
 
-                    // Acquire lock for discover_callbacks_
-                    const std::lock_guard discover_callbacks_lock {discover_callbacks_mutex_};
-                    // Loop over callback and run as detached threads
-                    for(const auto& cb_entry : discover_callbacks_) {
-                        if(cb_entry.service_id == discovered_service.identifier) {
-                            std::thread(cb_entry.callback, discovered_service, true, cb_entry.user_data).detach();
-                        }
-                    }
+                    call_discover_callbacks(discovered_service, true);
                 }
                 break;
             }

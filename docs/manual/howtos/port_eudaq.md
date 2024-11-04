@@ -27,6 +27,42 @@ corresponding Constellation satellite skeleton. The following table helps in fin
 
 ## Transmitting Data
 
+Data in EUDAQ is transmitted as `RawEvent` objects. There is the possibility of adding multiple so-called data blocks to a single
+event, as well as the option to store events as sub-events of others. The creation, outfitting and sending of a message in EUDAQ
+follows roughly this pattern:
+
+```cpp
+// Create new event and set its ID
+auto event = eudaq::Event::MakeUnique("MyDetectorEvent");
+event->SetEventN(m_ev);
+// Add data to the event
+event->AddBlock(0, data);
+// Possibly add a tag
+event->SetTag("my_tag", std::to_string(my_value));
+// Send the event
+SendEvent(std::move(event));
+```
+
+Constellation data messages consist of a header with metadata such as the sending satellite and the continuous message sequence,
+and any number of frames with binary data. These frames can be likened to the EUDAQ data blocks. A concept akin to sub-events
+does not exits in Constellation. Knowing this, the above sequence would translate to the following satellite code:
+
+```cpp
+// Create new message, message sequence is handled by Constellation
+auto msg = newDataMessage();
+// Add data to the message
+msg.addFrame(std::move(data));
+// Possibly add a tag
+msg.addTag("my_tag", my_value)
+// Send the message
+sendDataMessage(msg);
+```
+
+It should be noted that tag values in EUDAQ are limited to `std::string` while Constellation tags can hold any configuration
+data type.
+
+Further information on data transmission can be found in the how-to section on [Implementing a Satellite in C++](satellite_cxx.md).
+
 ## Adjusting the Logging Mechanism
 
 In EUDAQ, log messages are sent via the logging macros `EUDAQ_DEBUG`, `EUDAQ_INFO`, `EUDAQ_WARN`, and `EUDAQ_ERROR` which

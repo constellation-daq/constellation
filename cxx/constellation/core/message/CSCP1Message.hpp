@@ -9,15 +9,18 @@
 
 #pragma once
 
+#include <chrono>
+#include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 
-#include <zmq.hpp>
 #include <zmq_addon.hpp>
 
 #include "constellation/build.hpp"
+#include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/BaseHeader.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/protocol/Protocol.hpp"

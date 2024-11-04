@@ -13,6 +13,7 @@
 #include <source_location>
 #include <sstream>
 #include <string_view>
+#include <utility>
 
 #include <spdlog/async_logger.h>
 
@@ -33,9 +34,9 @@ namespace constellation::log {
          */
         class LogStream final : public std::ostringstream {
         public:
-            inline LogStream(const Logger& logger, Level level, std::source_location src_loc)
+            LogStream(const Logger& logger, Level level, std::source_location src_loc)
                 : logger_(logger), level_(level), src_loc_(src_loc) {}
-            inline ~LogStream() final { logger_.log(level_, this->view(), src_loc_); }
+            ~LogStream() final { logger_.log(level_, this->view(), src_loc_); } // NOLINT(bugprone-exception-escape)
 
             // No copy/move constructor/assignment
             /// @cond doxygen_suppress
@@ -80,7 +81,7 @@ namespace constellation::log {
          * @param level Log level to be tested against the logger configuration
          * @return Boolean indicating if the message should be logged
          */
-        inline bool shouldLog(Level level) const { return spdlog_logger_->should_log(to_spdlog_level(level)); }
+        CNSTLN_API bool shouldLog(Level level) const { return spdlog_logger_->should_log(to_spdlog_level(level)); }
 
         /**
          * @brief Return the current log level of the logger
@@ -89,7 +90,7 @@ namespace constellation::log {
          *
          * @return Current log level
          */
-        inline Level getLogLevel() const { return from_spdlog_level(spdlog_logger_->level()); }
+        CNSTLN_API Level getLogLevel() const { return from_spdlog_level(spdlog_logger_->level()); }
 
         /**
          * @brief Log a message using a stream
@@ -98,7 +99,7 @@ namespace constellation::log {
          * @param src_loc Source code location from which the log message emitted
          * @return `LogStream` to which the log message can be streamed
          */
-        inline LogStream log(Level level, std::source_location src_loc = std::source_location::current()) const {
+        CNSTLN_API LogStream log(Level level, std::source_location src_loc = std::source_location::current()) const {
             return {*this, level, src_loc};
         }
 
@@ -109,9 +110,9 @@ namespace constellation::log {
          * @param message Log message
          * @param src_loc Source code location from which the log message emitted
          */
-        inline void log(Level level,
-                        std::string_view message,
-                        std::source_location src_loc = std::source_location::current()) const {
+        CNSTLN_API void log(Level level,
+                            std::string_view message,
+                            std::source_location src_loc = std::source_location::current()) const {
             spdlog_logger_->log({src_loc.file_name(), static_cast<int>(src_loc.line()), src_loc.function_name()},
                                 to_spdlog_level(level),
                                 message);

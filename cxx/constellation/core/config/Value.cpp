@@ -15,12 +15,14 @@
 #include <span>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <variant>
 #include <vector>
 
 #include <msgpack.hpp>
 
 #include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;

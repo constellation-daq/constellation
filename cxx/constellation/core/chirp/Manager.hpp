@@ -13,6 +13,7 @@
 #include <mutex>
 #include <set>
 #include <stop_token>
+#include <string>
 #include <string_view>
 #include <thread>
 #include <vector>
@@ -195,6 +196,9 @@ namespace constellation::chirp {
          *
          * Note that a callback function can be registered multiple times for different services.
          *
+         * @warning Discover callbacks block the execution of further processing of CHIRP requests and offers, callbacks that
+         *          take a long time should offload the work to a new thread.
+         *
          * @param callback Function pointer to a callback
          * @param service_id Service identifier of the service for which callbacks should be received
          * @param user_data Arbitrary user data passed to the callback function (see `DiscoverCallback`)
@@ -260,6 +264,11 @@ namespace constellation::chirp {
          * @param service Service with identifier and port
          */
         void send_message(MessageType type, RegisteredService service);
+
+        /**
+         * Call all discover callbacks
+         */
+        void call_discover_callbacks(const DiscoveredService& discovered_service, bool depart);
 
         /**
          * Main loop listening and responding to incoming CHIRP broadcasts

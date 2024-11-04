@@ -22,7 +22,7 @@ from constellation.core.chirp import (
 )
 
 from constellation.core.monitoring import (
-    MonitoringListener,
+    FileMonitoringListener,
 )
 
 from constellation.core.cscp import CommandTransmitter
@@ -40,9 +40,7 @@ mock_packet_queue_sender = {}
 send_port = 11111
 recv_port = 22222
 
-SNDMORE_MARK = (
-    "_S/END_"  # Arbitrary marker for SNDMORE flag used in mocket packet queues_
-)
+SNDMORE_MARK = "_S/END_"  # Arbitrary marker for SNDMORE flag used in mocket packet queues_
 CHIRP_OFFER_CTRL = b"\x96\xa9CHIRP%x01\x02\xc4\x10\xc3\x941\xda'\x96_K\xa6JU\xac\xbb\xfe\xf1\xac\xc4\x10:\xb9W2E\x01R\xa2\x93|\xddA\x9a%\xb6\x90\x01\xcda\xa9"  # noqa: E501
 
 
@@ -152,16 +150,10 @@ class mocket(MagicMock):
     def recv_multipart(self, flags=None):
         """Pop entry from queue."""
         if flags == zmq.NOBLOCK:
-            if (
-                self.port not in self._get_queue(False)
-                or not self._get_queue(False)[self.port]
-            ):
+            if self.port not in self._get_queue(False) or not self._get_queue(False)[self.port]:
                 raise zmq.ZMQError("Resource temporarily unavailable")
         else:
-            while (
-                self.port not in self._get_queue(False)
-                or not self._get_queue(False)[self.port]
-            ):
+            while self.port not in self._get_queue(False) or not self._get_queue(False)[self.port]:
                 time.sleep(0.01)
         r = []
         RCV_MORE = True
@@ -212,10 +204,7 @@ class mocket(MagicMock):
         print(f"Bound Mocket on {self.port}")
 
     def has_no_data(self):
-        return (
-            self.port not in self._get_queue(False)
-            or not self._get_queue(False)[self.port]
-        )
+        return self.port not in self._get_queue(False) or not self._get_queue(False)[self.port]
 
 
 @pytest.fixture
@@ -299,9 +288,7 @@ def mock_satellite(mock_chirp_transmitter, mock_heartbeat_checker):
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context
-        s = Satellite(
-            "mock_satellite", "mockstellation", 11111, 22222, 33333, "127.0.0.1"
-        )
+        s = Satellite("mock_satellite", "mockstellation", 11111, 22222, 33333, "127.0.0.1")
         t = threading.Thread(target=s.run_satellite)
         t.start()
         # give the threads a chance to start
@@ -322,9 +309,7 @@ def mock_controller(mock_chirp_transmitter, mock_heartbeat_checker):
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context
-        c = BaseController(
-            name="mock_controller", group="mockstellation", interface="127.0.0.1"
-        )
+        c = BaseController(name="mock_controller", group="mockstellation", interface="127.0.0.1")
         # give the threads a chance to start
         time.sleep(0.1)
         yield c
@@ -365,9 +350,7 @@ def mock_example_satellite(mock_chirp_transmitter):
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context
-        s = MockExampleSatellite(
-            "mock_satellite", "mockstellation", 11111, 22222, 33333, "127.0.0.1"
-        )
+        s = MockExampleSatellite("mock_satellite", "mockstellation", 11111, 22222, 33333, "127.0.0.1")
         t = threading.Thread(target=s.run_satellite)
         t.start()
         # give the threads a chance to start
@@ -379,14 +362,14 @@ def mock_example_satellite(mock_chirp_transmitter):
 def monitoringlistener():
     """Create a MonitoringListener instance."""
 
-    with TemporaryDirectory() as tmpdirname:
-        m = MonitoringListener(
+    with TemporaryDirectory(prefix="constellation_pytest_") as tmpdirname:
+        m = FileMonitoringListener(
             name="mock_monitor",
             group="mockstellation",
             interface="*",
             output_path=tmpdirname,
         )
-        t = threading.Thread(target=m.receive_metrics)
+        t = threading.Thread(target=m.run_listener)
         t.start()
         # give the thread a chance to start
         time.sleep(0.1)
@@ -398,6 +381,4 @@ def wait_for_state(fsm, state: str, timeout: float = 2.0):
         time.sleep(0.05)
         timeout -= 0.05
     if timeout < 0:
-        raise RuntimeError(
-            f"Never reached {state}, now in state {fsm.current_state_value.name} with status '{fsm.status}'"
-        )
+        raise RuntimeError(f"Never reached {state}, now in state {fsm.current_state_value.name} with status '{fsm.status}'")

@@ -12,6 +12,9 @@ elif host_machine.system() == 'windows'
   dso_suffix = '.dll'
 endif
 
+# pkgconfig module to export .pc files for libraries
+pkg = import('pkgconfig')
+
 build_hpp_data = configuration_data()
 build_hpp_data.set('version', meson.project_version())
 build_hpp_data.set('libdir', get_option('prefix') / get_option('libdir'))
@@ -21,9 +24,10 @@ build_hpp_data.set('dso_suffix', dso_suffix)
 build_hpp = configure_file(
   input: 'build.hpp',
   output: 'build.hpp',
-  configuration: build_hpp_data, )
+  configuration: build_hpp_data,
+)
 
-install_headers(build_hpp, subdir: 'constellation', )
+install_headers(build_hpp, subdir: 'constellation')
 
 subdir('core')
 subdir('satellite')

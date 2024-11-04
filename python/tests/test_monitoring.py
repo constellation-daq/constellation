@@ -47,11 +47,11 @@ def mock_monitoringsender():
     """Create a mock MonitoringSender instance."""
 
     class MyStatProducer(MonitoringSender):
-        @schedule_metric(MetricsType.LAST_VALUE, 0.1)
+        @schedule_metric("Answer", MetricsType.LAST_VALUE, 0.1)
         def get_answer(self):
             """The answer to the Ultimate Question"""
             # self.log.info("Got the answer!")
-            return 42, "Answer"
+            return 42
 
     def mocket_factory(*args, **kwargs):
         m = mocket()
@@ -70,11 +70,11 @@ def monitoringsender():
     """Create a MonitoringSender instance."""
 
     class MyStatProducer(MonitoringSender):
-        @schedule_metric(MetricsType.LAST_VALUE, 0.1)
+        @schedule_metric("Answer", MetricsType.LAST_VALUE, 0.1)
         def get_answer(self):
             """The answer to the Ultimate Question"""
             # self.log.info("Got the answer!")
-            return 42, "Answer"
+            return 42
 
     m = MyStatProducer("mock_sender", send_port, interface="*")
     yield m
@@ -192,7 +192,7 @@ def test_monitoring_sender_loop(mock_listener, mock_monitoringsender):
     m._add_com_thread()
     m._start_com_threads()
     time.sleep(0.3)
-    assert b"STATS/GET_ANSWER" in mock_packet_queue_sender[send_port]
+    assert b"STAT/GET_ANSWER" in mock_packet_queue_sender[send_port]
 
 
 @pytest.mark.forked
@@ -201,24 +201,16 @@ def test_monitoring_file_writing(monitoringlistener, monitoringsender):
     ms = monitoringsender
     assert len(ml._log_listeners) == 0
     chirp = CHIRPBeaconTransmitter("mock_sender", "mockstellation", interface="*")
-    chirp.broadcast(
-        CHIRPServiceIdentifier.MONITORING, CHIRPMessageType.OFFER, send_port
-    )
+    chirp.broadcast(CHIRPServiceIdentifier.MONITORING, CHIRPMessageType.OFFER, send_port)
     # start metric sender thread
     ms._add_com_thread()
     ms._start_com_threads()
     time.sleep(1)
     assert len(ml._log_listeners) == 1
     assert len(ml._metric_sockets) == 1
+    assert os.path.exists(os.path.join(tmpdir, "logs")), "Log output directory not created"
+    assert os.path.exists(os.path.join(tmpdir, "stats")), "Stats output directory not created"
+    assert os.path.exists(os.path.join(tmpdir, "logs", "mockstellation.log")), "No log file created"
     assert os.path.exists(
-        os.path.join(tmpdir, "logs")
-    ), "Log output directory not created"
-    assert os.path.exists(
-        os.path.join(tmpdir, "stats")
-    ), "Stats output directory not created"
-    assert os.path.exists(
-        os.path.join(tmpdir, "logs", "mockstellation.log")
-    ), "No log file created"
-    assert os.path.exists(
-        os.path.join(tmpdir, "stats", "mock_sender_get_answer.csv")
+        os.path.join(tmpdir, "stats", "MyStatProducer.mock_sender.get_answer.csv")
     ), "Expected output metrics csv not found"

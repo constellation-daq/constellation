@@ -37,6 +37,7 @@ foreach satellite : satellites_to_build
     sources: [satellite_generator, satellite_sources],
     dependencies: [core_dep, satellite_dep] + satellite_dependencies,
     gnu_symbol_visibility: 'hidden',
+    install: true,
     install_dir: satellite_libdir,
     install_rpath: constellation_rpath,
   )

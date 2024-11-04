@@ -13,12 +13,15 @@ BinPackArguments: false
 ColumnLimit: 125
 IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex:    '^<[^/\.]+>$'
-    Priority: 1
-  - Regex:    '^<.+\.h.*>$'
-    Priority: 2
-  - Regex:    '^"constellation/.+"$'
-    Priority: 3
+  - Regex:         '^<Q[^/\.]+>$'
+    Priority:      3
+    CaseSensitive: true
+  - Regex:         '^<[^/\.]+>$'
+    Priority:      1
+  - Regex:         '^<.+\.h.*>$'
+    Priority:      2
+  - Regex:         '^"constellation/.+"$'
+    Priority:      4
 IncludeIsMainSourceRegex: '\.ipp$'
 IndentWidth: 4
 NamespaceIndentation: All

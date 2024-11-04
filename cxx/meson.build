@@ -73,10 +73,9 @@ if host_machine.system() == 'windows'
   # Disable parts of Windows API with conflicting macro definitions
   constellation_args += ['-DWIN32_LEAN_AND_MEAN', '-DNOGDI']
 endif
-
-# Globally add flags for static libraries
+# Add flags for static libraries
 if get_option('default_library') == 'static'
-  add_project_arguments(['-DCNSTLN_STATIC'], language: 'cpp')
+  constellation_args += '-DCNSTLN_STATIC'
 elif get_option('default_library') == 'both'
   error('Building both static and shared libraries is not possible')
 endif
@@ -88,5 +87,6 @@ constellation_rpath = get_option('prefix') / get_option('libdir')
 
 subdir('constellation')
 subdir('tools')
+subdir('controllers')
 subdir('satellites')
 subdir('tests')

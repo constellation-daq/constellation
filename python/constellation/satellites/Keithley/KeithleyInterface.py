@@ -77,6 +77,13 @@ class KeithleyInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def output_enabled(self) -> bool:
+        """
+        If the output is enabled
+        """
+        pass
+
+    @abstractmethod
     def get_terminals(self) -> list[str]:
         """
         List of terminals which can be controlled
@@ -159,6 +166,13 @@ class KeithleyInterface(metaclass=ABCMeta):
     def initialize(self):
         """
         Resets device and initializes appropriate settings
+        """
+        pass
+
+    @abstractmethod
+    def release(self):
+        """
+        Release device from remote mode
         """
         pass
 

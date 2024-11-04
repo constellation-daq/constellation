@@ -19,7 +19,6 @@
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Configuration.hpp"
-#include "constellation/core/config/Value.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/utils/networking.hpp"
@@ -54,7 +53,7 @@ TransmitterSatellite::DataMessage TransmitterSatellite::newDataMessage(std::size
     return {getCanonicalName(), ++seq_, frames};
 }
 
-bool TransmitterSatellite::sendDataMessage(TransmitterSatellite::DataMessage& message) {
+bool TransmitterSatellite::trySendDataMessage(TransmitterSatellite::DataMessage& message) {
     // Send data but do not wait for receiver
     LOG(cdtp_logger_, TRACE) << "Sending data message " << message.getHeader().getSequenceNumber();
     const auto sent = message.assemble().send(cdtp_push_socket_, static_cast<int>(zmq::send_flags::dontwait));
@@ -65,7 +64,7 @@ bool TransmitterSatellite::sendDataMessage(TransmitterSatellite::DataMessage& me
     return sent;
 }
 
-void TransmitterSatellite::trySendDataMessage(TransmitterSatellite::DataMessage& message) {
+void TransmitterSatellite::sendDataMessage(TransmitterSatellite::DataMessage& message) {
     LOG(cdtp_logger_, TRACE) << "Sending data message " << message.getHeader().getSequenceNumber();
     const auto sent = message.assemble().send(cdtp_push_socket_);
     if(!sent) {
@@ -100,10 +99,10 @@ void TransmitterSatellite::starting_transmitter(std::string_view run_identifier,
     // Reset run metadata and sequence counter
     seq_ = 0;
     run_metadata_ = {};
-    setRunMetadataTag("run_id", run_identifier);
+    set_run_metadata_tag("run_id", run_identifier);
 
     // Create CDTP1 message for BOR
-    CDTP1Message msg {{getCanonicalName(), seq_, CDTP1Message::Type::BOR}, 1};
+    CDTP1Message msg {{getCanonicalName(), seq_, CDTP1Message::Type::BOR, std::chrono::system_clock::now(), bor_tags_}, 1};
     msg.addPayload(config.getDictionary().assemble());
 
     // Send BOR
@@ -118,11 +117,14 @@ void TransmitterSatellite::starting_transmitter(std::string_view run_identifier,
 
     // Set timeout for data sending
     set_send_timeout(data_msg_timeout_);
+
+    // Clear BOR tags:
+    bor_tags_ = {};
 }
 
 void TransmitterSatellite::stopping_transmitter() {
     // Create CDTP1 message for EOR
-    CDTP1Message msg {{getCanonicalName(), ++seq_, CDTP1Message::Type::EOR}, 1};
+    CDTP1Message msg {{getCanonicalName(), ++seq_, CDTP1Message::Type::EOR, std::chrono::system_clock::now(), eor_tags_}, 1};
     msg.addPayload(run_metadata_.assemble());
 
     // Send EOR
@@ -134,4 +136,7 @@ void TransmitterSatellite::stopping_transmitter() {
         throw SendTimeoutError("EOR message", data_eor_timeout_);
     }
     LOG(cdtp_logger_, DEBUG) << "Sent EOR message";
+
+    // Clear EOR tags:
+    eor_tags_ = {};
 }

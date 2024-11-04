@@ -19,10 +19,10 @@ transitional states are implemented by overriding methods provided by the `Satel
 For a new satellite, the following transitional state actions **should be implemented**:
 
 * `def do_initializing(self, config: Configuration)`
-* `def do_launching(self, payload: any)`
-* `def do_landing(self, payload: any)`
-* `def do_starting(self, payload: any)`
-* `def do_stopping(self, payload: any)`
+* `def do_launching(self)`
+* `def do_landing(self)`
+* `def do_starting(self, run_identifier: str)`
+* `def do_stopping(self)`
 
 The following transitional state actions are optional:
 
@@ -60,19 +60,34 @@ The log messages are broadcast to listeners, and can be listened on by using e.g
 
 ## Sending stats
 
-To send metrics (e.g. readings from a sensor), the `schedule_metrics` method can be used. The method takes a metric name, a callable function, a polling interval, and a metric type as arguments.
+To send metrics (e.g. readings from a sensor), the `schedule_metric` method can be used. The method takes a metric name,
+the unit, a polling interval, a metric type and a callable function as arguments. The name of the metric will always be
+converted to full caps.
 
-* Callable function: Should return a single value, with the option of also returning a unit. If only a value is returned, no unit will be transmitted. If a tuple is returned, the first element is taken as the value, and the second as the unit. The callable needs to return a value (of any type) and a unit (of type string), and take no arguments. If you have a callable that requires arguments, consider using functools.partial to fill in the necessary information at scheduling time.
+* Metric type: can be `LAST_VALUE`, `ACCUMULATE`, `AVERAGE`, or `RATE`.
 * Polling interval: a float value in seconds, indicating how often the metric is transmitted.
-* Metric type: can be `LAST_VALUE`, `ACCUMULATE`, `AVERAGE`, or `RATE`. The default type is `LAST_VALUE`.
+* Callable function: Should return a single value (of any type), and take no arguments. If you have a callable that requires
+  arguments, consider using `functools.partial` to fill in the necessary information at scheduling time. If the callback
+  returns `None`, no metric will be published.
 
 An example call is shown below:
 
 ```python
-self.schedule_metric("Current", self.device.get_current, interval=5.0)
+self.schedule_metric("Current", "A", MetricsType.LAST_VALUE, 10, self.device.get_current)
 ```
 
-In this example, the callable `self.device.get_current` fetches the current from a power supply, and returns a tuple of value and unit via `return current, "A"`.
+In this example, the callable `self.device.get_current` fetches the current from a power supply every 10 seconds, and returns
+the value `return current`. The same can also be achieved with a function decorator:
+
+```python
+@schedule_metric("A", MetricsType.LAST_VALUE, 10)
+def Current(self) -> Any:
+    if self.device.can_read_current():
+        return self.device.get_current()
+    return None
+```
+
+Note that in this case, if `None` is returned, no metric is sent. The name of the metric is taken from the function name.
 
 ## Adding entry point installation for the satellite
 

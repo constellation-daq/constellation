@@ -56,6 +56,7 @@ class Satellite(
         )
 
         self.run_identifier: str = ""
+        self.config = Configuration({})
 
         # give monitoring a chance to start up and catch early messages
         time.sleep(0.1)
@@ -204,10 +205,10 @@ class Satellite(
 
         """
         self.hb_checker.start_all()
-        return str(self.do_launching(payload))
+        return str(self.do_launching())
 
     @debug_log
-    def do_launching(self, payload: Any) -> str:
+    def do_launching(self) -> str:
         """Prepare Satellite for data acquisitions."""
         return "Launched."
 
@@ -248,11 +249,11 @@ class Satellite(
 
         """
         self.hb_checker.stop()
-        res: str = self.do_landing(payload)
+        res: str = self.do_landing()
         return res
 
     @debug_log
-    def do_landing(self, payload: Any) -> str:
+    def do_landing(self) -> str:
         """Return Satellite to Initialized state."""
         return "Landed."
 
@@ -273,11 +274,11 @@ class Satellite(
         assert isinstance(self._state_thread_fut, Future)
         res_run: str = self._state_thread_fut.result(timeout=None)
         self.log.debug("RUN thread finished, continue with STOPPING.")
-        res: str = self.do_stopping(payload)
+        res: str = self.do_stopping()
         return f"{res_run}; {res}"
 
     @debug_log
-    def do_stopping(self, payload: Any) -> str:
+    def do_stopping(self) -> str:
         """Stop the data acquisition."""
         return "Acquisition stopped."
 
@@ -300,7 +301,7 @@ class Satellite(
         return res
 
     @debug_log
-    def do_starting(self, payload: Any) -> str:
+    def do_starting(self, run_identifier: str) -> str:
         """Final preparation for acquisition."""
         return "Finished preparations, starting."
 
@@ -398,17 +399,6 @@ class Satellite(
         self.do_landing()
         return "Interrupted."
 
-    @handle_error
-    @debug_log
-    def _wrap_recover(self) -> str:
-        """Wrapper for the 'recovering' transitional state of the FSM.
-
-        This method does not perform any action as the SAFE->INIT transition has
-        no side-effects.
-
-        """
-        return "Recovered."
-
     def _thread_exception(self, args: Any) -> None:
         """Handle exceptions in threads.
 
@@ -454,6 +444,16 @@ class Satellite(
         """
         return self.run_identifier, None, {}
 
+    @cscp_requestable
+    def get_config(self, _request: CSCPMessage | None = None) -> tuple[str, Any, dict[str, Any]]:
+        """Get current satellite configuration.
+
+        No payload argument.
+
+        """
+        cfg_dict = self.config.get_dict()
+        return f"{len(cfg_dict)} configuration keys, dictionary attached in payload", cfg_dict, {}
+
 
 # -------------------------------------------------------------------------
 
@@ -496,8 +496,6 @@ def main(args: Any = None) -> None:
 
     """
     parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
-    # this sets the defaults for our "demo" Satellite
-    parser.set_defaults(name="satellite_demo")
     # get a dict of the parsed arguments
     args = vars(parser.parse_args(args))
 

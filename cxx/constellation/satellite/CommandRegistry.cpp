@@ -10,14 +10,13 @@
 #include "CommandRegistry.hpp"
 
 #include <map>
-#include <numeric>
 #include <string>
-#include <vector>
 
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/satellite/exceptions.hpp"
 
 using namespace constellation;
 using namespace constellation::protocol::CSCP;

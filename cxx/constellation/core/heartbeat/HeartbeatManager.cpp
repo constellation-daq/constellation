@@ -23,14 +23,14 @@
 #include "constellation/core/message/CHP1Message.hpp"
 #include "constellation/core/protocol/CHP_definitions.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
-#include "constellation/core/utils/std_future.hpp" // IWYU pragma: keep
+#include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::heartbeat;
 using namespace constellation::message;
 using namespace constellation::utils;
 using namespace constellation::protocol;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono_literals;
 
 HeartbeatManager::HeartbeatManager(std::string sender,
                                    std::function<CSCP::State()> state_callback,
@@ -65,7 +65,7 @@ std::optional<CSCP::State> HeartbeatManager::getRemoteState(std::string_view rem
     return {};
 }
 
-void HeartbeatManager::process_heartbeat(CHP1Message&& msg) {
+void HeartbeatManager::process_heartbeat(const CHP1Message& msg) {
     LOG(logger_, TRACE) << msg.getSender() << " reports state " << to_string(msg.getState()) << ", next message in "
                         << msg.getInterval();
 
@@ -78,7 +78,18 @@ void HeartbeatManager::process_heartbeat(CHP1Message&& msg) {
 
         const auto deviation = std::chrono::duration_cast<std::chrono::seconds>(now - msg.getTime());
         if(std::chrono::abs(deviation) > 3s) [[unlikely]] {
-            LOG(logger_, WARNING) << "Detected time deviation of " << deviation << " to " << msg.getSender();
+            LOG(logger_, DEBUG) << "Detected time deviation of " << deviation << " to " << msg.getSender();
+        }
+
+        // Take immediate action on remote state changes:
+        // Check for ERROR and SAFE states:
+        if(remote_it->second.lives > 0 && (msg.getState() == CSCP::State::ERROR || msg.getState() == CSCP::State::SAFE)) {
+            remote_it->second.lives = 0;
+            if(interrupt_callback_) {
+                LOG(logger_, DEBUG) << "Detected state " << to_string(msg.getState()) << " at " << remote_it->first
+                                    << ", interrupting";
+                interrupt_callback_(remote_it->first + " reports state " + to_string(msg.getState()));
+            }
         }
 
         remote_it->second.interval = msg.getInterval();
@@ -108,16 +119,6 @@ void HeartbeatManager::run(const std::stop_token& stop_token) {
         // Calculate the next wake-up by checking when the next heartbeat times out, but time out after 3s anyway:
         wakeup = std::chrono::system_clock::now() + 3s;
         for(auto& [key, remote] : remotes_) {
-            // Check for ERROR and SAFE states:
-            if(remote.lives > 0 && (remote.last_state == CSCP::State::ERROR || remote.last_state == CSCP::State::SAFE)) {
-                remote.lives = 0;
-                if(interrupt_callback_) {
-                    LOG(logger_, DEBUG) << "Detected state " << to_string(remote.last_state) << " at " << key
-                                        << ", interrupting";
-                    interrupt_callback_(key + " reports state " + to_string(remote.last_state));
-                }
-            }
-
             // Check if we are beyond the interval and that we only subtract lives once every interval
             const auto now = std::chrono::system_clock::now();
             if(remote.lives > 0 && now - remote.last_heartbeat > remote.interval &&

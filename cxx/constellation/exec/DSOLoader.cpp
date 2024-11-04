@@ -11,7 +11,6 @@
 
 #include <filesystem>
 #include <string>
-#include <utility>
 #include <vector>
 
 #ifdef _WIN32
@@ -89,7 +88,6 @@ DSOLoader::DSOLoader(const std::string& dso_name, Logger& logger, const std::fil
     const std::filesystem::path library_path = possible_paths.front();
 
     // Get actual DSO name from path
-    const auto library_path_stem = library_path.stem().string();
     dso_name_ = library_path.stem().string().substr(std::string(CNSTLN_DSO_PREFIX).size());
 
     // Load the DSO

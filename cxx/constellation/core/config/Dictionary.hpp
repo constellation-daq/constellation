@@ -39,6 +39,13 @@ namespace constellation::config {
 
         /** Disassemble list from message payload */
         CNSTLN_API static List disassemble(const message::PayloadBuffer& message);
+
+        /**
+         * @brief Convert list to human readable string
+         *
+         * @return String with one line for each value starting `\n `
+         */
+        CNSTLN_API std::string to_string() const;
     };
 
     /**

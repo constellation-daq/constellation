@@ -5,12 +5,14 @@ SPDX-License-Identifier: CC-BY-4.0
 This module provides a base class for Constellation Satellite modules.
 """
 
+import re
 import zmq
 import threading
 import logging
 from argparse import ArgumentParser
 from queue import Queue
 from typing import cast, Any
+import socket
 import atexit
 import coloredlogs  # type: ignore[import-untyped]
 from .network import validate_interface, get_interfaces
@@ -39,7 +41,7 @@ class ConstellationArgumentParser(ArgumentParser):
         self.constellation.add_argument(
             "--name",
             "-n",
-            required=True,
+            default=socket.gethostname().replace("-", "_"),
             type=str,
             help="The name of the Satellite. This has to be unique within "
             "the Constellation group. Together with the Satellite class, "
@@ -128,6 +130,9 @@ class BaseSatelliteFrame:
     def __init__(self, name: str, interface: str, **_kwds: Any):
         # type name == python class name
         self.type = type(self).__name__
+        # Check if provided name is valid:
+        if not re.match(r"^\w+$", name):
+            raise ValueError("Satellite name contains invalid characters")
         # add type name to create the canonical name
         self.name = f"{self.type}.{name}"
         logging.setLoggerClass(ConstellationLogger)

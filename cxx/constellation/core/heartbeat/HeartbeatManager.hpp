@@ -19,7 +19,6 @@
 #include <string>
 #include <string_view>
 #include <thread>
-#include <utility>
 
 #include "constellation/build.hpp"
 #include "constellation/core/heartbeat/HeartbeatRecv.hpp"
@@ -97,7 +96,7 @@ namespace constellation::heartbeat {
          *
          * @param msg Received CHP message from remote service
          * */
-        void process_heartbeat(message::CHP1Message&& msg);
+        void process_heartbeat(const message::CHP1Message& msg);
 
         /**
          * @brief Main loop of the manager which checks for heartbeats of registered remotes.
@@ -123,9 +122,9 @@ namespace constellation::heartbeat {
          */
         struct Remote {
             // TODO(simonspa) add importance here
-            std::chrono::milliseconds interval;
+            std::chrono::milliseconds interval {};
             std::chrono::system_clock::time_point last_heartbeat;
-            protocol::CSCP::State last_state;
+            protocol::CSCP::State last_state {};
             std::chrono::system_clock::time_point last_checked;
             std::uint8_t lives {protocol::CHP::Lives};
         };

@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <initializer_list>
+#include <iomanip>
 #include <stdexcept>
 #include <string>
 #include <vector>

@@ -64,6 +64,10 @@ class Configuration:
         """Return JSON-encoded configuration data."""
         return json.dumps(self._config)
 
+    def get_dict(self) -> dict[str, Any]:
+        """Returns the dictionary held by the configuration."""
+        return self._config
+
     def update(self, config: dict[str, Any], unused_keys: set[str]) -> None:
         """Update the configuration with a new dict."""
         # update key+values of internal dict

@@ -8,12 +8,14 @@
  */
 
 #include <chrono>
+#include <cstddef>
 #include <future>
-#include <string>
+#include <string> // IWYU pragma: keep
 #include <vector>
 
 #include <asio.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_range_equals.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
@@ -22,8 +24,8 @@
 
 using namespace Catch::Matchers;
 using namespace constellation::chirp;
-using namespace std::literals::chrono_literals;
-using namespace std::literals::string_literals;
+using namespace std::chrono_literals;
+using namespace std::string_literals;
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
 

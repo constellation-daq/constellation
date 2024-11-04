@@ -63,38 +63,21 @@ variables:
 
 .alma9-cern:
   image: gitlab.desy.de:5555/constellation/build-images/alma9-cern:latest
-  variables:
-    CXX: ccache clang++
-    CXX_LD: lld
-    CC: ccache clang
-    CC_LD: lld
 
 .debian-clang:
   image: gitlab.desy.de:5555/constellation/build-images/debian-clang:latest
-  variables:
-    CXX: ccache clang++
-    CXX_LD: lld
-    CC: ccache clang
-    CC_LD: lld
 
 .debian-gcc:
   image: gitlab.desy.de:5555/constellation/build-images/debian-gcc:latest
-  variables:
-    CXX: ccache g++
 
 .fedora-clang:
   image: gitlab.desy.de:5555/constellation/build-images/fedora-clang:latest
-  variables:
-    CXX: ccache clang++
-    CXX_LD: mold
 
 .fedora-mingw:
   image: gitlab.desy.de:5555/constellation/build-images/fedora-mingw:latest
 
 .ubuntu-22.04:
   image: gitlab.desy.de:5555/constellation/build-images/ubuntu-22.04:latest
-  variables:
-    CXX: ccache g++-12
 
 .ubuntu-24.04:
   image: gitlab.desy.de:5555/constellation/build-images/ubuntu-24.04:latest
@@ -133,6 +116,9 @@ variables:
 .python-3.12:
   image: python:3.12
 
+.python-3.13:
+  image: python:3.13
+
 # Combined Python / C++ templates
 
 # In MRs run only if either C++ or Python files are changed
@@ -158,7 +144,7 @@ variables:
     - *meson-wrap-cache
     - *ccache
   script:
-    - meson setup build -Dcxx_tests=enabled $(scripts/meson_enable_all_components.sh) -Dbuildtype=${BUILD_TYPE} ${BUILD_OPTIONS}
+    - meson setup build -Dcxx_tests=enabled $(scripts/meson_enable_all_components.sh) -Dbuildtype=${BUILD_TYPE} ${BUILD_OPTIONS} $(eval ${BUILD_SCRIPTS})
     - meson compile -C build ${NINJA_OPTIONS}
   artifacts:
     paths:
@@ -191,7 +177,7 @@ build:debian-clang:
     - .debian-clang
   variables:
     BUILD_TYPE: "debug"
-    BUILD_OPTIONS: "-Db_sanitize=address -Db_lundef=false"
+    BUILD_OPTIONS: "-Dcpp_std=c++23 -Db_sanitize=address -Db_lundef=false"
 
 build:debian-clang-libcxx:
   extends:
@@ -200,6 +186,7 @@ build:debian-clang-libcxx:
   variables:
     BUILD_TYPE: "debugoptimized"
     BUILD_OPTIONS: "--wrap-mode=forcefallback -Dspdlog:external_fmt=disabled -Db_sanitize=thread -Db_lundef=false"
+    BUILD_SCRIPTS: "scripts/meson_disable_qt_components.sh"
     CXXFLAGS: "-stdlib=libc++ -fexperimental-library"
 
 build:debian-gcc:
@@ -224,7 +211,9 @@ build:fedora-mingw:
     - .fedora-mingw
   variables:
     BUILD_TYPE: "release"
+    # Do not build the Qt UI
     BUILD_OPTIONS: "--cross .cross/mingw-ucrt.ini"
+    BUILD_SCRIPTS: "scripts/meson_disable_qt_components.sh"
     NINJA_OPTIONS: "-l4"
   retry: 2
 
@@ -236,6 +225,7 @@ build:ubuntu-22.04:
     BUILD_TYPE: "debugoptimized"
     BUILD_OPTIONS: "-Dqt_version=qt5"
     NINJA_OPTIONS: "-l4"
+    CXXFLAGS: "-Wno-deprecated-enum-enum-conversion"
   retry: 2
 
 build:ubuntu-24.04:
@@ -256,6 +246,12 @@ build:python-3.12:
     - .build-py
     - .python-venv
     - .python-3.12
+
+build:python-3.13:
+  extends:
+    - .build-py
+    - .python-venv
+    - .python-3.13
 
 # test stage
 
@@ -357,6 +353,15 @@ test:python-3.12:
     - job: build:python-3.12
       artifacts: false
 
+test:python-3.13:
+  extends:
+    - .test-py
+    - .python-venv
+    - .python-3.13
+  needs:
+    - job: build:python-3.13
+      artifacts: false
+
 # lint stage
 
 .lint:
@@ -430,9 +435,7 @@ lint:clang-tidy-diff:
       artifacts: true
   script:
     - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
-    - git diff -U0 origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME -- | clang-tidy-diff -p 1 -path build -j $(nproc) | tee clang-tidy-diff.log
-    - | # Until LLVM 18 we need to check the output for errors
-      grep -qzv ": error: " clang-tidy-diff.log
+    - git diff -U0 origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME -- | clang-tidy-diff -p 1 -path build -j $(nproc)
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       <<: *cpp-rules-changes

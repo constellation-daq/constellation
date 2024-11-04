@@ -13,14 +13,17 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include <msgpack.hpp>
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
 #include "constellation/core/config/Dictionary.hpp"
+#include "constellation/core/message/BaseHeader.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/protocol/Protocol.hpp"
@@ -32,7 +35,7 @@ using namespace constellation::config;
 using namespace constellation::message;
 using namespace constellation::protocol;
 using namespace constellation::utils;
-using namespace std::literals::string_view_literals;
+using namespace std::string_view_literals;
 
 // Similar to BaseHeader::disassemble in BaseHeader.cpp, check when modifying
 CDTP1Message::Header CDTP1Message::Header::disassemble(std::span<const std::byte> data) {
@@ -104,8 +107,8 @@ void CDTP1Message::Header::msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpa
 std::string CDTP1Message::Header::to_string() const {
     // Insert type and sequence number into string from base class function
     std::ostringstream insert {};
-    insert << "\nType:   "sv << utils::to_string(type_) //
-           << "\nSeq No: "sv << seq_;                   //
+    insert << "\nType:   " << utils::to_string(type_) //
+           << "\nSeq No: " << seq_;                   //
 
     // Insert before tags (at least 59 chars after string begin)
     auto out = BaseHeader::to_string();

@@ -9,17 +9,20 @@
 
 #pragma once
 
-#include "CommandRegistry.hpp"
+#include "CommandRegistry.hpp" // NOLINT(misc-header-include-cycle)
 
 #include <functional>
-#include <map>
+#include <initializer_list>
 #include <string>
-#include <string_view>
+#include <typeinfo>
 #include <utility>
-#include <vector>
+#include <variant>
+
+#include <magic_enum.hpp>
 
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/type.hpp"
 #include "constellation/satellite/exceptions.hpp"

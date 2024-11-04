@@ -21,10 +21,12 @@
 using namespace Catch::Matchers;
 using namespace constellation::controller;
 
-std::filesystem::path test_files_dir() {
-    const auto* cxx_tests_dir = std::getenv("CXX_TESTS_DIR"); // NOLINT(concurrency-mt-unsafe)
-    return std::filesystem::path(cxx_tests_dir) / "test_files";
-}
+namespace {
+    std::filesystem::path test_files_dir() {
+        const auto* cxx_tests_dir = std::getenv("CXX_TESTS_DIR"); // NOLINT(concurrency-mt-unsafe)
+        return std::filesystem::path(cxx_tests_dir) / "test_files";
+    }
+} // namespace
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
 

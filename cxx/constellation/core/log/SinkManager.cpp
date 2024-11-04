@@ -12,6 +12,7 @@
 #include <ctime>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -31,7 +32,7 @@
 #include "constellation/core/log/CMDPSink.hpp"
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/ProxySink.hpp"
-#include "constellation/core/utils/exceptions.hpp"
+#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::log;
@@ -60,8 +61,8 @@ std::unique_ptr<spdlog::custom_flag_formatter> SinkManager::ConstellationLevelFo
 void SinkManager::ConstellationTopicFormatter::format(const spdlog::details::log_msg& msg,
                                                       const std::tm& /*tm*/,
                                                       spdlog::memory_buf_t& dest) {
-    if(msg.logger_name.size() > 0) {
-        auto topic = "[" + to_string(msg.logger_name) + "]";
+    if(msg.logger_name.size() > 0) {                         // NOLINT(readability-container-size-empty) might be fmt string
+        auto topic = "[" + to_string(msg.logger_name) + "]"; // NOLINT(misc-include-cleaner) might be fmt string
         dest.append(topic.data(), topic.data() + topic.size());
     }
 }
@@ -109,12 +110,8 @@ SinkManager::SinkManager() : zmq_context_(global_zmq_context()), console_global_
 #endif
 
     // CMDP sink, log level always TRACE since only accessed via ProxySink
-    try {
-        cmdp_sink_ = std::make_shared<CMDPSink>(zmq_context_);
-        cmdp_sink_->set_level(to_spdlog_level(TRACE));
-    } catch(const zmq::error_t& error) {
-        throw ZMQInitError(error.what());
-    }
+    cmdp_sink_ = std::make_shared<CMDPSink>(zmq_context_);
+    cmdp_sink_->set_level(to_spdlog_level(TRACE));
 
     // Create default logger without topic
     default_logger_ = create_logger("DEFAULT");
