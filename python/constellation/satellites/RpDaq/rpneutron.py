@@ -12,6 +12,7 @@ import mmap
 import numpy as np
 from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
 from constellation.core.satellite import SatelliteArgumentParser
+from constellation.core.configuration import Configuration
 from constellation.core.base import setup_cli_logging
 import rp
 
@@ -110,8 +111,8 @@ class RPNeutron(RedPitayaSatellite):
         self.active_channels = RP_CHANNELS
         self.master = False
 
-    def do_initializing(self, payload: any) -> str:
-        self.master = self.config["master"]
+    def do_initializing(self, configuration: Configuration) -> str:
+        self.master = configuration["master"]
         # Define axi array for custom start stop register
         axi_mmap0 = mmap.mmap(
             self.memory_file_handle,
@@ -122,7 +123,7 @@ class RPNeutron(RedPitayaSatellite):
         )
         axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
         self.axi_array_contents0 = axi_numpy_array0[0]
-        return super().do_initializing(payload)
+        return super().do_initializing(configuration)
 
     def write_start_stop_bit_to_FPGA(self, start_stop):
         self.axi_array_contents0.Externaltrigger = start_stop

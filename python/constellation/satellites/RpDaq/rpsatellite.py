@@ -22,6 +22,7 @@ from .lib_mikroe_rtd import RTD
 from constellation.core.commandmanager import cscp_requestable
 from constellation.core.cscp import CSCPMessage
 from constellation.core.datasender import DataSender
+from constellation.core.configuration import Configuration
 from constellation.core.configuration import ConfigError
 from constellation.core.satellite import SatelliteArgumentParser
 from constellation.core.base import setup_cli_logging
@@ -118,18 +119,22 @@ class RedPitayaSatellite(DataSender):
             interval=METRICS_PERIOD,
         )
 
-    def do_reconfigure(self, payload: any) -> str:
+    def do_reconfigure(self, partial_config: Configuration) -> str:
+        config_keys = partial_config.get_keys()
+        if "data_type" in config_keys:
+            self.data_type = partial_config["data_type"]
         # Writes FPGA configurations to register
         time.sleep(1)
         names = [field[0] for field in self.axi_regset_config.descr]
         for name, value in zip(names, self.config_axi_array_contents):
-            setattr(self.config_axi_array_contents, name, self.config[name])
+            if name in config_keys:
+                setattr(self.config_axi_array_contents, name, partial_config[name])
         return "Reconfigured"
 
-    def do_initializing(self, payload: any) -> str:
+    def do_initializing(self, configuration: Configuration) -> str:
         try:
             # Change the FPGA image ##
-            bin_file = self.config["bin_file"]
+            bin_file = configuration["bin_file"]
             command = "/opt/redpitaya/bin/fpgautil -b " + bin_file
             if os.system(command) != 0:  # OS 2.00 and above
                 msg = "System command failed."
@@ -158,7 +163,7 @@ class RedPitayaSatellite(DataSender):
             # Writes FPGA configurations to register
             names = [field[0] for field in self.axi_regset_config.descr]
             for name, value in zip(names, self.config_axi_array_contents):
-                setattr(self.config_axi_array_contents, name, self.config[name])
+                setattr(self.config_axi_array_contents, name, configuration[name])
 
             # Define the axi array for axi writer channel 1 2
             self.axi_writer_register_names = np.dtype(
@@ -241,35 +246,36 @@ class RedPitayaSatellite(DataSender):
                 mmap.PROT_READ | mmap.PROT_WRITE,
                 offset=0x1000000,
             )
+            self.data_type = configuration["data_type"]
             time.sleep(0.1)
             # Resetting ADC
             self.reset()
 
             # Setup metrics
-            if self.config["read_water_sensors"]:
+            if configuration["read_water_sensors"]:
                 self.expand11 = Expand11(i2c_bus=0, i2c_address=0x41)
 
                 if self.expand11.default_cfg() != -1:
                     self.schedule_metric(
                         self.get_water_sensor_state.__name__,
                         self.get_water_sensor_state,
-                        self.config["water_sensors_poll_rate"],
+                        configuration["water_sensors_poll_rate"],
                     )
                 else:
                     self.log.warning("Could not connect to Expand11 card")
 
-            if self.config["read_temperature_sensors"]:
+            if configuration["read_temperature_sensors"]:
                 self.rtd = RTD(microbus=1)
                 if self.rtd.default_cfg() != -1:
                     self.schedule_metric(
                         self.rtd.get_rtd_temperature.__name__,
                         self.rtd.get_rtd_temperature,
-                        self.config["temperature_sensors_poll_rate"],
+                        configuration["temperature_sensors_poll_rate"],
                     )
                 else:
                     self.log.warning("Could not connect to RTD card")
 
-            if self.config["read_gpio"]:
+            if configuration["read_gpio"]:
                 # Define the axi array for GPIO pins
 
                 axi_mmap_gpio = mmap.mmap(
@@ -285,42 +291,42 @@ class RedPitayaSatellite(DataSender):
                 self.schedule_metric(
                     self.get_analog_gpio_pins.__name__,
                     self.get_analog_gpio_pins,
-                    self.config["gpio_poll_rate"],
+                    configuration["gpio_poll_rate"],
                 )
                 self.schedule_metric(
                     self.get_digital_gpio_pins.__name__,
                     self.get_digital_gpio_pins,
-                    self.config["gpio_poll_rate"],
+                    configuration["gpio_poll_rate"],
                 )
             self.schedule_metric(
                 self.get_cpu_temperature.__name__,
                 self.get_cpu_temperature,
-                self.config["metrics_poll_rate"],
+                configuration["metrics_poll_rate"],
             )
             self.schedule_metric(
                 self.get_cpu_load.__name__,
                 self.get_cpu_load,
-                self.config["metrics_poll_rate"],
+                configuration["metrics_poll_rate"],
             )
             self.schedule_metric(
                 self.get_memory_load.__name__,
                 self.get_memory_load,
-                self.config["metrics_poll_rate"],
+                configuration["metrics_poll_rate"],
             )
             self.schedule_metric(
                 self.get_network_rx.__name__,
                 self.get_network_rx,
-                self.config["metrics_poll_rate"],
+                configuration["metrics_poll_rate"],
             )
             self.schedule_metric(
                 self.get_network_tx.__name__,
                 self.get_network_tx,
-                self.config["metrics_poll_rate"],
+                configuration["metrics_poll_rate"],
             )
             self.schedule_metric(
                 self.read_registers.__name__,
                 self.read_registers,
-                self.config["metrics_poll_rate"],
+                configuration["metrics_poll_rate"],
             )
 
         except (ConfigError, OSError) as e:
@@ -348,7 +354,6 @@ class RedPitayaSatellite(DataSender):
         # tmp_BOR = self.config._config
         # tmp_BOR["start time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
         # self.BOR = tmp_BOR
-        self.data_type = self.config["data_type"]
         return "Started"
 
     def do_run(self, payload):
@@ -374,9 +379,9 @@ class RedPitayaSatellite(DataSender):
 
     def reset(self):
         """Reset DAQ."""
-        self.data_type_axi_array_contents.data_type = self.config["data_type"] | (1 << 4)
+        self.data_type_axi_array_contents.data_type = self.data_type | (1 << 4)
         time.sleep(0.1)
-        self.data_type_axi_array_contents.data_type = self.config["data_type"]
+        self.data_type_axi_array_contents.data_type = self.data_type
         self._readpos = 0
 
     def do_stopping(self, payload: any):

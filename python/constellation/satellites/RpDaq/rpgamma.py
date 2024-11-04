@@ -15,6 +15,7 @@ import rp
 from constellation.core.satellite import SatelliteArgumentParser
 from constellation.core.base import setup_cli_logging
 from constellation.core.configuration import ConfigError
+from constellation.core.configuration import Configuration
 from .rpsatellite import RedPitayaSatellite, axi_regset_start_stop
 
 RP_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2]
@@ -61,7 +62,7 @@ class RPGamma(RedPitayaSatellite):
         self.axi_regset_config = axi_regset_config
         self.regset_readout = axi_regset_readout
 
-    def do_initializing(self, payload: any) -> str:
+    def do_initializing(self, configuration: Configuration) -> str:
         """Initialize satellite. Change the FPGA image and set register
         values."""
         try:
@@ -81,15 +82,15 @@ class RPGamma(RedPitayaSatellite):
         )
         axi_numpy_array0 = np.recarray(1, axi_regset_start_stop, buf=axi_mmap0)
         self.axi_array_contents0 = axi_numpy_array0[0]
-        return super().do_initializing(payload)
+        return super().do_initializing(configuration)
 
     def do_starting(self, payload: any) -> str:
         """Start acquisition by writing to address."""
-        self.axi_array_contents0.Externaltrigger = self.config["data_type"] | (1 << 5)
+        self.axi_array_contents0.Externaltrigger = self.data_type | (1 << 5)
         return super().do_starting(payload)
 
     def do_stopping(self, payload: any):
-        self.axi_array_contents0.Externaltrigger = self.config["data_type"] & ~(1 << 5)
+        self.axi_array_contents0.Externaltrigger = self.data_type & ~(1 << 5)
         return super().do_stopping(payload)
 
 
