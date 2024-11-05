@@ -21,11 +21,13 @@ from .lib_mikroe_rtd import RTD
 
 from constellation.core.commandmanager import cscp_requestable
 from constellation.core.cscp import CSCPMessage
-from constellation.core.datasender import DataSender
 from constellation.core.configuration import Configuration
 from constellation.core.configuration import ConfigError
 from constellation.core.satellite import SatelliteArgumentParser
+from constellation.core.datasender import DataSender
 from constellation.core.base import setup_cli_logging
+from constellation.core.cmdp import MetricsType
+from functools import partial
 
 axi_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
 
@@ -93,31 +95,114 @@ class RedPitayaSatellite(DataSender):
         self._prev_rx = int(self.network_rx_file_reader.read())
         self.regset_readout = None
         self.device = None
+        self._configure_monitoring(None, METRICS_PERIOD)
+
+    def _configure_monitoring(self, configuration, interval: float) -> None:
+        """Schedule monitoring for internal parameters."""
+        self.reset_scheduled_metrics()
+        # add a callback using partial
+
         self.schedule_metric(
-            self.get_cpu_temperature.__name__,
-            self.get_cpu_temperature,
-            interval=METRICS_PERIOD,
+            "get_cpu_temperature",
+            "°C",
+            MetricsType.LAST_VALUE,
+            interval,
+            partial(self.get_cpu_temperature),
+        )
+
+        self.schedule_metric(
+            "get_cpu_load",
+            "%",
+            MetricsType.LAST_VALUE,
+            interval,
+            partial(self.get_cpu_load),
         )
         self.schedule_metric(
-            self.get_cpu_load.__name__,
-            self.get_cpu_load,
-            interval=METRICS_PERIOD,
+            "get_memory_load",
+            "%",
+            MetricsType.LAST_VALUE,
+            interval,
+            partial(self.get_memory_load),
         )
         self.schedule_metric(
-            self.get_memory_load.__name__,
-            self.get_memory_load,
-            interval=METRICS_PERIOD,
+            "get_network_rx",
+            "kb/s",
+            MetricsType.LAST_VALUE,
+            interval,
+            partial(self.get_network_rx),
         )
         self.schedule_metric(
-            self.get_network_rx.__name__,
-            self.get_network_rx,
-            interval=METRICS_PERIOD,
+            "get_network_tx",
+            "kb/s",
+            MetricsType.LAST_VALUE,
+            interval,
+            partial(self.get_network_tx),
         )
-        self.schedule_metric(
-            self.get_network_tx.__name__,
-            self.get_network_tx,
-            interval=METRICS_PERIOD,
-        )
+
+        if configuration is not None:
+
+            if configuration["read_water_sensors"]:
+                self.expand11 = Expand11(i2c_bus=0, i2c_address=0x41)
+
+                if self.expand11.default_cfg() != -1:
+                    self.schedule_metric(
+                        "get_water_sensor_state",
+                        "uint8",
+                        MetricsType.LAST_VALUE,
+                        interval,
+                        partial(self.get_water_sensor_state),
+                    )
+                else:
+                    self.log.warning("Could not connect to Expand11 card")
+
+            if configuration["read_temperature_sensors"]:
+                self.rtd = RTD(microbus=1)
+                if self.rtd.default_cfg() != -1:
+
+                    self.schedule_metric(
+                        "get_rtd_temperature",
+                        "°C",
+                        MetricsType.LAST_VALUE,
+                        interval,
+                        partial(self.get_rtd_temperature),
+                    )
+                else:
+                    self.log.warning("Could not connect to RTD card")
+
+            if configuration["read_gpio"]:
+                # Define the axi array for GPIO pins
+
+                axi_mmap_gpio = mmap.mmap(
+                    self.memory_file_handle,
+                    mmap.PAGESIZE,
+                    mmap.MAP_SHARED,
+                    mmap.PROT_READ | mmap.PROT_WRITE,
+                    offset=0x40000000,
+                )
+                axi_numpy_array_gpio = np.recarray(1, axi_gpio_regset_pins, buf=axi_mmap_gpio)
+                self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
+
+                self.schedule_metric(
+                    "get_analog_gpio_pins",
+                    "bits",
+                    MetricsType.LAST_VALUE,
+                    interval,
+                    partial(self.get_analog_gpio_pins),
+                )
+                self.schedule_metric(
+                    "get_digital_gpio_pins",
+                    "bits",
+                    MetricsType.LAST_VALUE,
+                    interval,
+                    partial(self.get_digital_gpio_pins),
+                )
+            self.schedule_metric(
+                "read_registers",
+                "",
+                MetricsType.LAST_VALUE,
+                interval,
+                partial(self.read_registers),
+            )
 
     def do_reconfigure(self, partial_config: Configuration) -> str:
         config_keys = partial_config.get_keys()
@@ -250,85 +335,7 @@ class RedPitayaSatellite(DataSender):
             time.sleep(0.1)
             # Resetting ADC
             self.reset()
-
-            # Setup metrics
-            if configuration["read_water_sensors"]:
-                self.expand11 = Expand11(i2c_bus=0, i2c_address=0x41)
-
-                if self.expand11.default_cfg() != -1:
-                    self.schedule_metric(
-                        self.get_water_sensor_state.__name__,
-                        self.get_water_sensor_state,
-                        configuration["water_sensors_poll_rate"],
-                    )
-                else:
-                    self.log.warning("Could not connect to Expand11 card")
-
-            if configuration["read_temperature_sensors"]:
-                self.rtd = RTD(microbus=1)
-                if self.rtd.default_cfg() != -1:
-                    self.schedule_metric(
-                        self.rtd.get_rtd_temperature.__name__,
-                        self.rtd.get_rtd_temperature,
-                        configuration["temperature_sensors_poll_rate"],
-                    )
-                else:
-                    self.log.warning("Could not connect to RTD card")
-
-            if configuration["read_gpio"]:
-                # Define the axi array for GPIO pins
-
-                axi_mmap_gpio = mmap.mmap(
-                    self.memory_file_handle,
-                    mmap.PAGESIZE,
-                    mmap.MAP_SHARED,
-                    mmap.PROT_READ | mmap.PROT_WRITE,
-                    offset=0x40000000,
-                )
-                axi_numpy_array_gpio = np.recarray(1, axi_gpio_regset_pins, buf=axi_mmap_gpio)
-                self.axi_array_contents_gpio = axi_numpy_array_gpio[0]
-
-                self.schedule_metric(
-                    self.get_analog_gpio_pins.__name__,
-                    self.get_analog_gpio_pins,
-                    configuration["gpio_poll_rate"],
-                )
-                self.schedule_metric(
-                    self.get_digital_gpio_pins.__name__,
-                    self.get_digital_gpio_pins,
-                    configuration["gpio_poll_rate"],
-                )
-            self.schedule_metric(
-                self.get_cpu_temperature.__name__,
-                self.get_cpu_temperature,
-                configuration["metrics_poll_rate"],
-            )
-            self.schedule_metric(
-                self.get_cpu_load.__name__,
-                self.get_cpu_load,
-                configuration["metrics_poll_rate"],
-            )
-            self.schedule_metric(
-                self.get_memory_load.__name__,
-                self.get_memory_load,
-                configuration["metrics_poll_rate"],
-            )
-            self.schedule_metric(
-                self.get_network_rx.__name__,
-                self.get_network_rx,
-                configuration["metrics_poll_rate"],
-            )
-            self.schedule_metric(
-                self.get_network_tx.__name__,
-                self.get_network_tx,
-                configuration["metrics_poll_rate"],
-            )
-            self.schedule_metric(
-                self.read_registers.__name__,
-                self.read_registers,
-                configuration["metrics_poll_rate"],
-            )
-
+            self._configure_monitoring(configuration, configuration["metrics_poll_rate"])
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
         return "Initialized."
@@ -345,11 +352,9 @@ class RedPitayaSatellite(DataSender):
         ret = {}
         for name, value in zip(names, values):
             ret[name] = value
-        return ret, "uint8"
+        return ret
 
-        return self.expand11.read_port_value()
-
-    def do_starting(self, payload):
+    def do_starting(self, run_identifier: str):
         """Starting the acquisition and Wrote BOR"""
         # tmp_BOR = self.config._config
         # tmp_BOR["start time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
@@ -384,7 +389,7 @@ class RedPitayaSatellite(DataSender):
         self.data_type_axi_array_contents.data_type = self.data_type
         self._readpos = 0
 
-    def do_stopping(self, payload: any):
+    def do_stopping(self):
         """Stop acquisition and read out last buffer"""
         tmp_EOR = self.read_registers()[0]
         tmp_EOR["stop time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
@@ -493,7 +498,7 @@ class RedPitayaSatellite(DataSender):
         raw = int(self.cpu_temperature_raw_file_reader.read())
         self.cpu_temperature_scale_file_reader.seek(0)
         scale = float(self.cpu_temperature_scale_file_reader.read())
-        return (round(((float)(offset + raw)) * scale / 1000.0, 1)), "°C"
+        return round(((float)(offset + raw)) * scale / 1000.0, 1)
 
     def get_cpu_load(self):
         """Estimate current CPU load and update previously saved CPU times."""
@@ -503,7 +508,7 @@ class RedPitayaSatellite(DataSender):
         utilization = ((total_cpu_time2 - idle_cpu_time2) * 100) / total_cpu_time2
         self._prev_cpu_time = total_cpu_time
         self._prev_cpu_idle = idle_cpu_time
-        return round(utilization, 1), "%"
+        return round(utilization, 1)
 
     def get_memory_load(self):
         """Obtain current memory usage."""
@@ -514,7 +519,7 @@ class RedPitayaSatellite(DataSender):
         free_mem = int(re.search(r"\d+", mem[1]).group())
         used_mem = tot_mem - free_mem
 
-        return round(used_mem / tot_mem * 100, 1), "%"
+        return round(used_mem / tot_mem * 100, 1)
 
     def get_network_tx(self):
         """Estimate current tx network speeds."""
@@ -522,7 +527,7 @@ class RedPitayaSatellite(DataSender):
         tx_bytes = int(self.network_tx_file_reader.read())
         tx_speed = (tx_bytes - self._prev_tx) / METRICS_PERIOD
         self._prev_tx = tx_bytes
-        return (round(tx_speed / 1000.0, 1)), "kb/s"
+        return round(tx_speed / 1000.0, 1)
 
     def get_network_rx(self):
         """Estimate current rx network speeds."""
@@ -531,7 +536,7 @@ class RedPitayaSatellite(DataSender):
         rx_speed = (rx_bytes - self._prev_rx) / METRICS_PERIOD
         self._prev_rx = rx_bytes
 
-        return (round(rx_speed / 1000, 1)), "kb/s"
+        return round(rx_speed / 1000, 1)
 
     def get_digital_gpio_pins(self):
         """Read out values at digital gpio P and N ports."""
@@ -539,14 +544,14 @@ class RedPitayaSatellite(DataSender):
         n_pins = self.axi_array_contents_gpio.n_pins.astype(dtype=np.uint8).item()
 
         pins = [p_pins, n_pins]
-        return pins, "bits"
+        return pins
 
     def get_analog_gpio_pins(self):
         """Read out values at analog gpio ports."""
         pins = []
         for pin in range(4):
             pins.append(rp.rp_AIpinGetValue(pin)[1])
-        return pins, "bits"
+        return pins
 
     def _get_axi_write_pointer(self):
         """Obtain _axi_write pointer"""
@@ -572,7 +577,7 @@ class RedPitayaSatellite(DataSender):
         ret = {}
         for name, value in zip(names, self.axi_array_contents_param):
             ret[name] = value.item()
-        return ret, "uint32"
+        return ret
 
     def _sample_axi_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
         """Read out data in 32-bit form."""

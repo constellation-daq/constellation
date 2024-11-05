@@ -87,7 +87,7 @@ class RTD:
         coefficient = referent_resistance / 400.0
         input_data >>= 1
         temperature = (input_data * coefficient) / 32 - 256
-        return round(temperature, 2), "°C"
+        return round(temperature, 2)
 
     def close(self):
         """Closes the connection and clean up"""

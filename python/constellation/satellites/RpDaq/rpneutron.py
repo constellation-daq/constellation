@@ -128,17 +128,17 @@ class RPNeutron(RedPitayaSatellite):
     def write_start_stop_bit_to_FPGA(self, start_stop):
         self.axi_array_contents0.Externaltrigger = start_stop
 
-    def do_stopping(self, payload: any):
+    def do_stopping(self):
         """Stop acquisition by writing to address."""
         if self.master:
             self.write_start_stop_bit_to_FPGA(0)
-        return super().do_stopping(payload)
+        return super().do_stopping()
 
-    def do_starting(self, payload: any) -> str:
+    def do_starting(self, run_identifier: str):
         """Start acquisition by writing to address."""
         if self.master:
             self.write_start_stop_bit_to_FPGA(3)
-        return super().do_starting(payload)
+        return super().do_starting(run_identifier)
 
 
 # -------------------------------------------------------------------------
@@ -152,13 +152,13 @@ def main(args=None):
     )
     # this sets the defaults for our Satellite
     parser.set_defaults(
+        name="RedPitaya_data_sender",
         cmd_port=23999,
         mon_port=55556,
         hb_port=61234,
         data_port=55557,
     )
     args = vars(parser.parse_args(args))
-
     # set up logging
     setup_cli_logging(args["name"], args.pop("log_level"))
 
