@@ -93,7 +93,6 @@ class RedPitayaSatellite(DataSender):
 
         self._prev_tx = int(self.network_tx_file_reader.read())
         self._prev_rx = int(self.network_rx_file_reader.read())
-        self.regset_readout = None
         self.device = None
         self._configure_monitoring(None, METRICS_PERIOD)
 
@@ -145,13 +144,20 @@ class RedPitayaSatellite(DataSender):
                 self.expand11 = Expand11(i2c_bus=0, i2c_address=0x41)
 
                 if self.expand11.default_cfg() != -1:
-                    self.schedule_metric(
-                        "get_water_sensor_state",
-                        "uint8",
-                        MetricsType.LAST_VALUE,
-                        interval,
-                        partial(self.get_water_sensor_state),
-                    )
+                    names = [
+                        "water_sensor_ch0",
+                        "water_sensor_ch1",
+                        "water_sensor_ch2",
+                        "water_sensor_ch3",
+                    ]
+                    for stat in names:
+                        self.schedule_metric(
+                            stat,
+                            "uint8",
+                            MetricsType.LAST_VALUE,
+                            interval,
+                            partial(self.get_water_sensor_state, stat),
+                        )
                 else:
                     self.log.warning("Could not connect to Expand11 card")
 
@@ -196,13 +202,18 @@ class RedPitayaSatellite(DataSender):
                     interval,
                     partial(self.get_digital_gpio_pins),
                 )
-            self.schedule_metric(
-                "read_registers",
-                "",
-                MetricsType.LAST_VALUE,
-                interval,
-                partial(self.read_registers),
-            )
+            """Schedule monitoring for internal parameters."""
+            for stat in self.regset_readout.names:
+                if stat not in self.axi_regset_config.names:
+                    self.log.info("Configuring monitoring for '%s' metric", stat)
+                    # add a callback using partial
+                    self.schedule_metric(
+                        stat,
+                        "",
+                        MetricsType.LAST_VALUE,
+                        interval,
+                        partial(self.read_registers, stat),
+                    )
 
     def do_reconfigure(self, partial_config: Configuration) -> str:
         config_keys = partial_config.get_keys()
@@ -210,11 +221,23 @@ class RedPitayaSatellite(DataSender):
             self.data_type = partial_config["data_type"]
         # Writes FPGA configurations to register
         time.sleep(1)
+        self._write_config_to_fpga(partial_config)
+        return "Reconfigured"
+
+    def _write_config_to_fpga(self, configuration: Configuration):
+        # Writes FPGA configurations to register
+        def calculate_register_value(config_prefix, scaling_factors, active_channels):
+            """Helper function to calculate the value for a given prefix and scaling factors."""
+            return sum(self.config[f"{config_prefix}_{i}"] * scaling_factors[i] for i in range(len(active_channels)))
+
         names = [field[0] for field in self.axi_regset_config.descr]
         for name, value in zip(names, self.config_axi_array_contents):
-            if name in config_keys:
-                setattr(self.config_axi_array_contents, name, partial_config[name])
-        return "Reconfigured"
+            if name in self.scaling_factors:
+                num_channels = 4 if len(self.active_channels) == 4 else 2
+                val = calculate_register_value(name, self.scaling_factors[name][:num_channels], self.active_channels)
+            elif name in ["data_type", "use_test_pulser"]:
+                val = configuration[name]
+            setattr(self.config_axi_array_contents, name, val)
 
     def do_initializing(self, configuration: Configuration) -> str:
         try:
@@ -245,11 +268,8 @@ class RedPitayaSatellite(DataSender):
             axi_numpy_array_param = np.recarray(1, self.regset_readout, buf=axi_mmap_custom_registers)
             self.axi_array_contents_param = axi_numpy_array_param[0]
             time.sleep(0.1)
-            # Writes FPGA configurations to register
-            names = [field[0] for field in self.axi_regset_config.descr]
-            for name, value in zip(names, self.config_axi_array_contents):
-                setattr(self.config_axi_array_contents, name, configuration[name])
 
+            self._write_config_to_fpga(configuration)
             # Define the axi array for axi writer channel 1 2
             self.axi_writer_register_names = np.dtype(
                 [
@@ -340,7 +360,7 @@ class RedPitayaSatellite(DataSender):
             self.log.error("Error configuring device. %s", e)
         return "Initialized."
 
-    def get_water_sensor_state(self):
+    def get_water_sensor_state(self, stat):
 
         names = [
             "water_sensor_ch0",
@@ -352,7 +372,7 @@ class RedPitayaSatellite(DataSender):
         ret = {}
         for name, value in zip(names, values):
             ret[name] = value
-        return ret
+        return ret[stat]
 
     def do_starting(self, run_identifier: str):
         """Starting the acquisition and Wrote BOR"""
@@ -391,10 +411,11 @@ class RedPitayaSatellite(DataSender):
 
     def do_stopping(self):
         """Stop acquisition and read out last buffer"""
-        tmp_EOR = self.read_registers()[0]
+        tmp_EOR = self.config._config
         tmp_EOR["stop time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
+        for stat in self.regset_readout.names:
+            tmp_EOR[stat] = self.read_registers(stat)
         self.EOR = tmp_EOR
-
         time.sleep(1)  # add sleep to make sure that everything has stopped
 
         # Read last buffer
@@ -562,7 +583,7 @@ class RedPitayaSatellite(DataSender):
             write_pointer = 0
         return write_pointer
 
-    def read_registers(self):
+    def read_registers(self, stat):
         """
         Reads the stored values of the axi_regset and returns a
         tuple of their respective names and values.
@@ -577,7 +598,7 @@ class RedPitayaSatellite(DataSender):
         ret = {}
         for name, value in zip(names, self.axi_array_contents_param):
             ret[name] = value.item()
-        return ret
+        return ret[stat]
 
     def _sample_axi_raw32(self, start: int = 0, stop: int = 16384, channel: int = 1):
         """Read out data in 32-bit form."""

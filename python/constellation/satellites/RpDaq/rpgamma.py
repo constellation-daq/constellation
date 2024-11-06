@@ -23,7 +23,7 @@ RP_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2]
 axi_regset_config = np.dtype(
     [
         ("data_type", "uint32"),
-        ("active_channels", "uint32"),
+        ("active_channel", "uint32"),
         ("use_test_pulser", "uint32"),
         ("running_sum_integration_time", "uint32"),
         ("averaging_integration_time", "uint32"),
@@ -34,9 +34,9 @@ axi_regset_config = np.dtype(
 axi_regset_readout = np.dtype(
     [
         ("data_type", "uint32"),
-        ("active_channels", "uint32"),
+        ("active_channel", "uint32"),
         ("use_test_pulser", "uint32"),
-        ("shiftSamplesExp", "uint32"),
+        ("running_sum_integration_time", "uint32"),
         ("averaging_integration_time", "uint32"),
         ("trigger_level", "uint32"),
         ("trigger_per_s_ch0", "uint32"),
@@ -49,6 +49,12 @@ axi_regset_readout = np.dtype(
         ("total_number_of_triggers_ch1", "uint32"),
     ]
 )
+scaling_factors = {
+    "active_channel": [1, 2, 4, 8],
+    "running_sum_integration_time": [1, 16, 256, 4096],
+    "averaging_integration_time": [1, 32, 1024, 32768],
+    "trigger_level": [1, 8192],
+}
 
 
 class RPGamma(RedPitayaSatellite):
@@ -61,6 +67,7 @@ class RPGamma(RedPitayaSatellite):
         self.device = "RedPitaya_250_12"
         self.axi_regset_config = axi_regset_config
         self.regset_readout = axi_regset_readout
+        self.scaling_factors = scaling_factors
 
     def do_initializing(self, configuration: Configuration) -> str:
         """Initialize satellite. Change the FPGA image and set register

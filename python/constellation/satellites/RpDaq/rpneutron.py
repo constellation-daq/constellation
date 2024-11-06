@@ -19,7 +19,7 @@ import rp
 axi_regset_config = np.dtype(
     [
         ("data_type", "uint32"),
-        ("active_channels", "uint32"),
+        ("active_channel", "uint32"),
         ("use_test_pulser", "uint32"),
         ("running_sum_integration_time", "uint32"),
         ("averaging_integration_time", "uint32"),
@@ -35,7 +35,7 @@ axi_regset_config = np.dtype(
 axi_regset_readout = np.dtype(
     [
         ("data_type", "uint32"),
-        ("active_channels", "uint32"),
+        ("active_channel", "uint32"),
         ("use_test_pulser", "uint32"),
         ("running_sum_integration_time", "uint32"),
         ("averaging_integration_time", "uint32"),
@@ -95,7 +95,15 @@ axi_regset_readout = np.dtype(
         ("Data_value_ch3", "uint32"),
     ]
 )
-
+scaling_factors = {
+    "active_channel": [1, 2, 4, 8],
+    "running_sum_integration_time": [1, 16, 256, 4096],
+    "averaging_integration_time": [1, 32, 1024, 32768],
+    "trigger_level": [1, 16, 256, 4096],
+    "tot": [1, 65536],
+    "dist": [1, 65536],
+    "ratio": [1, 256, 65536, 16777216],
+}
 RP_CHANNELS = [rp.RP_CH_1, rp.RP_CH_2, rp.RP_CH_3, rp.RP_CH_4]
 
 
@@ -108,6 +116,7 @@ class RPNeutron(RedPitayaSatellite):
         self.device = "RedPitaya_125_14"
         self.axi_regset_config = axi_regset_config
         self.regset_readout = axi_regset_readout
+        self.scaling_factors = scaling_factors
         self.active_channels = RP_CHANNELS
         self.master = False
 
