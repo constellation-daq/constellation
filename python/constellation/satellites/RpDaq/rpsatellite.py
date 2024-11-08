@@ -27,6 +27,7 @@ from constellation.core.satellite import SatelliteArgumentParser
 from constellation.core.datasender import DataSender
 from constellation.core.base import setup_cli_logging
 from constellation.core.cmdp import MetricsType
+from constellation.core.fsm import SatelliteState
 from functools import partial
 
 axi_regset_start_stop = np.dtype([("Externaltrigger", "uint32")])
@@ -99,6 +100,7 @@ class RedPitayaSatellite(DataSender):
     def _configure_monitoring(self, configuration, interval: float) -> None:
         """Schedule monitoring for internal parameters."""
         self.reset_scheduled_metrics()
+        time.sleep(1)
         # add a callback using partial
 
         self.schedule_metric(
@@ -226,16 +228,20 @@ class RedPitayaSatellite(DataSender):
 
     def _write_config_to_fpga(self, configuration: Configuration):
         # Writes FPGA configurations to register
-        def calculate_register_value(config_prefix, scaling_factors, active_channels):
+        def calculate_register_value(key, scaling_factors, active_channels):
             """Helper function to calculate the value for a given prefix and scaling factors."""
-            return sum(self.config[f"{config_prefix}_{i}"] * scaling_factors[i] for i in range(len(active_channels)))
+            return sum(configuration[f"{key}_{i}"] * scaling_factors[i] for i in range(len(active_channels)))
 
         names = [field[0] for field in self.axi_regset_config.descr]
+        config_keys = configuration.get_keys()
         for name, value in zip(names, self.config_axi_array_contents):
+            # check if key in partial_config
+            if name not in config_keys:
+                continue
             if name in self.scaling_factors:
                 num_channels = 4 if len(self.active_channels) == 4 else 2
                 val = calculate_register_value(name, self.scaling_factors[name][:num_channels], self.active_channels)
-            elif name in ["data_type", "use_test_pulser"]:
+            else:
                 val = configuration[name]
             setattr(self.config_axi_array_contents, name, val)
 
@@ -360,8 +366,25 @@ class RedPitayaSatellite(DataSender):
             self.log.error("Error configuring device. %s", e)
         return "Initialized."
 
-    def get_water_sensor_state(self, stat):
+    def get_rtd_temperature(self):
+        if self.fsm.current_state_value in [
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return None
 
+        return self.rtd.get_rtd_temperature()
+
+    def get_water_sensor_state(self, stat):
+        if self.fsm.current_state_value in [
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return None
         names = [
             "water_sensor_ch0",
             "water_sensor_ch1",
@@ -372,6 +395,7 @@ class RedPitayaSatellite(DataSender):
         ret = {}
         for name, value in zip(names, values):
             ret[name] = value
+
         return ret[stat]
 
     def do_starting(self, run_identifier: str):
@@ -411,7 +435,7 @@ class RedPitayaSatellite(DataSender):
 
     def do_stopping(self):
         """Stop acquisition and read out last buffer"""
-        tmp_EOR = self.config._config
+        tmp_EOR = {}
         tmp_EOR["stop time"] = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
         for stat in self.regset_readout.names:
             tmp_EOR[stat] = self.read_registers(stat)
@@ -512,7 +536,13 @@ class RedPitayaSatellite(DataSender):
 
     def get_cpu_temperature(self):
         """Obtain temperature of CPU."""
-
+        if self.fsm.current_state_value in [
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return None
         self.cpu_temperature_offset_file_reader.seek(0)
         offset = int(self.cpu_temperature_offset_file_reader.read())
         self.cpu_temperature_raw_file_reader.seek(0)
@@ -523,6 +553,13 @@ class RedPitayaSatellite(DataSender):
 
     def get_cpu_load(self):
         """Estimate current CPU load and update previously saved CPU times."""
+        if self.fsm.current_state_value in [
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return None
         idle_cpu_time, total_cpu_time = self._get_cpu_times()
         total_cpu_time2 = total_cpu_time - self._prev_cpu_time
         idle_cpu_time2 = idle_cpu_time - self._prev_cpu_idle
@@ -534,6 +571,13 @@ class RedPitayaSatellite(DataSender):
     def get_memory_load(self):
         """Obtain current memory usage."""
         # Obtain memory info from file
+        if self.fsm.current_state_value in [
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return None
         self.memor_load_file_reader.seek(0)
         mem = self.memor_load_file_reader.read().split("\n")
         tot_mem = int(re.search(r"\d+", mem[0]).group())
@@ -544,6 +588,13 @@ class RedPitayaSatellite(DataSender):
 
     def get_network_tx(self):
         """Estimate current tx network speeds."""
+        if self.fsm.current_state_value in [
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return None
         self.network_tx_file_reader.seek(0)
         tx_bytes = int(self.network_tx_file_reader.read())
         tx_speed = (tx_bytes - self._prev_tx) / METRICS_PERIOD
@@ -552,6 +603,13 @@ class RedPitayaSatellite(DataSender):
 
     def get_network_rx(self):
         """Estimate current rx network speeds."""
+        if self.fsm.current_state_value in [
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return None
         self.network_rx_file_reader.seek(0)
         rx_bytes = int(self.network_rx_file_reader.read())
         rx_speed = (rx_bytes - self._prev_rx) / METRICS_PERIOD
@@ -561,6 +619,13 @@ class RedPitayaSatellite(DataSender):
 
     def get_digital_gpio_pins(self):
         """Read out values at digital gpio P and N ports."""
+        if self.fsm.current_state_value in [
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return None
         p_pins = self.axi_array_contents_gpio.p_pins.astype(dtype=np.uint8).item()
         n_pins = self.axi_array_contents_gpio.n_pins.astype(dtype=np.uint8).item()
 
@@ -569,6 +634,13 @@ class RedPitayaSatellite(DataSender):
 
     def get_analog_gpio_pins(self):
         """Read out values at analog gpio ports."""
+        if self.fsm.current_state_value in [
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return None
         pins = []
         for pin in range(4):
             pins.append(rp.rp_AIpinGetValue(pin)[1])
@@ -590,6 +662,13 @@ class RedPitayaSatellite(DataSender):
 
         If no readout of axi_regset is specified the method returns None.
         """
+        if self.fsm.current_state_value in [
+            SatelliteState.ERROR,
+            SatelliteState.DEAD,
+            SatelliteState.initializing,
+            SatelliteState.reconfiguring,
+        ]:
+            return None
         if not self.regset_readout:
             return None
 
