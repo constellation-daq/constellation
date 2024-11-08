@@ -6,10 +6,12 @@
 
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <string_view>
 #include <thread>
+#include <tuple>
 
 #include "constellation/core/chirp/BroadcastSend.hpp"
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
@@ -34,6 +36,14 @@ inline void chirp_mock_service(std::string_view name,
     const auto msgtype = offer ? MessageType::OFFER : MessageType::DEPART;
     const auto chirp_msg = constellation::message::CHIRPMessage(msgtype, "edda", name, service, port);
     chirp_sender.sendBroadcast(chirp_msg.assemble());
-    // Sleep a bit to handle chirp broadcast
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    // Wait until broadcast is received
+    auto* manager = Manager::getDefaultInstance();
+    while(std::ranges::count(manager->getDiscoveredServices(),
+                             std::make_tuple(constellation::message::MD5Hash(name), service, port),
+                             [](const auto& discovered_service) {
+                                 return std::make_tuple(
+                                     discovered_service.host_id, discovered_service.identifier, discovered_service.port);
+                             }) == 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
 }

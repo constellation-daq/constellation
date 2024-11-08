@@ -28,6 +28,7 @@
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
+#include "constellation/core/utils/string.hpp"
 
 using namespace constellation::chirp;
 using namespace constellation::log;
@@ -58,13 +59,13 @@ namespace {
     }
 
     // DiscoverCallback signature NOLINTNEXTLINE(performance-unnecessary-value-param)
-    void discover_callback(DiscoveredService service, bool depart, std::any /* user_data */) {
+    void discover_callback(DiscoveredService service, ServiceStatus status, std::any /* user_data */) {
         std::cout << "Callback:\n"
                   << " Service " << pad_str_right(magic_enum::enum_name(service.identifier), 10) //
                   << " Port " << std::setw(5) << service.port                                    //
                   << " Host " << service.host_id.to_string()                                     //
                   << " IP " << pad_str_right(service.address.to_string(), 15)                    //
-                  << (depart ? " DEPART" : " OFFER")                                             //
+                  << to_string(status)                                                           //
                   << "\n"
                   << std::flush;
     }

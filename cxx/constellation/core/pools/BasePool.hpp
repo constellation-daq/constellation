@@ -114,6 +114,13 @@ namespace constellation::pools {
         virtual void host_disconnected(const chirp::DiscoveredService& service);
 
         /**
+         * @brief Method for derived classes to act on sockets that are removed because their endpoint is dead
+         *
+         * @param service Service of the disconnected host
+         */
+        virtual void host_disposed(const chirp::DiscoveredService& service);
+
+        /**
          * @brief Return all connected sockets
          *
          * @warning Read access to the sockets needs to be protected with `sockets_mutex_`
@@ -135,13 +142,13 @@ namespace constellation::pools {
          * with the central polling mechanism
          *
          * @param service Discovered service
-         * @param depart Boolean to indicate discovery or departure
+         * @param status Enum to indicate if the service is discovered, departed or dead
          * @param user_data Pointer to the BasePool instance
          */
-        static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
+        static void callback(chirp::DiscoveredService service, chirp::ServiceStatus status, std::any user_data);
 
         /** Callback implementation */
-        void callback_impl(const chirp::DiscoveredService& service, bool depart);
+        void callback_impl(const chirp::DiscoveredService& service, chirp::ServiceStatus status);
 
         /** Main loop polling the registered sockets */
         void loop(const std::stop_token& stop_token);
@@ -151,6 +158,9 @@ namespace constellation::pools {
 
         /** Helper to disconnect from a departing service */
         void disconnect(const chirp::DiscoveredService& service);
+
+        /** Helper to remove a dead service */
+        void dispose(const chirp::DiscoveredService& service);
 
         /** Disconnect from all registered services */
         void disconnect_all();

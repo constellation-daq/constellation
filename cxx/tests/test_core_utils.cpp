@@ -9,6 +9,7 @@
 #include <map>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <variant>
 #include <vector>
 
@@ -16,6 +17,7 @@
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include "constellation/core/utils/timers.hpp"
 #include "constellation/core/utils/type.hpp"
 
 using namespace Catch::Matchers;
@@ -27,7 +29,25 @@ namespace test {
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
 
-TEST_CASE("Test demangle", "[satellite]") {
+TEST_CASE("Stopwatch Timer", "[core]") {
+    using namespace std::chrono_literals;
+    auto timer = StopwatchTimer();
+    timer.start();
+    std::this_thread::sleep_for(50ms);
+    timer.stop();
+    REQUIRE(timer.duration() >= 50ms);
+}
+
+TEST_CASE("Timeout Timer", "[core]") {
+    using namespace std::chrono_literals;
+    auto timer = TimeoutTimer(200ms);
+    timer.start();
+    REQUIRE_FALSE(timer.timeoutReached());
+    std::this_thread::sleep_for(200ms);
+    REQUIRE(timer.timeoutReached());
+}
+
+TEST_CASE("Test demangle", "[core]") {
     // std::vector
     using Vector = std::vector<int>;
     REQUIRE_THAT(demangle<Vector>(), Equals("std::vector<int>"));

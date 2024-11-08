@@ -50,17 +50,37 @@ of this tutorial. This section shows different options to perform this task.
 
 ### Starting a Controller
 
-::::{tab-set}
-:::{tab-item} C++
+::::::{tab-set}
+:::::{tab-item} C++
 :sync: cxx
 
 TODO
 
-:::
-:::{tab-item} Python
+:::::
+:::::{tab-item} Python
 :sync: python
 
-The Python implementation of Constellation provides a powerful command line interface controller using IPython. This can be installed with the `cli` component (see [Installing from Source](../install.md#installing-the-constellation-package)).
+The Python implementation of Constellation provides a powerful command line interface controller using IPython.
+This can be installed with the `cli` component:
+
+::::{tab-set}
+:::{tab-item} Source
+:sync: source
+
+```sh
+pip install --no-build-isolation -e .[cli]
+```
+
+:::
+:::{tab-item} PyPI
+:sync: pypi
+
+```sh
+pip install ConstellationDAQ[cli]
+```
+
+:::
+::::
 
 The controller can be started via its Python module via `python -m constellation.core.controller`, but an entry point is also created on installation which allows starting directly via the command `Controller`. It is possible to pass the controller some (optional) arguments, for example:
 
@@ -104,8 +124,8 @@ In [3]: for sat in constellation.satellites.values():
 {'msg': 'sputnik.thesecondsatellite', 'payload': None}
 ```
 
-:::
-::::
+:::::
+::::::
 
 ### Sending Commands to the Satellite
 
@@ -157,7 +177,7 @@ Similarly, all satellite states can be called. A full list of available commands
 state machine can be found in the [concepts chapter on satellites](../concepts/satellite).
 
 :::
-::::
+::::::
 
 ### Loading a Configuration File
 

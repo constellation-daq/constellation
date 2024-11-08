@@ -177,7 +177,7 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     update_run_identifier(gui_settings_.value("run/identifier", "run").toString(),
                           gui_settings_.value("run/sequence", 0).toInt());
 
-    setWindowTitle("Constellation MissionControl " CNSTLN_VERSION);
+    setWindowTitle("Constellation MissionControl " CNSTLN_VERSION_FULL);
 
     // Connect timer to method for run timer update
     connect(&display_timer_, &QTimer::timeout, this, &MissionControl::update_run_infos);
@@ -607,7 +607,7 @@ int main(int argc, char** argv) {
         auto& logger = Logger::getDefault();
 
         // CLI parsing
-        argparse::ArgumentParser parser {"MissionControl", CNSTLN_VERSION};
+        argparse::ArgumentParser parser {"MissionControl", CNSTLN_VERSION_FULL};
         try {
             parse_args(argc, argv, parser);
         } catch(const std::exception& error) {
@@ -645,7 +645,7 @@ int main(int argc, char** argv) {
         const auto controller_name = get_arg(parser, "name");
 
         // Log the version after all the basic checks are done
-        LOG(logger, STATUS) << "Constellation v" << CNSTLN_VERSION;
+        LOG(logger, STATUS) << "Constellation " << CNSTLN_VERSION_FULL;
 
         // Get Constellation group:
         std::string group_name;

@@ -58,12 +58,12 @@ PARAMETERS_SET = [
     "RUp",
     "RDw",
     "Trip",
-    "PDwn",
-    "IMRange",
+    # "PDwn", Not yet supported
+    # "IMRange", Not yet supported
     "Pw",  # missing in HW but software added; True/False to enable/disable power
-    "ON",  # does not take any parameter
-    "OFF",  # does not take any parameter
-    "BDCLR",
+    # "ON",  Not done in config use Pw instead
+    # "OFF",  Not done in config use Pw instead
+    # "BDCLR", Not done in config
 ]
 NCHANNELS = 4
 
@@ -199,7 +199,7 @@ class CaenNDT1470Manager:
             num_channels=NCHANNELS,
             model=model,
             serial_number=0,  # FIXME
-            description="NOTIMPLEMENTED",  # FIXME
+            description="Caen NDT1470",  # FIXME
             firmware_release="NOTIMPLEMENTED",
         )  # FIXME
 

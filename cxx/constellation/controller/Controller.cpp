@@ -90,18 +90,18 @@ void Controller::reached_state(CSCP::State /*state*/, bool /*global*/) {};
 void Controller::propagate_update(UpdateType /*type*/, std::size_t /*position*/, std::size_t /*total*/) {};
 
 // NOLINTNEXTLINE(performance-unnecessary-value-param)
-void Controller::callback(chirp::DiscoveredService service, bool depart, std::any user_data) {
+void Controller::callback(chirp::DiscoveredService service, chirp::ServiceStatus status, std::any user_data) {
     auto* instance = std::any_cast<Controller*>(user_data);
-    instance->callback_impl(service, depart);
+    instance->callback_impl(service, status);
 }
 
-void Controller::callback_impl(const constellation::chirp::DiscoveredService& service, bool depart) {
+void Controller::callback_impl(const constellation::chirp::DiscoveredService& service, chirp::ServiceStatus status) {
 
     std::unique_lock<std::mutex> lock {connection_mutex_};
 
     // Add or drop, depending on message:
     const auto uri = service.to_uri();
-    if(depart) {
+    if(status == chirp::ServiceStatus::DEPARTED || status == chirp::ServiceStatus::DEAD) {
         const auto it =
             std::ranges::find(connections_, service.host_id, [&](const auto& sat) { return sat.second.host_id; });
         if(it != connections_.end()) {
@@ -120,7 +120,7 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
             // Propagate state change of the constellation
             reached_state(getLowestState(), isInGlobalState());
         }
-    } else {
+    } else if(status == chirp::ServiceStatus::DISCOVERED) {
         // New satellite connection
         Connection conn = {{*utils::global_zmq_context(), zmq::socket_type::req}, service.host_id, uri};
         conn.req.connect(uri);
@@ -177,7 +177,7 @@ void Controller::process_heartbeat(const message::CHP1Message& msg) {
         }
 
         // Check if a state has changed and we need to calculate and propagate updates:
-        const bool state_updated = (sat->second.state != msg.getState());
+        const bool state_updated = (sat->second.state != msg.getState()) || (sat->second.interval != msg.getInterval());
 
         // Update status and timers
         sat->second.interval = msg.getInterval();
@@ -423,17 +423,12 @@ void Controller::controller_loop(const std::stop_token& stop_token) {
                     // This parrot is dead, it is no more
                     LOG(logger_, DEBUG) << "Missed heartbeats from " << key << ", no lives left";
 
-                    // Close connection, remove from list:
-                    remote.req.close();
-                    connections_.erase(conn);
-                    connection_count_.store(connections_.size());
-
-                    // Trigger method for propagation of connection list updates in derived controller classes
-                    propagate_update(UpdateType::REMOVED, position, connections_.size());
-
+                    // Discard all CHIRP services for this host - this will remove the connection through the callback:
                     lock.unlock();
-                    // Propagate state change of the constellation
-                    reached_state(getLowestState(), isInGlobalState());
+                    auto* chirp_manager = chirp::Manager::getDefaultInstance();
+                    if(chirp_manager != nullptr) {
+                        chirp_manager->forgetDiscoveredServices(conn->second.host_id);
+                    }
                     lock.lock();
                 } else {
                     // Trigger method for propagation of connection list updates in derived controller classes

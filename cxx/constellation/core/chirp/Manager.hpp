@@ -10,6 +10,7 @@
 #pragma once
 
 #include <any>
+#include <cstdint>
 #include <mutex>
 #include <set>
 #include <stop_token>
@@ -61,18 +62,28 @@ namespace constellation::chirp {
         CNSTLN_API bool operator<(const DiscoveredService& other) const;
     };
 
+    /** Status of a service for callbacks from the `Manager` */
+    enum class ServiceStatus : std::uint8_t {
+        /** The service is newly discovered */
+        DISCOVERED,
+        /** The service departed */
+        DEPARTED,
+        /** The service is considered dead without departure */
+        DEAD,
+    };
+
     /**
      * Function signature for user callback
      *
-     * The first argument (``service``) contains the discovered service, the second argument is a bool (``depart``) that is
-     * false when the service is newly and true when the service is departing, and the third argument (``user_data``) is
-     * arbitrary user data passed to the callback (done via `Manager::RegisterDiscoverCallback`).
+     * The first argument (``service``) contains the discovered service, the second argument is an enum that indicates the
+     * status of the service, i.e. whether it is newly discovered, departing, or considered dead, and the third argument
+     * (``user_data``) is arbitrary user data passed to the callback (done via `Manager::RegisterDiscoverCallback`).
      *
      * It is recommended to pass the user data wrapped in an atomic `std::shared_ptr` since the callback is
      * launched asynchronously in a detached `std::thread`. If the data is modified, it is recommended to use
      * atomic types when possible or a `std::mutex` for locking to ensure thread-safe access.
      */
-    using DiscoverCallback = void(DiscoveredService service, bool depart, std::any user_data);
+    using DiscoverCallback = void(DiscoveredService service, ServiceStatus status, std::any user_data);
 
     /** Entry for a user callback in the `Manager` for newly discovered or departing services */
     struct DiscoverCallbackEntry {
@@ -226,7 +237,22 @@ namespace constellation::chirp {
          */
         CNSTLN_API void unregisterDiscoverCallbacks();
 
-        /** Forgets all previously discovered services */
+        /**
+         * @brief Forget the previously discovered services of the given type and host ID, if present
+         *
+         * @param identifier Identifier of the discovered service to be forgotten
+         * @param host_id Host ID of the discovered service to be forgotten
+         */
+        CNSTLN_API void forgetDiscoveredService(ServiceIdentifier identifier, message::MD5Hash host_id);
+
+        /**
+         * @brief Forget all previously discovered services of a given host
+         *
+         * @param host_id Host ID of the discovered services to be forgotten
+         */
+        CNSTLN_API void forgetDiscoveredServices(message::MD5Hash host_id);
+
+        /** Forget all previously discovered services */
         CNSTLN_API void forgetDiscoveredServices();
 
         /**
@@ -268,7 +294,7 @@ namespace constellation::chirp {
         /**
          * Call all discover callbacks
          */
-        void call_discover_callbacks(const DiscoveredService& discovered_service, bool depart);
+        void call_discover_callbacks(const DiscoveredService& discovered_service, ServiceStatus status);
 
         /**
          * Main loop listening and responding to incoming CHIRP broadcasts

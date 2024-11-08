@@ -294,10 +294,12 @@ namespace constellation::controller {
          * @brief Callback helper for CHIPR service discovery
          *
          * @param service Discovered service
-         * @param depart Boolean indicating departure
+         * @param status Enum indicating the status of the service (discovery, departure, death)
          * @param user_data Pointer to the base controller instance
          */
-        static void callback(chirp::DiscoveredService service, bool depart, std::any user_data);
+        static void callback(chirp::DiscoveredService service,
+                             constellation::chirp::ServiceStatus status,
+                             std::any user_data);
 
         /**
          * @brief Implementation of the CONTROL service discovery callback
@@ -306,9 +308,10 @@ namespace constellation::controller {
          * For departures, it closes the connection and removes the connection entry.
          *
          * @param service Discovered control service
-         * @param depart Boolean indicating departure
+         * @param status Enum indicating the status of the service (discovery, departure, death)
          */
-        void callback_impl(const constellation::chirp::DiscoveredService& service, bool depart);
+        void callback_impl(const constellation::chirp::DiscoveredService& service,
+                           constellation::chirp::ServiceStatus status);
 
         /**
          * @brief Helper to process heartbeats. This is registered as callback in the heartbeat receiver

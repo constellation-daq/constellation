@@ -16,26 +16,26 @@ namespace constellation::utils {
     class StopwatchTimer {
     public:
         StopwatchTimer() { start(); }
-        void start() { start_time_ = std::chrono::system_clock::now(); }
-        void stop() { stop_time_ = std::chrono::system_clock::now(); }
+        void start() { start_time_ = std::chrono::steady_clock::now(); }
+        void stop() { stop_time_ = std::chrono::steady_clock::now(); }
         std::chrono::nanoseconds duration() const {
             return std::chrono::duration_cast<std::chrono::nanoseconds>(stop_time_ - start_time_);
         }
 
     private:
-        std::chrono::system_clock::time_point start_time_;
-        std::chrono::system_clock::time_point stop_time_;
+        std::chrono::steady_clock::time_point start_time_;
+        std::chrono::steady_clock::time_point stop_time_;
     };
 
     /** Timer that can be used to wait for timeouts */
     class TimeoutTimer {
     public:
         TimeoutTimer(std::chrono::nanoseconds timeout) : timeout_(timeout) { start(); }
-        void start() { start_time_ = std::chrono::system_clock::now(); }
-        bool timeoutReached() const { return start_time_ + timeout_ < std::chrono::system_clock::now(); }
+        void start() { start_time_ = std::chrono::steady_clock::now(); }
+        bool timeoutReached() const { return start_time_ + timeout_ < std::chrono::steady_clock::now(); }
 
     private:
-        std::chrono::system_clock::time_point start_time_;
+        std::chrono::steady_clock::time_point start_time_;
         std::chrono::nanoseconds timeout_;
     };
 

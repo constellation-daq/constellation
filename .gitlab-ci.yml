@@ -14,6 +14,7 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "schedule"
       variables:
         CCACHE_DISABLE: 1
+    - if: $CI_COMMIT_TAG && $CI_PIPELINE_SOURCE == "push"
     - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"
       when: never
     - when: always
@@ -240,6 +241,10 @@ build:python-3.11:
     - .build-py
     - .python-venv
     - .python-3.11
+  artifacts:
+    paths:
+      - dist
+    expire_in: 24 hour
 
 build:python-3.12:
   extends:
@@ -553,20 +558,38 @@ docs:html:
     - .fedora-sphinx
   variables:
     SPHINXOPTS: -W --keep-going
-  script:
-    - pip install --no-build-isolation -e .[docs]
-    - make -C docs html
   needs:
     - job: docs:doxygen
       artifacts: true
+  script:
+    - pip install --no-build-isolation -e .[docs]
+    - make -C docs html
 
 # deploy stage
 
-deploy:docs:
+.deploy:
   stage: deploy
+
+deploy:pypi:
+  extends:
+    - .deploy
+    - .python-venv
+    - .python-3.11
+  needs:
+    - job: build:python-3.11
+      artifacts: true
+  script:
+    - pip install twine
+    - twine upload dist/*
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v.*/
+
+deploy:docs:
+  extends:
+    - .deploy
   needs:
     - job: docs:html
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   trigger:
     project: constellation/constellation.pages.desy.de
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

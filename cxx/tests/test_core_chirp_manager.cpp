@@ -102,7 +102,7 @@ TEST_CASE("Register callbacks in CHIRP manager", "[chirp][chirp::manager]") {
     Manager manager {"0.0.0.0", "0.0.0.0", "group1", "sat1"};
 
     // DiscoverCallback signature NOLINTNEXTLINE(performance-unnecessary-value-param)
-    auto callback = [](DiscoveredService, bool, std::any) {};
+    auto callback = [](DiscoveredService, ServiceStatus, std::any) {};
 
     // test that first register works
     REQUIRE(manager.registerDiscoverCallback(callback, CONTROL, nullptr));
@@ -206,16 +206,16 @@ TEST_CASE("Execute callbacks in CHIRP manager", "[chirp][chirp::manager]") {
 
     // Callback test struct to test if callback was properly executed
     struct CBTest {
-        bool depart {};
+        ServiceStatus status {};
         DiscoveredService service {};
         std::atomic_bool executed {false};
     };
     CBTest cb_test_data {};
 
     // Create a callback, use pointer to access test variable
-    auto callback = [](DiscoveredService service, bool depart, std::any cb_info) {
+    auto callback = [](DiscoveredService service, ServiceStatus status, std::any cb_info) {
         auto* cb_test_data_p = std::any_cast<CBTest*>(cb_info);
-        cb_test_data_p->depart = depart;
+        cb_test_data_p->status = status;
         cb_test_data_p->service = std::move(service);
         // Set callback as executed
         cb_test_data_p->executed = true;
@@ -231,7 +231,7 @@ TEST_CASE("Execute callbacks in CHIRP manager", "[chirp][chirp::manager]") {
     }
     cb_test_data.executed = false;
     // Test that we correct OFFER callback
-    REQUIRE_FALSE(cb_test_data.depart);
+    REQUIRE(cb_test_data.status == ServiceStatus::DISCOVERED);
     REQUIRE(cb_test_data.service.identifier == CONTROL);
     REQUIRE(cb_test_data.service.port == 50100);
 
@@ -243,7 +243,23 @@ TEST_CASE("Execute callbacks in CHIRP manager", "[chirp][chirp::manager]") {
     }
     cb_test_data.executed = false;
     // Test that we got DEPART callback
-    REQUIRE(cb_test_data.depart);
+    REQUIRE(cb_test_data.status == ServiceStatus::DEPARTED);
+
+    // Forget service of a host:
+    manager1.registerService(CONTROL, 50100);
+    // Wait for execution of callback
+    while(!cb_test_data.executed) {
+        std::this_thread::sleep_for(1ms);
+    }
+    cb_test_data.executed = false;
+    manager2.forgetDiscoveredService(CONTROL, cb_test_data.service.host_id);
+    // Wait for execution of callback
+    while(!cb_test_data.executed) {
+        std::this_thread::sleep_for(1ms);
+    }
+    cb_test_data.executed = false;
+    // Test that we got DEAD callback
+    REQUIRE(cb_test_data.status == ServiceStatus::DEAD);
 
     // Unregister callback
     manager2.unregisterDiscoverCallback(callback, CONTROL);

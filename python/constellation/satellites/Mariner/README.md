@@ -14,9 +14,9 @@ New Python satellites for Constellation may be created by copying and modifying 
 
 | Parameter | Description | Type | Default Value |
 |-----------|-------------|------|---------------|
-| `voltage` | Voltage value for the canopus star tracker | Floating Point Number | - |
-| `current` | Current value for the canopus star tracker | Floating Point Number | - |
-| `sample_period` | Time between executions of the voltage sampling/print-out | Floating Point Number | - |
+| `voltage` | Voltage value for the canopus star tracker | Float | - |
+| `current` | Current value for the canopus star tracker | Float | - |
+| `sample_period` | Time between executions of the voltage sampling/print-out | Float | - |
 
 ## Metrics
 

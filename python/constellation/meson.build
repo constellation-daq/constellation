@@ -24,7 +24,6 @@ core_files = files(
   'core/protocol.py',
   'core/py.typed',
   'core/satellite.py',
-
 )
 
 satellites_files = files(
@@ -46,3 +45,15 @@ py.install_sources(tools_files,
   subdir: 'constellation/tools')
 
 subdir('satellites')
+
+# Create file for version code name
+version_code_name_data = configuration_data()
+version_code_name_data.set('version_code_name', version_code_name)
+version_code_name_file = configure_file(
+  configuration: version_code_name_data,
+  input: 'core/version_code_name',
+  output: 'version_code_name',
+)
+py.install_sources(version_code_name_file,
+  subdir: 'constellation/core',
+)

@@ -28,7 +28,8 @@ Features, protocols and the behavior of individual components may still change.
 ```{toctree}
 :caption: Get started
 
-install
+get_started/install_from_source
+get_started/install_from_pypi
 ```
 
 ```{toctree}

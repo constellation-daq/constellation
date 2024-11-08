@@ -15,6 +15,8 @@ from typing import cast, Any
 import socket
 import atexit
 import coloredlogs  # type: ignore[import-untyped]
+
+from . import __version__, __version_code_name__
 from .network import validate_interface, get_interfaces
 
 
@@ -32,10 +34,12 @@ class ConstellationArgumentParser(ArgumentParser):
         super().__init__(*args, **kwargs)
         # generic arguments
         self.add_argument(
+            "-l",
             "--log-level",
             default="info",
             help="The maximum level of log messages to print to the console.",
         )
+        self.add_argument("--version", action="version", version=f"Constellation v{__version__} ({__version_code_name__})")
         # add a constellation argument group
         self.constellation = self.add_argument_group("Constellation")
         self.constellation.add_argument(

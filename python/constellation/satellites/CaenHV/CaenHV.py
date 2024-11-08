@@ -46,6 +46,7 @@ class CaenHVSatellite(Satellite):
         user = configuration.setdefault("username", "")
         pw = configuration.setdefault("password", "")
         metrics_poll_rate = configuration["metrics_poll_rate"]
+
         if "ndt1" in system.lower():
             self.caen: CaenNDT1470Manager | CaenHVModule = CaenNDT1470Manager()
         else:
@@ -103,15 +104,55 @@ class CaenHVSatellite(Satellite):
         self._configure_monitoring(metrics_poll_rate)
         return f"Connected to crate and configured {len(crate.boards)} boards"
 
-    # def do_reconfigure(self, partial_config: Configuration) -> str:
-    #    """Reconfigure the HV module by re-running initialization and launch."""
-    #    FIXME: needs updating! See https://gitlab.desy.de/constellation/constellation/-/issues/153
-    #    self.do_initializing(configuration)
-    #    return self.do_launching(None)
+    def do_reconfigure(self, partial_config: Configuration) -> str:
+        """Reconfigure the HV module"""
+        # process configuration
+        config_keys = partial_config.get_keys()
+
+        with self.caen as crate:
+            for brdno, brd in crate.boards.items():
+                # loop over boards
+                self.log.info("Configuring board %s", brd)
+                for chno, ch in enumerate(brd.channels):
+                    # loop over channels
+                    for par in ch.parameter_names:
+                        # loop over parameters
+                        if not ch.parameters[par].attributes["mode"] == "R/W":
+                            continue
+                        # construct configuration key
+                        key = f"board{brdno}_ch{chno}_{par.lower()}"
+                        self.log.trace("Checking configuration for key '%s'", key)
+                        try:
+                            # check if key in partial_config
+                            if key not in config_keys:
+                                continue
+                            # retrieve and set value
+                            val = partial_config[key]
+                            if par in ["Pw"]:
+                                # do not want to power up just yet
+                                continue
+                            # the board essentially only knows 'float'-type
+                            # arguments except for 'Pw':
+                            val = float(val)
+                        except KeyError:
+                            # nothing in the cfg, leave as it is
+                            continue
+                        except ValueError as e:
+                            raise RuntimeError(f"Error in configuration for key {key}: {repr(e)}") from e
+                        ch.parameters[par].value = val
+                        self.log.debug(
+                            "Configuring %s on board %s, ch %s with value '%s'",
+                            par,
+                            brdno,
+                            chno,
+                            val,
+                        )
+        self._power_up(partial_config)
+        return f"Reconfigured {len(crate.boards)} boards"
 
     def do_launching(self) -> str:
         """Power up the HV."""
-        nch = self._power_up()
+        nch = self._power_up(self.config)
         return f"Launched and powered {nch} channels."
 
     def do_interrupting(self) -> str:
@@ -270,15 +311,18 @@ class CaenHVSatellite(Satellite):
                             ),
                         )
 
-    def _power_up(self) -> int:
+    def _power_up(self, cfg) -> int:
         """Loop over channels and enable them according to configuration."""
+        config_keys = cfg.get_keys()
         npowered = 0  # number of powered channels
         with self.caen as crate:
             for brdno, brd in crate.boards.items():
                 self.log.info("Powering board %s", brd)
                 for chno, ch in enumerate(brd.channels):
                     key = f"board{brdno}_ch{chno}_pw"
-                    val = self.config.setdefault(key, "off")
+                    if key not in config_keys:
+                        continue
+                    val = cfg[key]
                     if val.lower() in ["true", "on", "1", "enabled", "enable"]:
                         self.log.debug("Powering board %s channel %s", brdno, chno)
                         ch.switch_on()

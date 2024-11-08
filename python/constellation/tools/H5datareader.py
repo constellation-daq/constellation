@@ -24,12 +24,16 @@ class H5DataReader:
 
     def _open_file(self, file: str):
         file_path = Path(file)
-        try:
-            h5file = h5py.File(file_path)
-        except Exception as exception:
-            raise RuntimeError(
-                f"Unable to open {file}: {str(exception)}",
-            ) from exception
+        while True:
+            try:
+                h5file = h5py.File(file_path, "r", libver="latest", swmr=True)
+                break
+            except Exception as exception:
+
+                raise RuntimeError(
+                    f"Unable to open {file}: {str(exception)}",
+                ) from exception
+
         return h5file
 
     def close(self):
@@ -40,14 +44,14 @@ class H5DataReader:
         """Read the file in chunks of length chunk_length"""
 
         def chunk_iterator():
-            start = 0
-            while start < len(datasets):
-                data = []
-                for i in range(chunk_length):
-                    if start < len(datasets):
-                        data.append(self.file[group][datasets[start]][:])
-                        start += 1
-                yield data
+            # Total number of datasets
+            num_datasets = len(datasets)
+
+            # Iterate through the datasets in steps of chunk_length
+            for start in range(0, num_datasets, chunk_length):
+                end = min(start + chunk_length, num_datasets)
+                chunk = [self.file[group][datasets[i]][:] for i in range(start, end)]
+                yield chunk
 
         return chunk_iterator()
 
@@ -65,11 +69,11 @@ class H5DataReader:
 
     def get_EOR_payload(self, group):
         """Fetch the payload of the EOR for the group"""
-        return self.file[group]["EOR"]["payload"][()]
+        return self.file[group]["EOR"]
 
     def get_BOR_payload(self, group):
         """Fetch the payload of the BOR for the group"""
-        return self.file[group]["BOR"]["payload"][()]
+        return self.file[group]["BOR"]
 
     def datasets(self, group):
         """Fetch a list of all dataset names of H5-file."""

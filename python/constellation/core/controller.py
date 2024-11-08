@@ -23,7 +23,7 @@ from .base import EPILOG, ConstellationArgumentParser, setup_cli_logging
 from .commandmanager import get_cscp_commands
 from .configuration import load_config, flatten_config
 from .heartbeatchecker import HeartbeatChecker
-from . import __version__
+from . import __version__, __version_code_name__
 
 
 class ControllerState(Enum):
@@ -677,6 +677,9 @@ def main(args: Any = None) -> None:
                 # show version
                 (Token.Generic.Subheading, "📡 v"),
                 (Token.Generic.Subheading, __version__),
+                (Token.Generic.Subheading, " ("),
+                (Token.Generic.Subheading, __version_code_name__),
+                (Token.Generic.Subheading, ")"),
                 (Token, " "),
                 # show number of satellites
                 (Token.Prompt, "🛰 "),

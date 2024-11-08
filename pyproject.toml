@@ -87,7 +87,7 @@ cli = ["ipython"]
 # Satellite components
 caenhv = ["pycaenhv>=0.03", "pyserial"]
 hdf5 = ["h5py"]
-influxdb = ["influxdb-client"]
+influx = ["influxdb-client"]
 keithley = ["pyserial"]
 
 [tool.meson-python.args]

@@ -17,11 +17,26 @@ which are evaluated in a hot loop. Excluding and including metrics is a feature 
 
 ## Requirements
 
-The Influx satellite requires the `[influxdb]` component, which can be installed e.g. via:
+The Influx satellite requires the `[influx]` component, which can be installed with:
+
+::::{tab-set}
+:::{tab-item} Source
+:sync: source
 
 ```sh
-pip install --no-build-isolation -e .[influxdb]
+pip install --no-build-isolation -e .[influx]
 ```
+
+:::
+:::{tab-item} PyPI
+:sync: pypi
+
+```sh
+pip install ConstellationDAQ[influx]
+```
+
+:::
+::::
 
 ## Parameters
 

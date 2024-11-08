@@ -7,16 +7,54 @@ subtitle: "Satellite receiving data and writing it to HDF5 files "
 
 ## Description
 
-To start the Satellite, run
+This satellite receives data from all satellites and stores it in an HDF5 file.
 
-``` shell
-SatelliteHDF5DataWriter
+## Requirements
+
+The H5DataWriter satellite requires the `[hdf5]` component, which can be installed with:
+
+::::{tab-set}
+:::{tab-item} Source
+:sync: source
+
+```sh
+pip install --no-build-isolation -e .[hdf5]
 ```
 
-or
+:::
+:::{tab-item} PyPI
+:sync: pypi
 
-``` shell
-SatelliteHDF5DataWriter --help
+```sh
+pip install ConstellationDAQ[hdf5]
 ```
 
-to get a list of the available command-line arguments.
+:::
+::::
+
+This requires the HDF5 development libraries to be installed, which can be installed with:
+
+::::{tab-set}
+:::{tab-item} Debian/Ubuntu
+
+```sh
+sudo apt install libhdf5-dev
+```
+
+:::
+:::{tab-item} ALMA/Fedora
+
+TODO
+
+:::
+:::{tab-item} MacOS
+
+TODO
+
+:::
+:::{tab-item} Windows
+
+TODO
+
+:::
+::::

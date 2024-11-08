@@ -23,11 +23,26 @@ A restart is required for the changes to be effective.
 
 ## Requirements
 
-The Keithley satellite requires the `[keithley]` component, which can be installed e.g. via:
+The Keithley satellite requires the `[keithley]` component, which can be installed with:
+
+::::{tab-set}
+:::{tab-item} Source
+:sync: source
 
 ```sh
 pip install --no-build-isolation -e .[keithley]
 ```
+
+:::
+:::{tab-item} PyPI
+:sync: pypi
+
+```sh
+pip install ConstellationDAQ[keithley]
+```
+
+:::
+::::
 
 ## Supported devices
 
@@ -66,9 +81,9 @@ Possible terminals are `front` and `rear`.
 
 | Metric | Description | Value Type | Metric Type | Interval |
 |--------|-------------|------------|-------------|----------|
-| `VOLTAGE` | Voltage output | Float | `LAST_VALUE` | 10s |
-| `CURRENT` | Current output | Float | `LAST_VALUE` | 10s |
-| `IN_COMLIANCE` | If in compliance | Bool | `LAST_VALUE` | 10s |
+| `VOLTAGE` | Voltage output | Float | `LAST_VALUE` | 5s |
+| `CURRENT` | Current output | Float | `LAST_VALUE` | 5s |
+| `IN_COMLIANCE` | If in compliance | Bool | `LAST_VALUE` | 5s |
 
 ## Custom Commands
 

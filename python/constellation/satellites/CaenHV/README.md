@@ -1,7 +1,7 @@
 ---
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC-BY-4.0 OR EUPL-1.2
-title: "CAEN High-Voltage Crate"
+title: "CaenHV"
 subtitle: "Satellite controlling a CAEN high-voltage crate such as the SY5527 and its modules"
 ---
 
@@ -9,15 +9,36 @@ subtitle: "Satellite controlling a CAEN high-voltage crate such as the SY5527 an
 
 This Satellite allows to control CAEN high-voltage crates such as the SY5527 and the inserted modules.
 
-For communication, the CAEN communication library, `CAENHVWrapper` as well as the Python bindings provided by [pycaenhv](https://gitlab.com/hperrey/pycaenhv) need to be installed.
+## Requirements
+
+The CaenHV satellite requires the `[caenhv]` component, which can be installed with:
+
+::::{tab-set}
+:::{tab-item} Source
+:sync: source
+
+```sh
+pip install --no-build-isolation -e .[caenhv]
+```
+
+:::
+:::{tab-item} PyPI
+:sync: pypi
+
+```sh
+pip install ConstellationDAQ[caenhv]
+```
+
+:::
+::::
 
 ## Parameters
 
 The following parameters need to be specified in the configuration file. System and connection parameters are required.
 
-| Parameter     | Description | Type | Default Value |
-|---------------|-------------|------|---------------|
-| `system`    | The type of crate connected, e.g. `"SY5527"` | String | - |
+| Parameter | Description | Type | Default Value |
+|-----------|-------------|------|---------------|
+| `system` | The type of crate connected, e.g. `"SY5527"` | String | - |
 | `link` | The type of connection, e.g. `"TCPIP"` or `"USB"` | String | - |
 | `link_argument` | Additional information for the connection, e.g. the ip address `"192.168.8.2"` | String | - |
 | `user` | The user name to connect with | String | - |
@@ -31,7 +52,7 @@ The available parameter names for `board[BNUM]_ch[CHNUM]_[PARNAME]` depend on th
 A minimal configuration would be:
 
 ```ini
-[satellites.caenhvsatellite.sy5527]
+[satellites.CaenHV.sy5527]
 # Device-specific system settings for the SY5527-controlling Satellite
 system="SY5527"
 link="TCPIP"
@@ -42,17 +63,3 @@ password="mypassword!"
 board1_ch1_V0Set = 1
 board1_ch1_pw = "on"
 ```
-
-To start the Satellite, run
-
-``` shell
-SatelliteCaenHv
-```
-
-or
-
-``` shell
-SatelliteCaenHv --help
-```
-
-to get a list of the available command-line arguments.

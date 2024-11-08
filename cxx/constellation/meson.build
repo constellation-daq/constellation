@@ -17,6 +17,7 @@ pkg = import('pkgconfig')
 
 build_hpp_data = configuration_data()
 build_hpp_data.set('version', meson.project_version())
+build_hpp_data.set('version_code_name', version_code_name)
 build_hpp_data.set('libdir', get_option('prefix') / get_option('libdir'))
 build_hpp_data.set('builddir', meson.project_build_root())
 build_hpp_data.set('dso_prefix', dso_prefix)

@@ -29,6 +29,7 @@
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/utils/networking.hpp"
+#include "constellation/core/utils/string.hpp"
 
 namespace constellation::pools {
 
@@ -46,7 +47,7 @@ namespace constellation::pools {
             // Call callback for all already discovered services
             const auto discovered_services = chirp_manager->getDiscoveredServices(SERVICE);
             for(const auto& discovered_service : discovered_services) {
-                callback_impl(discovered_service, false);
+                callback_impl(discovered_service, chirp::ServiceStatus::DISCOVERED);
             }
 
             // Register CHIRP callback
@@ -84,6 +85,9 @@ namespace constellation::pools {
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
     void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::host_disconnected(const chirp::DiscoveredService& /*service*/) {}
+
+    template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
+    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::host_disposed(const chirp::DiscoveredService& /*service*/) {}
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
     void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::checkPoolException() {
@@ -206,23 +210,56 @@ namespace constellation::pools {
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
-    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::callback_impl(const chirp::DiscoveredService& service, bool depart) {
-        LOG(pool_logger_, TRACE) << "Callback for " << service.to_uri() << (depart ? ", departing" : "");
+    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::dispose(const chirp::DiscoveredService& service) {
+        std::unique_lock sockets_lock {sockets_mutex_};
 
-        if(depart) {
+        // Disconnect the socket
+        const auto socket_it = sockets_.find(service);
+        if(socket_it != sockets_.end()) {
+            LOG(pool_logger_, TRACE) << "Removing " << service.to_uri() << "...";
+            try {
+                // Remove from poller
+                poller_.remove(zmq::socket_ref(socket_it->second));
+
+                // Disconnect the socket and close it
+                socket_it->second.disconnect(service.to_uri());
+                socket_it->second.close();
+            } catch(const zmq::error_t& error) {
+                LOG(pool_logger_, DEBUG) << "Socket could not be disconnected properly for " << socket_it->first.to_uri()
+                                         << ": " << error.what();
+            }
+
+            sockets_.erase(socket_it);
+            socket_count_.store(sockets_.size());
+            LOG(pool_logger_, DEBUG) << "Removed " << service.to_uri();
+
+            // Call removed callback
+            sockets_lock.unlock();
+            host_disposed(service);
+        }
+    }
+
+    template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
+    void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::callback_impl(const chirp::DiscoveredService& service,
+                                                                chirp::ServiceStatus status) {
+        LOG(pool_logger_, TRACE) << "Callback for " << service.to_uri() << ", status " << utils::to_string(status);
+
+        if(status == chirp::ServiceStatus::DEPARTED) {
             disconnect(service);
-        } else if(should_connect(service)) {
+        } else if(status == chirp::ServiceStatus::DISCOVERED && should_connect(service)) {
             connect(service);
+        } else if(status == chirp::ServiceStatus::DEAD) {
+            dispose(service);
         }
     }
 
     // NOLINTNEXTLINE(performance-unnecessary-value-param)
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
     void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::callback(chirp::DiscoveredService service,
-                                                           bool depart,
+                                                           chirp::ServiceStatus status,
                                                            std::any user_data) {
         auto* instance = std::any_cast<BasePool*>(user_data);
-        instance->callback_impl(service, depart);
+        instance->callback_impl(service, status);
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>

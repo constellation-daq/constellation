@@ -140,6 +140,11 @@ TEST_CASE("Message callback", "[core][core::pools]") {
     auto sender = CMDPSender("CMDPSender.s1");
     chirp_mock_service(sender.getName(), chirp::MONITORING, sender.getPort());
 
+    // Wait until socket is connected
+    while(pool.countSockets() < 1) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
     // Subscribe to LOG messages
     pool.subscribe("LOG");
 
@@ -211,6 +216,11 @@ TEST_CASE("Sending and receiving subscriptions", "[core][core::pools]") {
     auto sender2 = CMDPSender("CMDPSender.s2");
     chirp_mock_service(sender2.getName(), chirp::MONITORING, sender2.getPort());
 
+    // Wait until sockets are connected
+    while(pool.countSockets() < 2) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
     // Subscribe to topic
     pool.subscribe("LOG/STATUS");
     REQUIRE(check_sub_message(sender1.recv().pop(), true, "LOG/STATUS"));
@@ -237,6 +247,11 @@ TEST_CASE("Sending and receiving subscriptions, single host", "[core][core::pool
     chirp_mock_service(sender1.getName(), chirp::MONITORING, sender1.getPort());
     auto sender2 = CMDPSender("CMDPSender.s2");
     chirp_mock_service(sender2.getName(), chirp::MONITORING, sender2.getPort());
+
+    // Wait until sockets are connected
+    while(pool.countSockets() < 2) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
 
     // Subscribing / unsubscribing from non-existing sender is fine
     pool.subscribe("fake1", "LOG");

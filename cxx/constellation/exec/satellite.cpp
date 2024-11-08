@@ -133,7 +133,7 @@ int constellation::exec::satellite_main(int argc,
     const auto needs_type = !satellite_type.has_value();
 
     // CLI parsing
-    argparse::ArgumentParser parser {to_string(program), CNSTLN_VERSION};
+    argparse::ArgumentParser parser {to_string(program), CNSTLN_VERSION_FULL};
     try {
         parse_args(argc, argv, parser, needs_type);
     } catch(const std::exception& error) {
@@ -172,7 +172,7 @@ int constellation::exec::satellite_main(int argc,
     const auto satellite_name = get_arg(parser, "name");
 
     // Log the version after all the basic checks are done
-    LOG(logger, STATUS) << "Constellation v" << CNSTLN_VERSION;
+    LOG(logger, STATUS) << "Constellation " << CNSTLN_VERSION_FULL;
 
     // Load satellite DSO
     std::unique_ptr<DSOLoader> loader {};
