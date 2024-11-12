@@ -43,6 +43,7 @@
 #include <QPainter>
 #include <QRegularExpression>
 #include <QSpinBox>
+#include <QStatusBar>
 #include <QStyleOptionViewItem>
 #include <QTextDocument>
 #include <QtGlobal>

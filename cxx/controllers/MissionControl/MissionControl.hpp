@@ -38,6 +38,7 @@
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 
 #include "QController.hpp"
+#include "QStatusBarSink.hpp"
 #include "ui_MissionControl.h"
 
 class ConnectionItemDelegate : public QStyledItemDelegate {
@@ -205,6 +206,7 @@ private:
 
     /** UI timer for refreshing certain elements such as the run duration */
     QTimer display_timer_;
+    std::shared_ptr<QStatusBarSink> qt_log_sink_;
 
     /** UI Settings */
     QSettings gui_settings_;
