@@ -17,11 +17,11 @@ Schematic drawing of heartbeats being exchanged between three satellites of a co
 In some cases it can be required to initialize, launch, start or stop satellites in a specific order - they might for example
 depend on receiving a hardware clock from another satellite that is only available after initializing.
 
-For this purpose, Constellation provides the `require_<transitional state>_after` keywords, available for each transition.
+For this purpose, Constellation provides the `_require_<transitional state>_after` keywords, available for each transition.
 The respective satellite will receive these as conditions from the controller via the configuration passed in the
 `initialize` command and evaluate them upon entering transitional states.
 
-If, for example, Satellite `Sputnik.Second` receives the condition `require_starting_after = "Sputnik.First"` it will enter
+If, for example, Satellite `Sputnik.Second` receives the condition `_require_starting_after = "Sputnik.First"` it will enter
 the `starting` transitional states but wait until satellite `Sputnik.First` has successfully completed the transition, and
 `Sputnik.Second` receives the state `RUN` from `Sputnik.First` via the
 [heartbeat protocol](../../reference/protocols.md#heartbeating) before progressing through its own `starting` state. This can
@@ -91,25 +91,37 @@ necessarily would progress sequentially.
 Conditions are available for all [regular transitional states](satellite.md#changing-states---transitions) of a satellite
 apart from `reconfiguring`, i.e.
 
-* `require_initializing_after`
-* `require_launching_after`
-* `require_landing_after`
-* `require_starting_after`
-* `require_stopping_after`
+* `_require_initializing_after`
+* `_require_launching_after`
+* `_require_landing_after`
+* `_require_starting_after`
+* `_require_stopping_after`
+
+```{warning}
+Depending on the Constellation, not necessarily all combinations are valid and will function. For example, a transmitter
+satellite depending on the stopping condition of a receiver satellite will eventually time out because the latter waits for
+the EOR message of the former.
+
+Also mutual dependencies on the same state will lead to deadlocks.
+
+Some controllers might check for conflicts, but in general the configuration has to be tested with a running Constellation.
+```
 
 There is no restriction to the number of conditions or the number of remote satellites to depend on. When depending on
 multiple satellites in one transitional state, the corresponding key can be set as array, e.g.
 
 ```toml
-require_launching_after = ["Sputnik.First", "Sputnik.Third"]
+_require_launching_after = ["Sputnik.First", "Sputnik.Third"]
 ```
 
-Conditions cannot be set on the same satellite executing the conditional transition, and they cannot be assigned to steady states.
+Conditions cannot be set on the same satellite executing the conditional transition, and they cannot be assigned to steady
+states.
 
 Waiting for remote conditions to be satisfied can be interrupted by a number of things:
 
 * The remote satellite the condition depends on is not present or disappeared
 * The remote satellite the condition depends on returns an `ERROR` state
-* The waiting satellite runs into the timeout for conditional transitions. The timeout can be configured using the key `conditional_transition_timeout` and defaults to 60 seconds.
+* The waiting satellite runs into the timeout for conditional transitions. The timeout can be configured using the key
+  `_conditional_transition_timeout` and defaults to 60 seconds.
 
 In all cases the waiting satellite aborts the pending action and transitions into its `ERROR` state.
