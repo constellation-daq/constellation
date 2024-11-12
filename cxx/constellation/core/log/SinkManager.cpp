@@ -80,7 +80,7 @@ SinkManager::SinkManager() : zmq_context_(global_zmq_context()), console_global_
     // Init thread pool with 1k queue size on 1 thread
     spdlog::init_thread_pool(1000, 1);
 
-    // Concole sink, log level always TRACE since only accessed via ProxySink
+    // Console sink, log level always TRACE since only accessed via ProxySink
     console_sink_ = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
     console_sink_->set_level(to_spdlog_level(TRACE));
 
@@ -133,6 +133,16 @@ std::shared_ptr<spdlog::async_logger> SinkManager::getLogger(std::string_view to
     // If not found unlock lock and create new logger
     loggers_lock.unlock();
     return create_logger(to_string(topic));
+}
+
+void SinkManager::registerSink(std::shared_ptr<spdlog::sinks::base_sink<std::mutex>> sink) {
+    // Acquire lock for loggers_
+    std::unique_lock loggers_lock {loggers_mutex_};
+    for(const auto& logger : loggers_) {
+        logger->sinks().push_back(sink);
+    }
+    // If not found unlock lock and create new logger
+    loggers_lock.unlock();
 }
 
 std::shared_ptr<spdlog::async_logger> SinkManager::create_logger(std::string_view topic) {
