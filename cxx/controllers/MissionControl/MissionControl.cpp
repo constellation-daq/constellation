@@ -130,6 +130,18 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
     // Set up the user interface
     setupUi(this);
 
+    qt_log_sink_ = std::make_shared<QStatusBarSink>(statusBar(), 10000);
+
+    // Set console format, e.g. |2024-01-10 00:16:40.922| CRITICAL [topic] message
+    auto formatter = std::make_unique<spdlog::pattern_formatter>();
+    formatter->add_flag<SinkManager::ConstellationLevelFormatter>('l', false);
+    formatter->add_flag<SinkManager::ConstellationLevelFormatter>('L', true);
+    formatter->add_flag<SinkManager::ConstellationTopicFormatter>('n');
+    formatter->set_pattern("%H:%M:%S %^%l%$ %n %v");
+    qt_log_sink_->set_formatter(std::move(formatter));
+
+    SinkManager::getInstance().registerSink(qt_log_sink_);
+
     // Set initial values for header bar
     const auto state = runcontrol_.getLowestState();
     cnstlnName->setText(QString::fromStdString("<font color=gray><b>" + std::string(group_name) + "</b></font>"));
