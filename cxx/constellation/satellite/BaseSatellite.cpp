@@ -440,6 +440,11 @@ void BaseSatellite::initializing_wrapper(config::Configuration&& config) {
 
 void BaseSatellite::launching_wrapper() {
     launching();
+
+    auto* receiver_ptr = dynamic_cast<ReceiverSatellite*>(this);
+    if(receiver_ptr != nullptr) {
+        receiver_ptr->ReceiverSatellite::launching_receiver();
+    }
 }
 
 void BaseSatellite::landing_wrapper() {

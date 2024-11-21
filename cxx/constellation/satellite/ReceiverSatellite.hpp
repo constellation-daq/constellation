@@ -133,6 +133,13 @@ namespace constellation::satellite {
         void initializing_receiver(config::Configuration& config);
 
         /**
+         * @brief Launching receiver components of satellite
+         *
+         * This checks if a CHIRP DATA service has been discovered for all transmitters listed in `_data_transmitters`
+         */
+        void launching_receiver();
+
+        /**
          * @brief Reconfigure receiver components of satellite
          *
          * Supports reconfiguring of the following config parameters:

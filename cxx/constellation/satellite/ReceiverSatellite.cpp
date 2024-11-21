@@ -87,6 +87,25 @@ void ReceiverSatellite::initializing_receiver(Configuration& config) {
     LOG(cdtp_logger_, INFO) << "Initialized to receive data from " << range_to_string(data_transmitters_);
 }
 
+void ReceiverSatellite::launching_receiver() {
+    LOG(cdtp_logger_, DEBUG) << "Checking for discovered data service endpoints";
+    auto* chirp_manager = chirp::Manager::getDefaultInstance();
+    if(chirp_manager != nullptr) {
+        // Get discovered DATA services
+        const auto services = chirp_manager->getDiscoveredServices(chirp::DATA);
+
+        // Cross-check their providers with the configured data transmitters:
+        auto it = std::ranges::find_if(data_transmitters_, [this, &services](const auto& host) {
+            LOG(cdtp_logger_, DEBUG) << "Checking for availability of host " << host;
+            return std::ranges::find(services, MD5Hash(host), [&](const auto& service) { return service.host_id; }) ==
+                   services.end();
+        });
+        if(it != data_transmitters_.end()) {
+            LOG(cdtp_logger_, WARNING) << "Data transmitter " << *it << " not found";
+        }
+    }
+}
+
 void ReceiverSatellite::reconfiguring_receiver(const Configuration& partial_config) {
     if(partial_config.has("_eor_timeout")) {
         data_eor_timeout_ = std::chrono::seconds(partial_config.get<std::uint64_t>("_eor_timeout"));
