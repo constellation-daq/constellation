@@ -20,6 +20,7 @@
 #include <thread>
 #include <utility>
 
+#include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
@@ -61,6 +62,11 @@ ReceiverSatellite::ReceiverSatellite(std::string_view type, std::string_view nam
                           10s,
                           {CSCP::State::starting, CSCP::State::RUN, CSCP::State::stopping},
                           [this]() { return bytes_received_.load(); });
+
+    auto* chirp_manager = chirp::Manager::getDefaultInstance();
+    if(chirp_manager != nullptr) {
+        chirp_manager->sendRequest(chirp::DATA);
+    }
 }
 
 void ReceiverSatellite::running(const std::stop_token& stop_token) {
