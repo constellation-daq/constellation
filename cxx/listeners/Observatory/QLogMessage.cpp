@@ -9,7 +9,6 @@
 
 #include "QLogMessage.hpp"
 
-#include <chrono>
 #include <string>
 #include <utility>
 

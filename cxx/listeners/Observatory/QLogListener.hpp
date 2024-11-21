@@ -16,8 +16,6 @@
 #include <string>
 #include <string_view>
 
-#include <zmq.hpp>
-
 #include <QAbstractListModel>
 #include <QObject>
 #include <QRegularExpression>
@@ -25,6 +23,7 @@
 #include <QVariant>
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
+#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
