@@ -45,6 +45,7 @@ using namespace constellation::exec;
 using namespace constellation::log;
 using namespace constellation::satellite;
 using namespace constellation::utils;
+using namespace std::chrono_literals;
 
 namespace {
     // Use global std::function to work around C linkage
@@ -209,10 +210,17 @@ int constellation::exec::satellite_main(int argc,
     std::shared_ptr<Satellite> satellite {};
     try {
         satellite = satellite_generator(type_name, satellite_name);
+
+        std::this_thread::sleep_for(3s);
+        LOG(logger, INFO) << "done done.";
+
     } catch(const std::exception& error) {
         LOG(logger, CRITICAL) << "Failed to create satellite: " << error.what();
         return 1;
     }
+
+    std::this_thread::sleep_for(3s);
+    LOG(logger, INFO) << "signal handlers";
 
     // Register signal handlers
     std::once_flag shut_down_flag {};

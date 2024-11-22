@@ -145,6 +145,9 @@ void Manager::start() {
 
 bool Manager::registerService(ServiceIdentifier service_id, utils::Port port) {
     const RegisteredService service {service_id, port};
+    LOG(logger_, INFO) << "registering " << service_id;
+
+    std::this_thread::sleep_for(3s);
 
     std::unique_lock registered_services_lock {registered_services_mutex_};
     const auto insert_ret = registered_services_.insert(service);
@@ -153,6 +156,7 @@ bool Manager::registerService(ServiceIdentifier service_id, utils::Port port) {
     // Lock not needed anymore
     registered_services_lock.unlock();
     if(actually_inserted) {
+        LOG(logger_, INFO) << "inserted, sending";
         send_message(OFFER, service);
     }
     return actually_inserted;
@@ -261,6 +265,9 @@ void Manager::sendRequest(ServiceIdentifier service) {
 
 void Manager::send_message(MessageType type, RegisteredService service) {
     LOG(logger_, DEBUG) << "Sending " << type << " for " << service.identifier << " service on port " << service.port;
+
+    std::this_thread::sleep_for(3s);
+
     const auto asm_msg = CHIRPMessage(type, group_id_, host_id_, service.identifier, service.port).assemble();
     sender_->sendBroadcast(asm_msg);
 }

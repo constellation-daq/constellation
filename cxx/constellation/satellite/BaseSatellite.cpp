@@ -83,11 +83,19 @@ BaseSatellite::BaseSatellite(std::string_view type, std::string_view name)
     }
     LOG(cscp_logger_, INFO) << "Starting to listen to commands on port " << cscp_port_;
 
+    std::this_thread::sleep_for(3s);
+    LOG(cscp_logger_, INFO) << "Starting cscp loop";
+
     // Start receiving CSCP commands
     cscp_thread_ = std::jthread(std::bind_front(&BaseSatellite::cscp_loop, this));
 
+    std::this_thread::sleep_for(3s);
+    LOG(cscp_logger_, INFO) << "registering fsm callback";
+
     // Register state callback for extrasystoles
     fsm_.registerStateCallback("extrasystoles", [&](CSCP::State) { heartbeat_manager_.sendExtrasystole(); });
+
+    LOG(cscp_logger_, INFO) << "done";
 }
 
 std::string BaseSatellite::getCanonicalName() const {
@@ -279,6 +287,8 @@ BaseSatellite::handle_user_command(std::string_view command, const message::Payl
 }
 
 void BaseSatellite::cscp_loop(const std::stop_token& stop_token) {
+    LOG(cscp_logger_, INFO) << "Starting cscp loop method";
+
     while(!stop_token.stop_requested()) {
         try {
             // Receive next command
