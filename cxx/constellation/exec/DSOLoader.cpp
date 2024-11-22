@@ -61,6 +61,8 @@ DSOLoader::DSOLoader(const std::string& dso_name, Logger& logger, const std::fil
     };
 
     auto add_path = [&](const std::filesystem::path& path) {
+        LOG(logger, TRACE) << "Adding library search path " << std::quoted(path.string());
+
         const auto abs_path = std::filesystem::absolute(path);
         // For directories, recursively iterate and add paths
         if(std::filesystem::is_directory(abs_path)) {
@@ -79,6 +81,9 @@ DSOLoader::DSOLoader(const std::string& dso_name, Logger& logger, const std::fil
     if(!hint.empty()) {
         add_path(hint);
     }
+
+    // Add current directory:
+    add_path(std::filesystem::current_path());
 
     const auto build_dir = std::filesystem::path(CNSTLN_BUILDDIR) / "cxx" / "satellites";
     add_path(build_dir);
