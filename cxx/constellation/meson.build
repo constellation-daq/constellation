@@ -8,7 +8,6 @@ dso_suffix = '.so'
 if host_machine.system() == 'darwin'
   dso_suffix = '.dylib'
 elif host_machine.system() == 'windows'
-  dso_prefix = ''
   dso_suffix = '.dll'
 endif
 
