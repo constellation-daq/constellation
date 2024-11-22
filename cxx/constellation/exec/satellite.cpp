@@ -235,8 +235,15 @@ int constellation::exec::satellite_main(int argc,
     std::signal(SIGINT, &signal_hander);
     // NOLINTEND(cert-err33-c)
 
+    LOG(logger, INFO) << "joining soon";
+    std::this_thread::sleep_for(3s);
+    LOG(logger, INFO) << "joining";
+
     // Wait for signal to join
     satellite->join();
+
+    std::this_thread::sleep_for(3s);
+    LOG(logger, INFO) << "signal handlers";
 
     // Unregister callbacks
     chirp_manager->unregisterDiscoverCallbacks();
