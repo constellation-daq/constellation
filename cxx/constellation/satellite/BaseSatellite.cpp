@@ -103,9 +103,19 @@ std::string BaseSatellite::getCanonicalName() const {
 }
 
 void BaseSatellite::join() {
+    std::this_thread::sleep_for(3s);
+    LOG(cscp_logger_, INFO) << "sat is joinable?";
+
     if(cscp_thread_.joinable()) {
+        LOG(cscp_logger_, INFO) << "sat is joinable.";
+        std::this_thread::sleep_for(3s);
+
         cscp_thread_.join();
     }
+
+    LOG(cscp_logger_, INFO) << "done joining";
+    std::this_thread::sleep_for(3s);
+
     fsm_.unregisterStateCallback("extrasystoles");
 }
 
