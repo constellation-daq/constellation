@@ -29,6 +29,7 @@
 #include "constellation/core/protocol/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/enum.hpp"
+#include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
@@ -45,8 +46,7 @@ CDTP1Message::Header CDTP1Message::Header::disassemble(std::span<const std::byte
         std::size_t offset = 0;
 
         // Unpack protocol
-        const auto msgpack_protocol_identifier = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-        const auto protocol_identifier = msgpack_protocol_identifier->as<std::string>();
+        const auto protocol_identifier = msgpack_unpack_to<std::string>(to_char_ptr(data.data()), data.size_bytes(), offset);
 
         // Try to decode protocol identifier into protocol
         Protocol protocol_recv {};
@@ -61,32 +61,27 @@ CDTP1Message::Header CDTP1Message::Header::disassemble(std::span<const std::byte
         }
 
         // Unpack sender
-        const auto msgpack_sender = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-        const auto sender = msgpack_sender->as<std::string>();
+        const auto sender = msgpack_unpack_to<std::string>(to_char_ptr(data.data()), data.size_bytes(), offset);
 
         // Unpack time
-        const auto msgpack_time = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-        const auto time = msgpack_time->as<std::chrono::system_clock::time_point>();
+        const auto time =
+            msgpack_unpack_to<std::chrono::system_clock::time_point>(to_char_ptr(data.data()), data.size_bytes(), offset);
 
         // Unpack message type
-        const auto msgpack_type = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-        const auto type = static_cast<Type>(msgpack_type->as<std::uint8_t>());
+        const auto type =
+            static_cast<Type>(msgpack_unpack_to<std::uint8_t>(to_char_ptr(data.data()), data.size_bytes(), offset));
         // TODO(stephan.lachnit): check range and throw if outside
 
         // Unpack sequence number
-        const auto msgpack_seq = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-        const auto seq = msgpack_seq->as<std::uint64_t>();
+        const auto seq = msgpack_unpack_to<std::uint64_t>(to_char_ptr(data.data()), data.size_bytes(), offset);
 
         // Unpack tags
-        const auto msgpack_tags = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-        const auto tags = msgpack_tags->as<Dictionary>();
+        const auto tags = msgpack_unpack_to<Dictionary>(to_char_ptr(data.data()), data.size_bytes(), offset);
 
         // Construct header
         return {sender, time, tags, seq, type};
-    } catch(const msgpack::type_error&) {
-        throw MessageDecodingError("malformed data");
-    } catch(const msgpack::unpack_error&) {
-        throw MessageDecodingError("could not unpack data");
+    } catch(const MsgPackError& e) {
+        throw MessageDecodingError(e.what());
     }
 }
 
