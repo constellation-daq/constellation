@@ -25,6 +25,7 @@
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/protocol/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/std_future.hpp"
 
 using namespace constellation::message;
@@ -44,8 +45,7 @@ CHP1Message CHP1Message::disassemble(zmq::multipart_t& frames) {
         std::size_t offset = 0;
 
         // Unpack protocol
-        const auto msgpack_protocol_identifier = msgpack::unpack(to_char_ptr(frame.data()), frame.size(), offset);
-        const auto protocol_identifier = msgpack_protocol_identifier->as<std::string>();
+        const auto protocol_identifier = msgpack_unpack_to<std::string>(to_char_ptr(frame.data()), frame.size(), offset);
 
         // Try to decode protocol identifier into protocol
         Protocol protocol_recv {};
@@ -60,27 +60,24 @@ CHP1Message CHP1Message::disassemble(zmq::multipart_t& frames) {
         }
 
         // Unpack sender
-        const auto msgpack_sender = msgpack::unpack(to_char_ptr(frame.data()), frame.size(), offset);
-        const auto sender = msgpack_sender->as<std::string>();
+        const auto sender = msgpack_unpack_to<std::string>(to_char_ptr(frame.data()), frame.size(), offset);
 
         // Unpack time
-        const auto msgpack_time = msgpack::unpack(to_char_ptr(frame.data()), frame.size(), offset);
-        const auto time = msgpack_time->as<std::chrono::system_clock::time_point>();
+        const auto time =
+            msgpack_unpack_to<std::chrono::system_clock::time_point>(to_char_ptr(frame.data()), frame.size(), offset);
 
         // Unpack remote state
-        const auto msgpack_state = msgpack::unpack(to_char_ptr(frame.data()), frame.size(), offset);
-        const auto state = static_cast<CSCP::State>(msgpack_state->as<std::uint8_t>());
+        const auto state =
+            static_cast<CSCP::State>(msgpack_unpack_to<std::uint8_t>(to_char_ptr(frame.data()), frame.size(), offset));
 
         // Unpack time interval
-        const auto msgpack_interval = msgpack::unpack(to_char_ptr(frame.data()), frame.size(), offset);
-        const auto interval = static_cast<std::chrono::milliseconds>(msgpack_interval->as<std::uint16_t>());
+        const auto interval = static_cast<std::chrono::milliseconds>(
+            msgpack_unpack_to<std::uint16_t>(to_char_ptr(frame.data()), frame.size(), offset));
 
         // Construct message
         return {sender, state, interval, time};
-    } catch(const msgpack::type_error&) {
-        throw MessageDecodingError("malformed data");
-    } catch(const msgpack::unpack_error&) {
-        throw MessageDecodingError("could not unpack data");
+    } catch(const MsgPackError& e) {
+        throw MessageDecodingError(e.what());
     }
 }
 
