@@ -24,6 +24,7 @@
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/protocol/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
@@ -39,8 +40,7 @@ BaseHeader BaseHeader::disassemble(Protocol protocol, std::span<const std::byte>
         std::size_t offset = 0;
 
         // Unpack protocol
-        const auto msgpack_protocol_identifier = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-        const auto protocol_identifier = msgpack_protocol_identifier->as<std::string>();
+        const auto protocol_identifier = msgpack_unpack_to<std::string>(to_char_ptr(data.data()), data.size_bytes(), offset);
 
         // Try to decode protocol identifier into protocol
         Protocol protocol_recv {};
@@ -55,23 +55,19 @@ BaseHeader BaseHeader::disassemble(Protocol protocol, std::span<const std::byte>
         }
 
         // Unpack sender
-        const auto msgpack_sender = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-        const auto sender = msgpack_sender->as<std::string>();
+        const auto sender = msgpack_unpack_to<std::string>(to_char_ptr(data.data()), data.size_bytes(), offset);
 
         // Unpack time
-        const auto msgpack_time = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-        const auto time = msgpack_time->as<std::chrono::system_clock::time_point>();
+        const auto time =
+            msgpack_unpack_to<std::chrono::system_clock::time_point>(to_char_ptr(data.data()), data.size_bytes(), offset);
 
         // Unpack tags
-        const auto msgpack_tags = msgpack::unpack(to_char_ptr(data.data()), data.size_bytes(), offset);
-        const auto tags = msgpack_tags->as<Dictionary>();
+        const auto tags = msgpack_unpack_to<Dictionary>(to_char_ptr(data.data()), data.size_bytes(), offset);
 
         // Construct header
         return {protocol, sender, time, tags};
-    } catch(const msgpack::type_error&) {
-        throw MessageDecodingError("malformed data");
-    } catch(const msgpack::unpack_error&) {
-        throw MessageDecodingError("could not unpack data");
+    } catch(const MsgPackError& e) {
+        throw MessageDecodingError(e.what());
     }
 }
 
