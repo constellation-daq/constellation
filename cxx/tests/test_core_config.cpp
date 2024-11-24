@@ -27,6 +27,7 @@
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/exceptions.hpp"
 #include "constellation/core/config/Value.hpp"
+#include "constellation/core/utils/msgpack.hpp"
 
 using namespace Catch::Matchers;
 using namespace constellation::config;
@@ -552,8 +553,7 @@ TEST_CASE("Pack & Unpack List to MsgPack", "[core][core::config]") {
     msgpack::pack(sbuf, list);
 
     // Unpack from MsgPack
-    auto unpacked = msgpack::unpack(sbuf.data(), sbuf.size());
-    auto list_unpacked = unpacked->as<List>();
+    auto list_unpacked = msgpack_unpack_to<List>(sbuf.data(), sbuf.size());
 
     REQUIRE(list_unpacked.at(0).get<bool>() == true);
     REQUIRE(list_unpacked.at(1).get<std::int64_t>() == std::int64_t(63));
@@ -592,8 +592,7 @@ TEST_CASE("Pack & Unpack Dictionary to MsgPack", "[core][core::config]") {
     msgpack::pack(sbuf, dict);
 
     // Unpack from MsgPack
-    auto unpacked = msgpack::unpack(sbuf.data(), sbuf.size());
-    auto dict_unpacked = unpacked->as<Dictionary>();
+    auto dict_unpacked = msgpack_unpack_to<Dictionary>(sbuf.data(), sbuf.size());
 
     REQUIRE(dict_unpacked["bool"].get<bool>() == true);
     REQUIRE(dict_unpacked["int64"].get<std::int64_t>() == std::int64_t(63));

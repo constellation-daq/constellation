@@ -27,6 +27,7 @@
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/exceptions.hpp"
+#include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/Satellite.hpp"
@@ -107,9 +108,9 @@ TEST_CASE("Standard commands", "[satellite]") {
     REQUIRE(recv_msg_get_state.getVerb().first == CSCP1Message::Type::SUCCESS);
     REQUIRE_THAT(to_string(recv_msg_get_state.getVerb().second), Equals("NEW"));
     const auto& recv_get_state_payload = recv_msg_get_state.getPayload();
-    auto recv_get_state_msgpack_state =
-        msgpack::unpack(to_char_ptr(recv_get_state_payload.span().data()), recv_get_state_payload.span().size());
-    REQUIRE(recv_get_state_msgpack_state->as<std::underlying_type_t<CSCP::State>>() == std::to_underlying(CSCP::State::NEW));
+    auto recv_get_state = msgpack_unpack_to<std::underlying_type_t<CSCP::State>>(
+        to_char_ptr(recv_get_state_payload.span().data()), recv_get_state_payload.span().size());
+    REQUIRE(recv_get_state == std::to_underlying(CSCP::State::NEW));
 
     // get_status
     sender.sendCommand("get_status");
@@ -154,8 +155,8 @@ TEST_CASE("User commands", "[satellite]") {
     REQUIRE_THAT(to_string(recv_msg_usr_cmd.getVerb().second), Equals("Command returned: 2"));
     REQUIRE(recv_msg_usr_cmd.hasPayload());
     const auto& usrmsgpayload = recv_msg_usr_cmd.getPayload();
-    const auto usrpayload = msgpack::unpack(to_char_ptr(usrmsgpayload.span().data()), usrmsgpayload.span().size());
-    REQUIRE(usrpayload->as<int>() == 2);
+    const auto usrpayload = msgpack_unpack_to<int>(to_char_ptr(usrmsgpayload.span().data()), usrmsgpayload.span().size());
+    REQUIRE(usrpayload == 2);
 
     // my_cmd user command is case insensitive
     sender.sendCommand("mY_cMd");
@@ -165,8 +166,8 @@ TEST_CASE("User commands", "[satellite]") {
     REQUIRE(recv_msg_usr_cmd_case.hasPayload());
     const auto& usrmsgpayload_case = recv_msg_usr_cmd_case.getPayload();
     const auto usrpayload_case =
-        msgpack::unpack(to_char_ptr(usrmsgpayload_case.span().data()), usrmsgpayload_case.span().size());
-    REQUIRE(usrpayload_case->as<int>() == 2);
+        msgpack_unpack_to<int>(to_char_ptr(usrmsgpayload_case.span().data()), usrmsgpayload_case.span().size());
+    REQUIRE(usrpayload_case == 2);
 
     // my_usr_cmd_arg with argument as payload
     auto usr_cmd_arg_msg = CSCP1Message({"cscp_sender"}, {CSCP1Message::Type::REQUEST, "my_cmd_arg"});
@@ -182,8 +183,9 @@ TEST_CASE("User commands", "[satellite]") {
     REQUIRE_THAT(to_string(recv_msg_usr_cmd_arg.getVerb().second), Equals("Command returned: 8"));
     REQUIRE(recv_msg_usr_cmd_arg.hasPayload());
     const auto& usrargmsgpayload = recv_msg_usr_cmd_arg.getPayload();
-    const auto usrargpayload = msgpack::unpack(to_char_ptr(usrargmsgpayload.span().data()), usrargmsgpayload.span().size());
-    REQUIRE(usrargpayload->as<int>() == 8);
+    const auto usrargpayload =
+        msgpack_unpack_to<int>(to_char_ptr(usrargmsgpayload.span().data()), usrargmsgpayload.span().size());
+    REQUIRE(usrargpayload == 8);
 
     // my_cmd_void user command without arguments and return value
     sender.sendCommand("my_cmd_void");

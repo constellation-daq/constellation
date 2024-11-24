@@ -24,6 +24,7 @@
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace Catch::Matchers;
@@ -292,8 +293,8 @@ TEST_CASE("Message Payload (CSCP1)", "[core][core::message]") {
 
     // Retrieve payload
     const auto& data = cscp1_msg2.getPayload();
-    const auto py_string = msgpack::unpack(to_char_ptr(data.span().data()), data.span().size());
-    REQUIRE_THAT(py_string->as<std::string>(), Equals("this is fine"));
+    REQUIRE_THAT(msgpack_unpack_to<std::string>(to_char_ptr(data.span().data()), data.span().size()),
+                 Equals("this is fine"));
 }
 
 TEST_CASE("Message Payload (CSCP1, too many frames)", "[core][core::message]") {
@@ -336,8 +337,7 @@ TEST_CASE("Message Payload (CDTP1)", "[core][core::message]") {
     REQUIRE(data.size() == 3);
 
     const auto front_span = data.front().span();
-    const auto py_string = msgpack::unpack(to_char_ptr(front_span.data()), front_span.size());
-    REQUIRE_THAT(py_string->as<std::string>(), Equals("this is fine"));
+    REQUIRE_THAT(msgpack_unpack_to<std::string>(to_char_ptr(front_span.data()), front_span.size()), Equals("this is fine"));
 }
 
 TEST_CASE("Packing / Unpacking (CDTP1)", "[core][core::message]") {
