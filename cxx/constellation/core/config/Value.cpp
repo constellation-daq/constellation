@@ -23,6 +23,7 @@
 
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
@@ -152,6 +153,5 @@ PayloadBuffer Value::assemble() const {
 }
 
 Value Value::disassemble(const PayloadBuffer& message) {
-    const auto msgpack_dict = msgpack::unpack(to_char_ptr(message.span().data()), message.span().size());
-    return msgpack_dict->as<Value>();
+    return msgpack_unpack_to<Value>(to_char_ptr(message.span().data()), message.span().size());
 }

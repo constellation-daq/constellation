@@ -17,6 +17,7 @@
 
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/msgpack.hpp"
 
 using namespace constellation::config;
 using namespace constellation::message;
@@ -54,8 +55,7 @@ PayloadBuffer List::assemble() const {
 }
 
 List List::disassemble(const PayloadBuffer& message) {
-    const auto msgpack_dict = msgpack::unpack(to_char_ptr(message.span().data()), message.span().size());
-    return msgpack_dict->as<List>();
+    return msgpack_unpack_to<List>(to_char_ptr(message.span().data()), message.span().size());
 }
 
 std::string List::to_string() const {
@@ -106,8 +106,7 @@ PayloadBuffer Dictionary::assemble() const {
 }
 
 Dictionary Dictionary::disassemble(const PayloadBuffer& message) {
-    const auto msgpack_dict = msgpack::unpack(to_char_ptr(message.span().data()), message.span().size());
-    return msgpack_dict->as<Dictionary>();
+    return msgpack_unpack_to<Dictionary>(to_char_ptr(message.span().data()), message.span().size());
 }
 
 std::string Dictionary::to_string() const {

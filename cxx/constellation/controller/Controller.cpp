@@ -274,7 +274,7 @@ std::optional<std::chrono::system_clock::time_point> Controller::getRunStartTime
             } catch(const msgpack::unpack_error&) {
                 continue;
             }
-        } catch(const NetworkError& e) {
+        } catch(const MessageDecodingError& e) {
             LOG(CRITICAL) << e.what();
             continue;
         }
