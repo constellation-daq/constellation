@@ -28,10 +28,12 @@
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
+#include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/enum.hpp"
+#include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
 #include "constellation/satellite/exceptions.hpp"
@@ -147,14 +149,13 @@ std::pair<CSCP1Message::Type, std::string> FSM::reactCommand(TransitionCommand t
             if(transition == Transition::initialize || transition == Transition::reconfigure) {
                 fsm_payload = Configuration(Dictionary::disassemble(payload));
             } else if(transition == Transition::start) {
-                const auto msgpack_payload = msgpack::unpack(to_char_ptr(payload.span().data()), payload.span().size());
-                if(!CSCP::is_valid_run_id(msgpack_payload->as<std::string>())) {
-                    throw msgpack::unpack_error("Run identifier contains invalid characters");
+                fsm_payload = msgpack_unpack_to<std::string>(to_char_ptr(payload.span().data()), payload.span().size());
+                if(!CSCP::is_valid_run_id(std::get<std::string>(fsm_payload))) {
+                    throw InvalidPayload("Run identifier contains invalid characters");
                 }
-                fsm_payload = msgpack_payload->as<std::string>();
             }
         }
-    } catch(const msgpack::unpack_error& error) {
+    } catch(const InvalidPayload& error) {
         std::string payload_info {"Transition " + to_string(transition) + " received invalid payload: " + error.what()};
         LOG(logger_, WARNING) << payload_info;
         return {CSCP1Message::Type::INCOMPLETE, std::move(payload_info)};
