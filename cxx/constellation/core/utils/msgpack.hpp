@@ -18,21 +18,28 @@
 namespace constellation::utils {
 
     /**
-     * @ingroup MsgPack Exceptions
-     * @brief Error in encoding or decoding MsgPack data
+     * @brief MsgPack helper function to pack value to stream
+     * @details This helper catches all MsgPack exceptions and rethrows them as MsgPackError
+     *
+     * @tparam S Reference to target stream
+     * @tparam T Value to be packed
      */
-    class CNSTLN_API MsgPackError : public utils::RuntimeError {
-    public:
-        explicit MsgPackError(const std::string& type, const std::string& reason) {
-            error_message_ = type;
-            error_message_ += ": ";
-            error_message_ += reason;
-        }
-
-    protected:
-        MsgPackError() = default;
+    template <typename S, typename T> inline void msgpack_pack(S& stream, const T& object) try {
+        msgpack::pack(stream, object);
+    } catch(const msgpack::type_error& e) {
+        throw MsgPackError("Type error", e.what());
+    } catch(const msgpack::parse_error& e) {
+        throw MsgPackError("Error parsing data", e.what());
     };
 
+    /**
+     * @brief MsgPack helper to unpack value
+     * @details This helper unpacks the MsgPack value and returns it as target value type. It catches all MsgPack exceptions
+     *          and rethrows them as MsgPackError
+     *
+     * @tparam args Variadic arguments
+     * @return Unpacked value in target type
+     */
     template <typename R, typename... Args> inline R msgpack_unpack_to(Args&&... args) try {
         const auto msgpack_var = msgpack::unpack(std::forward<Args>(args)...);
         return msgpack_var->template as<R>();

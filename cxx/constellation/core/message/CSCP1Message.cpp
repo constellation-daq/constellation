@@ -35,13 +35,13 @@ zmq::multipart_t CSCP1Message::assemble(bool keep_payload) {
 
     // First frame: header
     msgpack::sbuffer sbuf_header {};
-    msgpack::pack(sbuf_header, header_);
+    msgpack_pack(sbuf_header, header_);
     frames.add(PayloadBuffer(std::move(sbuf_header)).to_zmq_msg_release());
 
     // Second frame: body
     msgpack::sbuffer sbuf_body {};
-    msgpack::pack(sbuf_body, std::to_underlying(verb_.first));
-    msgpack::pack(sbuf_body, verb_.second);
+    msgpack_pack(sbuf_body, std::to_underlying(verb_.first));
+    msgpack_pack(sbuf_body, verb_.second);
     frames.add(PayloadBuffer(std::move(sbuf_body)).to_zmq_msg_release());
 
     // Third frame: payload

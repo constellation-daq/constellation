@@ -92,4 +92,19 @@ namespace constellation::utils {
         LogicError() = default;
     };
 
+    /**
+     * @ingroup Exceptions
+     * @brief Error in encoding or decoding MsgPack data
+     *
+     * Issues in treating incoming or outgoing MsgPack-encoded data
+     */
+    class CNSTLN_API MsgPackError : public RuntimeError {
+    public:
+        explicit MsgPackError(const std::string& type, const std::string& reason) {
+            error_message_ = type;
+            error_message_ += ": ";
+            error_message_ += reason;
+        }
+    };
+
 } // namespace constellation::utils

@@ -44,6 +44,7 @@
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/exceptions.hpp"
+#include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/exceptions.hpp"
@@ -271,7 +272,7 @@ BaseSatellite::handle_user_command(std::string_view command, const message::Payl
         // Return the call value as payload only if it is not std::monostate
         if(!std::holds_alternative<std::monostate>(retval)) {
             msgpack::sbuffer sbuf {};
-            msgpack::pack(sbuf, retval);
+            msgpack_pack(sbuf, retval);
             return_payload = {std::move(sbuf)};
         }
         return_verb = {CSCP1Message::Type::SUCCESS, "Command returned: " + retval.str()};

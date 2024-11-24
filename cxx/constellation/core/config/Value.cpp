@@ -148,7 +148,7 @@ void Value::msgpack_unpack(const msgpack::object& msgpack_object) {
 
 PayloadBuffer Value::assemble() const {
     msgpack::sbuffer sbuf {};
-    msgpack::pack(sbuf, *this);
+    utils::msgpack_pack(sbuf, *this);
     return {std::move(sbuf)};
 }
 

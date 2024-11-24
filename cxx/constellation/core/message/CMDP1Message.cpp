@@ -24,6 +24,7 @@
 #include "constellation/core/metrics/Metric.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/enum.hpp"
+#include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
@@ -53,7 +54,7 @@ zmq::multipart_t CMDP1Message::assemble() {
 
     // Second frame: header
     msgpack::sbuffer sbuf_header {};
-    msgpack::pack(sbuf_header, header_);
+    msgpack_pack(sbuf_header, header_);
     frames.add(PayloadBuffer(std::move(sbuf_header)).to_zmq_msg_release());
 
     // Third frame: move payload

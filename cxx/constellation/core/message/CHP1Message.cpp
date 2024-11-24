@@ -87,15 +87,15 @@ zmq::multipart_t CHP1Message::assemble() {
     msgpack::sbuffer sbuf {};
 
     // first pack protocol
-    msgpack::pack(sbuf, get_protocol_identifier(CHP1));
+    msgpack_pack(sbuf, get_protocol_identifier(CHP1));
     // then sender
-    msgpack::pack(sbuf, getSender());
+    msgpack_pack(sbuf, getSender());
     // then time
-    msgpack::pack(sbuf, getTime());
+    msgpack_pack(sbuf, getTime());
     // then state
-    msgpack::pack(sbuf, std::to_underlying(state_));
+    msgpack_pack(sbuf, std::to_underlying(state_));
     // then interval
-    msgpack::pack(sbuf, static_cast<uint16_t>(interval_.count()));
+    msgpack_pack(sbuf, static_cast<uint16_t>(interval_.count()));
 
     frames.add(PayloadBuffer(std::move(sbuf)).to_zmq_msg_release());
 

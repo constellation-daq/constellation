@@ -123,7 +123,7 @@ zmq::multipart_t CDTP1Message::assemble() {
 
     // First frame: header
     msgpack::sbuffer sbuf_header {};
-    msgpack::pack(sbuf_header, header_);
+    msgpack_pack(sbuf_header, header_);
     frames.add(PayloadBuffer(std::move(sbuf_header)).to_zmq_msg_release());
 
     // Second frame until Nth frame: always move payload (no reuse)
