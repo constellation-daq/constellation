@@ -23,7 +23,7 @@ if not peary_dep.found()
   peary_opts.set_override_option('werror', 'false')
 
   # Peary build options
-  peary_opts.add_cmake_defines({'BUILD_EXE': false})
+  peary_opts.add_cmake_defines({'BUILD_EXE': false, 'INTERFACE_EMULATION': true})
 
   peary_sp = cmake.subproject('peary', options: peary_opts)
   peary_dep = peary_sp.dependency('peary')
