@@ -75,7 +75,7 @@ test('Core configuration test', test_core_config,
 
 test_core_pools = executable('test_core_pools',
   sources: 'test_core_pools.cpp',
-  dependencies: [core_dep, catch2_dep],
+  dependencies: [core_dep, cppzmq_dep, catch2_dep],
 )
 test('Core pools test', test_core_pools,
   args: ['--durations', 'yes', '--verbosity', 'high'],
