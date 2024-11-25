@@ -16,7 +16,8 @@
 #include <string_view>
 #include <vector>
 
-#include <asio.hpp>
+#include <asio/io_context.hpp>
+#include <asio/ip/udp.hpp>
 
 #include "constellation/build.hpp"
 

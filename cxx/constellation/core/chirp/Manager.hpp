@@ -21,7 +21,7 @@
 #include <thread>
 #include <vector>
 
-#include <asio.hpp>
+#include <asio/ip/address_v4.hpp>
 
 #include "constellation/build.hpp"
 #include "constellation/core/chirp/BroadcastRecv.hpp"

@@ -15,6 +15,8 @@
 #include <string>
 #include <string_view>
 
+#include <asio.hpp>
+
 using namespace constellation::chirp;
 
 constexpr std::size_t MESSAGE_BUFFER = 1024;

@@ -16,6 +16,8 @@
 #include <string_view>
 #include <utility>
 
+#include <asio.hpp>
+
 using namespace constellation::chirp;
 
 BroadcastSend::BroadcastSend(const std::set<asio::ip::address_v4>& brd_addresses, asio::ip::port_type port) {
