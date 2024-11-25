@@ -300,9 +300,6 @@ void CaribouSatellite::stopping() {
 
 void CaribouSatellite::running(const std::stop_token& stop_token) {
 
-    // Keep track of current number of frames:
-    std::size_t current_frames = 0;
-
     // Prepare data message
     auto msg = newDataMessage(number_of_frames_);
 
@@ -322,9 +319,6 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
                     return static_cast<uintptr_t>(word);
                 });
                 msg.addFrame(std::move(data));
-
-                // Increment frame counter
-                current_frames++;
             }
 
             // If this message has all its frames, send it:
