@@ -32,10 +32,11 @@
 #include "constellation/core/log/CMDPSink.hpp"
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/ProxySink.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::log;
+using namespace constellation::networking;
 using namespace constellation::utils;
 
 SinkManager::ConstellationLevelFormatter::ConstellationLevelFormatter(bool format_short) : format_short_(format_short) {}

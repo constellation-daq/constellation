@@ -24,14 +24,16 @@
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
+#include "constellation/core/networking/Port.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/pools/SubscriberPool.hpp"
-#include "constellation/core/utils/networking.hpp"
 
 #include "chirp_mock.hpp"
 
 using namespace constellation;
 using namespace constellation::log;
 using namespace constellation::message;
+using namespace constellation::networking;
 using namespace constellation::pools;
 using namespace constellation::utils;
 

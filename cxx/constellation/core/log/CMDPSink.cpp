@@ -37,8 +37,8 @@
 #include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/metrics/Metric.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/utils/enum.hpp"
-#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/windows.hpp"
 
@@ -46,6 +46,7 @@ using namespace constellation;
 using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::metrics;
+using namespace constellation::networking;
 using namespace constellation::utils;
 using namespace std::chrono_literals;
 

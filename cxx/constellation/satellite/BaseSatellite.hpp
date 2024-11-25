@@ -26,8 +26,8 @@
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/core/networking/Port.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
-#include "constellation/core/utils/networking.hpp"
 #include "constellation/satellite/CommandRegistry.hpp"
 #include "constellation/satellite/FSM.hpp"
 
@@ -101,12 +101,12 @@ namespace constellation::satellite {
         /**
          * @brief Return the ephemeral port number to which the CSCP socket is bound to
          */
-        constexpr utils::Port getCommandPort() const { return cscp_port_; }
+        constexpr networking::Port getCommandPort() const { return cscp_port_; }
 
         /**
          * @brief Return the ephemeral port number to which the CHP socket is bound to
          */
-        constexpr utils::Port getHeartbeatPort() const { return heartbeat_manager_.getPort(); }
+        constexpr networking::Port getHeartbeatPort() const { return heartbeat_manager_.getPort(); }
 
         /**
          * @brief Return the FSM of the satellite
@@ -222,7 +222,7 @@ namespace constellation::satellite {
 
     private:
         zmq::socket_t cscp_rep_socket_;
-        utils::Port cscp_port_;
+        networking::Port cscp_port_;
 
         std::string_view satellite_type_;
         std::string_view satellite_name_;

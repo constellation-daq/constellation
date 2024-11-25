@@ -26,9 +26,9 @@
 #include "constellation/core/heartbeat/HeartbeatSend.hpp"
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
+#include "constellation/core/networking/Port.hpp"
 #include "constellation/core/protocol/CHP_definitions.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
-#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/string_hash_map.hpp"
 
 namespace constellation::heartbeat {
@@ -105,7 +105,7 @@ namespace constellation::heartbeat {
          *
          * @return Port number
          */
-        constexpr utils::Port getPort() const { return sender_.getPort(); }
+        constexpr networking::Port getPort() const { return sender_.getPort(); }
 
     private:
         /**

@@ -15,3 +15,4 @@ Core Library
    heartbeat
    chirp
    pools
+   networking

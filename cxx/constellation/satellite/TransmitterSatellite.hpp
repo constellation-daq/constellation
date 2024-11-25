@@ -24,7 +24,7 @@
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/networking/Port.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
 #include "constellation/satellite/Satellite.hpp"
@@ -120,7 +120,7 @@ namespace constellation::satellite {
         /**
          * @brief Return the ephemeral port number to which the CDTP socket is bound to
          */
-        constexpr utils::Port getDataPort() const { return cdtp_port_; }
+        constexpr networking::Port getDataPort() const { return cdtp_port_; }
 
     protected:
         /**
@@ -195,7 +195,7 @@ namespace constellation::satellite {
 
     private:
         zmq::socket_t cdtp_push_socket_;
-        utils::Port cdtp_port_;
+        networking::Port cdtp_port_;
         log::Logger cdtp_logger_;
         std::chrono::seconds data_bor_timeout_ {};
         std::chrono::seconds data_eor_timeout_ {};

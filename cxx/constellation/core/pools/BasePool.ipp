@@ -28,8 +28,8 @@
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/exceptions.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/utils/enum.hpp"
-#include "constellation/core/utils/networking.hpp"
 
 namespace constellation::pools {
 
@@ -106,7 +106,7 @@ namespace constellation::pools {
         LOG(pool_logger_, TRACE) << "Connecting to " << service.to_uri() << "...";
         try {
 
-            zmq::socket_t socket {*utils::global_zmq_context(), SOCKET_TYPE};
+            zmq::socket_t socket {*networking::global_zmq_context(), SOCKET_TYPE};
             socket.connect(service.to_uri());
 
             /**

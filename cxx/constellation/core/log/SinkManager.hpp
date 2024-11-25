@@ -29,7 +29,7 @@
 #include "constellation/core/log/CMDPSink.hpp"
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/metrics/Metric.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/networking/Port.hpp"
 
 namespace constellation::log {
     /**
@@ -75,7 +75,7 @@ namespace constellation::log {
          *
          * @return Port number
          */
-        utils::Port getCMDPPort() const { return cmdp_sink_->getPort(); }
+        networking::Port getCMDPPort() const { return cmdp_sink_->getPort(); }
 
         /**
          * @brief Enable sending via CMDP

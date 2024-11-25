@@ -27,11 +27,13 @@
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
+#include "constellation/core/networking/Port.hpp"
 #include "constellation/core/utils/enum.hpp"
 
 using namespace constellation::chirp;
 using namespace constellation::log;
 using namespace constellation::message;
+using namespace constellation::networking;
 using namespace constellation::utils;
 using namespace std::string_literals;
 

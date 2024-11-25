@@ -20,12 +20,13 @@
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/external/md5.h"
 #include "constellation/core/message/exceptions.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/networking/Port.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::chirp;
 using namespace constellation::message;
+using namespace constellation::networking;
 
 MD5Hash::MD5Hash(std::string_view string) : array() {
     auto hasher = Chocobo1::MD5();
@@ -60,12 +61,11 @@ bool MD5Hash::operator<(const MD5Hash& other) const {
     return false;
 }
 
-CHIRPMessage::CHIRPMessage(
-    MessageType type, MD5Hash group_id, MD5Hash host_id, ServiceIdentifier service_id, utils::Port port)
+CHIRPMessage::CHIRPMessage(MessageType type, MD5Hash group_id, MD5Hash host_id, ServiceIdentifier service_id, Port port)
     : type_(type), group_id_(group_id), host_id_(host_id), service_id_(service_id), port_(port) {}
 
 CHIRPMessage::CHIRPMessage(
-    MessageType type, std::string_view group, std::string_view host, ServiceIdentifier service_id, utils::Port port)
+    MessageType type, std::string_view group, std::string_view host, ServiceIdentifier service_id, Port port)
     : CHIRPMessage(type, MD5Hash(group), MD5Hash(host), service_id, port) {}
 
 AssembledMessage CHIRPMessage::assemble() const {

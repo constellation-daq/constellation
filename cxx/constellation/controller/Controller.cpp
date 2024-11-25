@@ -38,15 +38,16 @@
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/protocol/CHP_definitions.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/enum.hpp"
-#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
 using namespace constellation::controller;
 using namespace constellation::message;
+using namespace constellation::networking;
 using namespace constellation::protocol;
 using namespace constellation::utils;
 using namespace std::chrono_literals;
@@ -122,7 +123,7 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
         }
     } else if(status == chirp::ServiceStatus::DISCOVERED) {
         // New satellite connection
-        Connection conn = {{*utils::global_zmq_context(), zmq::socket_type::req}, service.host_id, uri};
+        Connection conn = {{*global_zmq_context(), zmq::socket_type::req}, service.host_id, uri};
         conn.req.connect(uri);
 
         // Obtain canonical name:

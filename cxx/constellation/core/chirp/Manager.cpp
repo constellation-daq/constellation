@@ -35,13 +35,15 @@
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/message/exceptions.hpp"
+#include "constellation/core/networking/asio_helpers.hpp"
+#include "constellation/core/networking/Port.hpp"
 #include "constellation/core/utils/enum.hpp"
-#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::chirp;
 using namespace constellation::message;
+using namespace constellation::networking;
 using namespace constellation::utils;
 using namespace std::chrono_literals;
 
@@ -59,7 +61,7 @@ bool RegisteredService::operator<(const RegisteredService& other) const {
 }
 
 std::string DiscoveredService::to_uri() const {
-    return "tcp://" + range_to_string(address.to_bytes(), ".") + ":" + to_string(port);
+    return ::to_uri(address, port);
 }
 
 bool DiscoveredService::operator<(const DiscoveredService& other) const {
@@ -143,7 +145,7 @@ void Manager::start() {
     main_loop_thread_ = std::jthread(std::bind_front(&Manager::main_loop, this));
 }
 
-bool Manager::registerService(ServiceIdentifier service_id, utils::Port port) {
+bool Manager::registerService(ServiceIdentifier service_id, Port port) {
     const RegisteredService service {service_id, port};
 
     std::unique_lock registered_services_lock {registered_services_mutex_};
@@ -158,7 +160,7 @@ bool Manager::registerService(ServiceIdentifier service_id, utils::Port port) {
     return actually_inserted;
 }
 
-bool Manager::unregisterService(ServiceIdentifier service_id, utils::Port port) {
+bool Manager::unregisterService(ServiceIdentifier service_id, Port port) {
     const RegisteredService service {service_id, port};
 
     std::unique_lock registered_services_lock {registered_services_mutex_};

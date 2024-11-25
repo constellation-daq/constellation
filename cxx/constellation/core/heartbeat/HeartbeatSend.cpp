@@ -22,12 +22,13 @@
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
-#include "constellation/core/utils/networking.hpp"
 
 using namespace constellation;
 using namespace constellation::heartbeat;
 using namespace constellation::message;
+using namespace constellation::networking;
 using namespace constellation::protocol;
 using namespace constellation::utils;
 

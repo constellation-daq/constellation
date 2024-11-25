@@ -22,10 +22,11 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
+#include "constellation/core/networking/Port.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/exceptions.hpp"
-#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/Satellite.hpp"
@@ -35,6 +36,7 @@
 using namespace Catch::Matchers;
 using namespace constellation::config;
 using namespace constellation::message;
+using namespace constellation::networking;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;

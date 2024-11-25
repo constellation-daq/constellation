@@ -39,10 +39,10 @@
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/metrics/MetricsManager.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/exceptions.hpp"
-#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/exceptions.hpp"
@@ -54,6 +54,7 @@ using namespace constellation::config;
 using namespace constellation::heartbeat;
 using namespace constellation::message;
 using namespace constellation::metrics;
+using namespace constellation::networking;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;

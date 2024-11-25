@@ -22,6 +22,8 @@ core_src = files(
   'message/CSCP1Message.cpp',
   'metrics/Metric.cpp',
   'metrics/MetricsManager.cpp',
+  'networking/asio_helpers.cpp',
+  'networking/zmq_helpers.cpp',
 )
 
 core_lib = library(
@@ -123,6 +125,13 @@ install_headers(
 )
 
 install_headers(
+  'networking/asio_helpers.hpp',
+  'networking/Port.hpp',
+  'networking/zmq_helpers.hpp',
+  subdir: 'constellation/core/networking',
+)
+
+install_headers(
   'protocol/CHP_definitions.hpp',
   'protocol/CSCP_definitions.hpp',
   'protocol/Protocol.hpp',
@@ -141,7 +150,6 @@ install_headers(
   'utils/casts.hpp',
   'utils/enum.hpp',
   'utils/exceptions.hpp',
-  'utils/networking.hpp',
   'utils/std_future.hpp',
   'utils/string.hpp',
   'utils/string_hash_map.hpp',

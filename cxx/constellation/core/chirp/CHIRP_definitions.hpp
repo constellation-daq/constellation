@@ -13,15 +13,9 @@
 #include <cstdint>
 #include <string_view>
 
-namespace constellation::chirp {
+#include "constellation/core/networking/Port.hpp"
 
-    /**
-     * Port number for a network connection
-     *
-     * Note that since ports are allocated dynamically, the port number should range between 49152 and 65535, as these are
-     * reserved by the IANA for dynamic allocation or temporary use (see also https://en.wikipedia.org/wiki/Ephemeral_port).
-     */
-    using Port = std::uint16_t;
+namespace constellation::chirp {
 
     /** Protocol identifier for CHIRP */
     constexpr std::string_view CHIRP_IDENTIFIER = "CHIRP";
@@ -30,7 +24,7 @@ namespace constellation::chirp {
     constexpr std::uint8_t CHIRP_VERSION = '\x01';
 
     /** Port number of the CHIRP protocol */
-    constexpr Port CHIRP_PORT = 7123;
+    constexpr networking::Port CHIRP_PORT = 7123;
 
     /** CHIRP Message length in bytes */
     constexpr std::size_t CHIRP_MESSAGE_LENGTH = 42;
