@@ -26,7 +26,7 @@
 #include "constellation/core/message/CMDP1Message.hpp"
 
 using namespace constellation;
-using namespace constellation::pools;
+using namespace constellation::listener;
 using namespace constellation::message;
 
 LogListener::LogListener(std::string_view log_topic, std::function<void(CMDP1Message&&)> callback)
@@ -34,13 +34,13 @@ LogListener::LogListener(std::string_view log_topic, std::function<void(CMDP1Mes
 
 LogListener::~LogListener() = default;
 
-void LogListener::socket_connected(const chirp::DiscoveredService& service, zmq::socket_t& socket) {
+void LogListener::host_connected(const chirp::DiscoveredService& service) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
 
     // Directly subscribe to current topic list
     for(const auto& topic : subscribed_topics_) {
         LOG(pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic) << " for " << service.to_uri();
-        socket.set(zmq::sockopt::subscribe, topic);
+        SubscriberPoolT::subscribe(service.host_id, topic);
     }
     // If extra topics for host, also subscribe to those
     const auto host_it = std::ranges::find(
@@ -49,77 +49,39 @@ void LogListener::socket_connected(const chirp::DiscoveredService& service, zmq:
         std::ranges::for_each(host_it->second, [&](const auto& topic) {
             if(!subscribed_topics_.contains(topic)) {
                 LOG(pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic) << " for " << service.to_uri();
-                socket.set(zmq::sockopt::subscribe, topic);
+                SubscriberPoolT::subscribe(service.host_id, topic);
             }
         });
     }
 }
 
-LogListener::socket_pair LogListener::find_socket(std::string_view host, sockets_map& sockets) {
-    const auto host_id = MD5Hash(host);
-    const auto socket_it = std::ranges::find(sockets, host_id, [&](const auto& socket_p) { return socket_p.first.host_id; });
-    if(socket_it != sockets.end()) {
-        return {socket_it->first, socket_it->second};
-    }
-    return {};
-}
-
-void LogListener::scribe(socket_pair& socket_pair, std::string_view topic, bool subscribe) {
-    if(socket_pair.second != nullptr) {
-        if(subscribe) {
-            LOG(pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic) << " for " << socket_pair.first.to_uri();
-            socket_pair.second.set(zmq::sockopt::subscribe, topic);
-        } else {
-            LOG(pool_logger_, TRACE) << "Unsubscribing from " << std::quoted(topic) << " for " << socket_pair.first.to_uri();
-            socket_pair.second.set(zmq::sockopt::unsubscribe, topic);
-        }
-    }
-}
-
-void LogListener::scribe_all(sockets_map& sockets, std::string_view topic, bool subscribe) {
-    for(auto& [host, socket] : sockets) {
-        if(subscribe) {
-            LOG(pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic) << " for " << host.to_uri();
-            socket.set(zmq::sockopt::subscribe, topic);
-        } else {
-            LOG(pool_logger_, TRACE) << "Unsubscribing from " << std::quoted(topic) << " for " << host.to_uri();
-            socket.set(zmq::sockopt::unsubscribe, topic);
-        }
-    }
-}
-
 void LogListener::setSubscriptionTopics(std::set<std::string> topics) {
-    // Lock sockets_mutex_ before to avoid potential deadlock
-    const std::lock_guard sockets_lock {sockets_mutex_};
-    auto& sockets = get_sockets();
-
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
 
     // Set of topics to unsubscribe: current topics not in new topics
-    std::set<std::string_view> to_unsubscribe {};
+    std::set<std::string> to_unsubscribe {};
     std::ranges::for_each(subscribed_topics_, [&](const auto& topic) {
         if(!topics.contains(topic)) {
             to_unsubscribe.emplace(topic);
         }
     });
     // Set of topics to subscribe: new topics not in current topics
-    std::set<std::string_view> to_subscribe {};
+    std::set<std::string> to_subscribe {};
     std::ranges::for_each(topics, [&](const auto& new_topic) {
         if(!subscribed_topics_.contains(new_topic)) {
             to_subscribe.emplace(new_topic);
         }
     });
     // Unsubscribe from old topics
-    std::ranges::for_each(to_unsubscribe, [&](const auto& topic) { scribe_all(sockets, topic, false); });
+    std::ranges::for_each(to_unsubscribe, [&](const auto& topic) { SubscriberPoolT::unsubscribe(topic); });
     // Subscribe to new topics
-    std::ranges::for_each(to_subscribe, [&](const auto& topic) { scribe_all(sockets, topic, true); });
+    std::ranges::for_each(to_subscribe, [&](const auto& topic) { SubscriberPoolT::subscribe(topic); });
 
     // Check if extra topics contained unsubscribed topics, if so subscribe again
     std::ranges::for_each(extra_subscribed_topics_, [&](const auto& host_p) {
-        auto socket_pair = find_socket(host_p.first, sockets);
         std::ranges::for_each(host_p.second, [&](const auto& topic) {
             if(to_unsubscribe.contains(topic)) {
-                scribe(socket_pair, topic, true);
+                SubscriberPoolT::subscribe(host_p.first, topic);
             }
         });
     });
@@ -159,39 +121,34 @@ void LogListener::unsubscribe(const std::string& topic) {
 }
 
 void LogListener::setExtraSubscriptionTopics(const std::string& host, std::set<std::string> topics) {
-    // Lock sockets_mutex_ before to avoid potential deadlock
-    const std::lock_guard sockets_lock {sockets_mutex_};
-    auto& sockets = get_sockets();
-    auto socket_pair = find_socket(host, sockets);
-
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
 
     // Check if extra topics already set
     const auto host_it = extra_subscribed_topics_.find(host);
     if(host_it != extra_subscribed_topics_.end()) {
         // Set of topics to unsubscribe: current topics not in subscribed_topics or new topics
-        std::set<std::string_view> to_unsubscribe {};
+        std::set<std::string> to_unsubscribe {};
         std::ranges::for_each(host_it->second, [&](const auto& topic) {
             if(!subscribed_topics_.contains(topic) || !topics.contains(topic)) {
                 to_unsubscribe.emplace(topic);
             }
         });
         // Set of topics to subscribe: new topics not in subscribed_topics and current topics
-        std::set<std::string_view> to_subscribe {};
+        std::set<std::string> to_subscribe {};
         std::ranges::for_each(topics, [&](const auto& new_topic) {
             if(!subscribed_topics_.contains(new_topic) && !host_it->second.contains(new_topic)) {
                 to_subscribe.emplace(new_topic);
             }
         });
         // Unsubscribe from old topics
-        std::ranges::for_each(to_unsubscribe, [&](const auto& topic) { scribe(socket_pair, topic, false); });
+        std::ranges::for_each(to_unsubscribe, [&](const auto& topic) { SubscriberPoolT::unsubscribe(host, topic); });
         // Subscribe to new topics
-        std::ranges::for_each(to_subscribe, [&](const auto& topic) { scribe(socket_pair, topic, true); });
+        std::ranges::for_each(to_subscribe, [&](const auto& topic) { SubscriberPoolT::subscribe(host, topic); });
     } else {
         // Subscribe to each topic not present in subscribed_topics_
         std::ranges::for_each(topics, [&](const auto& topic) {
             if(!subscribed_topics_.contains(topic)) {
-                scribe(socket_pair, topic, true);
+                SubscriberPoolT::subscribe(host, topic);
             }
         });
     }
@@ -242,18 +199,13 @@ void LogListener::unsubscribeExtra(const std::string& host, const std::string& t
 }
 
 void LogListener::removeExtraSubscriptions(const std::string& host) {
-    // Lock sockets_mutex_ before to avoid potential deadlock
-    const std::lock_guard sockets_lock {sockets_mutex_};
-    auto& sockets = get_sockets();
-    auto socket_pair = find_socket(host, sockets);
-
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
     const auto host_it = extra_subscribed_topics_.find(host);
     if(host_it != extra_subscribed_topics_.end()) {
-        // Unscribe from each topic not in subscribed_topics_
+        // Unsubscribe from each topic not in subscribed_topics_
         std::ranges::for_each(host_it->second, [&](const auto& topic) {
             if(!subscribed_topics_.contains(topic)) {
-                scribe(socket_pair, topic, false);
+                SubscriberPoolT::unsubscribe(host, topic);
             }
         });
         extra_subscribed_topics_.erase(host_it);
@@ -261,17 +213,12 @@ void LogListener::removeExtraSubscriptions(const std::string& host) {
 }
 
 void LogListener::removeExtraSubscriptions() {
-    // Lock sockets_mutex_ before to avoid potential deadlock
-    const std::lock_guard sockets_lock {sockets_mutex_};
-    auto& sockets = get_sockets();
-
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
     std::ranges::for_each(extra_subscribed_topics_, [&](const auto& host_p) {
-        auto socket_pair = find_socket(host_p.first, sockets);
-        // Unscribe from each topic not in subscribed_topics_
+        // Unsubscribe from each topic not in subscribed_topics_
         std::ranges::for_each(host_p.second, [&](const auto& topic) {
             if(!subscribed_topics_.contains(topic)) {
-                scribe(socket_pair, topic, false);
+                SubscriberPoolT::unsubscribe(host_p.first, topic);
             }
         });
     });

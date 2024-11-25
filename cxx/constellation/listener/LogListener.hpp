@@ -118,14 +118,7 @@ namespace constellation::listener {
          * @warning Derived functions should always call `CMDPPool::socket_connected()` to ensure that sockets are
          *          subscribed to the correct topics.
          */
-        CNSTLN_API void socket_connected(const chirp::DiscoveredService& service, zmq::socket_t& socket) override;
-
-    private:
-        using sockets_map = std::map<chirp::DiscoveredService, zmq::socket_t>;
-        using socket_pair = std::pair<chirp::DiscoveredService, zmq::socket_ref>;
-        static socket_pair find_socket(std::string_view host, sockets_map& sockets);
-        void scribe(socket_pair& socket_pair, std::string_view topic, bool subscribe);
-        void scribe_all(sockets_map& sockets, std::string_view topic, bool subscribe);
+        CNSTLN_API void host_connected(const chirp::DiscoveredService& service) override;
 
     private:
         std::mutex subscribed_topics_mutex_;
