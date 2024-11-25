@@ -30,14 +30,18 @@
 
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/log.hpp"
+#include "constellation/core/metrics/Metric.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
 using namespace constellation::config;
 using namespace constellation::log;
+using namespace constellation::metrics;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
+using namespace constellation::utils;
 using namespace std::literals::chrono_literals;
 
 Level PearyLogger::getLogLevel(char short_log_format_char) {
@@ -164,7 +168,7 @@ CaribouSatellite::CaribouSatellite(std::string_view type, std::string_view name)
 void CaribouSatellite::initializing(constellation::config::Configuration& config) {
 
     // Set default values:
-    config.setDefault("adc_frequency", 1000);
+    config.setDefault("adc_interval", 10);
     config.setDefault("peary_verbosity", "INFO");
     config.setDefault("number_of_frames", 1);
 
@@ -180,9 +184,20 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
 
     // Prepare ADC info to be distributed as metrics
     if(config.has("adc_signal")) {
-        // Select which ADC signal to regularly fetch:
-        adc_signal_ = config.get<std::string>("adc_signal");
-        adc_freq_ = config.get<std::uint64_t>("adc_frequency");
+        const auto signal = config.get<std::string>("adc_signal");
+        const auto unit = config.get<std::string>("adc_unit", "");
+        const auto conversion = config.get<double>("adc_conversion", 1.0);
+        const auto interval = std::chrono::seconds(config.get<std::uint64_t>("adc_interval"));
+        LOG(INFO) << "Will probe ADC signal " << std::quoted(signal) << " every " << interval;
+        register_timed_metric(transform(signal, ::toupper),
+                              unit,
+                              MetricType::LAST_VALUE,
+                              interval,
+                              {CSCP::State::ORBIT, CSCP::State::RUN},
+                              [this, signal, conversion]() {
+                                  std::lock_guard<std::mutex> lock {device_mutex_};
+                                  return device_->getADC(signal) * conversion;
+                              });
     }
 
     // Cache the number of frames to attach to a single data message:
@@ -202,13 +217,6 @@ void CaribouSatellite::initializing(constellation::config::Configuration& config
         device_ = manager_->getDevice(device_id);
     } catch(const caribou::DeviceException& error) {
         throw SatelliteError("Failed to get device \"" + device_class_ + "\": " + error.what());
-    }
-
-    if(config.has("adc_signal")) {
-        // Try out ADC reading directly to catch mis-configuration
-        auto adc_value = device_->getADC(adc_signal_);
-        LOG(INFO) << "Will probe ADC signal \"" << adc_signal_ << "\" every " << adc_freq_ << " frames";
-        LOG(TRACE) << "ADC value: " << adc_value; // FIXME: unused variable, send as stats instead
     }
 }
 
@@ -314,15 +322,6 @@ void CaribouSatellite::running(const std::stop_token& stop_token) {
                     return static_cast<uintptr_t>(word);
                 });
                 msg.addFrame(std::move(data));
-
-                // Query ADC if wanted:
-                if(!adc_signal_.empty()) {
-                    if(current_frames % adc_freq_ == 0) {
-                        auto adc_value = device_->getADC(adc_signal_);
-                        LOG(DEBUG) << "ADC reading: " << adc_signal_ << " =  " << std::to_string(adc_value);
-                        msg.addTag(adc_signal_, adc_value);
-                    }
-                }
 
                 // Increment frame counter
                 current_frames++;

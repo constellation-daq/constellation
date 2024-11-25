@@ -45,8 +45,10 @@ The following parameters are read and interpreted by this satellite:
 |--------------------|-------------|------|---------------|
 | `type`             | Type of the Caribou device to be instantiated, corresponds to the (case-sensitive) device class name | `string` | - |
 | `peary_verbosity`  | Verbosity of the Peary logger. See custom commands for possible values. The verbosity can be changed at any time using the custom command described below | `string` | `INFO` |
-| `adc_signal`       | Optional channel name of the Carboard ADC to be read in regular intervals | `string` | `"antenna"` |
-| `adc_frequency`    | Number of frames read from the attached Caribou device until ADC is sampled again | `int` | 1000 |
+| `adc_signal`       | Optional channel name of the Carboard ADC to be read in regular intervals and send as metric | `string` | `"antenna"` |
+| `adc_interval`     | Interval in seconds between consecutive ADC samplings. Only used if `adc_signal` is set | `int` | 10 |
+| `adc_unit`         | Unit of the sampled ADC signal. Is sent as metric unit along the ADC signal | `string` | |
+| `adc_conversion`   | Conversion factor with which the sampled ADC units are multiplied before being sent as metric | `double` | 1.0 |
 | `number_of_frames` | Number of Caribou device frames to be sent with a single Constellation data message | `int` | 1 |
 
 
