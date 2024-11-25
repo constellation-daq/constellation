@@ -155,3 +155,14 @@ test('Controller config test', test_controller_config,
   args: ['--durations', 'yes', '--verbosity', 'high'],
   env: ['CXX_TESTS_DIR='+meson.current_source_dir()],
 )
+
+# Listener
+
+test_listener_log = executable('test_listener_log',
+  sources: 'test_listener_log.cpp',
+  dependencies: [core_dep, listener_dep, cppzmq_dep, catch2_dep],
+)
+test('Log listener functionality test', test_listener_log,
+  args: ['--durations', 'yes', '--verbosity', 'high'],
+  is_parallel: false,
+)

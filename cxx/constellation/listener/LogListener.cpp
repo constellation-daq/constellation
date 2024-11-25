@@ -39,7 +39,6 @@ void LogListener::host_connected(const chirp::DiscoveredService& service) {
 
     // Directly subscribe to current topic list
     for(const auto& topic : subscribed_topics_) {
-        LOG(pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic) << " for " << service.to_uri();
         SubscriberPoolT::subscribe(service.host_id, topic);
     }
     // If extra topics for host, also subscribe to those
@@ -48,7 +47,6 @@ void LogListener::host_connected(const chirp::DiscoveredService& service) {
     if(host_it != extra_subscribed_topics_.end()) {
         std::ranges::for_each(host_it->second, [&](const auto& topic) {
             if(!subscribed_topics_.contains(topic)) {
-                LOG(pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic) << " for " << service.to_uri();
                 SubscriberPoolT::subscribe(service.host_id, topic);
             }
         });
