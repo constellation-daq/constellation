@@ -167,6 +167,11 @@ class DataReceiver(Satellite):
                     "Never received EOR from following Satellites: %s",
                     ", ".join(self.active_satellites),
                 )
+                # Write a substitute EOR
+                # for sat in self.active_satellites:
+                # Create substitute EOR with CDTPRunCondition.ABORTED
+                # self._write_EOR(outfile, substitute_eor)
+
             self.active_satellites = []
         return f"Finished acquisition to {filename}"
 
