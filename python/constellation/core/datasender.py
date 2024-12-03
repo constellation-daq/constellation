@@ -15,6 +15,7 @@ from queue import Queue, Empty
 import random
 import numpy as np
 import zmq
+import msgpack  # type: ignore[import-untyped]
 
 from .cdtp import DataTransmitter, CDTPMessageIdentifier, CDTPRunCondition
 from .satellite import Satellite, SatelliteArgumentParser
@@ -173,6 +174,12 @@ class DataSender(Satellite):
         # configuration dictionary as a payload
         if not self.BOR:
             self.BOR = self.config._config
+
+        if not self.EOR:
+            self.EOR = {}
+        self.EOR["run_id"] = run_identifier
+        self.EOR["time_start"] = msgpack.Timestamp.from_unix_nano(time.time_ns())
+
         self.log.debug("Sending BOR")
         self.data_queue.put((self._beg_of_run, CDTPMessageIdentifier.BOR))
         res: str = super()._wrap_start(run_identifier)
@@ -185,10 +192,10 @@ class DataSender(Satellite):
         finished.
 
         """
-        if not self.EOR:
-            self.EOR = {}
         self.EOR["condition"] = CDTPRunCondition.GOOD.name
         self.EOR["condition_code"] = CDTPRunCondition.GOOD.value
+        self.EOR["time_end"] = msgpack.Timestamp.from_unix_nano(time.time_ns())
+
         res: str = super()._wrap_stop(payload)
         self.log.debug("Sending EOR")
         self.data_queue.put((self._end_of_run, CDTPMessageIdentifier.EOR))
@@ -201,11 +208,11 @@ class DataSender(Satellite):
         finished.
 
         """
-        res: str = super()._wrap_interrupt(payload)
-        if not self.EOR:
-            self.EOR = {}
         self.EOR["condition"] = CDTPRunCondition.INTERRUPTED.name
         self.EOR["condition_code"] = CDTPRunCondition.INTERRUPTED.value
+        self.EOR["time_end"] = msgpack.Timestamp.from_unix_nano(time.time_ns())
+
+        res: str = super()._wrap_interrupt(payload)
         self.log.debug("Sending EOR")
         self.data_queue.put((self._end_of_run, CDTPMessageIdentifier.EOR))
         return res
