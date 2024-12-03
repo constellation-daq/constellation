@@ -28,6 +28,16 @@ class CDTPMessageIdentifier(Enum):
     EOR = 0x2
 
 
+class CDTPRunCondition(Enum):
+    """Defines the condition of run data as transmitted via CDTP."""
+
+    GOOD = 0x00
+    TAINTED = 0x01
+    INCOMPLETE = 0x02
+    INTERRUPTED = 0xFE
+    ABORTED = 0xFF
+
+
 class CDTPMessage:
     """Class holding details of a received CDTP command."""
 

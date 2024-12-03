@@ -16,7 +16,7 @@ import random
 import numpy as np
 import zmq
 
-from .cdtp import DataTransmitter, CDTPMessageIdentifier
+from .cdtp import DataTransmitter, CDTPMessageIdentifier, CDTPRunCondition
 from .satellite import Satellite, SatelliteArgumentParser
 from .base import EPILOG, setup_cli_logging
 from .broadcastmanager import CHIRPServiceIdentifier
@@ -110,17 +110,17 @@ class DataSender(Satellite):
 
     @property
     def EOR(self) -> Any:
-        """Get optional playload for the end-of-run event (EOR)."""
+        """Get optional payload for the end-of-run event (EOR)."""
         return self._end_of_run["payload"]
 
     @EOR.setter
     def EOR(self, payload: Any) -> None:
-        """Set optional playload for the end-of-run event (EOR)."""
+        """Set optional payload for the end-of-run event (EOR)."""
         self._end_of_run["payload"] = payload
 
     @property
     def BOR(self) -> Any:
-        """Get optional playload for the beginning-of-run event (BOR)."""
+        """Get optional payload for the beginning-of-run event (BOR)."""
         return self._beg_of_run["payload"]
 
     @BOR.setter
@@ -185,6 +185,10 @@ class DataSender(Satellite):
         finished.
 
         """
+        if not self.EOR:
+            self.EOR = {}
+        self.EOR["condition"] = CDTPRunCondition.GOOD.name
+        self.EOR["condition_code"] = CDTPRunCondition.GOOD.value
         res: str = super()._wrap_stop(payload)
         self.log.debug("Sending EOR")
         self.data_queue.put((self._end_of_run, CDTPMessageIdentifier.EOR))
@@ -198,6 +202,10 @@ class DataSender(Satellite):
 
         """
         res: str = super()._wrap_interrupt(payload)
+        if not self.EOR:
+            self.EOR = {}
+        self.EOR["condition"] = CDTPRunCondition.INTERRUPTED.name
+        self.EOR["condition_code"] = CDTPRunCondition.INTERRUPTED.value
         self.log.debug("Sending EOR")
         self.data_queue.put((self._end_of_run, CDTPMessageIdentifier.EOR))
         return res
