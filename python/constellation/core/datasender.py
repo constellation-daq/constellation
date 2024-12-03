@@ -190,6 +190,18 @@ class DataSender(Satellite):
         self.data_queue.put((self._end_of_run, CDTPMessageIdentifier.EOR))
         return res
 
+    def _wrap_interrupt(self, payload: Any) -> str:
+        """Wrapper for the 'interrupting' transitional state of the FSM.
+
+        Sends the EOR event after base class wrapper and `do_interrupting` have
+        finished.
+
+        """
+        res: str = super()._wrap_interrupt(payload)
+        self.log.debug("Sending EOR")
+        self.data_queue.put((self._end_of_run, CDTPMessageIdentifier.EOR))
+        return res
+
     def do_run(self, payload: Any) -> str:
         """Perform the data acquisition and enqueue the results.
 
