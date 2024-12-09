@@ -192,6 +192,10 @@ class DataSender(Satellite):
         finished.
 
         """
+        if "condition_code" not in self.EOR:
+            self.EOR["condition_code"] = CDTPRunCondition.GOOD
+
+        self.EOR["condition"] = self.EOR["condition_code"].name
         self.EOR["time_end"] = msgpack.Timestamp.from_unix_nano(time.time_ns())
 
         res: str = super()._wrap_stop(payload)
