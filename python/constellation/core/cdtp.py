@@ -31,6 +31,7 @@ class CDTPMessageIdentifier(Enum):
 class CDTPRunCondition(IntFlag):
     """Defines the condition flags of run data as transmitted via CDTP."""
 
+    GOOD = 0x00
     TAINTED = 0x01
     INCOMPLETE = 0x02
     INTERRUPTED = 0x04
