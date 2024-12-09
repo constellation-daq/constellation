@@ -192,8 +192,6 @@ class DataSender(Satellite):
         finished.
 
         """
-        self.EOR["condition"] = CDTPRunCondition.GOOD.name
-        self.EOR["condition_code"] = CDTPRunCondition.GOOD.value
         self.EOR["time_end"] = msgpack.Timestamp.from_unix_nano(time.time_ns())
 
         res: str = super()._wrap_stop(payload)
@@ -208,8 +206,12 @@ class DataSender(Satellite):
         finished.
 
         """
-        self.EOR["condition"] = CDTPRunCondition.INTERRUPTED.name
-        self.EOR["condition_code"] = CDTPRunCondition.INTERRUPTED.value
+        if "condition_code" in self.EOR:
+            self.EOR["condition_code"] |= CDTPRunCondition.INTERRUPTED
+        else:
+            self.EOR["condition_code"] = CDTPRunCondition.INTERRUPTED
+
+        self.EOR["condition"] = self.EOR["condition_code"].name
         self.EOR["time_end"] = msgpack.Timestamp.from_unix_nano(time.time_ns())
 
         res: str = super()._wrap_interrupt(payload)

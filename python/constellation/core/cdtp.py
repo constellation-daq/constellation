@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 Module implementing the Constellation Data Transmission Protocol.
 """
 
-from enum import Enum
+from enum import Enum, IntFlag
 from typing import Any
 
 import msgpack  # type: ignore[import-untyped]
@@ -28,14 +28,13 @@ class CDTPMessageIdentifier(Enum):
     EOR = 0x2
 
 
-class CDTPRunCondition(Enum):
-    """Defines the condition of run data as transmitted via CDTP."""
+class CDTPRunCondition(IntFlag):
+    """Defines the condition flags of run data as transmitted via CDTP."""
 
-    GOOD = 0x00
     TAINTED = 0x01
     INCOMPLETE = 0x02
-    INTERRUPTED = 0xFE
-    ABORTED = 0xFF
+    INTERRUPTED = 0x04
+    ABORTED = 0x08
 
 
 class CDTPMessage:
