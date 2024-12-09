@@ -51,7 +51,7 @@ class CDTPMessage:
         self,
         name: str,
         timestamp: msgpack.Timestamp,
-        msgtype: int,
+        msgtype: int | CDTPMessageIdentifier,
         seqno: int,
         meta: dict[str, Any],
     ) -> None:

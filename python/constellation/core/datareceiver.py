@@ -15,9 +15,10 @@ import zmq
 from uuid import UUID
 from functools import partial
 from typing import Any, Tuple
+import msgpack  # type: ignore[import-untyped]
 
 from .broadcastmanager import chirp_callback, DiscoveredService
-from .cdtp import CDTPMessage, CDTPMessageIdentifier, DataTransmitter
+from .cdtp import CDTPMessage, CDTPMessageIdentifier, CDTPRunCondition, DataTransmitter
 from .cmdp import MetricsType
 from .chirp import CHIRPServiceIdentifier
 from .commandmanager import cscp_requestable
@@ -161,16 +162,25 @@ class DataReceiver(Satellite):
                         last_msg = datetime.datetime.now()
 
         finally:
-            self._close_file(outfile)
             if self.active_satellites:
                 self.log.warning(
                     "Never received EOR from following Satellites: %s",
                     ", ".join(self.active_satellites),
                 )
-                # Write a substitute EOR
-                # for sat in self.active_satellites:
-                # Create substitute EOR with CDTPRunCondition.ABORTED
-                # self._write_EOR(outfile, substitute_eor)
+                # Write a substitute EORs
+                for sat in self.active_satellites:
+                    # Create substitute EOR with CDTPRunCondition.ABORTED
+                    substitute_eor = CDTPMessage()
+                    now = msgpack.Timestamp.from_datetime(datetime.datetime.now())
+                    substitute_eor.set_header(sat, now, CDTPMessageIdentifier.EOR, 0, {})
+                    substitute_eor.payload = {
+                        "time_end": now,
+                        "condition_code": CDTPRunCondition.ABORTED,
+                        "condition": CDTPRunCondition.ABORTED.name,
+                    }
+                    self._write_EOR(outfile, substitute_eor)
+
+            self._close_file(outfile)
 
             self.active_satellites = []
         return f"Finished acquisition to {filename}"
