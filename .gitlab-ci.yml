@@ -220,6 +220,8 @@ build:ubuntu-22.04:
     - .build-cpp
     - .ubuntu-22.04
   variables:
+    KUBERNETES_CPU_LIMIT: "10"
+    KUBERNETES_MEMORY_LIMIT: "20Gi"
     BUILD_TYPE: "debugoptimized"
     BUILD_OPTIONS: "-Dqt_version=qt5"
     CXXFLAGS: "-Wno-deprecated-enum-enum-conversion"
