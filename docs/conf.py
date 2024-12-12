@@ -8,6 +8,8 @@ import sphinx.util.logging
 
 import copy_satellite_docs
 
+import yaml
+
 logger = sphinx.util.logging.getLogger(__name__)
 
 # set directories
@@ -144,11 +146,20 @@ for path in satellite_files:
     satellite_type, satellite_category = copy_satellite_docs.convert_satellite_readme(path, docsdir / "satellites")
     satellites.setdefault(satellite_category, []).append(f"{satellite_type} <{satellite_type}>")
 
+# Add externally hosted satellites:
+extsatpath = pathlib.Path("satellites/external_satellites.yaml").resolve()
+with extsatpath.open(mode="r", encoding="utf-8") as file:
+    yaml_data = yaml.safe_load(file.read())
+    for satellite in yaml_data:
+        category = satellite["category"] if "category" in satellites else "Uncategorized"
+        logger.info(f"Adding external satellite {satellite["title"]} in category {category}")
+        satellites.setdefault(category, []).append(f"{satellite["title"]} <{satellite["url"]}>")
+
 # Create tocs for categories
 satellite_tocs = ""
 for category, satellites_list in sorted(satellites.items()):
     satellite_tocs += f"\n```{{toctree}}\n:caption: {category}\n:maxdepth: 1\n\n"
-    for satellite in satellites_list:
+    for satellite in sorted(satellites_list):
         satellite_tocs += satellite + "\n"
     satellite_tocs += "```\n"
 
