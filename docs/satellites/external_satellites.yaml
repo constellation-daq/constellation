@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+# SPDX-License-Identifier: CC0-1.0
+
+# Externally hosted Constellation Satellites
+
+- title: "Adenium Telescope"
+  url: "https://gitlab.desy.de/beam-telescopes/adenium/-/tree/main/source/constellation"
