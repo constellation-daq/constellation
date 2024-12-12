@@ -83,5 +83,6 @@ concepts/data
 ```{toctree}
 :caption: How-To Guides
 
+howtos/startup_order
 howtos/setup_influxdb_grafana
 ```
