@@ -228,19 +228,16 @@ class RedPitayaSatellite(DataSender):
 
     def _write_config_to_fpga(self, configuration: Configuration):
         # Writes FPGA configurations to register
-        def calculate_register_value(key, scaling_factors, active_channels):
+        def calculate_register_value(key, scaling_factors):
             """Helper function to calculate the value for a given prefix and scaling factors."""
-            return sum(configuration[f"{key}_{i}"] * scaling_factors[i] for i in range(len(active_channels)))
+            return sum(configuration[f"{key}_{i}"] * scaling_factors[i] for i in range(len(self.active_channels)))
 
         names = [field[0] for field in self.axi_regset_config.descr]
-        config_keys = configuration.get_keys()
         for name, value in zip(names, self.config_axi_array_contents):
             # check if key in partial_config
-            if name not in config_keys:
-                continue
             if name in self.scaling_factors:
                 num_channels = 4 if len(self.active_channels) == 4 else 2
-                val = calculate_register_value(name, self.scaling_factors[name][:num_channels], self.active_channels)
+                val = calculate_register_value(name, self.scaling_factors[name][:num_channels])
             else:
                 val = configuration[name]
             setattr(self.config_axi_array_contents, name, val)
@@ -361,7 +358,7 @@ class RedPitayaSatellite(DataSender):
             time.sleep(0.1)
             # Resetting ADC
             self.reset()
-            self._configure_monitoring(configuration, configuration["metrics_poll_rate"])
+            self._configure_monitoring(configuration, configuration["metrics_poll_interval"])
         except (ConfigError, OSError) as e:
             self.log.error("Error configuring device. %s", e)
         return "Initialized."

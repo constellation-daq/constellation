@@ -50,9 +50,9 @@ axi_regset_readout = np.dtype(
     ]
 )
 scaling_factors = {
-    "active_channel": [1, 2, 4, 8],
-    "running_sum_integration_time": [1, 16, 256, 4096],
-    "averaging_integration_time": [1, 32, 1024, 32768],
+    "active_channel": [1, 2],
+    "running_sum_integration_time": [1, 16],
+    "averaging_integration_time": [1, 32],
     "trigger_level": [1, 8192],
 }
 
