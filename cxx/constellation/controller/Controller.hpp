@@ -355,6 +355,8 @@ namespace constellation::controller {
 
         std::atomic_size_t connection_count_;
 
+        std::chrono::milliseconds cmd_timeout_ {1500};
+
         std::condition_variable_any cv_;
         std::jthread watchdog_thread_;
     };

@@ -47,8 +47,7 @@ class MessageHeader:
     def recv(
         self, socket: zmq.Socket, flags: int = 0  # type: ignore[type-arg]
     ) -> (
-        Tuple[str, msgpack.Timestamp, dict[str, Any] | None]
-        | Tuple[str, msgpack.Timestamp, int, int, dict[str, Any] | None]
+        Tuple[str, msgpack.Timestamp, dict[str, Any] | None] | Tuple[str, msgpack.Timestamp, int, int, dict[str, Any] | None]
     ):
         """Receive header from socket and return all decoded fields."""
         return self.decode(socket.recv())
@@ -56,17 +55,14 @@ class MessageHeader:
     def decode(
         self, header: Any
     ) -> (
-        Tuple[str, msgpack.Timestamp, dict[str, Any] | None]
-        | Tuple[str, msgpack.Timestamp, int, int, dict[str, Any] | None]
+        Tuple[str, msgpack.Timestamp, dict[str, Any] | None] | Tuple[str, msgpack.Timestamp, int, int, dict[str, Any] | None]
     ):
         """Decode header string and return host, timestamp and meta map."""
         unpacker = msgpack.Unpacker()
         unpacker.feed(header)
         protocol = unpacker.unpack()
         if not protocol == self.protocol.value:
-            raise RuntimeError(
-                f"Received message with malformed {self.protocol.name} header: {header}!"
-            )
+            raise RuntimeError(f"Received message with malformed {self.protocol.name} header: {header}!")
         host = unpacker.unpack()
         timestamp = unpacker.unpack()
         if protocol == Protocol.CDTP:

@@ -24,7 +24,6 @@
 #include <utility>
 #include <variant>
 
-#include <magic_enum.hpp>
 #include <msgpack.hpp>
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
@@ -39,9 +38,12 @@
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
+#include "constellation/core/metrics/MetricsManager.hpp"
+#include "constellation/core/networking/exceptions.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/exceptions.hpp"
-#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/exceptions.hpp"
@@ -52,6 +54,8 @@ using namespace constellation;
 using namespace constellation::config;
 using namespace constellation::heartbeat;
 using namespace constellation::message;
+using namespace constellation::metrics;
+using namespace constellation::networking;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
@@ -70,8 +74,12 @@ BaseSatellite::BaseSatellite(std::string_view type, std::string_view name)
         throw RuntimeError("Satellite name is invalid");
     }
 
-    // Set receive timeout for CSCP socket
-    cscp_rep_socket_.set(zmq::sockopt::rcvtimeo, static_cast<int>(std::chrono::milliseconds(100).count()));
+    try {
+        // Set receive timeout for CSCP socket
+        cscp_rep_socket_.set(zmq::sockopt::rcvtimeo, static_cast<int>(std::chrono::milliseconds(100).count()));
+    } catch(const zmq::error_t& e) {
+        throw NetworkError(e.what());
+    }
 
     // Announce service via CHIRP
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
@@ -90,13 +98,6 @@ BaseSatellite::BaseSatellite(std::string_view type, std::string_view name)
     fsm_.registerStateCallback("extrasystoles", [&](CSCP::State) { heartbeat_manager_.sendExtrasystole(); });
 }
 
-BaseSatellite::~BaseSatellite() {
-    fsm_.unregisterStateCallback("extrasystoles");
-
-    cscp_thread_.request_stop();
-    join();
-}
-
 std::string BaseSatellite::getCanonicalName() const {
     return to_string(satellite_type_) + "." + to_string(satellite_name_);
 }
@@ -105,6 +106,8 @@ void BaseSatellite::join() {
     if(cscp_thread_.joinable()) {
         cscp_thread_.join();
     }
+    fsm_.unregisterStateCallback("extrasystoles");
+    MetricsManager::getInstance().unregisterMetrics();
 }
 
 void BaseSatellite::terminate() {
@@ -120,29 +123,39 @@ void BaseSatellite::terminate() {
 std::optional<CSCP1Message> BaseSatellite::get_next_command() {
     // Receive next message
     zmq::multipart_t recv_msg {};
-    auto received = recv_msg.recv(cscp_rep_socket_);
 
-    // Return if timeout
-    if(!received) {
-        return std::nullopt;
+    try {
+        auto received = recv_msg.recv(cscp_rep_socket_);
+
+        // Return if timeout
+        if(!received) {
+            return std::nullopt;
+        }
+
+        // Try to disamble message
+        auto message = CSCP1Message::disassemble(recv_msg);
+
+        LOG(cscp_logger_, DEBUG) << "Received CSCP message of type " << message.getVerb().first << " with verb \""
+                                 << message.getVerb().second << "\"" << (message.hasPayload() ? " and a payload" : "")
+                                 << " from " << message.getHeader().getSender();
+
+        return message;
+    } catch(const zmq::error_t& e) {
+        throw NetworkError(e.what());
     }
-
-    // Try to disamble message
-    auto message = CSCP1Message::disassemble(recv_msg);
-
-    LOG(cscp_logger_, DEBUG) << "Received CSCP message of type " << to_string(message.getVerb().first) << " with verb \""
-                             << message.getVerb().second << "\"" << (message.hasPayload() ? " and a payload" : "")
-                             << " from " << message.getHeader().getSender();
-
-    return message;
 }
 
 void BaseSatellite::send_reply(std::pair<CSCP1Message::Type, std::string> reply_verb,
                                message::PayloadBuffer payload,
                                config::Dictionary tags) {
-    auto msg = CSCP1Message({getCanonicalName(), std::chrono::system_clock::now(), std::move(tags)}, std::move(reply_verb));
-    msg.addPayload(std::move(payload));
-    msg.assemble().send(cscp_rep_socket_);
+    try {
+        auto msg =
+            CSCP1Message({getCanonicalName(), std::chrono::system_clock::now(), std::move(tags)}, std::move(reply_verb));
+        msg.addPayload(std::move(payload));
+        msg.assemble().send(cscp_rep_socket_);
+    } catch(const zmq::error_t& e) {
+        throw NetworkError(e.what());
+    }
 }
 
 std::optional<std::tuple<std::pair<message::CSCP1Message::Type, std::string>, message::PayloadBuffer, config::Dictionary>>
@@ -151,7 +164,7 @@ BaseSatellite::handle_standard_command(std::string_view command) {
     message::PayloadBuffer return_payload {};
     config::Dictionary return_tags {};
 
-    auto command_enum = magic_enum::enum_cast<CSCP::StandardCommand>(command, magic_enum::case_insensitive);
+    auto command_enum = enum_cast<CSCP::StandardCommand>(command);
     if(!command_enum.has_value()) {
         return std::nullopt;
     }
@@ -307,8 +320,7 @@ void BaseSatellite::cscp_loop(const std::stop_token& stop_token) {
             const std::string command_string = transform(message.getVerb().second, ::tolower);
 
             // Try to decode as transition
-            auto transition_command =
-                magic_enum::enum_cast<CSCP::TransitionCommand>(command_string, magic_enum::case_insensitive);
+            auto transition_command = enum_cast<CSCP::TransitionCommand>(command_string);
             if(transition_command.has_value()) {
                 send_reply(fsm_.reactCommand(transition_command.value(), message.getPayload()));
                 continue;
@@ -398,6 +410,10 @@ void BaseSatellite::apply_internal_config(const config::Configuration& config) {
         LOG(logger_, INFO) << "Updating heartbeat interval to " + to_string(interval);
         heartbeat_manager_.updateInterval(interval);
     }
+
+    if(config.has("_allow_departure")) {
+        heartbeat_manager_.allowDeparture(config.get<bool>("_allow_departure"));
+    }
 }
 
 void BaseSatellite::initializing_wrapper(config::Configuration&& config) {
@@ -483,7 +499,7 @@ void BaseSatellite::running_wrapper(const std::stop_token& stop_token) {
 }
 
 void BaseSatellite::interrupting_wrapper(CSCP::State previous_state) {
-    // stopping from receiver needs to come first to wait for all EORs
+    // Interrupting from receiver needs to come first to wait for all EORs
     auto* receiver_ptr = dynamic_cast<ReceiverSatellite*>(this);
     if(receiver_ptr != nullptr) {
         LOG(logger_, DEBUG) << "Interrupting: execute interrupting_receiver";
@@ -491,6 +507,12 @@ void BaseSatellite::interrupting_wrapper(CSCP::State previous_state) {
     }
 
     interrupting(previous_state);
+
+    auto* transmitter_ptr = dynamic_cast<TransmitterSatellite*>(this);
+    if(transmitter_ptr != nullptr) {
+        LOG(logger_, DEBUG) << "Interrupting: execute interrupting_transmitter";
+        transmitter_ptr->TransmitterSatellite::interrupting_transmitter(previous_state);
+    }
 }
 
 void BaseSatellite::failure_wrapper(CSCP::State previous_state) {

@@ -21,8 +21,8 @@
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/exceptions.hpp"
-#include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/FSM.hpp"
 
 #include "dummy_satellite.hpp"
@@ -75,6 +75,8 @@ TEST_CASE("Regular FSM operation", "[satellite][satellite::fsm]") {
     REQUIRE(fsm.getState() == State::landing);
     satellite.progressFsm();
     REQUIRE(fsm.getState() == State::INIT);
+
+    satellite.exit();
 }
 
 TEST_CASE("FSM interrupts and failures", "[satellite][satellite::fsm]") {
@@ -110,6 +112,8 @@ TEST_CASE("FSM interrupts and failures", "[satellite][satellite::fsm]") {
     std::this_thread::sleep_for(150ms); // Give some time call stopping and landing
     satellite.progressFsm();
     REQUIRE(fsm.getState() == State::SAFE);
+
+    satellite.exit();
 }
 
 TEST_CASE("React via CSCP", "[satellite][satellite::fsm][cscp]") {
@@ -154,6 +158,8 @@ TEST_CASE("React via CSCP", "[satellite][satellite::fsm][cscp]") {
     ret = fsm.reactCommand(TransitionCommand::reconfigure, payload_frame);
     REQUIRE(ret.first == CSCP1Message::Type::NOTIMPLEMENTED);
     REQUIRE_THAT(ret.second, Equals("Transition reconfigure is not implemented by this satellite"));
+
+    satellite.exit();
 }
 
 // NOLINTNEXTLINE(readability-function-size)
@@ -438,6 +444,8 @@ TEST_CASE("Allowed FSM transitions", "[satellite][satellite::fsm]") {
     fsm.react(Transition::initialize, Configuration());
     satellite.progressFsm();
     REQUIRE(fsm.getState() == State::INIT);
+
+    satellite.exit();
 }
 
 TEST_CASE("FSM callbacks", "[satellite][satellite::fsm]") {
@@ -448,7 +456,7 @@ TEST_CASE("FSM callbacks", "[satellite][satellite::fsm]") {
     std::atomic_int cb_count = 0;
     fsm.registerStateCallback("test", [&](State state) {
         const auto local_count = ++cb_count;
-        LOG(DEBUG) << "State callback with state " << to_string(state) << ", count " << local_count;
+        LOG(DEBUG) << "State callback with state " << state << ", count " << local_count;
         if(throw_cb) {
             throw Exception("Throwing in state callback as requested");
         }
@@ -464,6 +472,8 @@ TEST_CASE("FSM callbacks", "[satellite][satellite::fsm]") {
     REQUIRE(cb_count.load() == 4);
 
     fsm.unregisterStateCallback("test");
+
+    satellite.exit();
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace)

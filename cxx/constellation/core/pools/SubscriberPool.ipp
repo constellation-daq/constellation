@@ -24,6 +24,7 @@
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
+#include "constellation/core/networking/exceptions.hpp"
 
 namespace constellation::pools {
 
@@ -33,34 +34,44 @@ namespace constellation::pools {
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
     void SubscriberPool<MESSAGE, SERVICE>::scribe(message::MD5Hash host_id, const std::string& topic, bool subscribe) {
-        const std::lock_guard sockets_lock {BasePoolT::sockets_mutex_};
-        const auto socket_it = std::ranges::find(
-            BasePoolT::get_sockets(), host_id, [&](const auto& socket_p) { return socket_p.first.host_id; });
-        if(socket_it != BasePoolT::get_sockets().end()) {
-            if(subscribe) {
-                LOG(BasePoolT::pool_logger_, TRACE)
-                    << "Subscribing to " << std::quoted(topic) << " for " << socket_it->first.to_uri();
-                socket_it->second.set(zmq::sockopt::subscribe, topic);
-            } else {
-                LOG(BasePoolT::pool_logger_, TRACE)
-                    << "Unsubscribing from " << std::quoted(topic) << " for " << socket_it->first.to_uri();
-                socket_it->second.set(zmq::sockopt::unsubscribe, topic);
+        try {
+            const std::lock_guard sockets_lock {BasePoolT::sockets_mutex_};
+            const auto socket_it = std::ranges::find(
+                BasePoolT::get_sockets(), host_id, [&](const auto& socket_p) { return socket_p.first.host_id; });
+            if(socket_it != BasePoolT::get_sockets().end()) {
+                if(subscribe) {
+                    LOG(BasePoolT::pool_logger_, TRACE)
+                        << "Subscribing to " << std::quoted(topic) << " for " << socket_it->first.to_uri();
+                    socket_it->second.set(zmq::sockopt::subscribe, topic);
+                } else {
+                    LOG(BasePoolT::pool_logger_, TRACE)
+                        << "Unsubscribing from " << std::quoted(topic) << " for " << socket_it->first.to_uri();
+                    socket_it->second.set(zmq::sockopt::unsubscribe, topic);
+                }
             }
+        } catch(const zmq::error_t& e) {
+            throw networking::NetworkError(e.what());
         }
     }
 
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE>
     void SubscriberPool<MESSAGE, SERVICE>::scribe_all(const std::string& topic, bool subscribe) {
-        const std::lock_guard sockets_lock {BasePoolT::sockets_mutex_};
-        for(auto& [host, socket] : BasePoolT::get_sockets()) {
-            if(subscribe) {
-                LOG(BasePoolT::pool_logger_, TRACE) << "Subscribing to " << std::quoted(topic) << " for " << host.to_uri();
-                socket.set(zmq::sockopt::subscribe, topic);
-            } else {
-                LOG(BasePoolT::pool_logger_, TRACE)
-                    << "Unsubscribing from " << std::quoted(topic) << " for " << host.to_uri();
-                socket.set(zmq::sockopt::unsubscribe, topic);
+
+        try {
+            const std::lock_guard sockets_lock {BasePoolT::sockets_mutex_};
+            for(auto& [host, socket] : BasePoolT::get_sockets()) {
+                if(subscribe) {
+                    LOG(BasePoolT::pool_logger_, TRACE)
+                        << "Subscribing to " << std::quoted(topic) << " for " << host.to_uri();
+                    socket.set(zmq::sockopt::subscribe, topic);
+                } else {
+                    LOG(BasePoolT::pool_logger_, TRACE)
+                        << "Unsubscribing from " << std::quoted(topic) << " for " << host.to_uri();
+                    socket.set(zmq::sockopt::unsubscribe, topic);
+                }
             }
+        } catch(const zmq::error_t& e) {
+            throw networking::NetworkError(e.what());
         }
     }
 

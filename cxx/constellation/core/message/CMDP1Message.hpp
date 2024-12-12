@@ -11,7 +11,6 @@
 
 #include <chrono>
 #include <cstddef>
-#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
@@ -174,13 +173,12 @@ namespace constellation::message {
         /**
          * Construct a new CMDP1 message for metrics
          *
-         * @note The message payload will be create immediately from the current value
+         * @note The message topic will be taken as the metric name
          *
-         * @param topic Topic of the statistics metric message
          * @param header CMDP1 header of the message
-         * @param metric The metric to be sent
+         * @param metric_value The metric value to be sent
          */
-        CNSTLN_API CMDP1StatMessage(std::string topic, Header header, std::shared_ptr<metrics::Metric> metric);
+        CNSTLN_API CMDP1StatMessage(Header header, metrics::MetricValue metric_value);
 
         /**
          * Construct a CMDP1StatMessage from a decoded CMDP1Message
@@ -190,9 +188,9 @@ namespace constellation::message {
         CNSTLN_API CMDP1StatMessage(CMDP1Message&& message);
 
         /**
-         * @return Metric value and type
+         * @return Metric value
          */
-        CNSTLN_API std::shared_ptr<metrics::Metric> getMetric() const { return metric_; }
+        CNSTLN_API const metrics::MetricValue& getMetric() const { return metric_value_; }
 
         /**
          * Disassemble stats message from ZeroMQ frames
@@ -206,8 +204,7 @@ namespace constellation::message {
         CNSTLN_API static CMDP1StatMessage disassemble(zmq::multipart_t& frames);
 
     private:
-        std::string stat_topic_;
-        std::shared_ptr<metrics::Metric> metric_;
+        metrics::MetricValue metric_value_;
     };
 
 } // namespace constellation::message

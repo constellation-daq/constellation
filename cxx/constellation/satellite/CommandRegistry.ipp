@@ -18,10 +18,9 @@
 #include <utility>
 #include <variant>
 
-#include <magic_enum.hpp>
-
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/type.hpp"
@@ -55,11 +54,11 @@ namespace constellation::satellite {
             throw utils::LogicError("Command name is invalid");
         }
 
-        if(magic_enum::enum_cast<protocol::CSCP::StandardCommand>(name_lc).has_value()) {
+        if(utils::enum_cast<protocol::CSCP::StandardCommand>(name_lc).has_value()) {
             throw utils::LogicError("Standard satellite command with this name exists");
         }
 
-        if(magic_enum::enum_cast<protocol::CSCP::TransitionCommand>(name_lc).has_value()) {
+        if(utils::enum_cast<protocol::CSCP::TransitionCommand>(name_lc).has_value()) {
             throw utils::LogicError("Satellite transition command with this name exists");
         }
 

@@ -21,21 +21,32 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
-#include "constellation/core/utils/networking.hpp"
-#include "constellation/satellite/exceptions.hpp"
+#include "constellation/core/networking/exceptions.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
+#include "constellation/core/protocol/CDTP_definitions.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/enum.hpp"
 
 #include "Satellite.hpp"
 
 using namespace constellation::config;
 using namespace constellation::message;
+using namespace constellation::networking;
+using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 
 TransmitterSatellite::TransmitterSatellite(std::string_view type, std::string_view name)
     : Satellite(type, name), cdtp_push_socket_(*global_zmq_context(), zmq::socket_type::push),
       cdtp_port_(bind_ephemeral_port(cdtp_push_socket_)), cdtp_logger_("CDTP") {
-    // Only send to completed connections
-    cdtp_push_socket_.set(zmq::sockopt::immediate, true);
+
+    try {
+        // Only send to completed connections
+        cdtp_push_socket_.set(zmq::sockopt::immediate, true);
+    } catch(const zmq::error_t& e) {
+        throw NetworkError(e.what());
+    }
+
     // Announce service via CHIRP
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
     if(chirp_manager != nullptr) {
@@ -45,7 +56,11 @@ TransmitterSatellite::TransmitterSatellite(std::string_view type, std::string_vi
 }
 
 void TransmitterSatellite::set_send_timeout(std::chrono::milliseconds timeout) {
-    cdtp_push_socket_.set(zmq::sockopt::sndtimeo, static_cast<int>(timeout.count()));
+    try {
+        cdtp_push_socket_.set(zmq::sockopt::sndtimeo, static_cast<int>(timeout.count()));
+    } catch(const zmq::error_t& e) {
+        throw NetworkError(e.what());
+    }
 }
 
 TransmitterSatellite::DataMessage TransmitterSatellite::newDataMessage(std::size_t frames) {
@@ -56,19 +71,28 @@ TransmitterSatellite::DataMessage TransmitterSatellite::newDataMessage(std::size
 bool TransmitterSatellite::trySendDataMessage(TransmitterSatellite::DataMessage& message) {
     // Send data but do not wait for receiver
     LOG(cdtp_logger_, TRACE) << "Sending data message " << message.getHeader().getSequenceNumber();
-    const auto sent = message.assemble().send(cdtp_push_socket_, static_cast<int>(zmq::send_flags::dontwait));
-    if(!sent) [[unlikely]] {
-        LOG(cdtp_logger_, DEBUG) << "Could not send message " << message.getHeader().getSequenceNumber();
-    }
 
-    return sent;
+    try {
+        const auto sent = message.assemble().send(cdtp_push_socket_, static_cast<int>(zmq::send_flags::dontwait));
+        if(!sent) [[unlikely]] {
+            LOG(cdtp_logger_, DEBUG) << "Could not send message " << message.getHeader().getSequenceNumber();
+        }
+
+        return sent;
+    } catch(const zmq::error_t& e) {
+        throw NetworkError(e.what());
+    }
 }
 
 void TransmitterSatellite::sendDataMessage(TransmitterSatellite::DataMessage& message) {
     LOG(cdtp_logger_, TRACE) << "Sending data message " << message.getHeader().getSequenceNumber();
-    const auto sent = message.assemble().send(cdtp_push_socket_);
-    if(!sent) {
-        throw SendTimeoutError("data message", data_msg_timeout_);
+    try {
+        const auto sent = message.assemble().send(cdtp_push_socket_);
+        if(!sent) {
+            throw SendTimeoutError("data message", data_msg_timeout_);
+        }
+    } catch(const zmq::error_t& e) {
+        throw NetworkError(e.what());
     }
 }
 
@@ -99,7 +123,9 @@ void TransmitterSatellite::starting_transmitter(std::string_view run_identifier,
     // Reset run metadata and sequence counter
     seq_ = 0;
     run_metadata_ = {};
+    mark_run_tainted_ = false;
     set_run_metadata_tag("run_id", run_identifier);
+    set_run_metadata_tag("time_start", std::chrono::system_clock::now());
 
     // Create CDTP1 message for BOR
     CDTP1Message msg {{getCanonicalName(), seq_, CDTP1Message::Type::BOR, std::chrono::system_clock::now(), bor_tags_}, 1};
@@ -109,9 +135,13 @@ void TransmitterSatellite::starting_transmitter(std::string_view run_identifier,
     LOG(cdtp_logger_, DEBUG) << "Sending BOR message (timeout " << data_bor_timeout_ << ")";
     // Note: this is not interruptible, thus we set a send timeout to hang if no data receiver
     set_send_timeout(data_bor_timeout_);
-    const auto sent = msg.assemble().send(cdtp_push_socket_);
-    if(!sent) {
-        throw SendTimeoutError("BOR message", data_bor_timeout_);
+    try {
+        const auto sent = msg.assemble().send(cdtp_push_socket_);
+        if(!sent) {
+            throw SendTimeoutError("BOR message", data_bor_timeout_);
+        }
+    } catch(const zmq::error_t& e) {
+        throw networking::NetworkError(e.what());
     }
     LOG(cdtp_logger_, DEBUG) << "Sent BOR message";
 
@@ -122,7 +152,9 @@ void TransmitterSatellite::starting_transmitter(std::string_view run_identifier,
     bor_tags_ = {};
 }
 
-void TransmitterSatellite::stopping_transmitter() {
+void TransmitterSatellite::send_eor() {
+    set_run_metadata_tag("time_end", std::chrono::system_clock::now());
+
     // Create CDTP1 message for EOR
     CDTP1Message msg {{getCanonicalName(), ++seq_, CDTP1Message::Type::EOR, std::chrono::system_clock::now(), eor_tags_}, 1};
     msg.addPayload(run_metadata_.assemble());
@@ -131,12 +163,40 @@ void TransmitterSatellite::stopping_transmitter() {
     LOG(cdtp_logger_, DEBUG) << "Sending EOR message (" << data_eor_timeout_ << ")";
     // Note: this is not interruptible, thus we set a send timeout to prevent hang if no data receiver
     set_send_timeout(data_eor_timeout_);
-    const auto sent = msg.assemble().send(cdtp_push_socket_);
-    if(!sent) {
-        throw SendTimeoutError("EOR message", data_eor_timeout_);
+    try {
+        const auto sent = msg.assemble().send(cdtp_push_socket_);
+        if(!sent) {
+            throw SendTimeoutError("EOR message", data_eor_timeout_);
+        }
+    } catch(const zmq::error_t& e) {
+        throw networking::NetworkError(e.what());
     }
     LOG(cdtp_logger_, DEBUG) << "Sent EOR message";
 
     // Clear EOR tags:
     eor_tags_ = {};
+}
+
+void TransmitterSatellite::stopping_transmitter() {
+    if(mark_run_tainted_) {
+        set_run_metadata_tag("condition_code", CDTP::RunCondition::TAINTED);
+        set_run_metadata_tag("condition", enum_name(CDTP::RunCondition::TAINTED));
+    } else {
+        set_run_metadata_tag("condition_code", CDTP::RunCondition::GOOD);
+        set_run_metadata_tag("condition", enum_name(CDTP::RunCondition::GOOD));
+    }
+    send_eor();
+}
+
+void TransmitterSatellite::interrupting_transmitter(CSCP::State previous_state) {
+    // If previous state was running, stop the run by sending an EOR
+    if(previous_state == CSCP::State::RUN) {
+        auto condition_code = CDTP::RunCondition::INTERRUPTED;
+        if(mark_run_tainted_) {
+            condition_code |= CDTP::RunCondition::TAINTED;
+        }
+        set_run_metadata_tag("condition_code", condition_code);
+        set_run_metadata_tag("condition", enum_name(condition_code));
+        send_eor();
+    }
 }

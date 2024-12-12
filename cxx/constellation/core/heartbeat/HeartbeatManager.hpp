@@ -21,10 +21,12 @@
 #include <thread>
 
 #include "constellation/build.hpp"
+#include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/heartbeat/HeartbeatRecv.hpp"
 #include "constellation/core/heartbeat/HeartbeatSend.hpp"
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
+#include "constellation/core/networking/Port.hpp"
 #include "constellation/core/protocol/CHP_definitions.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/string_hash_map.hpp"
@@ -38,7 +40,7 @@ namespace constellation::heartbeat {
      * received heartbeats. It keeps track of received heartbeats from remote heartbeat senders, counts their lives and
      * takes action either upon missing heartbeats or a remote ERROR state of the FSM.
      */
-    class HeartbeatManager {
+    class HeartbeatManager : public HeartbeatRecv {
     public:
         /**
          * @brief Construct a heartbeat manager
@@ -88,6 +90,23 @@ namespace constellation::heartbeat {
          */
         CNSTLN_API void updateInterval(std::chrono::milliseconds interval) { sender_.updateInterval(interval); }
 
+        /**
+         * @brief Configure whether regular departures are allows.
+         * @details If set to true, departing satellites which send a proper DEPART CHIRP message are not considered
+         *          erroneous but are removed from the list of monitored heartbeats. If set to false, any missing heartbeat,
+         *          even after a regular departure, is considered erroneous and the interruption callback is activated
+         *
+         * @param allow Boolean flag whether regular departures are allowed or not
+         */
+        CNSTLN_API void allowDeparture(bool allow) { allow_departure_ = allow; }
+
+        /**
+         * @brief Get ephemeral port to which the CHP socket is bound
+         *
+         * @return Port number
+         */
+        constexpr networking::Port getPort() const { return sender_.getPort(); }
+
     private:
         /**
          * @brief Helper to process heartbeats. This is registered as callback in the heartbeat receiver
@@ -99,6 +118,15 @@ namespace constellation::heartbeat {
         void process_heartbeat(const message::CHP1Message& msg);
 
         /**
+         * @brief Helper to process satellite departure
+         * @details Proper departure of satellites is considered different from the simple disappearance of a heartbeat
+         * signal. Whether to not to take appropriate action can be configured.
+         *
+         * @param service The remote service which has departed and send an appropriate CHIRP DEPART message
+         */
+        void host_disconnected(const chirp::DiscoveredService& service) override;
+
+        /**
          * @brief Main loop of the manager which checks for heartbeats of registered remotes.
          * @details The thread sleeps until the next remote is expected to have sent a heartbeat, checks if any of the
          * heartbeats are late or missing and goes back to sleep. This thread holds the main logic for autonomous operation,
@@ -108,8 +136,6 @@ namespace constellation::heartbeat {
          */
         void run(const std::stop_token& stop_token);
 
-        /** Receiver service */
-        HeartbeatRecv receiver_;
         /** Sender service */
         HeartbeatSend sender_;
 
@@ -133,6 +159,9 @@ namespace constellation::heartbeat {
         utils::string_hash_map<Remote> remotes_;
         std::mutex mutex_;
         std::condition_variable cv_;
+
+        /** Configuration */
+        bool allow_departure_ {true};
 
         log::Logger logger_;
 

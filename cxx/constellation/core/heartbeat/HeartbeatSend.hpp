@@ -21,8 +21,8 @@
 #include <zmq.hpp>
 
 #include "constellation/build.hpp"
+#include "constellation/core/networking/Port.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
-#include "constellation/core/utils/networking.hpp"
 
 namespace constellation::heartbeat {
 
@@ -59,7 +59,7 @@ namespace constellation::heartbeat {
          *
          * @return Port number
          */
-        constexpr utils::Port getPort() const { return port_; }
+        constexpr networking::Port getPort() const { return port_; }
 
         /**
          * @brief Update the maximum heartbeat interval to a new value
@@ -88,7 +88,7 @@ namespace constellation::heartbeat {
         /** Publisher socket for emitting heartbeats */
         zmq::socket_t pub_socket_;
         /** Ephemeral port selected for the heartbeat emission */
-        utils::Port port_;
+        networking::Port port_;
 
         /** Canonical sender name */
         std::string sender_;

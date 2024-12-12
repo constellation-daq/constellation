@@ -17,7 +17,7 @@
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/networking/Port.hpp"
 
 inline std::shared_ptr<constellation::chirp::Manager> create_chirp_manager() {
     auto manager = std::make_shared<constellation::chirp::Manager>("0.0.0.0", "0.0.0.0", "edda", "chirp_manager");
@@ -28,7 +28,7 @@ inline std::shared_ptr<constellation::chirp::Manager> create_chirp_manager() {
 
 inline void chirp_mock_service(std::string_view name,
                                constellation::chirp::ServiceIdentifier service,
-                               constellation::utils::Port port,
+                               constellation::networking::Port port,
                                bool offer = true) {
     // Hack: add fake satellite to chirp to find satellite (cannot find from same manager)
     using namespace constellation::chirp;

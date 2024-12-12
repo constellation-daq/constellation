@@ -107,14 +107,10 @@ class CHIRPMessage:
         """Decode from bytes."""
         # Check message length
         if len(msg) != 42:
-            raise RuntimeError(
-                f"Invalid CHIRP message: length is {len(msg)} instead of 42 bytes long"
-            )
+            raise RuntimeError(f"Invalid CHIRP message: length is {len(msg)} instead of 42 bytes long")
         # Check header
         if msg[0:6] != CHIRP_HEADER.encode():
-            raise RuntimeError(
-                f"Invalid CHIRP message: header {msg[0:6]!r} is malformed"
-            )
+            raise RuntimeError(f"Invalid CHIRP message: header {msg[0:6]!r} is malformed")
         # Decode message
         self.msgtype = CHIRPMessageType(int.from_bytes(msg[6:7]))
         self.group_uuid = UUID(bytes=msg[7:23])
@@ -236,9 +232,7 @@ class CHIRPBeaconTransmitter:
         try:
             msg.unpack(buf)
         except Exception as e:
-            raise RuntimeError(
-                f"Received malformed message by host {from_address}: {e}"
-            ) from e
+            raise RuntimeError(f"Received malformed message by host {from_address}: {e}") from e
 
         # ignore msg from this (our) host
         if self._host_uuid == msg.host_uuid:

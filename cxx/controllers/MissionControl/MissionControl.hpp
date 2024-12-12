@@ -150,6 +150,11 @@ private slots:
     void on_btnLoadConf_clicked();
 
     /**
+     * @brief Private slot for "Generate" button for generating a configuration file from a running Constellation
+     */
+    void on_btnGenConf_clicked();
+
+    /**
      * @brief Private slot for the connection list context menu
      * @param point Selected point of the context menu
      */

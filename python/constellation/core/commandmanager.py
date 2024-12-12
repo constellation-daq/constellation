@@ -98,17 +98,13 @@ class CommandReceiver(BaseSatelliteFrame):
     def _add_com_thread(self) -> None:
         """Add the command receiver thread to the communication thread pool."""
         super()._add_com_thread()
-        self._com_thread_pool["cmd_receiver"] = threading.Thread(
-            target=self._recv_cmds, daemon=True
-        )
+        self._com_thread_pool["cmd_receiver"] = threading.Thread(target=self._recv_cmds, daemon=True)
         self.log.debug("Command receiver thread prepared and added to the pool.")
 
     def _recv_cmds(self) -> None:
         """Request receive loop."""
         # assert for mypy static type analysis
-        assert isinstance(
-            self._com_thread_evt, threading.Event
-        ), "Thread Event not set up correctly"
+        assert isinstance(self._com_thread_evt, threading.Event), "Thread Event not set up correctly"
         while not self._com_thread_evt.is_set():
             try:
                 req = self._cmd_tm.get_message(flags=zmq.NOBLOCK)
@@ -123,9 +119,7 @@ class CommandReceiver(BaseSatelliteFrame):
                 continue
             # check that it is actually a REQUEST
             if req.msg_verb != CSCPMessageVerb.REQUEST:
-                self.log.error(
-                    f"Received malformed request with msg verb: {req.msg_verb}"
-                )
+                self.log.error(f"Received malformed request with msg verb: {req.msg_verb}")
                 self._cmd_tm.send_reply(
                     f"Received malformed request with msg verb: {req.msg_verb}",
                     CSCPMessageVerb.INVALID,
@@ -135,9 +129,7 @@ class CommandReceiver(BaseSatelliteFrame):
             # find a matching callback
             if req.msg not in self._cmds:
                 self.log.error("Unknown command: %s", req)
-                self._cmd_tm.send_reply(
-                    f"Unknown command: {req.msg}", CSCPMessageVerb.UNKNOWN
-                )
+                self._cmd_tm.send_reply(f"Unknown command: {req.msg}", CSCPMessageVerb.UNKNOWN)
                 continue
             # test whether callback is allowed by calling the
             # method "_COMMAND_is_allowed" (if exists).
@@ -166,30 +158,20 @@ class CommandReceiver(BaseSatelliteFrame):
                 continue
             except TransitionNotAllowed as e:
                 self.log.error("Transition '%s' not allowed: %s", req.msg, e)
-                self._cmd_tm.send_reply(
-                    f"Transition not allowed: {e}", CSCPMessageVerb.INVALID, repr(e)
-                )
+                self._cmd_tm.send_reply(f"Transition not allowed: {e}", CSCPMessageVerb.INVALID, repr(e))
                 continue
             except (TypeError, ValueError) as e:
-                self.log.error(
-                    "Command '%s' received wrong argument: %s", req.msg, repr(e)
-                )
-                self._cmd_tm.send_reply(
-                    f"Wrong argument: {repr(e)}", CSCPMessageVerb.INCOMPLETE, repr(e)
-                )
+                self.log.error("Command '%s' received wrong argument: %s", req.msg, repr(e))
+                self._cmd_tm.send_reply(f"Wrong argument: {repr(e)}", CSCPMessageVerb.INCOMPLETE, repr(e))
                 continue
             except Exception as e:
                 self.log.error("Command '%s' failed: %s", req.msg, repr(e))
-                self._cmd_tm.send_reply(
-                    f"Exception: {repr(e)}", CSCPMessageVerb.INVALID, repr(e)
-                )
+                self._cmd_tm.send_reply(f"Exception: {repr(e)}", CSCPMessageVerb.INVALID, repr(e))
                 continue
             # check the response; empty string means 'missing data/incomplete'
             if res is None:
                 self.log.error("Command returned nothing: %s", req)
-                self._cmd_tm.send_reply(
-                    "Command returned nothing", CSCPMessageVerb.INCOMPLETE
-                )
+                self._cmd_tm.send_reply("Command returned nothing", CSCPMessageVerb.INCOMPLETE)
                 continue
             # finally, assemble a proper response!
             self.log.debug("Command succeeded with '%s': %s", res, req)
@@ -203,9 +185,7 @@ class CommandReceiver(BaseSatelliteFrame):
         self._cmd_tm.socket.close()
 
     @cscp_requestable
-    def get_commands(
-        self, _request: CSCPMessage | None = None
-    ) -> Tuple[str, dict[str, str], None]:
+    def get_commands(self, _request: CSCPMessage | None = None) -> Tuple[str, dict[str, str], None]:
         """Return all commands supported by the Satellite.
 
         No payload argument.

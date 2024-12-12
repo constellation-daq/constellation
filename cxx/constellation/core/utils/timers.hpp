@@ -15,7 +15,7 @@ namespace constellation::utils {
     /** Timer that can be used as a stopwatch */
     class StopwatchTimer {
     public:
-        StopwatchTimer() { start(); }
+        StopwatchTimer() = default;
         void start() { start_time_ = std::chrono::steady_clock::now(); }
         void stop() { stop_time_ = std::chrono::steady_clock::now(); }
         std::chrono::nanoseconds duration() const {
@@ -30,9 +30,10 @@ namespace constellation::utils {
     /** Timer that can be used to wait for timeouts */
     class TimeoutTimer {
     public:
-        TimeoutTimer(std::chrono::nanoseconds timeout) : timeout_(timeout) { start(); }
-        void start() { start_time_ = std::chrono::steady_clock::now(); }
+        TimeoutTimer(std::chrono::nanoseconds timeout) : timeout_(timeout) {}
+        void reset() { start_time_ = std::chrono::steady_clock::now(); }
         bool timeoutReached() const { return start_time_ + timeout_ < std::chrono::steady_clock::now(); }
+        std::chrono::steady_clock::time_point startTime() const { return start_time_; }
 
     private:
         std::chrono::steady_clock::time_point start_time_;

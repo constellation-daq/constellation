@@ -66,7 +66,13 @@ namespace constellation::config {
     class Value : public value_t {
     public:
         using value_t::value_t;
-        using value_t::operator=;
+
+        /**
+         * @brief Assignment operator for better handling, automatic conversion of variant types to Value
+         *
+         * @param value Value to be set
+         */
+        template <typename T> Value& operator=(const T& value);
 
         /**
          * @brief Convert value to string representation

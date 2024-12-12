@@ -15,6 +15,7 @@
 #include <mutex>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <spdlog/async_logger.h>
@@ -27,7 +28,8 @@
 #include "constellation/build.hpp"
 #include "constellation/core/log/CMDPSink.hpp"
 #include "constellation/core/log/Level.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/metrics/Metric.hpp"
+#include "constellation/core/networking/Port.hpp"
 
 namespace constellation::log {
     /**
@@ -73,7 +75,7 @@ namespace constellation::log {
          *
          * @return Port number
          */
-        utils::Port getCMDPPort() const { return cmdp_sink_->getPort(); }
+        networking::Port getCMDPPort() const { return cmdp_sink_->getPort(); }
 
         /**
          * @brief Enable sending via CMDP
@@ -81,6 +83,13 @@ namespace constellation::log {
          * @param sender_name Canonical name of the satellite
          */
         CNSTLN_API void enableCMDPSending(std::string sender_name);
+
+        /**
+         * Send metric via the CMDP sink
+         *
+         * @param metric_value Metric value to sink
+         */
+        void sendCMDPMetric(metrics::MetricValue metric_value) { cmdp_sink_->sinkMetric(std::move(metric_value)); }
 
         /**
          * @brief Get an asynchronous spdlog logger with a given topic

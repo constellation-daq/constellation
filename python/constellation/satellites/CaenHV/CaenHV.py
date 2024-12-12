@@ -1,25 +1,25 @@
-#!/usr/bin/env python3
 """
 SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 
-This module provides the class for a Constellation Satellite.
+Provides the class for the CaenHV satellite
 """
+
 from functools import partial
-from typing import Tuple, Any
+from typing import Any
 
 from pycaenhv import CaenHVModule  # type: ignore[import-untyped]
+
+from constellation.core.cmdp import MetricsType
+from constellation.core.commandmanager import cscp_requestable, CSCPMessage
+from constellation.core.configuration import Configuration
+from constellation.core.fsm import SatelliteState
+from constellation.core.satellite import Satellite
+
 from .lib_caen_ndt1470 import CaenNDT1470Manager
 
-from constellation.core.satellite import Satellite, SatelliteArgumentParser
-from constellation.core.cmdp import MetricsType
-from constellation.core.fsm import SatelliteState
-from constellation.core.configuration import Configuration
-from constellation.core.commandmanager import cscp_requestable, CSCPMessage
-from constellation.core.base import setup_cli_logging
 
-
-class CaenHVSatellite(Satellite):
+class CaenHV(Satellite):
     """Satellite controlling a CAEN HV crate via `pycaenhv` library.
 
     Supported models include SY5527.
@@ -45,7 +45,7 @@ class CaenHVSatellite(Satellite):
         link_arg = configuration["link_argument"]
         user = configuration.setdefault("username", "")
         pw = configuration.setdefault("password", "")
-        metrics_poll_rate = configuration["metrics_poll_rate"]
+        metrics_poll_interval = configuration["metrics_poll_interval"]
 
         if "ndt1" in system.lower():
             self.caen: CaenNDT1470Manager | CaenHVModule = CaenNDT1470Manager()
@@ -62,8 +62,14 @@ class CaenHVSatellite(Satellite):
         self.caen.connect(system=system, link=link, argument=link_arg, user=user, password=pw)
         if not self.caen.is_connected():
             raise RuntimeError("No connection to Caen HV crate established")
+        crate = self._set_configuration_on_board(configuration)
+        # configure metrics sending
+        self._configure_monitoring(metrics_poll_interval)
+        return f"Connected to crate and configured {len(crate.boards)} boards"
 
+    def _set_configuration_on_board(self, configuration: Configuration):
         # process configuration
+        config_keys = configuration.get_keys()
         with self.caen as crate:
             for brdno, brd in crate.boards.items():
                 # loop over boards
@@ -78,6 +84,9 @@ class CaenHVSatellite(Satellite):
                         key = f"board{brdno}_ch{chno}_{par.lower()}"
                         self.log.trace("Checking configuration for key '%s'", key)
                         try:
+                            # check if key in configuration
+                            if key not in config_keys:
+                                continue
                             # retrieve and set value
                             val = configuration[key]
                             if par in ["Pw"]:
@@ -99,54 +108,11 @@ class CaenHVSatellite(Satellite):
                             chno,
                             val,
                         )
-
-        # configure metrics sending
-        self._configure_monitoring(metrics_poll_rate)
-        return f"Connected to crate and configured {len(crate.boards)} boards"
+            return crate
 
     def do_reconfigure(self, partial_config: Configuration) -> str:
         """Reconfigure the HV module"""
-        # process configuration
-        config_keys = partial_config.get_keys()
-
-        with self.caen as crate:
-            for brdno, brd in crate.boards.items():
-                # loop over boards
-                self.log.info("Configuring board %s", brd)
-                for chno, ch in enumerate(brd.channels):
-                    # loop over channels
-                    for par in ch.parameter_names:
-                        # loop over parameters
-                        if not ch.parameters[par].attributes["mode"] == "R/W":
-                            continue
-                        # construct configuration key
-                        key = f"board{brdno}_ch{chno}_{par.lower()}"
-                        self.log.trace("Checking configuration for key '%s'", key)
-                        try:
-                            # check if key in partial_config
-                            if key not in config_keys:
-                                continue
-                            # retrieve and set value
-                            val = partial_config[key]
-                            if par in ["Pw"]:
-                                # do not want to power up just yet
-                                continue
-                            # the board essentially only knows 'float'-type
-                            # arguments except for 'Pw':
-                            val = float(val)
-                        except KeyError:
-                            # nothing in the cfg, leave as it is
-                            continue
-                        except ValueError as e:
-                            raise RuntimeError(f"Error in configuration for key {key}: {repr(e)}") from e
-                        ch.parameters[par].value = val
-                        self.log.debug(
-                            "Configuring %s on board %s, ch %s with value '%s'",
-                            par,
-                            brdno,
-                            chno,
-                            val,
-                        )
+        crate = self._set_configuration_on_board(partial_config)
         self._power_up(partial_config)
         return f"Reconfigured {len(crate.boards)} boards"
 
@@ -192,7 +158,7 @@ class CaenHVSatellite(Satellite):
         return ", ".join(status)
 
     @cscp_requestable
-    def get_parameter(self, request: CSCPMessage) -> Tuple[Any, None, None]:
+    def get_parameter(self, request: CSCPMessage) -> tuple[str, Any, dict]:
         """Return the value of a parameter.
 
         Payload: dictionary with 'board', 'channel' and 'parameter' keys
@@ -203,13 +169,13 @@ class CaenHVSatellite(Satellite):
         chno = int(request.payload["channel"])
         par = request.payload["parameter"]
         val = self.get_channel_value(board, chno, par)
-        return val, None, None
+        return val, None, {}
 
     def _get_parameter_is_allowed(self, request: CSCPMessage) -> bool:
         return self._ready()
 
     @cscp_requestable
-    def get_hv_status(self, request: CSCPMessage) -> Tuple[str, dict[str, str], None]:
+    def get_hv_status(self, request: CSCPMessage) -> tuple[str, Any, dict]:
         """Return the collected state of all channels.
 
         Payload: None.
@@ -231,13 +197,13 @@ class CaenHVSatellite(Satellite):
         msg = f"All OK, {npowered} powered"
         if errors:
             msg = "{npowered} powered, additional bits set in: " + ", ".join(errors)
-        return msg, res, None
+        return msg, res, {}
 
     def _get_status_is_allowed(self, request: CSCPMessage) -> bool:
         return self._ready()
 
     @cscp_requestable
-    def get_hw_config(self, request: CSCPMessage) -> Tuple[str, dict[str, str], None]:
+    def get_hw_config(self, request: CSCPMessage) -> tuple[str, Any, dict]:
         """Read and return the current hardware configuration.
 
         Payload: None
@@ -257,14 +223,14 @@ class CaenHVSatellite(Satellite):
                         # construct configuration key
                         key = f"board{brdno}_ch{chno}_{par.lower()}"
                         res[key] = ch.parameters[par].value
-        return f"Read {len(res)} parameters", res, None
+        return f"Read {len(res)} parameters", res, {}
 
     @cscp_requestable
-    def about(self, _request: CSCPMessage) -> Tuple[str, None, None]:
+    def about(self, _request: CSCPMessage) -> tuple[str, Any, dict]:
         """Get info about the Satellite"""
         # TODO extend with info on connected crate (FW release, etc)
         res = f"{__name__} "
-        return res, None, None
+        return res, None, {}
 
     def _power_down(self) -> None:
         self.log.warning("Powering down all channels")
@@ -275,7 +241,7 @@ class CaenHVSatellite(Satellite):
                     ch.switch_off()
         self.log.info("All channels powered down.")
 
-    def _configure_monitoring(self, metrics_poll_rate: int) -> None:
+    def _configure_monitoring(self, metrics_poll_interval: int) -> None:
         """Schedule monitoring for certain parameters."""
         self.reset_scheduled_metrics()
         with self.caen as crate:
@@ -290,7 +256,7 @@ class CaenHVSatellite(Satellite):
                             f"b{brdno}_ch{chno}_{par}",
                             "",
                             MetricsType.LAST_VALUE,
-                            metrics_poll_rate,
+                            metrics_poll_interval,
                             partial(
                                 self.get_channel_value,
                                 board=brdno,
@@ -302,7 +268,7 @@ class CaenHVSatellite(Satellite):
                             f"b{brdno}_ch{chno}_{par}_status",
                             "",
                             MetricsType.LAST_VALUE,
-                            metrics_poll_rate,
+                            metrics_poll_interval,
                             partial(
                                 self.get_channel_status,
                                 board=brdno,
@@ -344,23 +310,3 @@ class CaenHVSatellite(Satellite):
         ]:
             return False
         return True
-
-
-# ---
-
-
-def main(args=None):
-    """The CAEN high-voltage Satellite for controlling a SY5527 HV crate."""
-    parser = SatelliteArgumentParser(
-        description=main.__doc__,
-        epilog="This is a 3rd-party component of Constellation.",
-    )
-
-    args = vars(parser.parse_args(args))
-
-    # set up logging
-    setup_cli_logging(args["name"], args.pop("log_level"))
-
-    # start server with remaining args
-    s = CaenHVSatellite(**args)
-    s.run_satellite()

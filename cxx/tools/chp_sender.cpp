@@ -15,14 +15,12 @@
 #include <string>
 #include <utility>
 
-#include <magic_enum.hpp>
-
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/heartbeat/HeartbeatSend.hpp"
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
-#include "constellation/core/utils/string.hpp"
+#include "constellation/core/utils/enum.hpp"
 
 using namespace constellation;
 using namespace constellation::heartbeat;
@@ -66,9 +64,9 @@ namespace {
             std::cout << "-----------------------------------------\n" << std::flush;
             // Type
             std::string state_s {};
-            std::cout << "State:    [" << to_string(state) << "] ";
+            std::cout << "State:    [" << state << "] ";
             std::getline(std::cin, state_s);
-            state = magic_enum::enum_cast<CSCP::State>(state_s, magic_enum::case_insensitive).value_or(state);
+            state = enum_cast<CSCP::State>(state_s).value_or(state);
             sender.sendExtrasystole();
         }
     }

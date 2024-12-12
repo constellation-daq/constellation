@@ -472,7 +472,7 @@ TEST_CASE("Invalid Key Access", "[core][core::config]") {
     REQUIRE_THROWS_AS(config.set("key", std::array<int, 5> {1, 2, 3, 4, 5}), InvalidTypeError);
 }
 
-TEST_CASE("Value Overflow", "[core][core::config]") {
+TEST_CASE("Value Overflow & Invalid Conversions", "[core][core::config]") {
 
     const std::size_t val = std::numeric_limits<std::size_t>::max();
     REQUIRE_THROWS_AS(Value::set(val), std::overflow_error);
@@ -480,6 +480,12 @@ TEST_CASE("Value Overflow", "[core][core::config]") {
 
     Configuration config {};
     REQUIRE_THROWS_AS(config.set("size", val), InvalidValueError);
+
+    enum class Enum : std::uint8_t { A, B };
+    config.set<std::string>("key1", "C");
+    REQUIRE_THROWS_MATCHES(config.get<Enum>("key1"),
+                           InvalidValueError,
+                           Message("Value C of key 'key1' is not valid: possible values are A, B"));
 }
 
 TEST_CASE("Update Configuration", "[core][core::config]") {
@@ -512,6 +518,12 @@ TEST_CASE("Move Configuration", "[core][core::config]") {
 
     const Configuration config_move = std::move(config);
     REQUIRE(config_move.get<bool>("bool") == true);
+}
+
+TEST_CASE("Assemble & disassemble Value to PayloadBuffer", "[core][core::config]") {
+    const auto val = Value::set(3.14);
+    const auto val_assembled = val.assemble();
+    REQUIRE(val == Value::disassemble(val_assembled));
 }
 
 TEST_CASE("Pack & Unpack List to MsgPack", "[core][core::config]") {

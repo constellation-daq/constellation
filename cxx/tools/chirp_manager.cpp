@@ -21,18 +21,19 @@
 #include <vector>
 
 #include <asio.hpp>
-#include <magic_enum.hpp>
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
-#include "constellation/core/utils/string.hpp"
+#include "constellation/core/networking/Port.hpp"
+#include "constellation/core/utils/enum.hpp"
 
 using namespace constellation::chirp;
 using namespace constellation::log;
 using namespace constellation::message;
+using namespace constellation::networking;
 using namespace constellation::utils;
 using namespace std::string_literals;
 
@@ -61,11 +62,11 @@ namespace {
     // DiscoverCallback signature NOLINTNEXTLINE(performance-unnecessary-value-param)
     void discover_callback(DiscoveredService service, ServiceStatus status, std::any /* user_data */) {
         std::cout << "Callback:\n"
-                  << " Service " << pad_str_right(magic_enum::enum_name(service.identifier), 10) //
-                  << " Port " << std::setw(5) << service.port                                    //
-                  << " Host " << service.host_id.to_string()                                     //
-                  << " IP " << pad_str_right(service.address.to_string(), 15)                    //
-                  << to_string(status)                                                           //
+                  << " Service " << pad_str_right(enum_name(service.identifier), 10) //
+                  << " Port " << std::setw(5) << service.port                        //
+                  << " Host " << service.host_id.to_string()                         //
+                  << " IP " << pad_str_right(service.address.to_string(), 15)        //
+                  << status                                                          //
                   << "\n"
                   << std::flush;
     }
@@ -135,7 +136,7 @@ namespace {
             if(cmd_split.empty()) {
                 continue;
             }
-            auto cmd_opt = magic_enum::enum_cast<Command>(cmd_split[0]);
+            auto cmd_opt = enum_cast<Command>(cmd_split[0]);
             if(!cmd_opt.has_value()) {
                 std::cout << std::quoted(cmd_split[0]) << " is not a valid command\n" << std::flush;
                 continue;
@@ -147,8 +148,8 @@ namespace {
                 auto registered_services = manager.getRegisteredServices();
                 std::cout << " Registered Services:\n";
                 for(const auto& service : registered_services) {
-                    std::cout << " Service " << pad_str_right(magic_enum::enum_name(service.identifier), 10) //
-                              << " Port " << std::setw(5) << service.port                                    //
+                    std::cout << " Service " << pad_str_right(enum_name(service.identifier), 10) //
+                              << " Port " << std::setw(5) << service.port                        //
                               << "\n";
                 }
                 std::cout << std::flush;
@@ -158,16 +159,16 @@ namespace {
             if(cmd == list_discovered_services) {
                 std::optional<ServiceIdentifier> service_opt {std::nullopt};
                 if(cmd_split.size() >= 2) {
-                    service_opt = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]);
+                    service_opt = enum_cast<ServiceIdentifier>(cmd_split[1]);
                 }
                 auto discovered_services = service_opt.has_value() ? manager.getDiscoveredServices(service_opt.value())
                                                                    : manager.getDiscoveredServices();
                 std::cout << " Discovered Services:\n";
                 for(const auto& service : discovered_services) {
-                    std::cout << " Service " << pad_str_right(magic_enum::enum_name(service.identifier), 15) //
-                              << " Port " << std::setw(5) << service.port                                    //
-                              << " Host " << service.host_id.to_string()                                     //
-                              << " IP " << pad_str_right(service.address.to_string(), 15)                    //
+                    std::cout << " Service " << pad_str_right(enum_name(service.identifier), 15) //
+                              << " Port " << std::setw(5) << service.port                        //
+                              << " Host " << service.host_id.to_string()                         //
+                              << " IP " << pad_str_right(service.address.to_string(), 15)        //
                               << "\n";
                 }
                 std::cout << std::flush;
@@ -177,7 +178,7 @@ namespace {
             if(cmd == register_service || cmd == unregister_service) {
                 ServiceIdentifier service {CONTROL};
                 if(cmd_split.size() >= 2) {
-                    service = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
+                    service = enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
                 }
                 Port port {23999};
                 if(cmd_split.size() >= 3) {
@@ -186,14 +187,14 @@ namespace {
                 if(cmd == register_service) {
                     auto ret = manager.registerService(service, port);
                     if(ret) {
-                        std::cout << " Registered Service " << pad_str_right(magic_enum::enum_name(service), 10) //
+                        std::cout << " Registered Service " << pad_str_right(enum_name(service), 10) //
                                   << " Port " << std::setw(5) << port << "\n"
                                   << std::flush;
                     }
                 } else {
                     auto ret = manager.unregisterService(service, port);
                     if(ret) {
-                        std::cout << " Unregistered Service " << pad_str_right(magic_enum::enum_name(service), 10) //
+                        std::cout << " Unregistered Service " << pad_str_right(enum_name(service), 10) //
                                   << " Port " << std::setw(5) << port << "\n"
                                   << std::flush;
                     }
@@ -204,17 +205,17 @@ namespace {
             if(cmd == register_callback || cmd == unregister_callback) {
                 ServiceIdentifier service {CONTROL};
                 if(cmd_split.size() >= 2) {
-                    service = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
+                    service = enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
                 }
                 if(cmd == register_callback) {
                     auto ret = manager.registerDiscoverCallback(&discover_callback, service, nullptr);
                     if(ret) {
-                        std::cout << " Registered Callback for " << magic_enum::enum_name(service) << "\n" << std::flush;
+                        std::cout << " Registered Callback for " << service << "\n" << std::flush;
                     }
                 } else {
                     auto ret = manager.unregisterDiscoverCallback(&discover_callback, service);
                     if(ret) {
-                        std::cout << " Unregistered Callback for " << magic_enum::enum_name(service) << "\n" << std::flush;
+                        std::cout << " Unregistered Callback for " << service << "\n" << std::flush;
                     }
                 }
                 continue;
@@ -223,10 +224,10 @@ namespace {
             if(cmd == request) {
                 ServiceIdentifier service {CONTROL};
                 if(cmd_split.size() >= 2) {
-                    service = magic_enum::enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
+                    service = enum_cast<ServiceIdentifier>(cmd_split[1]).value_or(CONTROL);
                 }
                 manager.sendRequest(service);
-                std::cout << " Sent Request for " << magic_enum::enum_name(service) << "\n" << std::flush;
+                std::cout << " Sent Request for " << service << "\n" << std::flush;
                 continue;
             }
             // Reset

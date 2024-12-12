@@ -53,9 +53,7 @@ class HeartbeatChecker:
     HB_INIT_LIVES = 3
     HB_INIT_PERIOD = 2000
 
-    def __init__(
-        self, callback: Optional[Callable[[str, SatelliteState], None]] = None
-    ) -> None:
+    def __init__(self, callback: Optional[Callable[[str, SatelliteState], None]] = None) -> None:
         self._callback = callback
         self._callback_lock = threading.Lock()
         self._threads: threading.Thread | None = None
@@ -88,9 +86,7 @@ class HeartbeatChecker:
         socket.connect(address)
         socket.setsockopt_string(zmq.SUBSCRIBE, "")
         evt = threading.Event()
-        self._states[socket] = HeartbeatState(
-            name, evt, self.HB_INIT_LIVES, self.HB_INIT_PERIOD
-        )
+        self._states[socket] = HeartbeatState(name, evt, self.HB_INIT_LIVES, self.HB_INIT_PERIOD)
         logger.info(f"Registered heartbeating check for {address}")
         return evt
 
@@ -144,9 +140,7 @@ class HeartbeatChecker:
             hb.refresh()
 
         # assert for mypy static type analysis
-        assert isinstance(
-            self._stop_threads, threading.Event
-        ), "Thread Event not set up correctly"
+        assert isinstance(self._stop_threads, threading.Event), "Thread Event not set up correctly"
 
         while not self._stop_threads.is_set():
             # check for heartbeats ready to be received
@@ -177,9 +171,7 @@ class HeartbeatChecker:
                     ]:
                         # satellite in error state, interrupt
                         if not hb.failed.is_set():
-                            logger.debug(
-                                f"{hb.name} state causing interrupt callback to be called"
-                            )
+                            logger.debug(f"{hb.name} state causing interrupt callback to be called")
                             hb.failed.set()
                             self._interrupt(hb.name, hb.state)
                     else:
@@ -202,9 +194,7 @@ class HeartbeatChecker:
                         if hb.lives <= 0:
                             # no lives left, interrupt
                             if not hb.failed.is_set():
-                                logger.info(
-                                    f"{hb.name} unresponsive causing interrupt callback to be called"
-                                )
+                                logger.info(f"{hb.name} unresponsive causing interrupt callback to be called")
                                 hb.failed.set()
                                 self._interrupt(hb.name, SatelliteState.DEAD)
                                 # update state
@@ -259,9 +249,7 @@ class HeartbeatChecker:
                 break
         if not registered:
             logger.error(f"Could not find registered Satellite with name '{name}'")
-            raise RuntimeError(
-                f"Could not find registered Satellite with name '{name}'"
-            )
+            raise RuntimeError(f"Could not find registered Satellite with name '{name}'")
         self._run()
 
     def start_all(self) -> None:
@@ -312,9 +300,7 @@ def main(args: Any = None) -> None:
 
     while True:
         failed = ", ".join(hb_checker.get_failed())
-        print(
-            f"Failed heartbeats so far: {failed}, evt is set: {evt.is_set()}, states: {hb_checker._states}"
-        )
+        print(f"Failed heartbeats so far: {failed}, evt is set: {evt.is_set()}, states: {hb_checker._states}")
         time.sleep(1)
 
     hb_checker.stop()

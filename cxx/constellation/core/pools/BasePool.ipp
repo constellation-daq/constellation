@@ -28,8 +28,9 @@
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/exceptions.hpp"
-#include "constellation/core/utils/networking.hpp"
-#include "constellation/core/utils/string.hpp"
+#include "constellation/core/networking/exceptions.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
+#include "constellation/core/utils/enum.hpp"
 
 namespace constellation::pools {
 
@@ -106,7 +107,7 @@ namespace constellation::pools {
         LOG(pool_logger_, TRACE) << "Connecting to " << service.to_uri() << "...";
         try {
 
-            zmq::socket_t socket {*utils::global_zmq_context(), SOCKET_TYPE};
+            zmq::socket_t socket {*networking::global_zmq_context(), SOCKET_TYPE};
             socket.connect(service.to_uri());
 
             /**
@@ -143,8 +144,8 @@ namespace constellation::pools {
 
         } catch(const zmq::error_t& error) {
             // The socket is emplaced in the list only on success of connection and poller registration and goes out of
-            // scope when an exception is thrown. Its  calls close() automatically.
-            LOG(pool_logger_, WARNING) << "Error when registering socket for " << service.to_uri() << ": " << error.what();
+            // scope when an exception is thrown. It calls close() automatically.
+            throw networking::NetworkError("Error when registering socket for " + service.to_uri() + ": " + error.what());
         }
     }
 
@@ -242,7 +243,7 @@ namespace constellation::pools {
     template <typename MESSAGE, chirp::ServiceIdentifier SERVICE, zmq::socket_type SOCKET_TYPE>
     void BasePool<MESSAGE, SERVICE, SOCKET_TYPE>::callback_impl(const chirp::DiscoveredService& service,
                                                                 chirp::ServiceStatus status) {
-        LOG(pool_logger_, TRACE) << "Callback for " << service.to_uri() << ", status " << utils::to_string(status);
+        LOG(pool_logger_, TRACE) << "Callback for " << service.to_uri() << ", status " << status;
 
         if(status == chirp::ServiceStatus::DEPARTED) {
             disconnect(service);
@@ -279,11 +280,16 @@ namespace constellation::pools {
 
                 const std::lock_guard lock {sockets_mutex_};
 
-                // The poller returns immediately when a socket received something, but will time out after the set period:
-                poller_events_.store(poller_.wait(50ms));
+                try {
+                    // The poller returns immediately when a socket received something, but will time out after the set
+                    // period:
+                    poller_events_.store(poller_.wait(50ms));
+                } catch(const zmq::error_t& e) {
+                    throw networking::NetworkError(e.what());
+                }
             }
         } catch(...) {
-            LOG(pool_logger_, DEBUG) << "Caught exception in pool thread";
+            LOG(pool_logger_, CRITICAL) << "Caught exception in pool thread";
 
             // Save exception
             exception_ptr_ = std::current_exception();

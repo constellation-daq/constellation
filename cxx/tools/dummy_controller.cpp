@@ -24,7 +24,7 @@
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
-#include "constellation/core/utils/string.hpp"
+#include "constellation/core/utils/enum.hpp"
 
 using namespace constellation;
 using namespace constellation::config;
@@ -89,7 +89,7 @@ namespace {
             for(const auto& [sat, recv_msg] : responses) {
                 // Print message
                 LOG(logger, INFO) << recv_msg.getHeader().to_string() << "\n"
-                                  << "Verb: " << to_string(recv_msg.getVerb().first) << " : " << recv_msg.getVerb().second;
+                                  << "Verb: " << recv_msg.getVerb().first << " : " << recv_msg.getVerb().second;
 
                 // Print payload if dict
                 if(recv_msg.hasPayload()) {

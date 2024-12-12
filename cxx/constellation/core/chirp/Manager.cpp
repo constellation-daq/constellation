@@ -17,7 +17,9 @@
 #include <functional>
 #include <future>
 #include <iterator>
+#include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <stop_token>
 #include <string>
@@ -26,16 +28,22 @@
 #include <utility>
 #include <vector>
 
+#include <asio/ip/address_v4.hpp>
+
+#include "constellation/core/chirp/BroadcastSend.hpp"
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/message/exceptions.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/networking/asio_helpers.hpp"
+#include "constellation/core/networking/Port.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::chirp;
 using namespace constellation::message;
+using namespace constellation::networking;
 using namespace constellation::utils;
 using namespace std::chrono_literals;
 
@@ -53,7 +61,7 @@ bool RegisteredService::operator<(const RegisteredService& other) const {
 }
 
 std::string DiscoveredService::to_uri() const {
-    return "tcp://" + range_to_string(address.to_bytes(), ".") + ":" + to_string(port);
+    return ::to_uri(address, port);
 }
 
 bool DiscoveredService::operator<(const DiscoveredService& other) const {
@@ -97,14 +105,23 @@ void Manager::setAsDefaultInstance() {
     Manager::default_manager_instance_ = this;
 }
 
-Manager::Manager(const asio::ip::address_v4& brd_address,
+Manager::Manager(const std::optional<asio::ip::address_v4>& brd_address,
                  const asio::ip::address_v4& any_address,
                  std::string_view group_name,
                  std::string_view host_name)
-    : receiver_(any_address, CHIRP_PORT), sender_(brd_address, CHIRP_PORT), group_id_(MD5Hash(group_name)),
-      host_id_(MD5Hash(host_name)), logger_("CHIRP") {
+    : receiver_(any_address, CHIRP_PORT), group_id_(MD5Hash(group_name)), host_id_(MD5Hash(host_name)), logger_("CHIRP") {
 
-    LOG(logger_, TRACE) << "Using broadcast address " << brd_address.to_string();
+    std::set<asio::ip::address_v4> brd_addresses {};
+    if(brd_address.has_value()) {
+        brd_addresses = {brd_address.value()};
+        LOG(logger_, TRACE) << "Using provided broadcast address " << brd_address.value().to_string();
+    } else {
+        brd_addresses = get_broadcast_addresses();
+        LOG(logger_, TRACE) << "Using broadcast addresses "
+                            << range_to_string(brd_addresses, [](const auto& adr) { return adr.to_string(); });
+    }
+    sender_ = std::make_unique<BroadcastSend>(brd_addresses, CHIRP_PORT);
+
     LOG(logger_, TRACE) << "Using any address " << any_address.to_string();
     LOG(logger_, DEBUG) << "Host ID for satellite " << host_name << " is " << host_id_.to_string();
     LOG(logger_, DEBUG) << "Group ID for constellation " << group_name << " is " << group_id_.to_string();
@@ -128,7 +145,7 @@ void Manager::start() {
     main_loop_thread_ = std::jthread(std::bind_front(&Manager::main_loop, this));
 }
 
-bool Manager::registerService(ServiceIdentifier service_id, utils::Port port) {
+bool Manager::registerService(ServiceIdentifier service_id, Port port) {
     const RegisteredService service {service_id, port};
 
     std::unique_lock registered_services_lock {registered_services_mutex_};
@@ -143,7 +160,7 @@ bool Manager::registerService(ServiceIdentifier service_id, utils::Port port) {
     return actually_inserted;
 }
 
-bool Manager::unregisterService(ServiceIdentifier service_id, utils::Port port) {
+bool Manager::unregisterService(ServiceIdentifier service_id, Port port) {
     const RegisteredService service {service_id, port};
 
     std::unique_lock registered_services_lock {registered_services_mutex_};
@@ -198,8 +215,7 @@ void Manager::forgetDiscoveredService(ServiceIdentifier identifier, message::MD5
         return service.host_id == host_id && service.identifier == identifier;
     });
     if(service_it != discovered_services_.end()) {
-        LOG(logger_, DEBUG) << "Dropping discovered service " << to_string(identifier) << " for host id "
-                            << host_id.to_string();
+        LOG(logger_, DEBUG) << "Dropping discovered service " << identifier << " for host id " << host_id.to_string();
         call_discover_callbacks(*service_it, ServiceStatus::DEAD);
         discovered_services_.erase(service_it);
     }
@@ -246,10 +262,9 @@ void Manager::sendRequest(ServiceIdentifier service) {
 }
 
 void Manager::send_message(MessageType type, RegisteredService service) {
-    LOG(logger_, DEBUG) << "Sending " << to_string(type) << " for " << to_string(service.identifier) << " service on port "
-                        << service.port;
+    LOG(logger_, DEBUG) << "Sending " << type << " for " << service.identifier << " service on port " << service.port;
     const auto asm_msg = CHIRPMessage(type, group_id_, host_id_, service.identifier, service.port).assemble();
-    sender_.sendBroadcast(asm_msg);
+    sender_->sendBroadcast(asm_msg);
 }
 
 void Manager::call_discover_callbacks(const DiscoveredService& discovered_service, ServiceStatus status) {
@@ -280,11 +295,11 @@ void Manager::main_loop(const std::stop_token& stop_token) {
             const auto& raw_msg = raw_msg_opt.value();
             auto chirp_msg = CHIRPMessage::disassemble(raw_msg.content);
 
-            LOG(logger_, TRACE) << "Received message from " << raw_msg.address.to_string()
-                                << ": group = " << chirp_msg.getGroupID().to_string()
-                                << ", host = " << chirp_msg.getHostID().to_string()
-                                << ", type = " << to_string(chirp_msg.getType())
-                                << ", service = " << to_string(chirp_msg.getServiceIdentifier())
+            LOG(logger_, TRACE) << "Received message from " << raw_msg.address.to_string() //
+                                << ": group = " << chirp_msg.getGroupID().to_string()      //
+                                << ", host = " << chirp_msg.getHostID().to_string()        //
+                                << ", type = " << chirp_msg.getType()                      //
+                                << ", service = " << chirp_msg.getServiceIdentifier()      //
                                 << ", port = " << chirp_msg.getPort();
 
             if(chirp_msg.getGroupID() != group_id_) {
@@ -302,7 +317,7 @@ void Manager::main_loop(const std::stop_token& stop_token) {
             switch(chirp_msg.getType()) {
             case REQUEST: {
                 auto service_id = discovered_service.identifier;
-                LOG(logger_, DEBUG) << "Received REQUEST for " << to_string(service_id) << " services";
+                LOG(logger_, DEBUG) << "Received REQUEST for " << service_id << " services";
                 const std::lock_guard registered_services_lock {registered_services_mutex_};
                 // Replay OFFERs for registered services with same service identifier
                 for(const auto& service : registered_services_) {
@@ -320,8 +335,8 @@ void Manager::main_loop(const std::stop_token& stop_token) {
                     // Unlock discovered_services_lock for user callback
                     discovered_services_lock.unlock();
 
-                    LOG(logger_, DEBUG) << to_string(chirp_msg.getServiceIdentifier()) << " service at "
-                                        << raw_msg.address.to_string() << ":" << chirp_msg.getPort() << " discovered";
+                    LOG(logger_, DEBUG) << chirp_msg.getServiceIdentifier() << " service at " << raw_msg.address.to_string()
+                                        << ":" << chirp_msg.getPort() << " discovered";
 
                     call_discover_callbacks(discovered_service, ServiceStatus::DISCOVERED);
                 }
@@ -335,8 +350,8 @@ void Manager::main_loop(const std::stop_token& stop_token) {
                     // Unlock discovered_services_lock for user callback
                     discovered_services_lock.unlock();
 
-                    LOG(logger_, DEBUG) << to_string(chirp_msg.getServiceIdentifier()) << " service at "
-                                        << raw_msg.address.to_string() << ":" << chirp_msg.getPort() << " departed";
+                    LOG(logger_, DEBUG) << chirp_msg.getServiceIdentifier() << " service at " << raw_msg.address.to_string()
+                                        << ":" << chirp_msg.getPort() << " departed";
 
                     call_discover_callbacks(discovered_service, ServiceStatus::DEPARTED);
                 }

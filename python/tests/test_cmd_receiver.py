@@ -186,9 +186,7 @@ def test_cmd_unique_commands(mock_cmdreceiver):
             return 42, None, None
 
     with patch("constellation.core.commandmanager.zmq.Context"):
-        cr = MockOtherCommandReceiver(
-            "mock_other_satellite", cmd_port=22222, interface="127.0.0.1"
-        )
+        cr = MockOtherCommandReceiver("mock_other_satellite", cmd_port=22222, interface="127.0.0.1")
         msg, cmds, _meta = cr.get_commands()
         # get_state not part of MockOtherCommandReceiver but of MockCommandReceiver
         assert "get_state" not in cmds

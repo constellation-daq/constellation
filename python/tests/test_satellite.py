@@ -56,9 +56,7 @@ def mock_device_satellite(mock_chirp_transmitter):
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context
-        s = MockDeviceSatellite(
-            "mydevice1", "mockstellation", 11111, 22222, 33333, "127.0.0.1"
-        )
+        s = MockDeviceSatellite("mydevice1", "mockstellation", 11111, 22222, 33333, "127.0.0.1")
         t = threading.Thread(target=s.run_satellite)
         t.start()
         # give the threads a chance to start
@@ -83,9 +81,7 @@ def mock_fail_satellite(mock_chirp_transmitter):
         mock_context = MagicMock()
         mock_context.socket = mocket_factory
         mock.return_value = mock_context
-        s = MockFailSatellite(
-            "fail1", "mockstellation", 11111, 22222, 33333, "127.0.0.1"
-        )
+        s = MockFailSatellite("fail1", "mockstellation", 11111, 22222, 33333, "127.0.0.1")
         t = threading.Thread(target=s.run_satellite)
         t.start()
         # give the threads a chance to start
@@ -192,9 +188,7 @@ def test_satellite_fsm_change_transitional(mock_cmd_transmitter, mock_device_sat
 
 
 @pytest.mark.forked
-def test_satellite_fsm_cannot_change_transitional(
-    mock_cmd_transmitter, mock_device_satellite
-):
+def test_satellite_fsm_cannot_change_transitional(mock_cmd_transmitter, mock_device_satellite):
     """Test transitions from slow transitional states."""
     sender = mock_cmd_transmitter
     # send a request to init
@@ -231,9 +225,7 @@ def test_satellite_chirp_offer(mock_chirp_transmitter, mock_device_satellite):
     """Test cmd reception."""
     satellite = mock_device_satellite
     assert not satellite.callback_triggered
-    mock_chirp_transmitter.broadcast(
-        CHIRPServiceIdentifier.DATA, CHIRPMessageType.OFFER, 666
-    )
+    mock_chirp_transmitter.broadcast(CHIRPServiceIdentifier.DATA, CHIRPMessageType.OFFER, 666)
     time.sleep(0.5)
     # chirp message has been processed
     assert satellite._beacon._sock.seen >= 1

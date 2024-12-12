@@ -11,7 +11,9 @@
 
 #include <any>
 #include <cstdint>
+#include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <stop_token>
 #include <string>
@@ -19,7 +21,7 @@
 #include <thread>
 #include <vector>
 
-#include <asio.hpp>
+#include <asio/ip/address_v4.hpp>
 
 #include "constellation/build.hpp"
 #include "constellation/core/chirp/BroadcastRecv.hpp"
@@ -27,7 +29,7 @@
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/networking/Port.hpp"
 
 namespace constellation::chirp {
 
@@ -37,7 +39,7 @@ namespace constellation::chirp {
         ServiceIdentifier identifier;
 
         /** Port of the offered service */
-        utils::Port port;
+        networking::Port port;
 
         CNSTLN_API bool operator<(const RegisteredService& other) const;
     };
@@ -54,7 +56,7 @@ namespace constellation::chirp {
         ServiceIdentifier identifier;
 
         /** Port of the discovered service */
-        utils::Port port;
+        networking::Port port;
 
         /** Convert service information to a URI */
         CNSTLN_API std::string to_uri() const;
@@ -125,7 +127,7 @@ namespace constellation::chirp {
          * @param group_name Group name of the group to join
          * @param host_name Host name for outgoing messages
          */
-        CNSTLN_API Manager(const asio::ip::address_v4& brd_address,
+        CNSTLN_API Manager(const std::optional<asio::ip::address_v4>& brd_address,
                            const asio::ip::address_v4& any_address,
                            std::string_view group_name,
                            std::string_view host_name);
@@ -173,7 +175,7 @@ namespace constellation::chirp {
          * @retval true if the service was registered
          * @retval false if the service was already registered
          */
-        CNSTLN_API bool registerService(ServiceIdentifier service_id, utils::Port port);
+        CNSTLN_API bool registerService(ServiceIdentifier service_id, networking::Port port);
 
         /**
          * Unregister a previously registered service offered by the host in the manager
@@ -186,7 +188,7 @@ namespace constellation::chirp {
          * @retval true If the service was unregistered
          * @retval false If the service was never registered
          */
-        CNSTLN_API bool unregisterService(ServiceIdentifier service_id, utils::Port port);
+        CNSTLN_API bool unregisterService(ServiceIdentifier service_id, networking::Port port);
 
         /**
          * Unregisters all offered services registered in the manager
@@ -309,7 +311,7 @@ namespace constellation::chirp {
 
     private:
         BroadcastRecv receiver_;
-        BroadcastSend sender_;
+        std::unique_ptr<BroadcastSend> sender_;
 
         message::MD5Hash group_id_;
         message::MD5Hash host_id_;

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 [codespell]
-skip = .git,.ci,subprojects,AUTHORS.md
+skip = .git,.ci,subprojects,AUTHORS.md,*.svg
 quiet-level = 2
 # Words to be ignored, put one word per line and sort alphabetically
 ignore-words-list =

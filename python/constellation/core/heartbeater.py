@@ -42,21 +42,15 @@ class HeartbeatSender(SatelliteStateHandler):
     def _add_com_thread(self) -> None:
         """Add the CHIRP broadcaster thread to the communication thread pool."""
         super()._add_com_thread()
-        self._com_thread_pool["heartbeat"] = threading.Thread(
-            target=self._run_heartbeat, daemon=True
-        )
+        self._com_thread_pool["heartbeat"] = threading.Thread(target=self._run_heartbeat, daemon=True)
         self.log.debug("Heartbeat sender thread prepared and added to the pool.")
 
     def _run_heartbeat(self) -> None:
         last = datetime.now()
         # assert for mypy static type analysis
-        assert isinstance(
-            self._com_thread_evt, threading.Event
-        ), "Thread Event not set up correctly"
+        assert isinstance(self._com_thread_evt, threading.Event), "Thread Event not set up correctly"
         while not self._com_thread_evt.is_set():
-            if (
-                (datetime.now() - last).total_seconds() > self.heartbeat_period / 1000
-            ) or self.fsm.transitioned:
+            if ((datetime.now() - last).total_seconds() > self.heartbeat_period / 1000) or self.fsm.transitioned:
                 last = datetime.now()
                 state = self.fsm.current_state_value
                 self._hb_tm.send(state.value, int(self.heartbeat_period * 1.1))

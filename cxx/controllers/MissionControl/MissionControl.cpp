@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -25,8 +26,6 @@
 #include <vector>
 
 #include <argparse/argparse.hpp>
-#include <magic_enum.hpp>
-#include <zmq.hpp>
 
 #include <QApplication>
 #include <QCloseEvent>
@@ -54,17 +53,22 @@
 #include "constellation/controller/ControllerConfiguration.hpp"
 #include "constellation/controller/exceptions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/log/SinkManager.hpp"
+#include "constellation/core/networking/exceptions.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/string.hpp"
 
 #include "qt_utils.hpp"
 
 using namespace constellation;
 using namespace constellation::chirp;
+using namespace constellation::config;
 using namespace constellation::controller;
 using namespace constellation::log;
+using namespace constellation::networking;
 using namespace constellation::protocol;
 using namespace constellation::utils;
 
@@ -279,7 +283,7 @@ void MissionControl::on_btnInit_clicked() {
     }
 
     for(auto& response : runcontrol_.sendQCommands("initialize", configs.value())) {
-        LOG(logger_, DEBUG) << "Initialize: " << response.first << ": " << to_string(response.second.getVerb().first);
+        LOG(logger_, DEBUG) << "Initialize: " << response.first << ": " << response.second.getVerb().first;
     }
 }
 
@@ -296,26 +300,26 @@ void MissionControl::on_btnShutdown_clicked() {
         LOG(logger_, DEBUG) << "Aborted satellite shutdown";
     } else {
         for(auto& response : runcontrol_.sendQCommands("shutdown")) {
-            LOG(logger_, DEBUG) << "Shutdown: " << response.first << ": " << to_string(response.second.getVerb().first);
+            LOG(logger_, DEBUG) << "Shutdown: " << response.first << ": " << response.second.getVerb().first;
         }
     }
 }
 
 void MissionControl::on_btnConfig_clicked() {
     for(auto& response : runcontrol_.sendQCommands("launch")) {
-        LOG(logger_, DEBUG) << "Launch: " << response.first << ": " << to_string(response.second.getVerb().first);
+        LOG(logger_, DEBUG) << "Launch: " << response.first << ": " << response.second.getVerb().first;
     }
 }
 
 void MissionControl::on_btnLand_clicked() {
     for(auto& response : runcontrol_.sendQCommands("land")) {
-        LOG(logger_, DEBUG) << "Land: " << response.first << ": " << to_string(response.second.getVerb().first);
+        LOG(logger_, DEBUG) << "Land: " << response.first << ": " << response.second.getVerb().first;
     }
 }
 
 void MissionControl::on_btnStart_clicked() {
     for(auto& response : runcontrol_.sendQCommands("start", current_run_.toStdString())) {
-        LOG(logger_, DEBUG) << "Start: " << response.first << ": " << to_string(response.second.getVerb().first);
+        LOG(logger_, DEBUG) << "Start: " << response.first << ": " << response.second.getVerb().first;
     }
 
     // Set start time for this run
@@ -324,7 +328,7 @@ void MissionControl::on_btnStart_clicked() {
 
 void MissionControl::on_btnStop_clicked() {
     for(auto& response : runcontrol_.sendQCommands("stop")) {
-        LOG(logger_, DEBUG) << "Stop: " << response.first << ": " << to_string(response.second.getVerb().first);
+        LOG(logger_, DEBUG) << "Stop: " << response.first << ": " << response.second.getVerb().first;
     }
 
     // Increment run sequence:
@@ -347,6 +351,32 @@ void MissionControl::on_btnLoadConf_clicked() {
     }
 }
 
+void MissionControl::on_btnGenConf_clicked() {
+
+    ControllerConfiguration new_cfg;
+
+    // Round-call to collect configurations from the satellites:
+    for(const auto& config : runcontrol_.sendQCommands("get_config")) {
+        const auto cfg = Dictionary::disassemble(config.second.getPayload());
+        new_cfg.addSatelliteConfiguration(config.first, cfg);
+    }
+
+    const QString filename = QFileDialog::getSaveFileName(
+        this, tr("Save File"), QFileInfo(txtConfigFileName->text()).path(), tr("Configurations (*.conf *.toml *.ini)"));
+
+    if(filename.isNull()) {
+        return;
+    }
+
+    // Store to file:
+    std::ofstream file {filename.toStdString()};
+    file << new_cfg.getAsTOML();
+    file.close();
+
+    // Set selected config to this one:
+    txtConfigFileName->setText(filename);
+}
+
 void MissionControl::update_button_states(CSCP::State state) {
 
     const QRegularExpression rx_conf(R"(.+(\.conf$|\.ini$|\.toml$))");
@@ -357,6 +387,8 @@ void MissionControl::update_button_states(CSCP::State state) {
     btnLand->setEnabled(state == ORBIT);
     btnConfig->setEnabled(state == INIT);
     btnLoadConf->setEnabled(CSCP::is_one_of_states<NEW, initializing, INIT, SAFE, ERROR>(state));
+    btnGenConf->setEnabled(CSCP::is_not_one_of_states<NEW, initializing, ERROR>(state) &&
+                           runcontrol_.getConnectionCount() > 0);
     txtConfigFileName->setEnabled(CSCP::is_one_of_states<NEW, initializing, INIT, SAFE, ERROR>(state));
     btnStart->setEnabled(state == ORBIT);
     btnStop->setEnabled(state == RUN);
@@ -446,7 +478,7 @@ void MissionControl::custom_context_menu(const QPoint& point) {
     contextMenu.addSeparator();
 
     // Add standard commands
-    for(const auto command : magic_enum::enum_names<CSCP::StandardCommand>()) {
+    for(const auto command : enum_names<CSCP::StandardCommand>()) {
         if(command == "shutdown") {
             // Already added above
             continue;
@@ -469,8 +501,7 @@ void MissionControl::custom_context_menu(const QPoint& point) {
     auto dict = runcontrol_.getQCommands(index);
     for(const auto& [key, value] : dict) {
         // Filter out transition and standard commands to not list them twice
-        if(magic_enum::enum_cast<CSCP::TransitionCommand>(key, magic_enum::case_insensitive).has_value() ||
-           magic_enum::enum_cast<CSCP::StandardCommand>(key, magic_enum::case_insensitive).has_value()) {
+        if(enum_cast<CSCP::TransitionCommand>(key).has_value() || enum_cast<CSCP::StandardCommand>(key).has_value()) {
             continue;
         }
 
@@ -551,13 +582,7 @@ namespace {
         parser.add_argument("-l", "--level").help("log level").default_value("INFO");
 
         // Broadcast address (--brd)
-        std::string default_brd_addr {};
-        try {
-            default_brd_addr = asio::ip::address_v4::broadcast().to_string();
-        } catch(const asio::system_error& error) {
-            default_brd_addr = "255.255.255.255";
-        }
-        parser.add_argument("--brd").help("broadcast address").default_value(default_brd_addr);
+        parser.add_argument("--brd").help("broadcast address");
 
         // Any address (--any)
         std::string default_any_addr {};
@@ -598,7 +623,7 @@ int main(int argc, char** argv) {
         // Ensure that ZeroMQ doesn't fail creating the CMDP sink
         try {
             SinkManager::getInstance();
-        } catch(const zmq::error_t& error) {
+        } catch(const NetworkError& error) {
             std::cerr << "Failed to initialize logging: " << error.what() << "\n" << std::flush;
             return 1;
         }
@@ -617,7 +642,7 @@ int main(int argc, char** argv) {
         }
 
         // Set log level
-        const auto default_level = magic_enum::enum_cast<Level>(get_arg(parser, "level"), magic_enum::case_insensitive);
+        const auto default_level = enum_cast<Level>(get_arg(parser, "level"));
         if(!default_level.has_value()) {
             LOG(logger, CRITICAL) << "Log level " << std::quoted(get_arg(parser, "level"))
                                   << " is not valid, possible values are: " << list_enum_names<Level>();
@@ -626,13 +651,19 @@ int main(int argc, char** argv) {
         SinkManager::getInstance().setConsoleLevels(default_level.value());
 
         // Check broadcast and any address
-        asio::ip::address_v4 brd_addr {};
+        std::optional<asio::ip::address_v4> brd_addr {};
         try {
-            brd_addr = asio::ip::make_address_v4(get_arg(parser, "brd"));
+            const auto brd_string = parser.present("brd");
+            if(brd_string.has_value()) {
+                brd_addr = asio::ip::make_address_v4(brd_string.value());
+            }
         } catch(const asio::system_error& error) {
-            LOG(logger, CRITICAL) << "Invalid broadcast address " << std::quoted(get_arg(parser, "brd"));
+            LOG(logger, CRITICAL) << "Invalid broadcast address \"" << get_arg(parser, "brd") << "\"";
             return 1;
+        } catch(const std::exception&) {
+            std::unreachable();
         }
+
         asio::ip::address_v4 any_addr {};
         try {
             any_addr = asio::ip::make_address_v4(get_arg(parser, "any"));

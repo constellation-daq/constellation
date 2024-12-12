@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC-BY-4.0 OR EUPL-1.2
 title: "Keithley"
-subtitle: "Satellite controlling a Keithley power supply"
+description: "Satellite controlling a Keithley power supply"
 ---
 
 ## Description

@@ -4,7 +4,7 @@
  *
  * @copyright Copyright (c) 2024 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
- * SPDX-License-Identifier: EUPL-1.2
+ * SPDX-License-Identifier: EUPL-1.2 OR CC0-1.0
  */
 
 #include <memory>
@@ -13,8 +13,6 @@
 #include "constellation/build.hpp"
 #include "constellation/satellite/Satellite.hpp"
 #include "satellites/@SATELLITE_TYPE@/@SATELLITE_TYPE@Satellite.hpp"
-
-using namespace constellation::satellite;
 
 #ifdef __clang__
 #pragma clang diagnostic push

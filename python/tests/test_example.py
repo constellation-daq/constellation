@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
@@ -9,10 +8,18 @@ import time
 import threading
 from unittest.mock import MagicMock, patch
 
+from constellation.core.configuration import Configuration
 from constellation.core.cscp import CSCPMessageVerb
-from constellation.satellites.Mariner.Mariner import Mariner
+from constellation.satellites.Mariner.Mariner import Mariner as MarinerDef
 
 from conftest import mocket, wait_for_state
+
+
+class Mariner(MarinerDef):
+    def do_initializing(self, config: Configuration) -> str:
+        # Overwrite and check existence of "voltage" before setting default for test
+        config["voltage"]
+        return super().do_initializing(config)
 
 
 @pytest.fixture

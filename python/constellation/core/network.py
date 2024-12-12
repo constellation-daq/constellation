@@ -47,7 +47,7 @@ def decode_ancdata(ancdata: List[Tuple[int, int, bytes]]) -> Tuple[str, int]:
             port = socket.htons(port)
 
             if family != socket.AF_INET:
-                raise TypeError(f"Unsupported socket type '{family}'")
+                continue  # Unknown family, continue
 
             ip = socket.inet_ntop(family, cmsg_data[4:8])
             destination = (ip, port)

@@ -19,10 +19,14 @@
 #include <string_view>
 #include <utility>
 
+#include "constellation/core/chirp/Manager.hpp"
+#include "constellation/core/heartbeat/HeartbeatRecv.hpp"
 #include "constellation/core/log/log.hpp"
+#include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
 #include "constellation/core/protocol/CHP_definitions.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
@@ -35,14 +39,14 @@ using namespace std::chrono_literals;
 HeartbeatManager::HeartbeatManager(std::string sender,
                                    std::function<CSCP::State()> state_callback,
                                    std::function<void(std::string_view)> interrupt_callback)
-    : receiver_([this](auto&& arg) { process_heartbeat(std::forward<decltype(arg)>(arg)); }),
+    : HeartbeatRecv([this](auto&& arg) { process_heartbeat(std::forward<decltype(arg)>(arg)); }),
       sender_(std::move(sender), std::move(state_callback), 5000ms), interrupt_callback_(std::move(interrupt_callback)),
       logger_("CHP"), watchdog_thread_(std::bind_front(&HeartbeatManager::run, this)) {
-    receiver_.startPool();
+    startPool();
 }
 
 HeartbeatManager::~HeartbeatManager() {
-    receiver_.stopPool();
+    stopPool();
 
     watchdog_thread_.request_stop();
     if(watchdog_thread_.joinable()) {
@@ -65,8 +69,25 @@ std::optional<CSCP::State> HeartbeatManager::getRemoteState(std::string_view rem
     return {};
 }
 
+void HeartbeatManager::host_disconnected(const chirp::DiscoveredService& service) {
+    if(!allow_departure_) {
+        return;
+    }
+
+    LOG(logger_, DEBUG) << "Processing orderly departure of remote " << service.to_uri();
+    const std::lock_guard lock {mutex_};
+
+    // Update or add the remote:
+    auto remote_it =
+        std::ranges::find_if(remotes_, [&service](const auto& remote) { return MD5Hash(remote.first) == service.host_id; });
+    if(remote_it != remotes_.end()) {
+        LOG(INFO) << remote_it->first << " departed orderly, removing heartbeat check";
+        remotes_.erase(remote_it);
+    }
+}
+
 void HeartbeatManager::process_heartbeat(const CHP1Message& msg) {
-    LOG(logger_, TRACE) << msg.getSender() << " reports state " << to_string(msg.getState()) << ", next message in "
+    LOG(logger_, TRACE) << msg.getSender() << " reports state " << msg.getState() << ", next message in "
                         << msg.getInterval();
 
     const auto now = std::chrono::system_clock::now();
@@ -86,8 +107,7 @@ void HeartbeatManager::process_heartbeat(const CHP1Message& msg) {
         if(remote_it->second.lives > 0 && (msg.getState() == CSCP::State::ERROR || msg.getState() == CSCP::State::SAFE)) {
             remote_it->second.lives = 0;
             if(interrupt_callback_) {
-                LOG(logger_, DEBUG) << "Detected state " << to_string(msg.getState()) << " at " << remote_it->first
-                                    << ", interrupting";
+                LOG(logger_, DEBUG) << "Detected state " << msg.getState() << " at " << remote_it->first << ", interrupting";
                 interrupt_callback_(remote_it->first + " reports state " + to_string(msg.getState()));
             }
         }
@@ -101,6 +121,7 @@ void HeartbeatManager::process_heartbeat(const CHP1Message& msg) {
             remote_it->second.lives = protocol::CHP::Lives;
         }
     } else {
+        // Add newly discovered remote:
         remotes_.emplace(msg.getSender(), Remote(msg.getInterval(), now, msg.getState(), now));
     }
 }

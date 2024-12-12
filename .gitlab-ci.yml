@@ -138,9 +138,6 @@ variables:
 
 .build-cpp:
   stage: build
-  # Select openstack Kubernetes runner for now since they perform better for C++ compilation
-  tags:
-    - openstack
   cache:
     - *meson-wrap-cache
     - *ccache
@@ -212,11 +209,11 @@ build:fedora-mingw:
     - .fedora-mingw
   variables:
     BUILD_TYPE: "release"
-    # Do not build the Qt UI
     BUILD_OPTIONS: "--cross .cross/mingw-ucrt.ini"
     BUILD_SCRIPTS: "scripts/meson_disable_qt_components.sh"
     NINJA_OPTIONS: "-l4"
-  retry: 2
+  tags:
+    - hi-load
 
 build:ubuntu-22.04:
   extends:
@@ -225,9 +222,10 @@ build:ubuntu-22.04:
   variables:
     BUILD_TYPE: "debugoptimized"
     BUILD_OPTIONS: "-Dqt_version=qt5"
-    NINJA_OPTIONS: "-l4"
     CXXFLAGS: "-Wno-deprecated-enum-enum-conversion"
-  retry: 2
+    NINJA_OPTIONS: "-l4"
+  tags:
+    - hi-load
 
 build:ubuntu-24.04:
   extends:
@@ -430,6 +428,8 @@ lint:clang-tidy:
     - ninja -C build clang-tidy
   rules:
     - if: $CI_PIPELINE_SOURCE != "merge_request_event"
+  tags:
+    - hi-load
 
 lint:clang-tidy-diff:
   extends:
@@ -444,6 +444,8 @@ lint:clang-tidy-diff:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       <<: *cpp-rules-changes
+  tags:
+    - hi-load
 
 lint:clang-scan-build:
   extends:
@@ -456,7 +458,7 @@ lint:clang-scan-build:
     CCC_CC: clang
     CCC_CXX: clang++
   script:
-    - meson setup build -Dcxx_tests=disabled -Dbuildtype=debug
+    - meson setup build -Dcxx_tests=disabled -Dbuildtype=debug $(scripts/meson_enable_all_components.sh)
     - ninja -C build scan-build
     - if [ ! -z "$(ls -A build/meson-logs/scanbuild)" ]; then false; fi
   artifacts:
@@ -479,8 +481,11 @@ lint:coverity-scan:
       --form project=$COVERITY_SCAN_PROJECT_NAME --form token=$COVERITY_SCAN_TOKEN
     - tar -xzf /tmp/cov-analysis-linux64.tgz
     - rm -r /tmp/cov-analysis-linux64.tgz
+    - PATH=$PATH:$(echo cov-analysis-linux64-*/bin)
+    - CC=$(command -v gcc); CXX=$(command -v g++) # Set directly to avoid ccache
+    - cov-configure --comptype gcc --compiler $CXX
     - meson setup build -Dcxx_tests=disabled -Dbuildtype=debug
-    - cov-analysis-linux64-*/bin/cov-build --dir cov-int ninja -C build
+    - cov-build --dir cov-int ninja -C build
     - tar -czf cov-int.tgz cov-int
     - curl -s https://scan.coverity.com/builds?project=$COVERITY_SCAN_PROJECT_NAME
       --form token=$COVERITY_SCAN_TOKEN --form email=$GITLAB_USER_EMAIL
@@ -488,6 +493,8 @@ lint:coverity-scan:
       --form description="$CI_COMMIT_REF_NAME / $CI_COMMIT_SHA / $CI_PIPELINE_ID"
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "schedule"
+  tags:
+    - hi-load
 
 # format stage
 
@@ -502,7 +509,7 @@ format:black:
     - .python-3.11
   script:
     - pip install --no-build-isolation -e .[dev]
-    - black python/
+    - black --check python/
 
 format:flake8:
   extends:

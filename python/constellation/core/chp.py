@@ -48,17 +48,13 @@ class CHPTransmitter:
         stream.write(packer.pack(interval))
         self._socket.send(stream.getbuffer(), flags=flags)
 
-    def recv(
-        self, flags: int = zmq.NOBLOCK
-    ) -> Tuple[str, msgpack.Timestamp, int, int] | Tuple[None, None, None, None]:
+    def recv(self, flags: int = zmq.NOBLOCK) -> Tuple[str, msgpack.Timestamp, int, int] | Tuple[None, None, None, None]:
         """Receive a heartbeat via CHP."""
         try:
             buf = self._socket.recv(flags)
         except zmq.ZMQError as e:
             if "Resource temporarily unavailable" not in e.strerror:
-                raise RuntimeError(
-                    "CommandTransmitter encountered zmq exception"
-                ) from e
+                raise RuntimeError("CommandTransmitter encountered zmq exception") from e
             return None, None, None, None
         return CHPDecodeMessage(buf)
 

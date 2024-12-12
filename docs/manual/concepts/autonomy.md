@@ -1,1 +1,0 @@
-# Autonomous Operation

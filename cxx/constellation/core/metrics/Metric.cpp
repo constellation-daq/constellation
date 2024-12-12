@@ -11,32 +11,33 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
 
-#include <magic_enum.hpp>
 #include <msgpack.hpp>
 
 #include "constellation/core/config/Value.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/casts.hpp"
-#include "constellation/core/utils/std_future.hpp"
+#include "constellation/core/utils/enum.hpp"
+#include "constellation/core/utils/std_future.hpp" // IWYU pragma: keep
 
 using namespace constellation::metrics;
 using namespace constellation::message;
 using namespace constellation::utils;
 
-PayloadBuffer Metric::assemble() const {
+PayloadBuffer MetricValue::assemble() const {
     msgpack::sbuffer sbuf {};
-    msgpack::pack(sbuf, this->value_);
-    msgpack::pack(sbuf, std::to_underlying(this->type()));
-    msgpack::pack(sbuf, this->unit());
+    msgpack::pack(sbuf, value_);
+    msgpack::pack(sbuf, std::to_underlying(metric_->type()));
+    msgpack::pack(sbuf, metric_->unit());
     return {std::move(sbuf)};
 }
 
-Metric Metric::disassemble(const message::PayloadBuffer& message) {
-    // Offset since we decode four separate msgpack objects
+MetricValue MetricValue::disassemble(std::string name, const message::PayloadBuffer& message) {
+    // Offset since we decode separate msgpack objects
     std::size_t offset = 0;
 
     // Unpack value
@@ -45,7 +46,7 @@ Metric Metric::disassemble(const message::PayloadBuffer& message) {
 
     // Unpack type
     const auto msgpack_type = msgpack::unpack(to_char_ptr(message.span().data()), message.span().size(), offset);
-    const auto type = magic_enum::enum_cast<metrics::Type>(msgpack_type->as<std::uint8_t>());
+    const auto type = enum_cast<MetricType>(msgpack_type->as<std::uint8_t>());
 
     // Unpack unit
     const auto msgpack_unit = msgpack::unpack(to_char_ptr(message.span().data()), message.span().size(), offset);
@@ -55,5 +56,5 @@ Metric Metric::disassemble(const message::PayloadBuffer& message) {
         throw std::invalid_argument("Invalid metric type");
     }
 
-    return {unit, type.value(), std::move(value)};
+    return {std::make_shared<Metric>(std::move(name), unit, type.value()), std::move(value)};
 }

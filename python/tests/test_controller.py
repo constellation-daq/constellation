@@ -49,14 +49,8 @@ def test_satellite_init_w_fullcfg(mock_controller, mock_example_satellite, rawco
     while timeout > 0 and len(mock_controller.constellation.satellites) < 1:
         time.sleep(0.05)
         timeout -= 0.05
-    res = mock_controller.constellation.MockExampleSatellite.mock_satellite.initialize(
-        rawconfig
-    )
+    res = mock_controller.constellation.MockExampleSatellite.mock_satellite.initialize(rawconfig)
     assert res.msg == "transitioning"
     time.sleep(0.1)
-    assert satellite.config._config == flatten_config(
-        rawconfig, "MockExampleSatellite", "mock_satellite"
-    )
-    assert (
-        "current_limit" not in satellite.config._config
-    ), "Found unexpected item in Satellite cfg after init"
+    assert satellite.config._config == flatten_config(rawconfig, "MockExampleSatellite", "mock_satellite")
+    assert "current_limit" not in satellite.config._config, "Found unexpected item in Satellite cfg after init"

@@ -52,9 +52,7 @@ class CDTPMessage:
         try:
             self.msgtype = CDTPMessageIdentifier(msgtype)
         except ValueError as exc:
-            raise RuntimeError(
-                f"Received invalid sequence identifier with msg: {msgtype}"
-            ) from exc
+            raise RuntimeError(f"Received invalid sequence identifier with msg: {msgtype}") from exc
         self.sequence_number = seqno
         self.meta = meta
 
@@ -90,9 +88,7 @@ class DataTransmitter:
         self._socket: zmq.Socket | None = socket  # type: ignore[type-arg]
         self.sequence_number: int = 0
 
-    def send_start(
-        self, payload: Any, meta: dict[str, Any] | None = None, flags: int = 0
-    ) -> None:
+    def send_start(self, payload: Any, meta: dict[str, Any] | None = None, flags: int = 0) -> None:
         """
         Send starting message of data run over a ZMQ socket.
 
@@ -112,9 +108,7 @@ class DataTransmitter:
             flags=flags,
         )
 
-    def send_data(
-        self, payload: Any, meta: dict[str, Any] | None = None, flags: int = 0
-    ) -> None:
+    def send_data(self, payload: Any, meta: dict[str, Any] | None = None, flags: int = 0) -> None:
         """
         Send data message of data run over a ZMQ socket.
 
@@ -136,9 +130,7 @@ class DataTransmitter:
             flags=flags,
         )
 
-    def send_end(
-        self, payload: Any, meta: dict[str, Any] | None = None, flags: int = 0
-    ) -> None:
+    def send_end(self, payload: Any, meta: dict[str, Any] | None = None, flags: int = 0) -> None:
         """
         Send ending message of data run over a ZMQ socket.
 

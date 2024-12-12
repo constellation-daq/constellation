@@ -20,12 +20,16 @@
 #include <variant>
 #include <vector>
 
-#include <magic_enum.hpp>
-
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/type.hpp"
 
 namespace constellation::config {
+
+    template <typename T> Value& Value::operator=(const T& value) {
+        *this = Value::set<T>(value);
+        return *this;
+    }
 
     template <typename T> T Value::get() const {
 
@@ -49,7 +53,7 @@ namespace constellation::config {
 
         } else if constexpr(std::is_enum_v<T>) {
             const auto& str = std::get<std::string>(*this);
-            const auto enum_val = magic_enum::enum_cast<T>(str, magic_enum::case_insensitive);
+            const auto enum_val = utils::enum_cast<T>(str);
 
             if(!enum_val.has_value()) {
                 throw std::invalid_argument("possible values are " + utils::list_enum_names<T>());
@@ -75,7 +79,7 @@ namespace constellation::config {
                 result.reserve(vec.size());
 
                 std::for_each(vec.begin(), vec.end(), [&](const auto& str) {
-                    const auto enum_val = magic_enum::enum_cast<T>(str, magic_enum::case_insensitive);
+                    const auto enum_val = utils::enum_cast<T>(str);
                     if(!enum_val.has_value()) {
                         throw std::invalid_argument("possible values are " + utils::list_enum_names<T>());
                     }

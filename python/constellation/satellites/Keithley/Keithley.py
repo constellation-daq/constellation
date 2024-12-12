@@ -2,19 +2,18 @@
 SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 
-This module provides the class for the keithley satellite.
+Provides the class for the Keithley satellite
 """
 
 from typing import Any
 
-from constellation.core.base import setup_cli_logging, EPILOG
 from constellation.core.commandmanager import cscp_requestable
 from constellation.core.configuration import Configuration
 from constellation.core.cmdp import MetricsType
 from constellation.core.cscp import CSCPMessage
 from constellation.core.fsm import SatelliteState
 from constellation.core.monitoring import schedule_metric
-from constellation.core.satellite import Satellite, SatelliteArgumentParser
+from constellation.core.satellite import Satellite
 
 from .KeithleyInterface import KeithleyInterface
 from .Keithley2410 import Keithley2410
@@ -111,7 +110,8 @@ class Keithley(Satellite):
         return f"Keithley at {self.device.get_voltage()}V"
 
     def reentry(self) -> None:
-        self.device.release()
+        if hasattr(self, "device"):
+            self.device.release()
         super().reentry()
 
     def _set_ovp(self):
@@ -174,15 +174,3 @@ class Keithley(Satellite):
         if self.fsm.current_state_value not in [SatelliteState.NEW, SatelliteState.ERROR]:
             return self.device.in_compliance()
         return None
-
-
-def main(args=None):
-    parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
-    args = vars(parser.parse_args(args))
-
-    # set up logging
-    setup_cli_logging(args["name"], args.pop("log_level"))
-
-    # start server with remaining args
-    s = Keithley(**args)
-    s.run_satellite()

@@ -85,6 +85,10 @@ TEST_CASE("Valid TOML file", "[controller]") {
     REQUIRE(d2_config.at("type").get<std::string>() == "Dummy");
     REQUIRE(d2_config.at("string").get<std::string>() == "D2");
     REQUIRE(d2_config.at("satellite").get<bool>() == true);
+
+    // Check if config is available
+    REQUIRE(config.hasSatelliteConfiguration("Dummy.D1"));
+    REQUIRE(config.hasSatelliteConfiguration("duMMy.d1"));
 }
 
 TEST_CASE("No global section", "[controller]") {

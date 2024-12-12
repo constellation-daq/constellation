@@ -29,6 +29,7 @@
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation::config;
@@ -83,8 +84,12 @@ QVariant QController::data(const QModelIndex& index, int role) const {
     }
     case 3: {
         // Connection (URI)
-        const std::string last_endpoint = conn.req.get(zmq::sockopt::last_endpoint);
-        return QString::fromStdString(last_endpoint);
+        try {
+            const std::string last_endpoint = conn.req.get(zmq::sockopt::last_endpoint);
+            return QString::fromStdString(last_endpoint);
+        } catch(const zmq::error_t& e) {
+            return QString::fromStdString(e.what());
+        }
     }
     case 4: {
         // Last command response type
@@ -166,7 +171,7 @@ QString QController::getStyledState(CSCP::State state, bool global) {
 
 QString QController::getStyledResponse(CSCP1Message::Type type) {
 
-    const auto type_string = QString::fromStdString(constellation::utils::to_string(type));
+    const auto type_string = QString::fromStdString(to_string(type));
     switch(type) {
     case CSCP1Message::Type::REQUEST:
     case CSCP1Message::Type::NOTIMPLEMENTED: {
@@ -188,7 +193,7 @@ QString QController::getStyledResponse(CSCP1Message::Type type) {
 }
 
 void QController::reached_state(CSCP::State state, bool global) {
-    LOG(logger_, DEBUG) << "Reached new " << (global ? "global" : "lowest") << " state " << to_string(state);
+    LOG(logger_, DEBUG) << "Reached new " << (global ? "global" : "lowest") << " state " << state;
     emit reachedState(state, global);
 }
 

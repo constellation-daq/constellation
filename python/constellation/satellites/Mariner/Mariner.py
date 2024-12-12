@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
@@ -6,21 +5,17 @@ SPDX-License-Identifier: CC-BY-4.0
 Provides the class for the Mariner example satellite
 """
 
-import time
 import random
+import time
 from typing import Any
 
-from constellation.core.satellite import Satellite, SatelliteArgumentParser
-from constellation.core.configuration import Configuration
-from constellation.core.fsm import SatelliteState
-
-from constellation.core.base import setup_cli_logging
-from constellation.core.base import EPILOG
-
 from constellation.core.cmdp import MetricsType
-from constellation.core.cscp import CSCPMessage
 from constellation.core.commandmanager import cscp_requestable
+from constellation.core.configuration import Configuration
+from constellation.core.cscp import CSCPMessage
+from constellation.core.fsm import SatelliteState
 from constellation.core.monitoring import schedule_metric
+from constellation.core.satellite import Satellite
 
 
 class CanopusStarTracker:
@@ -31,7 +26,7 @@ class CanopusStarTracker:
 
     """
 
-    def __init__(self, voltage, ampere, sample_period=0.1):
+    def __init__(self, voltage, ampere, sample_period):
         self.voltage = voltage
         self.ampere = ampere
         self.sample_period = sample_period
@@ -72,7 +67,10 @@ class Mariner(Satellite):
         automatically return an error or warning, respectively.
 
         """
-        self.device = CanopusStarTracker(config["voltage"], config["current"], config["sample_period"])
+        voltage = config.setdefault("voltage", 5.0)
+        current = config.setdefault("current", 0.1)
+        sample_period = config.setdefault("sample_period", 0.5)
+        self.device = CanopusStarTracker(voltage, current, sample_period)
         return "Initialized"
 
     def do_run(self, payload: Any) -> str:
@@ -119,26 +117,3 @@ class Mariner(Satellite):
         ]:
             return None
         return self.device.get_current_brightness()
-
-
-# -------------------------------------------------------------------------
-
-
-def main(args=None):
-    """Start an example satellite.
-
-    Provides a basic example satellite that can be controlled, and used as a
-    basis for custom implementations.
-
-    """
-    parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
-
-    # get a dict of the parsed arguments
-    args = vars(parser.parse_args(args))
-
-    # set up logging
-    setup_cli_logging(args["name"], args.pop("log_level"))
-
-    # start server with remaining args
-    s = Mariner(**args)
-    s.run_satellite()

@@ -31,6 +31,7 @@
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
 #include "constellation/satellite/exceptions.hpp"
@@ -70,7 +71,7 @@ FSM::TransitionFunction FSM::find_transition_function(Transition transition) con
 void FSM::set_state(FSM::State new_state) {
     state_.store(new_state);
     last_changed_.store(std::chrono::system_clock::now());
-    LOG(logger_, STATUS) << "New state: " << to_string(new_state);
+    LOG(logger_, STATUS) << "New state: " << new_state;
 }
 
 bool FSM::isAllowed(Transition transition) const {
@@ -88,7 +89,7 @@ void FSM::react(Transition transition, TransitionPayload payload) {
     // Find transition
     auto transition_function = find_transition_function(transition);
 
-    LOG(logger_, INFO) << "Reacting to transition " << to_string(transition);
+    LOG(logger_, INFO) << "Reacting to transition " << transition;
     // Execute transition function
     const auto new_state = (this->*transition_function)(std::move(payload));
     set_state(new_state);
@@ -101,7 +102,7 @@ bool FSM::reactIfAllowed(Transition transition, TransitionPayload payload) {
     try {
         react(transition, std::move(payload));
     } catch(const FSMError&) {
-        LOG(logger_, DEBUG) << "Skipping transition " << to_string(transition);
+        LOG(logger_, DEBUG) << "Skipping transition " << transition;
         return false;
     }
     return true;
@@ -111,7 +112,7 @@ std::pair<CSCP1Message::Type, std::string> FSM::reactCommand(TransitionCommand t
                                                              const PayloadBuffer& payload) {
     // Cast to normal transition, underlying values are identical
     auto transition = static_cast<Transition>(transition_command);
-    LOG(logger_, INFO) << "Reacting to transition " << to_string(transition);
+    LOG(logger_, INFO) << "Reacting to transition " << transition;
     // Acquire lock to prevent other threads from setting state
     const std::lock_guard transition_lock {transition_mutex_};
     // Check if command is a valid transition for the current state

@@ -20,6 +20,10 @@ clean:
 doxygen:
 	doxygen
 
+.PHONY: livethml
+livehtml:
+	@$(PYTHON) -m sphinx_autobuild --ignore $(SOURCEDIR)/satellites $(SOURCEDIR) $(BUILDDIR) $(SPHINXOPTS) $(O)
+
 .PHONY: Makefile
 %: Makefile
 	@$(PYTHON) -m sphinx -M $@ $(SOURCEDIR) $(BUILDDIR) $(SPHINXOPTS) $(O)

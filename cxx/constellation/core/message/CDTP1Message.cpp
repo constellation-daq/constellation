@@ -28,6 +28,7 @@
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/protocol/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
@@ -107,8 +108,8 @@ void CDTP1Message::Header::msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpa
 std::string CDTP1Message::Header::to_string() const {
     // Insert type and sequence number into string from base class function
     std::ostringstream insert {};
-    insert << "\nType:   " << utils::to_string(type_) //
-           << "\nSeq No: " << seq_;                   //
+    insert << "\nType:   " << type_ //
+           << "\nSeq No: " << seq_; //
 
     // Insert before tags (at least 59 chars after string begin)
     auto out = BaseHeader::to_string();

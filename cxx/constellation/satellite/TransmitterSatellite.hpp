@@ -21,11 +21,11 @@
 #include "constellation/build.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
-#include "constellation/core/config/Value.hpp"
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/networking/Port.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"
 #include "constellation/satellite/Satellite.hpp"
@@ -54,9 +54,7 @@ namespace constellation::satellite {
              * @param key Key of the tag
              * @param value Value of the tag
              */
-            template <typename T> void addTag(const std::string& key, const T& value) {
-                getHeader().setTag(key, config::Value::set(value));
-            }
+            template <typename T> void addTag(const std::string& key, const T& value) { getHeader().setTag(key, value); }
 
             /**
              * @brief Obtain current number of frames in this message
@@ -96,7 +94,7 @@ namespace constellation::satellite {
         [[nodiscard]] bool trySendDataMessage(DataMessage& message);
 
         /**
-         * @brief Send data message created with `newDataMessage()
+         * @brief Send data message created with `newDataMessage()`
          *
          * @note This method will block until the message has been sent *or* the timeout for sending data messages has been
          *       reached. In the latter case, a SendTimeoutError exception is thrown.
@@ -107,23 +105,30 @@ namespace constellation::satellite {
         void sendDataMessage(DataMessage& message);
 
         /**
+         * @brief Mark this run data as tainted
+         * @details This will set the condition tag in the run metadata to `TAINTED` instead of `GOOD` to mark that there
+         *          might be an issue with the data recorded during this run.
+         */
+        void markRunTainted() { mark_run_tainted_ = true; };
+
+        /**
          * @brief Set tag for the BOR message metadata send at the begin of the run
          */
         template <typename T> void setBORTag(std::string_view key, const T& value) {
-            bor_tags_[utils::transform(key, ::tolower)] = config::Value::set(value);
+            bor_tags_[utils::transform(key, ::tolower)] = value;
         }
 
         /**
          * @brief Set tag for the EOR message metadata send at the end of the run
          */
         template <typename T> void setEORTag(std::string_view key, const T& value) {
-            eor_tags_[utils::transform(key, ::tolower)] = config::Value::set(value);
+            eor_tags_[utils::transform(key, ::tolower)] = value;
         }
 
         /**
          * @brief Return the ephemeral port number to which the CDTP socket is bound to
          */
-        constexpr utils::Port getDataPort() const { return cdtp_port_; }
+        constexpr networking::Port getDataPort() const { return cdtp_port_; }
 
     protected:
         /**
@@ -174,13 +179,22 @@ namespace constellation::satellite {
         void starting_transmitter(std::string_view run_identifier, const config::Configuration& config);
 
         /**
-         * @brief Stop transmitter components of satellite
-         *
-         * This function sends the EOR message.
+         * @brief Stop transmitter components of satellite and send the EOR
          *
          * @throw SendTimeoutError If EOR send timeout is reached
          */
         void stopping_transmitter();
+
+        /**
+         * @brief Interrupt function of transmitter
+         *
+         * If the previous state is RUN, this sends an EOR message marking the end of the run indicating an interruption.
+         *
+         * @throw SendTimeoutError If EOR send timeout is reached
+         *
+         * @param previous_state State in which the satellite was being interrupted
+         */
+        void interrupting_transmitter(protocol::CSCP::State previous_state);
 
         /**
          * @brief Set send timeout
@@ -190,15 +204,22 @@ namespace constellation::satellite {
         void set_send_timeout(std::chrono::milliseconds timeout = std::chrono::milliseconds(-1));
 
         /**
+         * @brief Send the EOR message
+         *
+         * @throw SendTimeoutError If EOR send timeout is reached
+         */
+        void send_eor();
+
+        /**
          * @brief Set tag for the run metadata send as payload of the EOR message
          */
         template <typename T> void set_run_metadata_tag(std::string_view key, const T& value) {
-            run_metadata_[utils::transform(key, ::tolower)] = config::Value::set(value);
+            run_metadata_[utils::transform(key, ::tolower)] = value;
         }
 
     private:
         zmq::socket_t cdtp_push_socket_;
-        utils::Port cdtp_port_;
+        networking::Port cdtp_port_;
         log::Logger cdtp_logger_;
         std::chrono::seconds data_bor_timeout_ {};
         std::chrono::seconds data_eor_timeout_ {};
@@ -207,6 +228,7 @@ namespace constellation::satellite {
         config::Dictionary bor_tags_;
         config::Dictionary eor_tags_;
         config::Dictionary run_metadata_;
+        bool mark_run_tainted_ {false};
     };
 
 } // namespace constellation::satellite

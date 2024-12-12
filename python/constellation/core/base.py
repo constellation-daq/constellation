@@ -45,7 +45,7 @@ class ConstellationArgumentParser(ArgumentParser):
         self.constellation.add_argument(
             "--name",
             "-n",
-            default=socket.gethostname().replace("-", "_"),
+            default=socket.gethostname().replace("-", "_").replace(".", "_"),
             type=str,
             help="The name of the Satellite. This has to be unique within "
             "the Constellation group. Together with the Satellite class, "

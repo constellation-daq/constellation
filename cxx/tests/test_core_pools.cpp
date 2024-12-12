@@ -22,15 +22,18 @@
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/log/Level.hpp"
+#include "constellation/core/message/CHIRPMessage.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
+#include "constellation/core/networking/Port.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/pools/SubscriberPool.hpp"
-#include "constellation/core/utils/networking.hpp"
 
 #include "chirp_mock.hpp"
 
 using namespace constellation;
 using namespace constellation::log;
 using namespace constellation::message;
+using namespace constellation::networking;
 using namespace constellation::pools;
 using namespace constellation::utils;
 
@@ -95,6 +98,11 @@ protected:
     }
 
     void host_disconnected(const chirp::DiscoveredService& /*service*/) final {
+        const std::lock_guard pseudo_lock {pesudo_mutex_};
+        cv_.notify_one();
+    }
+
+    void host_disposed(const chirp::DiscoveredService& /*service*/) final {
         const std::lock_guard pseudo_lock {pesudo_mutex_};
         cv_.notify_one();
     }
@@ -191,6 +199,42 @@ TEST_CASE("Disconnect", "[core][core::pools]") {
     chirp_mock_service(sender.getName(), chirp::MONITORING, sender.getPort(), false);
 
     // Wait until socket is disconnected
+    REQUIRE(disconnected_fut.get() == std::cv_status::no_timeout);
+
+    // Subscribe to new topic
+    pool.subscribe("LOG");
+
+    // Check that we did not subscription message since disconnected
+    REQUIRE_FALSE(sender.canRecv());
+
+    pool.stopPool();
+}
+
+TEST_CASE("Dispose", "[core][core::pools]") {
+    // Create CHIRP manager for monitoring service discovery
+    auto chirp_manager = create_chirp_manager();
+
+    // Start pool
+    auto pool = TestPool();
+    pool.startPool();
+
+    // Get future for socket_connected callback
+    auto connected_fut = pool.waitCallback();
+
+    // Start the sender and mock via chirp
+    auto sender = CMDPSender("CMDPSender.s1");
+    chirp_mock_service(sender.getName(), chirp::MONITORING, sender.getPort());
+
+    // Wait until socket is connected
+    REQUIRE(connected_fut.get() == std::cv_status::no_timeout);
+
+    // Get future for socket_disposed callback
+    auto disconnected_fut = pool.waitCallback();
+
+    // Dispose of the socket:
+    chirp_manager->forgetDiscoveredServices(MD5Hash("CMDPSender.s1"));
+
+    // Wait until socket is disposed
     REQUIRE(disconnected_fut.get() == std::cv_status::no_timeout);
 
     // Subscribe to new topic

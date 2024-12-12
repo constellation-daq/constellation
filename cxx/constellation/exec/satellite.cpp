@@ -24,7 +24,6 @@
 
 #include <argparse/argparse.hpp>
 #include <asio.hpp>
-#include <magic_enum.hpp>
 
 #include "constellation/build.hpp"
 #include "constellation/core/chirp/Manager.hpp"
@@ -32,17 +31,18 @@
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/log/SinkManager.hpp"
+#include "constellation/core/networking/exceptions.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/exec/DSOLoader.hpp"
 #include "constellation/exec/exceptions.hpp"
 #include "constellation/satellite/Satellite.hpp"
 
-#include "zmq.hpp"
-
 using namespace constellation;
 using namespace constellation::exec;
 using namespace constellation::log;
+using namespace constellation::networking;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 
@@ -83,13 +83,7 @@ namespace {
         // TODO(stephan.lachnit): module specific console log level
 
         // Broadcast address (--brd)
-        std::string default_brd_addr {};
-        try {
-            default_brd_addr = asio::ip::address_v4::broadcast().to_string();
-        } catch(const asio::system_error& error) {
-            default_brd_addr = "255.255.255.255";
-        }
-        parser.add_argument("--brd").help("broadcast address").default_value(default_brd_addr);
+        parser.add_argument("--brd").help("broadcast address");
 
         // Any address (--any)
         std::string default_any_addr {};
@@ -121,7 +115,7 @@ int constellation::exec::satellite_main(int argc,
     // Ensure that ZeroMQ doesn't fail creating the CMDP sink
     try {
         SinkManager::getInstance();
-    } catch(const zmq::error_t& error) {
+    } catch(const NetworkError& error) {
         std::cerr << "Failed to initialize logging: " << error.what() << "\n" << std::flush;
         return 1;
     }
@@ -143,7 +137,7 @@ int constellation::exec::satellite_main(int argc,
     }
 
     // Set log level
-    const auto default_level = magic_enum::enum_cast<Level>(get_arg(parser, "level"), magic_enum::case_insensitive);
+    const auto default_level = enum_cast<Level>(get_arg(parser, "level"));
     if(!default_level.has_value()) {
         LOG(logger, CRITICAL) << "Log level \"" << get_arg(parser, "level") << "\" is not valid"
                               << ", possible values are: " << utils::list_enum_names<Level>();
@@ -152,13 +146,19 @@ int constellation::exec::satellite_main(int argc,
     SinkManager::getInstance().setConsoleLevels(default_level.value());
 
     // Check broadcast and any address
-    asio::ip::address_v4 brd_addr {};
+    std::optional<asio::ip::address_v4> brd_addr {};
     try {
-        brd_addr = asio::ip::make_address_v4(get_arg(parser, "brd"));
+        const auto brd_string = parser.present("brd");
+        if(brd_string.has_value()) {
+            brd_addr = asio::ip::make_address_v4(brd_string.value());
+        }
     } catch(const asio::system_error& error) {
         LOG(logger, CRITICAL) << "Invalid broadcast address \"" << get_arg(parser, "brd") << "\"";
         return 1;
+    } catch(const std::exception&) {
+        std::unreachable();
     }
+
     asio::ip::address_v4 any_addr {};
     try {
         any_addr = asio::ip::make_address_v4(get_arg(parser, "any"));
@@ -229,6 +229,9 @@ int constellation::exec::satellite_main(int argc,
 
     // Wait for signal to join
     satellite->join();
+
+    // Unregister callbacks
+    chirp_manager->unregisterDiscoverCallbacks();
 
     return 0;
 }

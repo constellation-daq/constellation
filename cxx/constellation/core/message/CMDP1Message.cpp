@@ -9,13 +9,11 @@
 
 #include "CMDP1Message.hpp"
 
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 
-#include <magic_enum.hpp>
 #include <msgpack.hpp>
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
@@ -25,6 +23,7 @@
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/metrics/Metric.hpp"
 #include "constellation/core/utils/casts.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 
@@ -71,7 +70,7 @@ CMDP1Message CMDP1Message::disassemble(zmq::multipart_t& frames) {
     // Decode topic
     const auto topic = frames.pop().to_string();
     if(!(topic.starts_with("LOG/") || topic.starts_with("STAT/"))) {
-        throw MessageDecodingError("Invalid message topic, neither log or statistics message");
+        throw MessageDecodingError("Invalid message topic, neither log nor telemetry message");
     }
 
     // Check if valid log level by trying to decode it
@@ -98,7 +97,7 @@ Level CMDP1Message::get_log_level_from_topic(std::string_view topic) {
     // Search for second slash after "LOG/" to get substring with log level
     const auto level_endpos = topic.find_first_of('/', 4);
     const auto level_str = topic.substr(4, level_endpos - 4);
-    const auto level_opt = magic_enum::enum_cast<Level>(level_str, magic_enum::case_insensitive);
+    const auto level_opt = enum_cast<Level>(level_str);
     if(!level_opt.has_value()) {
         throw MessageDecodingError("\"" + to_string(level_str) + "\" is not a valid log level");
     }
@@ -137,20 +136,21 @@ CMDP1LogMessage CMDP1LogMessage::disassemble(zmq::multipart_t& frames) {
     return {CMDP1Message::disassemble(frames)};
 }
 
-CMDP1StatMessage::CMDP1StatMessage(std::string topic, CMDP1Message::Header header, std::shared_ptr<metrics::Metric> metric)
-    : CMDP1Message("STAT/" + transform(topic, ::toupper), std::move(header), metric->assemble()),
-      stat_topic_(std::move(topic)), metric_(std::move(metric)) {}
+CMDP1StatMessage::CMDP1StatMessage(Header header, metrics::MetricValue metric_value)
+    : CMDP1Message(
+          "STAT/" + transform(metric_value.getMetric()->name(), ::toupper), std::move(header), metric_value.assemble()),
+      metric_value_(std::move(metric_value)) {}
 
 CMDP1StatMessage::CMDP1StatMessage(CMDP1Message&& message) : CMDP1Message(std::move(message)) {
     if(!isStatMessage()) {
-        throw MessageDecodingError("Not a statistics message");
+        throw MessageDecodingError("Not a telemetry message");
     }
 
     // Assign topic after prefix "STAT/"
-    stat_topic_ = getTopic().substr(5);
+    const auto topic = std::string(getTopic().substr(5));
 
     try {
-        metric_ = std::make_shared<Metric>(Metric::disassemble(get_payload()));
+        metric_value_ = MetricValue::disassemble(topic, get_payload());
     } catch(const std::invalid_argument& e) {
         throw MessageDecodingError(e.what());
     }

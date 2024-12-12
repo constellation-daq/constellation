@@ -23,10 +23,14 @@
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
+#include "constellation/core/config/Value.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
 #include "constellation/core/message/CHIRPMessage.hpp"
+#include "constellation/core/networking/exceptions.hpp"
 #include "constellation/core/pools/BasePool.hpp"
+#include "constellation/core/protocol/CDTP_definitions.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/core/utils/timers.hpp"
@@ -35,7 +39,9 @@
 using namespace constellation;
 using namespace constellation::config;
 using namespace constellation::message;
+using namespace constellation::networking;
 using namespace constellation::pools;
+using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
 using namespace std::chrono_literals;
@@ -101,7 +107,8 @@ void ReceiverSatellite::stopping_receiver() {
     }
     // Now start EOR timer
     LOG(cdtp_logger_, DEBUG) << "Starting timeout for EOR arrivals (" << data_eor_timeout_ << ")";
-    const TimeoutTimer timer {data_eor_timeout_};
+    TimeoutTimer timer {data_eor_timeout_};
+    timer.reset();
 
     // Warn about transmitters that never sent a BOR message
     if(cdtp_logger_.shouldLog(WARNING)) {
@@ -116,8 +123,12 @@ void ReceiverSatellite::stopping_receiver() {
             << range_to_string(std::ranges::to<std::vector>(std::views::keys(data_transmitters_not_connected)));
 
         // Warn about missed messages (so far)
-        LOG_IF(cdtp_logger_, WARNING, seqs_missed_ > 0)
-            << "Missed " << seqs_missed_ << " messages, data might be incomplete";
+        auto data_transmitters_missed_msg = std::ranges::views::filter(
+            data_transmitter_states_, [](const auto& data_transmitter_p) { return data_transmitter_p.second.missed > 0; });
+        LOG_IF(cdtp_logger_, WARNING, !data_transmitters_missed_msg.empty())
+            << "Missed messages from "
+            << range_to_string(std::ranges::to<std::vector>(std::views::keys(data_transmitters_missed_msg)))
+            << ", data might be incomplete";
     }
 
     // Loop until all data transmitters that sent a BOR also sent an EOR
@@ -139,13 +150,31 @@ void ReceiverSatellite::stopping_receiver() {
             stopPool();
 
             // Filter for data transmitters that did not send an EOR
-            // Note: we do not have a biderectional range so the content needs to be copied to a vector
-            const auto data_transmitter_no_eor = std::ranges::to<std::vector>(std::ranges::views::keys(
+            auto data_transmitter_no_eor =
                 std::ranges::views::filter(data_transmitter_states_, [](const auto& data_transmitter_p) {
                     return data_transmitter_p.second.state == TransmitterState::BOR_RECEIVED;
-                })));
-            throw RecvTimeoutError("EOR messages missing from " + range_to_string(data_transmitter_no_eor),
-                                   data_eor_timeout_);
+                });
+
+            // Note: we do not have a bidirectional range so the content needs to be copied to a vector
+            const auto data_transmitter_no_eor_str =
+                range_to_string(std::ranges::to<std::vector>(std::ranges::views::keys(data_transmitter_no_eor)));
+            LOG(cdtp_logger_, WARNING) << "Not all EOR messages received, emitting substitute EOR messages for "
+                                       << data_transmitter_no_eor_str;
+
+            for(const auto& data_transmitter : data_transmitter_no_eor) {
+                LOG(cdtp_logger_, DEBUG) << "Creating substitute EOR for " << data_transmitter.first;
+                auto run_metadata = Dictionary();
+                run_metadata["run_id"] = getRunIdentifier();
+                auto condition_code = CDTP::RunCondition::ABORTED;
+                if(data_transmitter.second.missed > 0) {
+                    condition_code |= CDTP::RunCondition::INCOMPLETE;
+                }
+                run_metadata["condition_code"] = condition_code;
+                run_metadata["condition"] = enum_name(condition_code);
+                receive_eor({data_transmitter.first, 0, CDTP1Message::Type::EOR}, std::move(run_metadata));
+            }
+
+            throw RecvTimeoutError("EOR messages missing from " + data_transmitter_no_eor_str, data_eor_timeout_);
         }
 
         // Wait a bit before re-locking
@@ -162,26 +191,8 @@ void ReceiverSatellite::interrupting_receiver() {
     // Stop as usual but do not throw if not all EOR messages received
     try {
         stopping_receiver();
-    } catch(const RecvTimeoutError&) {
-        // Stop BasePool thread and disconnect all connected sockets
-        stopPool();
-
-        // Filter for data transmitters that did not send an EOR
-        auto data_transmitter_no_eor = std::ranges::views::keys(
-            std::ranges::views::filter(data_transmitter_states_, [](const auto& data_transmitter_p) {
-                return data_transmitter_p.second.state == TransmitterState::BOR_RECEIVED;
-            }));
-
-        // Note: we do not have a biderectional range so the content needs to be copied to a vector
-        LOG(cdtp_logger_, WARNING) << "Not all EOR messages received, emitting substitute EOR messages for "
-                                   << range_to_string(std::ranges::to<std::vector>(data_transmitter_no_eor));
-
-        for(const auto& data_transmitter : data_transmitter_no_eor) {
-            LOG(cdtp_logger_, DEBUG) << "Creating substitute EOR for " << data_transmitter;
-            auto run_metadata = Dictionary();
-            run_metadata["substitute_eor"] = true;
-            receive_eor({data_transmitter, 0, CDTP1Message::Type::EOR}, std::move(run_metadata));
-        }
+    } catch(const RecvTimeoutError& e) {
+        LOG(cdtp_logger_, WARNING) << e.what();
     }
 }
 
@@ -194,9 +205,8 @@ void ReceiverSatellite::reset_data_transmitter_states() {
     const std::lock_guard data_transmitter_states_lock {data_transmitter_states_mutex_};
     data_transmitter_states_.clear();
     for(const auto& data_transmitter : data_transmitters_) {
-        data_transmitter_states_.emplace(data_transmitter, TransmitterStateSeq(TransmitterState::NOT_CONNECTED, 0));
+        data_transmitter_states_.emplace(data_transmitter, TransmitterStateSeq(TransmitterState::NOT_CONNECTED, 0, 0));
     }
-    seqs_missed_ = 0;
 }
 
 void ReceiverSatellite::handle_cdtp_message(CDTP1Message&& message) {
@@ -243,7 +253,7 @@ void ReceiverSatellite::handle_data_message(CDTP1Message data_message) {
         throw InvalidCDTPMessageType(CDTP1Message::Type::DATA, "did not receive BOR");
     }
     // Store sequence number and missed messages
-    seqs_missed_ += data_message.getHeader().getSequenceNumber() - 1 - data_transmitter_it->second.seq;
+    data_transmitter_it->second.missed += data_message.getHeader().getSequenceNumber() - 1 - data_transmitter_it->second.seq;
     data_transmitter_it->second.seq = data_message.getHeader().getSequenceNumber();
     data_transmitter_states_lock.unlock();
 
@@ -257,8 +267,25 @@ void ReceiverSatellite::handle_eor_message(CDTP1Message eor_message) {
     if(data_transmitter_it->second.state != TransmitterState::BOR_RECEIVED) [[unlikely]] {
         throw InvalidCDTPMessageType(CDTP1Message::Type::EOR, "did not receive BOR");
     }
+    auto metadata = Dictionary::disassemble(eor_message.getPayload().at(0));
+
+    // Mark run as incomplete if there are missed messages:
+    if(data_transmitter_it->second.missed > 0) {
+        auto condition_code = CDTP::RunCondition::INCOMPLETE;
+        auto condition_code_it = metadata.find("condition_code");
+        if(condition_code_it != metadata.end()) {
+            // Add INCOMPLETE flag to existing condition
+            condition_code |= condition_code_it->second.get<CDTP::RunCondition>();
+            condition_code_it->second = condition_code;
+        } else {
+            metadata.emplace("condition_code", condition_code);
+        }
+        // Overwrite existing human-readable run condition
+        metadata.insert_or_assign("condition", enum_name(condition_code));
+    }
+
     data_transmitter_it->second.state = TransmitterState::EOR_RECEIVED;
     data_transmitter_states_lock.unlock();
 
-    receive_eor(eor_message.getHeader(), Dictionary::disassemble(eor_message.getPayload().at(0)));
+    receive_eor(eor_message.getHeader(), std::move(metadata));
 }

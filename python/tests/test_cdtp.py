@@ -236,7 +236,7 @@ def test_receive_writing_package(
     receiver = receiver_satellite
     tx = data_transmitter
     with TemporaryDirectory() as tmpdir:
-        commander.request_get_response("initialize", {"file_name_pattern": FILE_NAME, "output_path": tmpdir})
+        commander.request_get_response("initialize", {"_file_name_pattern": FILE_NAME, "_output_path": tmpdir})
         wait_for_state(receiver.fsm, "INIT", 1)
         receiver._add_sender(service)
         commander.request_get_response("launch")
@@ -314,7 +314,7 @@ def test_receiver_stats(
 
     receiver = receiver_satellite
     ml, tmpdir = monitoringlistener
-    commander.request_get_response("initialize", {"file_name_pattern": FILE_NAME, "output_path": tmpdir})
+    commander.request_get_response("initialize", {"_file_name_pattern": FILE_NAME, "_output_path": tmpdir})
     wait_for_state(receiver.fsm, "INIT", 1)
     receiver._add_sender(service)
     commander.request_get_response("launch")

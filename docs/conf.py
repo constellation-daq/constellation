@@ -1,10 +1,15 @@
 # SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
-import sphinx
 import pathlib
 
+import sphinx
+import sphinx.util.logging
+
 import copy_satellite_docs
+
+from constellation.core import __version__
+from constellation.core import __version_code_name__
 
 logger = sphinx.util.logging.getLogger(__name__)
 
@@ -16,8 +21,8 @@ repodir = docsdir.parent
 project = "Constellation"
 project_copyright = "2024 DESY and the Constellation authors, CC-BY-4.0"
 author = "DESY and the Constellation authors"
-version = "0"
-release = "v" + version
+version = __version__
+release = "v" + version + " " + __version_code_name__
 
 # extensions
 extensions = [
@@ -71,8 +76,9 @@ html_theme_options = {
     ],
     "use_edit_page_button": True,
     "secondary_sidebar_items": {
-        "manual/**": ["page-toc", "edit-this-page"],
-        "reference/**": ["page-toc", "edit-this-page"],
+        "operator_guide/**": ["page-toc", "edit-this-page"],
+        "application_development/**": ["page-toc", "edit-this-page"],
+        "framework_reference/**": ["page-toc", "edit-this-page"],
         "protocols/**": ["page-toc", "edit-this-page"],
         "news/**": ["page-toc"],
         "satellites/**": ["page-toc"],
@@ -108,6 +114,9 @@ myst_fence_as_directive = ["plantuml"]
 myst_enable_extensions = ["colon_fence"]
 myst_update_mathjax = False
 
+# Suppress header warnings from MyST - we check them with markdownlint but cannot disable them in MyST on a per-file level
+suppress_warnings = ["myst.header"]
+
 # breathe settings
 breathe_projects = {
     "Constellation": docsdir.joinpath("doxygen").joinpath("xml"),
@@ -121,46 +130,38 @@ plantuml_output_format = "svg_img"
 without_news = not docsdir.joinpath("news").exists()
 if without_news:
     logger.info("Building documentation without news section", color="yellow")
-with open("index.md.in", "rt") as index_in, open("index.md", "wt") as index_out:
-    for line in index_in:
-        if without_news and "news/index" in line:
-            continue
-        index_out.write(line)
 
 # Remove existing satellite READMEs
 for path in (docsdir / "satellites").glob("*.md"):
-    path.unlink()
+    if not path.name.startswith("_"):
+        path.unlink()
 
 # Add satellite READMEs to documentation
-satellite_files_cxx = sorted(
-    list((repodir / "cxx" / "satellites").glob("**/README.md"))
-)
-satellite_files_py = sorted(
-    list((repodir / "python" / "constellation" / "satellites").glob("**/README.md"))
-)
+satellite_files = []
+satellite_files.extend(list((repodir / "cxx" / "satellites").glob("**/README.md")))
+satellite_files.extend(list((repodir / "python" / "constellation" / "satellites").glob("**/README.md")))
 
-satellites_types_cxx = []
-satellites_types_py = []
+# Retrieve satellite type and category
+satellites = {}
+for path in satellite_files:
+    satellite_type, satellite_category = copy_satellite_docs.convert_satellite_readme(path, docsdir / "satellites")
+    satellites.setdefault(satellite_category, []).append(f"{satellite_type} <{satellite_type}>")
 
-for path in satellite_files_cxx:
-    satellite_type = copy_satellite_docs.convert_satellite_readme(
-        path, docsdir / "satellites"
-    )
-    satellites_types_cxx.append(f"{satellite_type} <{satellite_type}>")
+# Create tocs for categories
+satellite_tocs = ""
+for category, satellites_list in sorted(satellites.items()):
+    satellite_tocs += f"\n```{{toctree}}\n:caption: {category}\n:maxdepth: 1\n\n"
+    for satellite in satellites_list:
+        satellite_tocs += satellite + "\n"
+    satellite_tocs += "```\n"
 
-for path in satellite_files_py:
-    satellite_type = copy_satellite_docs.convert_satellite_readme(
-        path, docsdir / "satellites"
-    )
-    satellites_types_py.append(f"{satellite_type} <{satellite_type}>")
-
+# Add tocs to satellites index.md.in
 with (
     open("satellites/index.md.in", "rt") as index_in,
     open("satellites/index.md", "wt") as index_out,
 ):
     for line in index_in:
-        line = line.replace("SATELLITES_CXX", "\n".join(satellites_types_cxx))
-        line = line.replace("SATELLITES_PYTHON", "\n".join(satellites_types_py))
+        line = line.replace("SATELLITES", satellite_tocs)
         index_out.write(line)
 
 # ablog settings

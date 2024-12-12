@@ -14,7 +14,7 @@ satellite_lib = library(
   'ConstellationSatellite',
   sources: satellite_src,
   include_directories: constellation_inc,
-  dependencies: [core_dep, cppzmq_dep, magic_enum_dep, msgpack_cxx_dep],
+  dependencies: [core_dep, cppzmq_dep, msgpack_cxx_dep],
   gnu_symbol_visibility: 'hidden',
   cpp_args: constellation_args + ['-DCNSTLN_BUILDLIB=1'],
   install: true,
@@ -25,13 +25,13 @@ satellite_dep = declare_dependency(
   link_with: satellite_lib,
   compile_args: constellation_args,
   include_directories: constellation_inc,
-  dependencies: [core_dep, cppzmq_dep, magic_enum_dep],
+  dependencies: [core_dep, cppzmq_dep],
 )
 
 pkg.generate(satellite_lib,
   description: 'Constellation satellite library',
   extra_cflags: constellation_args,
-  libraries: [core_dep, cppzmq_dep, magic_enum_dep],
+  libraries: [core_dep, cppzmq_dep],
 )
 
 install_headers(
@@ -42,6 +42,7 @@ install_headers(
   'FSM.hpp',
   'ReceiverSatellite.hpp',
   'Satellite.hpp',
+  'Satellite.ipp',
   'TransmitterSatellite.hpp',
   subdir: 'constellation/satellite',
 )

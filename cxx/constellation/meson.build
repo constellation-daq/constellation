@@ -1,14 +1,13 @@
 # SPDX-FileCopyrightText: 2023 DESY and the Constellation authors
 # SPDX-License-Identifier: CC0-1.0
 
-# Shared library prefix: UNIX: "lib", Windows: ""
+# Shared library prefix: UNIX: "lib", Windows: "lib"
 # Shared library suffixes: POSIX: ".so", MacOS: ".dylib", Windows: ".dll"
 dso_prefix = 'lib'
 dso_suffix = '.so'
 if host_machine.system() == 'darwin'
   dso_suffix = '.dylib'
 elif host_machine.system() == 'windows'
-  dso_prefix = ''
   dso_suffix = '.dll'
 endif
 

@@ -289,16 +289,6 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="2" colspan="2">
-           <widget class="QLineEdit" name="txtConfigFileName">
-            <property name="whatsThis">
-             <string extracomment="Configuration file - directly editable or through file dialog."/>
-            </property>
-            <property name="text">
-             <string>Configuration file not set</string>
-            </property>
-           </widget>
-          </item>
           <item row="2" column="4">
            <widget class="QSpinBox" name="runSequence">
             <property name="toolTip">
@@ -313,13 +303,6 @@
            <widget class="QLabel" name="labelRunSeq">
             <property name="text">
              <string>Sequence:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="4">
-           <widget class="QPushButton" name="btnLoadConf">
-            <property name="text">
-             <string>Select</string>
             </property>
            </widget>
           </item>
@@ -378,6 +361,42 @@
               <string>CRITICAL</string>
              </property>
             </item>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLineEdit" name="txtConfigFileName">
+            <property name="whatsThis">
+             <string extracomment="Configuration file - directly editable or through file dialog."/>
+            </property>
+            <property name="text">
+             <string>Configuration file not set</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QPushButton" name="btnLoadConf">
+            <property name="text">
+             <string>Select</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QPushButton" name="btnGenConf">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>100</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>Read the current configuration from the running Constellation and store it as file</string>
+            </property>
+            <property name="text">
+             <string>Deduce</string>
+            </property>
            </widget>
           </item>
          </layout>
@@ -564,7 +583,6 @@
  </widget>
  <tabstops>
   <tabstop>txtConfigFileName</tabstop>
-  <tabstop>btnLoadConf</tabstop>
   <tabstop>txtLogmsg</tabstop>
   <tabstop>comboBoxLogLevel</tabstop>
   <tabstop>btnLog</tabstop>

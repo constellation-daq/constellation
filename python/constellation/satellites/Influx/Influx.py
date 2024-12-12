@@ -1,25 +1,26 @@
 """
 SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
+
+Provides the class for the Influx satellite
 """
 
-import threading
+from threading import Lock
 
 import influxdb_client
 from influxdb_client.client.write_api import SYNCHRONOUS
 
-from constellation.core.base import setup_cli_logging, EPILOG
 from constellation.core.cmdp import Metric
 from constellation.core.configuration import Configuration
 from constellation.core.monitoring import StatListener
-from constellation.core.satellite import Satellite, SatelliteArgumentParser
+from constellation.core.satellite import Satellite
 
 
 class Influx(Satellite, StatListener):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._influxdb_connected = False
-        self._influxdb_lock = threading.Lock()
+        self._influxdb_lock = Lock()
 
     def do_initializing(self, config: Configuration) -> None:
         with self._influxdb_lock:
@@ -58,15 +59,3 @@ class Influx(Satellite, StatListener):
                     self.write_api.write(bucket=self.bucket, record=record)
                 else:
                     self.log.debug(f"Metric of type {metric_type} cannot be written to InfluxDB")
-
-
-def main(args=None):
-    parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
-    args = vars(parser.parse_args(args))
-
-    # set up logging
-    setup_cli_logging(args["name"], args.pop("log_level"))
-
-    # start server with remaining args
-    s = Influx(**args)
-    s.run_satellite()

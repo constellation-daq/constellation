@@ -208,7 +208,7 @@ TEST_CASE("Message Assembly / Disassembly (CMDP1, invalid topic)", "[core][core:
 
     REQUIRE_THROWS_MATCHES(CMDP1Message::disassemble(log_frames),
                            MessageDecodingError,
-                           Message("Error decoding message: Invalid message topic, neither log or statistics message"));
+                           Message("Error decoding message: Invalid message topic, neither log nor telemetry message"));
 }
 
 TEST_CASE("Message Assembly / Disassembly (CMDP1, invalid log level)", "[core][core::message]") {

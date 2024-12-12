@@ -9,7 +9,7 @@ exec_src = files(
 exec_lib = library('ConstellationExec',
   sources: exec_src,
   include_directories: constellation_inc,
-  dependencies: [core_dep, satellite_dep, argparse_dep, asio_dep, magic_enum_dep, dl_dep],
+  dependencies: [core_dep, satellite_dep, argparse_dep, asio_dep, dl_dep],
   gnu_symbol_visibility: 'hidden',
   cpp_args: constellation_args + ['-DCNSTLN_BUILDLIB=1'],
   install: true,
@@ -36,7 +36,7 @@ install_headers(
   subdir: 'constellation/exec',
 )
 
-executable('satellite',
+executable('Satellite',
   sources: 'main.cpp',
   dependencies: [exec_dep],
   install: true,

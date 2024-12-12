@@ -30,7 +30,7 @@
 #include <sstream>
 #endif
 
-#include <magic_enum.hpp>
+#include "constellation/core/utils/enum.hpp"
 
 namespace constellation::utils {
 
@@ -127,7 +127,7 @@ namespace constellation::utils {
     template <typename E>
         requires std::is_enum_v<E>
     inline std::string to_string(E enum_val) {
-        return to_string(magic_enum::enum_name<E>(enum_val));
+        return enum_name<E>(enum_val);
     }
 
     /** Object that can be converted to a string */
@@ -166,7 +166,7 @@ namespace constellation::utils {
     template <typename E>
         requires std::is_enum_v<E>
     inline std::string list_enum_names() {
-        return range_to_string(magic_enum::enum_names<E>());
+        return range_to_string(enum_names<E>());
     }
 
     /** Convert char as hex string */

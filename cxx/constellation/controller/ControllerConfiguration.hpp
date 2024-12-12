@@ -10,6 +10,7 @@
 #pragma once
 
 #include <filesystem>
+#include <string>
 #include <string_view>
 
 #include "constellation/build.hpp"
@@ -84,6 +85,10 @@ namespace constellation::controller {
          * @return Configuration dictionary, possibly empty if the satellite was not found in the cached configuration
          */
         CNSTLN_API config::Dictionary getSatelliteConfiguration(std::string_view canonical_name) const;
+
+        CNSTLN_API void addSatelliteConfiguration(std::string_view canonical_name, config::Dictionary config);
+
+        CNSTLN_API std::string getAsTOML() const;
 
     private:
         /**

@@ -22,6 +22,7 @@
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CHP1Message.hpp"
+#include "constellation/core/utils/enum.hpp" // IWYU pragma: keep
 #include "constellation/core/utils/string.hpp"
 
 using namespace constellation;
@@ -59,7 +60,7 @@ namespace {
         Logger logger {"chp_receiver"};
 
         const HeartbeatRecv receiver {[&](const CHP1Message& msg) {
-            LOG(logger, DEBUG) << msg.getSender() << " reports state " << to_string(msg.getState()) << ", next message in "
+            LOG(logger, DEBUG) << msg.getSender() << " reports state " << msg.getState() << ", next message in "
                                << to_string(msg.getInterval());
         }};
 

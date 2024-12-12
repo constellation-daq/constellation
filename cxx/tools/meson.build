@@ -9,14 +9,14 @@ endif
 
 executable('chirp_manager',
   sources: 'chirp_manager.cpp',
-  dependencies: [core_dep, magic_enum_dep],
+  dependencies: [core_dep],
 )
 
 # Core/ Heartbeat
 
 executable('chp_sender',
   sources: 'chp_sender.cpp',
-  dependencies: [core_dep, magic_enum_dep],
+  dependencies: [core_dep],
 )
 
 executable('chp_receiver',

@@ -9,7 +9,9 @@
 
 #include "DSOLoader.hpp"
 
+#include <cstdio>
 #include <filesystem>
+#include <iomanip>
 #include <string>
 #include <vector>
 
@@ -36,28 +38,37 @@ DSOLoader::DSOLoader(const std::string& dso_name, Logger& logger, const std::fil
     // - custom executable: hint
     // - in dev environment: builddir/satellites/XYZ/libXYZ.suffix
     // - in installed environment: libdir/ConstellationSatellites/libXYZ.suffix
+    // - in portable installed environment: current directory
     const auto dso_file_name = to_dso_file_name(dso_name);
-    LOG(logger, TRACE) << "Searching paths for library with name " << dso_file_name;
+    LOG(logger, TRACE) << "Searching paths for library with name " << std::quoted(dso_file_name);
 
     // List containing paths of possible DSOs (ordered after priority)
     auto possible_paths = std::vector<std::filesystem::path>();
 
     auto add_file_path = [&](const std::filesystem::path& path) {
         const auto abs_path = std::filesystem::absolute(path);
+        LOG(logger, TRACE) << "Checking " << std::quoted(path.string()) << " (abs " << std::quoted(abs_path.string()) << ")";
         // Check that path is a file
         if(std::filesystem::is_regular_file(abs_path)) {
             // Check that file name matches (case-insensitive)
             if(transform(abs_path.filename().string(), ::tolower) == transform(dso_file_name, ::tolower)) {
-                LOG(logger, TRACE) << "Adding " << abs_path << " to library lookup";
+                LOG(logger, TRACE) << "Adding " << std::quoted(abs_path.string()) << " to library lookup";
                 possible_paths.emplace_back(abs_path);
+            } else {
+                LOG(logger, TRACE) << "Skipping " << std::quoted(abs_path.string()) << ": filename does not match";
             }
+        } else {
+            LOG(logger, TRACE) << "Skipping " << std::quoted(abs_path.string()) << ": not a regular file";
         }
     };
 
     auto add_path = [&](const std::filesystem::path& path) {
         const auto abs_path = std::filesystem::absolute(path);
+        LOG(logger, TRACE) << "Adding library search path " << std::quoted(path.string()) << " (abs "
+                           << std::quoted(abs_path.string()) << ")";
         // For directories, recursively iterate and add paths
         if(std::filesystem::is_directory(abs_path)) {
+            LOG(logger, TRACE) << "Path " << std::quoted(abs_path.string()) << " is a directory, recursing through content";
             for(const auto& entry : std::filesystem::recursive_directory_iterator(abs_path)) {
                 // Try adding path as file
                 add_file_path(entry.path());
@@ -78,6 +89,9 @@ DSOLoader::DSOLoader(const std::string& dso_name, Logger& logger, const std::fil
 
     const auto lib_dir = std::filesystem::path(CNSTLN_LIBDIR) / "ConstellationSatellites";
     add_path(lib_dir);
+
+    const auto cwd = std::filesystem::current_path();
+    add_path(cwd);
 
     // Did not find a matching library:
     if(possible_paths.empty()) {

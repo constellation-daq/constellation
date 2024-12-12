@@ -30,6 +30,13 @@ namespace constellation::utils {
 
     /// @cond doxygen_suppress
 
+    // Type trait to check if type is a specialization of another type
+    template <typename T, template <typename...> class Ref> struct is_specialization_of : std::false_type {};
+    template <template <typename...> class Ref, typename... Args>
+    struct is_specialization_of<Ref<Args...>, Ref> : std::true_type {};
+    template <typename T, template <typename...> class Ref>
+    inline constexpr bool is_specialization_of_v = is_specialization_of<T, Ref>::value;
+
     // Type trait for std::vector
     template <typename T> struct is_std_vector : std::false_type {};
     template <typename U> struct is_std_vector<std::vector<U>> : std::true_type {};

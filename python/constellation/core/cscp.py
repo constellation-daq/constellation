@@ -73,9 +73,7 @@ class CommandTransmitter:
         self.msgheader = MessageHeader(name, Protocol.CSCP)
         self.socket = socket
 
-    def send_request(
-        self, command: str, payload: Any = None, meta: Optional[dict[str, Any]] = None
-    ) -> None:
+    def send_request(self, command: str, payload: Any = None, meta: Optional[dict[str, Any]] = None) -> None:
         """Send a command request to a Satellite with an optional payload.
 
         meta is an optional dictionary that is sent as a map of string/value
@@ -90,9 +88,7 @@ class CommandTransmitter:
             flags=zmq.NOBLOCK,
         )
 
-    def request_get_response(
-        self, command: str, payload: Any = None, meta: dict[str, Any] | None = None
-    ) -> CSCPMessage:
+    def request_get_response(self, command: str, payload: Any = None, meta: dict[str, Any] | None = None) -> CSCPMessage:
         """Send a command request to a Satellite and return response.
 
         meta is an optional dictionary that is sent as a map of string/value
@@ -139,9 +135,7 @@ class CommandTransmitter:
             cmdmsg = self.socket.recv_multipart(flags)
         except zmq.ZMQError as e:
             if "Resource temporarily unavailable" not in e.strerror:
-                raise RuntimeError(
-                    "CommandTransmitter encountered zmq exception"
-                ) from e
+                raise RuntimeError("CommandTransmitter encountered zmq exception") from e
             return None
         msg = CSCPMessage()
         msg.set_header(*self.msgheader.decode(cmdmsg[0]))
@@ -153,9 +147,7 @@ class CommandTransmitter:
         try:
             msg.msg_verb = CSCPMessageVerb(msg.msg_verb)
         except ValueError:
-            raise RuntimeError(
-                f"Received invalid request with msg verb: {msg.msg_verb}"
-            )
+            raise RuntimeError(f"Received invalid request with msg verb: {msg.msg_verb}")
         # convert to lower case:
         msg.msg = msg.msg.lower()
         try:

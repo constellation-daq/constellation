@@ -45,11 +45,12 @@ DemoHeartbeatSender = "constellation.core.heartbeater:main"
 # tools
 ConstellationListInterfaces = "constellation.tools.list_interfaces:main"
 # 3rd-party Satellites
-SatelliteCaenHV = "constellation.satellites.CaenHV.CaenHV:main"
-SatelliteH5DataWriter = "constellation.satellites.H5DataWriter.H5DataWriter:main"
-SatelliteInflux = "constellation.satellites.Influx.Influx:main"
-SatelliteKeithley = "constellation.satellites.Keithley.Keithley:main"
-SatelliteMariner = "constellation.satellites.Mariner.Mariner:main"
+SatelliteCaenHV = "constellation.satellites.CaenHV.__main__:main"
+SatelliteH5DataWriter = "constellation.satellites.H5DataWriter.__main__:main"
+SatelliteInflux = "constellation.satellites.Influx.__main__:main"
+SatelliteKeithley = "constellation.satellites.Keithley.__main__:main"
+SatelliteLakeShore218 = "constellation.satellites.LakeShore218.__main__:main"
+SatelliteMariner = "constellation.satellites.Mariner.__main__:main"
 SatelliteRPNeutron = "constellation.satellites.RpDaq.rpneutron:main"
 SatelliteRPGamma = "constellation.satellites.RpDaq.rpgamma:main"
 
@@ -73,6 +74,7 @@ test = [
 ]
 docs = [
     "sphinx",
+    "sphinx-autobuild",
     "pydata_sphinx_theme",
     "myst-parser",
     "breathe",
@@ -89,6 +91,7 @@ caenhv = ["pycaenhv>=0.03", "pyserial"]
 hdf5 = ["h5py"]
 influx = ["influxdb-client"]
 keithley = ["pyserial"]
+visa = ["pyvisa", "pyvisa-py", "pyserial", "zeroconf"]
 
 [tool.meson-python.args]
 setup = ["--wrap-mode=forcefallback", "-Dimpl_py=enabled", "-Dimpl_cxx=disabled"]  # disable C++ for now

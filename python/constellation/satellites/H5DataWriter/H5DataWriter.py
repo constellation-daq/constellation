@@ -1,23 +1,21 @@
-#!/usr/bin/env python3
 """
 SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
 SPDX-License-Identifier: CC-BY-4.0
 
-This module provides the class for a Constellation Satellite.
+Provides the class for the H5DataWriter satellite
 """
-from typing import Any
 
 import datetime
-import h5py  # type: ignore[import-untyped]
-import numpy as np
 import os
 import pathlib
+from typing import Any
+
+import h5py  # type: ignore[import-untyped]
+import numpy as np
 
 from constellation.core import __version__
-from constellation.core.datareceiver import DataReceiver
 from constellation.core.cdtp import CDTPMessage
-from constellation.core.satellite import SatelliteArgumentParser
-from constellation.core.base import EPILOG, setup_cli_logging
+from constellation.core.datareceiver import DataReceiver
 
 
 class H5DataWriter(DataReceiver):
@@ -149,29 +147,3 @@ class H5DataWriter(DataReceiver):
         grp = outfile.create_group(self.name)
         grp["constellation_version"] = __version__
         grp["date_utc"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-
-# -------------------------------------------------------------------------
-
-
-def main(args: Any = None) -> None:
-    """Start the Constellation data receiver satellite.
-
-    Data will be written in HDF5 format.
-
-    """
-    parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
-
-    # get a dict of the parsed arguments
-    args = vars(parser.parse_args(args))
-
-    # set up logging
-    setup_cli_logging(args["name"], args.pop("log_level"))
-
-    # start server with remaining args
-    s = H5DataWriter(**args)
-    s.run_satellite()
-
-
-if __name__ == "__main__":
-    main()

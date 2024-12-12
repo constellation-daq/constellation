@@ -18,7 +18,7 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/networking/Port.hpp"
 
 namespace constellation::message {
 
@@ -62,7 +62,7 @@ namespace constellation::message {
                      MD5Hash group_id,
                      MD5Hash host_id,
                      chirp::ServiceIdentifier service_id,
-                     utils::Port port);
+                     networking::Port port);
 
         /**
          * @param type CHIRP message type
@@ -76,7 +76,7 @@ namespace constellation::message {
                      std::string_view group,
                      std::string_view host,
                      chirp::ServiceIdentifier service_id,
-                     utils::Port port);
+                     networking::Port port);
 
         /** Return the message type */
         constexpr chirp::MessageType getType() const { return type_; }
@@ -91,7 +91,7 @@ namespace constellation::message {
         constexpr chirp::ServiceIdentifier getServiceIdentifier() const { return service_id_; }
 
         /** Return the service port of the message */
-        constexpr utils::Port getPort() const { return port_; }
+        constexpr networking::Port getPort() const { return port_; }
 
         /** Assemble message to byte array */
         CNSTLN_API AssembledMessage assemble() const;
@@ -113,7 +113,7 @@ namespace constellation::message {
         MD5Hash group_id_;
         MD5Hash host_id_;
         chirp::ServiceIdentifier service_id_;
-        utils::Port port_;
+        networking::Port port_;
     };
 
 } // namespace constellation::message

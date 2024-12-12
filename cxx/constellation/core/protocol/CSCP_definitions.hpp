@@ -15,8 +15,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <magic_enum.hpp>
-
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/std_future.hpp"
 
 namespace constellation::protocol::CSCP {
@@ -147,9 +146,4 @@ namespace constellation::protocol::CSCP {
 } // namespace constellation::protocol::CSCP
 
 // State enum exceeds default enum value limits of magic_enum (-128, 127)
-namespace magic_enum::customize {
-    template <> struct enum_range<constellation::protocol::CSCP::State> {
-        static constexpr int min = 0;
-        static constexpr int max = 255;
-    };
-} // namespace magic_enum::customize
+ENUM_SET_RANGE(constellation::protocol::CSCP::State, 0, 255);

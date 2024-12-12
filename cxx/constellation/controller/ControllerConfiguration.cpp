@@ -17,7 +17,9 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <toml++/toml.hpp>
@@ -52,6 +54,76 @@ ControllerConfiguration::ControllerConfiguration(const std::filesystem::path& pa
 
 ControllerConfiguration::ControllerConfiguration(std::string_view toml) {
     parse_toml(toml);
+}
+
+std::string ControllerConfiguration::getAsTOML() const {
+
+    auto get_toml_array = [&](auto&& val) -> toml::array {
+        toml::array arr;
+
+        using T = std::decay_t<decltype(val)>::value_type;
+        for(const auto& v : val) {
+            arr.push_back(static_cast<T>(v));
+        }
+        return arr;
+    };
+
+    auto get_toml_table = [&](const config::Dictionary& dict) -> toml::table {
+        toml::table tbl;
+        for(const auto& [key, value] : dict) {
+
+            LOG(config_parser_logger_, TRACE) << "Parsing key " << key;
+
+            if(std::holds_alternative<bool>(value)) {
+                tbl.emplace(key, toml::value<bool>(value.get<bool>()));
+            } else if(std::holds_alternative<std::int64_t>(value)) {
+                tbl.emplace(key, toml::value<std::int64_t>(value.get<std::int64_t>()));
+            } else if(std::holds_alternative<double>(value)) {
+                tbl.emplace(key, toml::value<double>(value.get<double>()));
+            } else if(std::holds_alternative<std::string>(value)) {
+                tbl.emplace(key, toml::value<std::string>(value.get<std::string>()));
+            } else if(std::holds_alternative<std::vector<bool>>(value)) {
+                tbl.emplace(key, get_toml_array(value.get<std::vector<bool>>()));
+            } else if(std::holds_alternative<std::vector<std::string>>(value)) {
+                tbl.emplace(key, get_toml_array(value.get<std::vector<std::string>>()));
+            } else if(std::holds_alternative<std::vector<double>>(value)) {
+                tbl.emplace(key, get_toml_array(value.get<std::vector<double>>()));
+            } else if(std::holds_alternative<std::vector<std::int64_t>>(value)) {
+                tbl.emplace(key, get_toml_array(value.get<std::vector<std::int64_t>>()));
+            }
+
+            // FIXME timestamp? char vector?
+        }
+        return tbl;
+    };
+
+    // The global TOML table
+    toml::table tbl;
+
+    // Add global config:
+    tbl.emplace("satellites", get_toml_table(global_config_));
+
+    // Add type config:
+    for(const auto& [type, config] : type_configs_) {
+        tbl["satellites"].as_table()->emplace(type, get_toml_table(config));
+    }
+
+    // Add individual satellites sections:
+    for(const auto& [canonical_name, config] : satellite_configs_) {
+        const auto pos = canonical_name.find_first_of('.', 0);
+        const auto type = canonical_name.substr(0, pos);
+        const auto name = canonical_name.substr(pos + 1);
+        tbl["satellites"].as_table()->emplace(type, toml::table {});
+        tbl["satellites"][type].as_table()->emplace(name, get_toml_table(config));
+    }
+
+    // Clean up table a bit:
+    tbl.prune();
+
+    std::stringstream oss;
+    oss << tbl;
+
+    return oss.str();
 }
 
 void ControllerConfiguration::parse_toml(std::string_view toml) {
@@ -184,6 +256,18 @@ void ControllerConfiguration::parse_toml(std::string_view toml) {
 
 bool ControllerConfiguration::hasSatelliteConfiguration(std::string_view canonical_name) const {
     return satellite_configs_.contains(transform(canonical_name, ::tolower));
+}
+
+void ControllerConfiguration::addSatelliteConfiguration(std::string_view canonical_name, config::Dictionary config) {
+
+    // Check if already there
+    auto config_it = satellite_configs_.find(canonical_name);
+    if(config_it != satellite_configs_.end()) {
+        LOG(config_parser_logger_, WARNING) << "Overwriting existing satellite configuration for " << canonical_name;
+        config_it->second = std::move(config);
+    } else {
+        satellite_configs_.emplace(canonical_name, std::move(config));
+    }
 }
 
 Dictionary ControllerConfiguration::getSatelliteConfiguration(std::string_view canonical_name) const {

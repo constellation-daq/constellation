@@ -21,9 +21,7 @@ def test_chirp_beacon_send_recv(mock_chirp_socket):
     receiver = CHIRPBeaconTransmitter("mock_receiver", "mockstellation", "127.0.0.1")
     sender.broadcast(CHIRPServiceIdentifier.DATA, CHIRPMessageType.OFFER, 666)
     res = receiver.listen()
-    assert (
-        res.serviceid == CHIRPServiceIdentifier.DATA
-    ), "Receiving chirp package failed."
+    assert res.serviceid == CHIRPServiceIdentifier.DATA, "Receiving chirp package failed."
 
     # listen a second time
     res = receiver.listen()
@@ -33,13 +31,9 @@ def test_chirp_beacon_send_recv(mock_chirp_socket):
     sender.broadcast(CHIRPServiceIdentifier.DATA, CHIRPMessageType.OFFER, 666)
     sender.broadcast(CHIRPServiceIdentifier.DATA, CHIRPMessageType.OFFER, 666)
     res = receiver.listen()
-    assert (
-        res.serviceid == CHIRPServiceIdentifier.DATA
-    ), "First of two packages went missing"
+    assert res.serviceid == CHIRPServiceIdentifier.DATA, "First of two packages went missing"
     res = receiver.listen()
-    assert (
-        res.serviceid == CHIRPServiceIdentifier.DATA
-    ), "Second of two packages went missing"
+    assert res.serviceid == CHIRPServiceIdentifier.DATA, "Second of two packages went missing"
     res = receiver.listen()
     assert not res, "Non-blocking receive w/o sending data failed."
 
@@ -48,9 +42,7 @@ def test_chirp_beacon_send_recv(mock_chirp_socket):
     with patch("constellation.core.chirp.CHIRP_HEADER"):
         with pytest.raises(RuntimeError) as e:
             res = receiver.listen()
-        assert "malformed message" in str(
-            e.value
-        ), "Wrong chirp header did not trigger expected exception message."
+        assert "malformed message" in str(e.value), "Wrong chirp header did not trigger expected exception message."
 
 
 @pytest.mark.forked

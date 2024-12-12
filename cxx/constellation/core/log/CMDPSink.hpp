@@ -23,7 +23,8 @@
 
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/Logger.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/metrics/Metric.hpp"
+#include "constellation/core/networking/Port.hpp"
 
 namespace constellation::log {
     /**
@@ -57,7 +58,7 @@ namespace constellation::log {
          *
          * @return Port number
          */
-        constexpr utils::Port getPort() const { return port_; }
+        constexpr networking::Port getPort() const { return port_; }
 
         /**
          * @brief Set sender name and enable sending by starting the subscription thread
@@ -65,6 +66,13 @@ namespace constellation::log {
          * @param sender_name Canonical name of the sender
          */
         void enableSending(std::string sender_name);
+
+        /**
+         * Sink metric
+         *
+         * @param metric_value Metric value to sink
+         */
+        void sinkMetric(metrics::MetricValue metric_value);
 
     protected:
         void sink_it_(const spdlog::details::log_msg& msg) final;
@@ -80,7 +88,7 @@ namespace constellation::log {
         std::shared_ptr<zmq::context_t> context_;
 
         zmq::socket_t pub_socket_;
-        utils::Port port_;
+        networking::Port port_;
         std::string sender_name_;
 
         std::jthread subscription_thread_;
