@@ -10,7 +10,7 @@
 
 #### Transition Orchestration
 
-Parameters to control [autonomous transition orchestration](../manual/concepts/autonomy.md) of satellites:
+Parameters to control [autonomous transition orchestration](../operator_guide/concepts/autonomy.md) of satellites:
 
 | Parameter | Type | Description | Default Value |
 |-----------|------|-------------|---------------|

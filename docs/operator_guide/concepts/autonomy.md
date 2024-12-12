@@ -24,7 +24,7 @@ The respective satellite will receive these as conditions from the controller vi
 If, for example, Satellite `Sputnik.Second` receives the condition `_require_starting_after = "Sputnik.First"` it will enter
 the `starting` transitional states but wait until satellite `Sputnik.First` has successfully completed the transition, and
 `Sputnik.Second` receives the state `RUN` from `Sputnik.First` via the
-[heartbeat protocol](../../reference/protocols.md#heartbeating) before progressing through its own `starting` state. This can
+[heartbeat protocol](../../framework_reference/protocols.md#heartbeating) before progressing through its own `starting` state. This can
 be visualized as follows:
 
 ```plantuml
