@@ -204,7 +204,7 @@ void KatherineSatellite::data_received(const char* data, size_t count) {
     }
     // Try to send and retry if it failed:
     LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
-    trySendDataMessage(msg);
+    sendDataMessage(msg);
 }
 
 void KatherineSatellite::interrupting(CSCP::State) {
