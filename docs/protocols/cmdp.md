@@ -18,10 +18,11 @@ This protocol specifies how CMDP hosts are
 * formatting message topics to allow identification of the message type as well as filtering, and
 * subscribing to specific message topics to reduce the number of transmitted messages and consequently the network load.
 
-This protocol defines two message types which differ in purpose and message syntax:
+This protocol defines three message types which differ in purpose and message syntax:
 
 * Log messages are intended for the distribution of informational logging messages from a CMDP host
 * Metrics data messages are intended for the distribution of machine-readable monitoring data from a CMDP host.
+* Notification messages are intended to communicate the available topics.
 
 Conforming implementations of this protocol SHOULD respect this specification, thus ensuring that applications can depend on predictable behavior.
 This specification is not transport specific, but not all behavior will be reproducible on all transports.
@@ -59,6 +60,8 @@ A receiving CMDP host SHALL discard messages that it receives with an invalid to
 
 In case of network congestion, unsent messaged SHALL be discarded by the sending CMDP host.
 
+Whenever a new topic becomes available or a new CMDP host subscribes to a notification topic, a new notification message with all available topics of the selected type SHALL be sent.
+
 ### Log Message Topic
 
 The message topic frame SHALL start with topic prefix `LOG`, hereafter referred to as ‘log messages’, if it distributes informational text from the program flow of the sending CMDP host.
@@ -90,6 +93,13 @@ The heading SHALL be followed by a metrics name which SHOULD be unique per sendi
 It is RECOMMENDED to use the same unique metrics name across different hosts for the same metrics data quantity.
 
 An example for a valid metrics data message topic is `STAT/CPULOAD`.
+
+### Notification Topic
+
+The message topic frame SHALL start with topic prefix `LOG` or `STAT` if it distributes log or metrics data messages, respectively.
+The selected topic prefix MUST be followed by a trailing question mark `?`.
+
+The two valid notification message topics are `LOG?` and `STAT?`.
 
 ### Message Header
 
@@ -129,3 +139,10 @@ The metrics type SHALL be encoded as 1-OCTET integer variable with the following
 * `0x4` - RATE: The rate of the metrics SHOULD be calculate over a given time interval.
 
 The metrics type MAY be implemented as enum type if appropriate.
+
+### Notification Payload
+
+The notification message payload frame MUST be encoded according to the [MessagePack](https://github.com/msgpack/msgpack/blob/master/spec.md) specification.
+It SHALL contain a map containing a sequence of key-value pairs.
+The key MUST be of string-type and represent the topic.
+The value MUST be of string-type and represent the description of the topic.
