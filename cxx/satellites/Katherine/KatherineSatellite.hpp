@@ -78,7 +78,7 @@ private:
         }
         // Try to send and retry if it failed:
         LOG(DEBUG) << "Sending message with " << msg.countFrames() << " pixels";
-        trySendDataMessage(msg);
+        sendDataMessage(msg);
     }
 
     template <typename T> std::vector<std::uint8_t> to_bytes(const T& pixel) {
