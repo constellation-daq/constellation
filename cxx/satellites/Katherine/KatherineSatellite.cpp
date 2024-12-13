@@ -19,11 +19,13 @@
 #include <vector>
 
 #include "constellation/core/log/log.hpp"
+#include "constellation/core/metrics/Metric.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
 using namespace constellation::config;
+using namespace constellation::metrics;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
@@ -73,6 +75,15 @@ KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view n
                          std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                          return device_->chip_id();
                      }));
+
+    register_timed_metric("TEMP_SENSOR", "C", MetricType::LAST_VALUE, std::chrono::seconds(10), [&]() {
+        std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+        return device_->sensor_temperature();
+    });
+    register_timed_metric("TEMP_READOUT", "C", MetricType::LAST_VALUE, std::chrono::seconds(10), [&]() {
+        std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+        return device_->readout_temperature();
+    });
 }
 
 void KatherineSatellite::initializing(constellation::config::Configuration& config) {
