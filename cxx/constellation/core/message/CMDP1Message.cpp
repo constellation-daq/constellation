@@ -18,6 +18,7 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
+#include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/message/exceptions.hpp"
 #include "constellation/core/message/PayloadBuffer.hpp"
@@ -44,6 +45,10 @@ bool CMDP1Message::isLogMessage() const {
 
 bool CMDP1Message::isStatMessage() const {
     return topic_.starts_with("STAT/");
+}
+
+bool CMDP1Message::isNotification() const {
+    return topic_.starts_with("STAT?") || topic_.starts_with("LOG?");
 }
 
 zmq::multipart_t CMDP1Message::assemble() {
@@ -158,6 +163,26 @@ CMDP1StatMessage::CMDP1StatMessage(CMDP1Message&& message) : CMDP1Message(std::m
 }
 
 CMDP1StatMessage CMDP1StatMessage::disassemble(zmq::multipart_t& frames) {
+    // Use disassemble from base class and cast via constructor
+    return {CMDP1Message::disassemble(frames)};
+}
+
+CMDP1Notification::CMDP1Notification(Header header, const std::string& id, const Dictionary& topics)
+    : CMDP1Message(id, std::move(header), topics.assemble()), topics_(std::move(topics)) {}
+
+CMDP1Notification::CMDP1Notification(CMDP1Message&& message) : CMDP1Message(std::move(message)) {
+    if(!isNotification()) {
+        throw MessageDecodingError("Not a telemetry notification");
+    }
+
+    try {
+        topics_ = Dictionary::disassemble(get_payload());
+    } catch(const std::invalid_argument& e) {
+        throw MessageDecodingError(e.what());
+    }
+}
+
+CMDP1Notification CMDP1Notification::disassemble(zmq::multipart_t& frames) {
     // Use disassemble from base class and cast via constructor
     return {CMDP1Message::disassemble(frames)};
 }
