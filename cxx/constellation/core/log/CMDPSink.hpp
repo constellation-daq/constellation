@@ -21,6 +21,7 @@
 #include <spdlog/sinks/base_sink.h>
 #include <zmq.hpp>
 
+#include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/metrics/Metric.hpp"
@@ -73,6 +74,14 @@ namespace constellation::log {
          * @param metric_value Metric value to sink
          */
         void sinkMetric(metrics::MetricValue metric_value);
+
+        /**
+         * Sink notification
+         *
+         * @param id Notification type
+         * @param topics Topics for the given notification type
+         */
+        void sinkNotification(const std::string& id, config::Dictionary topics);
 
     protected:
         void sink_it_(const spdlog::details::log_msg& msg) final;
