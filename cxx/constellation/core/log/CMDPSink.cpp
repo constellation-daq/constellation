@@ -126,54 +126,58 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
         body.remove_prefix(1);
         LOG(*logger_, TRACE) << "Received " << (subscribe ? "" : "un") << "subscribe message for " << body;
 
-        // TODO(simonspa) At some point we also have to treat STAT here
-        if(!body.starts_with("LOG/")) {
-            continue;
+        if(body.starts_with("LOG/")) {
+            handle_log_subscriptions(subscribe, body);
         }
-
-        const auto level_endpos = body.find_first_of('/', 4);
-        const auto level_str = body.substr(4, level_endpos - 4);
-
-        // Empty level means subscription to everything
-        const auto level = (level_str.empty() ? std::optional<Level>(TRACE) : enum_cast<Level>(level_str));
-
-        // Only accept valid levels
-        if(!level.has_value()) {
-            LOG(*logger_, TRACE) << "Invalid log level " << std::quoted(level_str) << ", ignoring";
-            continue;
-        }
-
-        const auto topic = (level_endpos != std::string_view::npos ? body.substr(level_endpos + 1) : std::string_view());
-        const auto topic_uc = transform(topic, ::toupper);
-        LOG(*logger_, TRACE) << "In/decrementing subscription counters for topic " << std::quoted(topic_uc);
-
-        if(subscribe) {
-            log_subscriptions_[topic_uc][level.value()] += 1;
-        } else {
-            if(log_subscriptions_[topic_uc][level.value()] > 0) {
-                log_subscriptions_[topic_uc][level.value()] -= 1;
-            }
-        }
-
-        // Figure out lowest level for each topic
-        auto cmdp_global_level = Level::OFF;
-        std::map<std::string_view, Level> cmdp_sub_topic_levels;
-        for(const auto& [logger, levels] : log_subscriptions_) {
-            auto it = std::ranges::find_if(levels, [](const auto& i) { return i.second > 0; });
-            if(it != levels.end()) {
-                if(!logger.empty()) {
-                    cmdp_sub_topic_levels[logger] = it->first;
-                } else {
-                    cmdp_global_level = it->first;
-                }
-            }
-        }
-
-        LOG(*logger_, TRACE) << "Lowest global log level: " << std::quoted(enum_name(cmdp_global_level));
-
-        // Update subscriptions
-        SinkManager::getInstance().updateCMDPLevels(cmdp_global_level, std::move(cmdp_sub_topic_levels));
     }
+}
+
+void CMDPSink::handle_log_subscriptions(bool subscribe, std::string_view body) {
+
+    // TODO(simonspa) At some point we also have to treat STAT here
+
+    const auto level_endpos = body.find_first_of('/', 4);
+    const auto level_str = body.substr(4, level_endpos - 4);
+
+    // Empty level means subscription to everything
+    const auto level = (level_str.empty() ? std::optional<Level>(TRACE) : enum_cast<Level>(level_str));
+
+    // Only accept valid levels
+    if(!level.has_value()) {
+        LOG(*logger_, TRACE) << "Invalid log level " << std::quoted(level_str) << ", ignoring";
+        return;
+    }
+
+    const auto topic = (level_endpos != std::string_view::npos ? body.substr(level_endpos + 1) : std::string_view());
+    const auto topic_uc = transform(topic, ::toupper);
+    LOG(*logger_, TRACE) << "In/decrementing subscription counters for topic " << std::quoted(topic_uc);
+
+    if(subscribe) {
+        log_subscriptions_[topic_uc][level.value()] += 1;
+    } else {
+        if(log_subscriptions_[topic_uc][level.value()] > 0) {
+            log_subscriptions_[topic_uc][level.value()] -= 1;
+        }
+    }
+
+    // Figure out lowest level for each topic
+    auto cmdp_global_level = Level::OFF;
+    std::map<std::string_view, Level> cmdp_sub_topic_levels;
+    for(const auto& [logger, levels] : log_subscriptions_) {
+        auto it = std::ranges::find_if(levels, [](const auto& i) { return i.second > 0; });
+        if(it != levels.end()) {
+            if(!logger.empty()) {
+                cmdp_sub_topic_levels[logger] = it->first;
+            } else {
+                cmdp_global_level = it->first;
+            }
+        }
+    }
+
+    LOG(*logger_, TRACE) << "Lowest global log level: " << std::quoted(enum_name(cmdp_global_level));
+
+    // Update subscriptions
+    SinkManager::getInstance().updateCMDPLevels(cmdp_global_level, std::move(cmdp_sub_topic_levels));
 }
 
 void CMDPSink::enableSending(std::string sender_name) {

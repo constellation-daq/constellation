@@ -90,6 +90,8 @@ namespace constellation::log {
     private:
         void subscription_loop(const std::stop_token& stop_token);
 
+        void handle_log_subscriptions(bool subscribe, std::string_view topic);
+
     private:
         std::unique_ptr<Logger> logger_;
 
