@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+# SPDX-License-Identifier: CC-BY-4.0
+
+[x]
+serial_no = 45437184
+port = "/dev/ttyUSB2"
+channel = 0
+# in mm
+velocity = 10
+acceleration = 2
+start_position = 50
+
+[y]
+serial_no = 45454864
+port = "/dev/ttyUSB3"
+channel = 0
+# in mm
+velocity = 10
+acceleration = 2
+start_position = 50
+
+[z]
+serial_no = 45455454
+port = "/dev/ttyUSB1"
+channel = 0
+# in mm
+velocity = 6
+acceleration = 4
+start_position = 0
+
+[r]
+serial_no = 27252700
+port = "/dev/ttyUSB4"
+channel = 0
+# in deg
+velocity = 8
+acceleration = 8
+start_position = 180
+
+[run]
+active_axes = ["x","y","r"]
+# active_axes = ["z"]
+
+# wait time at each point (measurement window)
+stop_time_per_point_s = 1
+# stage position sending frequency (in seconds) to data writer
+readout_freq_s = 0.1
+
+
+## in mm
+position_x = [50,150,50]
+# position_y = [50,150,50]
+#position_z = [19,29,5]
+## in deg
+position_r = [175,185,5]
+
+save_config = true

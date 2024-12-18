@@ -50,6 +50,7 @@ SatelliteH5DataWriter = "constellation.satellites.H5DataWriter.__main__:main"
 SatelliteInflux = "constellation.satellites.Influx.__main__:main"
 SatelliteKeithley = "constellation.satellites.Keithley.__main__:main"
 SatelliteLakeShore218 = "constellation.satellites.LakeShore218.__main__:main"
+SatelliteECTStage = "constellation.satellites.eCTStage.__main__:main"
 SatelliteMariner = "constellation.satellites.Mariner.__main__:main"
 
 [project.urls]
