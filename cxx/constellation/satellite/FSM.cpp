@@ -160,7 +160,7 @@ std::pair<CSCP1Message::Type, std::string> FSM::reactCommand(TransitionCommand t
         std::string payload_info {"Transition " + to_string(transition) + " received invalid payload: " + error.what()};
         LOG(logger_, WARNING) << payload_info;
         return {CSCP1Message::Type::INCOMPLETE, std::move(payload_info)};
-    } catch(const std::bad_cast&) {
+    } catch(const MsgPackError&) {
         std::string payload_info {"Transition " + to_string(transition) + " received incorrect payload"};
         LOG(logger_, WARNING) << payload_info;
         return {CSCP1Message::Type::INCOMPLETE, std::move(payload_info)};
