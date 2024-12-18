@@ -33,6 +33,7 @@
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/enum.hpp"
+#include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/satellite/BaseSatellite.hpp"

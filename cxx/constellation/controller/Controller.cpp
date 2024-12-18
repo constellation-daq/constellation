@@ -42,6 +42,7 @@
 #include "constellation/core/protocol/CHP_definitions.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/enum.hpp"
+#include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/string.hpp"
 

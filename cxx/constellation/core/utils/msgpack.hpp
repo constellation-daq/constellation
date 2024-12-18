@@ -9,8 +9,6 @@
 
 #pragma once
 
-#include <exception>
-
 #include <msgpack.hpp>
 
 #include "constellation/core/utils/exceptions.hpp"

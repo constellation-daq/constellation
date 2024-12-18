@@ -29,6 +29,7 @@
 #include "constellation/core/protocol/Protocol.hpp"
 #include "constellation/core/utils/casts.hpp"
 #include "constellation/core/utils/enum.hpp"
+#include "constellation/core/utils/exceptions.hpp"
 #include "constellation/core/utils/msgpack.hpp"
 #include "constellation/core/utils/std_future.hpp"
 #include "constellation/core/utils/string.hpp"
