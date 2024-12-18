@@ -41,7 +41,7 @@ KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view n
                      "Read chip communication link status from the device.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
                      std::function<std::vector<std::string>()>([&]() -> std::vector<std::string> {
-                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+                         const std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                          auto state = device_->comm_status();
                          return {"Line mask " + char_to_hex_string(static_cast<char>(state.comm_lines_mask)),
                                  "Data rate " + to_string(state.data_rate),
@@ -51,28 +51,28 @@ KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view n
                      "Read the current temperature from the Katherine readout board.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
                      std::function<double()>([&]() {
-                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+                         const std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                          return device_->readout_temperature();
                      }));
     register_command("get_temperature_sensor",
                      "Read the current temperature from the temperature sensor.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
                      std::function<double()>([&]() {
-                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+                         const std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                          return device_->sensor_temperature();
                      }));
     register_command("get_adc_voltage",
                      "Read the voltage from the ADC channel provided as parameter.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
                      std::function<double(std::uint8_t)>([&](auto channel) {
-                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+                         const std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                          return device_->adc_voltage(channel);
                      }));
     register_command("get_chip_id",
                      "Read the chip ID of the attached sensor.",
                      {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
                      std::function<std::string()>([&]() {
-                         std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+                         const std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                          return device_->chip_id();
                      }));
 
@@ -82,7 +82,7 @@ KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view n
                           std::chrono::seconds(10),
                           {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
                           [&]() {
-                              std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+                              const std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                               return device_->sensor_temperature();
                           });
     register_timed_metric("TEMP_READOUT",
@@ -91,7 +91,7 @@ KatherineSatellite::KatherineSatellite(std::string_view type, std::string_view n
                           std::chrono::seconds(10),
                           {CSCP::State::INIT, CSCP::State::ORBIT, CSCP::State::RUN},
                           [&]() {
-                              std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+                              const std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
                               return device_->readout_temperature();
                           });
 }
