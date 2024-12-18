@@ -110,7 +110,6 @@ class ECTstage(DataSender):
             self._get_stage_info(axis)
         return "Initialized"
 
-
     def do_reconfigure(self, cnfg: Configuration) -> str:
         """
         Reconfigures stages using config file,
@@ -149,7 +148,7 @@ class ECTstage(DataSender):
         for axis in self.conf["run"]["active_axes"]:
             self._get_stage_info(axis)
 
-        # re-launches satelite to start position
+        # re-launches satellite to start position
         for axis in self.conf["run"]["active_axes"]:
             if self.conf[axis]["start_position"] > stage_max[axis]:
                 raise KeyError("Home position in [{}] must be smaller than {}".format(axis, stage_max[axis]))
@@ -157,7 +156,7 @@ class ECTstage(DataSender):
 
         return "Reconfigured from conf file"
 
-    def do_launching(self, payload: any) -> str:
+    def do_launching(self) -> str:
         """
         move stage to start position
         """
@@ -167,7 +166,7 @@ class ECTstage(DataSender):
         self._move_to_start()
         return "Launched"
 
-    def do_landing(self, payload: any) -> str:
+    def do_landing(self) -> str:
         """
         Closes connections with stage and lands satellite
         """
@@ -182,7 +181,7 @@ class ECTstage(DataSender):
                 pass
         return "Connection with stages closed"
 
-    def do_starting(self, payload: any) -> str:
+    def do_starting(self, run_identifier: str) -> str:
         """
         move to data taking position
         """
@@ -220,8 +219,10 @@ class ECTstage(DataSender):
                         self.log.debug(f"{axis} {pos[axis]}")
                     else:
                         raise KeyError(
-                            "{} must be a 3-valued list. To take data at a single point, remove this parameter and use `home_position` instead".format(
-                                param
+                            "{} {} {}".format(
+                                param,
+                                "must be a 3-valued list.",
+                                "To take data at a single point, remove this parameter and use `home_position` instead",
                             )
                         )
                 else:
@@ -232,7 +233,7 @@ class ECTstage(DataSender):
         self.log.debug(f"pos: {pos}")
         for pos_z in pos["z"]:
             if np.isnan(pos_z):
-                self.log.debug(f"z stage not moved")
+                self.log.debug("z stage not moved")
             else:
                 self.log.debug(f"z position {pos_z}")
                 self._move_stage("z", pos_z)
@@ -257,7 +258,7 @@ class ECTstage(DataSender):
                     self._move_stage("r", pos_r)
                     self._wait_until_stage_stops_moving(self.stage_r)
                 else:
-                    self.log.debug(f"r stage not moved")
+                    self.log.debug("r stage not moved")
                 if self._state_thread_evt.is_set():
                     break
 
@@ -265,7 +266,7 @@ class ECTstage(DataSender):
                     self._move_stage("y", pos_y)
                     self._wait_until_stage_stops_moving(self.stage_y)
                 else:
-                    self.log.debug(f"y stage not moved")
+                    self.log.debug("y stage not moved")
                 if self._state_thread_evt.is_set():
                     break
 
@@ -273,7 +274,7 @@ class ECTstage(DataSender):
                     self._move_stage("x", pos_x)
                     self._wait_until_stage_stops_moving(self.stage_x)
                 else:
-                    self.log.debug(f"x stage not moved")
+                    self.log.debug("x stage not moved")
 
                 if self._state_thread_evt.is_set():
                     print("is this the issue?")
@@ -281,7 +282,7 @@ class ECTstage(DataSender):
 
                 if startTime_flag:
                     self.start_of_loop_time = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW) - self.start_of_run_time
-                    startTime_flag=False
+                    startTime_flag = False
                 # measurement time
                 time.sleep(self.conf["run"]["stop_time_per_point_s"])
 
@@ -302,14 +303,11 @@ class ECTstage(DataSender):
             self._move_to_start()
             return "Finished acquisition. Stop run to proceed"
 
-    def do_stopping(self, payload: any) -> str:
-        """End the run. Add run metadata for end-of-run event
-        """
+    def do_stopping(self) -> str:
+        """End the run. Add run metadata for end-of-run event"""
 
-        self.EOR = {"start_of_loop_time":self.start_of_loop_time,
-                    "end_of_loop_time":self.end_of_loop_time}
+        self.EOR = {"start_of_loop_time": self.start_of_loop_time, "end_of_loop_time": self.end_of_loop_time}
         return "Stopped. EOR sent"
-
 
     @cscp_requestable
     def go_home(self, request: CSCPMessage) -> tuple[str, any, dict]:
@@ -319,11 +317,11 @@ class ECTstage(DataSender):
         args: `axis` (optional). else: applies to all stages
         """
         axis = request.payload
-        if axis not in self.conf["run"]["active_axes"] and axis != None:
+        if axis not in self.conf["run"]["active_axes"] and axis is not None:
             return "Stage not found", None, {}
 
         for ax in self.conf["run"]["active_axes"]:
-            if ax == axis or axis == None:
+            if ax == axis or axis is None:
                 stage = self._stage_select(ax)
                 with self._lock:
                     stage.home()
@@ -338,11 +336,11 @@ class ECTstage(DataSender):
         args: `axis` (optional). else: applies to all stages
         """
         axis = request.payload
-        if axis not in self.conf["run"]["active_axes"] and axis != None:
+        if axis not in self.conf["run"]["active_axes"] and axis is not None:
             return "Stage not found", None, {}
 
         for ax in self.conf["run"]["active_axes"]:
-            if ax == axis or axis == None:
+            if ax == axis or axis is None:
                 stage = self._stage_select(ax)
                 if self._stage_moving(stage):
                     self._stage_stop(stage)
@@ -356,12 +354,12 @@ class ECTstage(DataSender):
         args: `axis` (optional). else: applies to all stages
         """
         axis = request.payload
-        if axis not in self.conf["run"]["active_axes"] and axis != None:
+        if axis not in self.conf["run"]["active_axes"] and axis is not None:
             return "Stage not found", None, {}
 
         val = ""
         for ax in self.conf["run"]["active_axes"]:
-            if ax == axis or axis == None:
+            if ax == axis or axis is None:
                 stage = self._stage_select(ax)
                 with self._lock:
                     val = val + ax + ": " + str(stage.get_status()) + " \n"
@@ -375,12 +373,12 @@ class ECTstage(DataSender):
         args: `axis` (optional). else: applies to all stages
         """
         axis = request.payload
-        if axis not in self.conf["run"]["active_axes"] and axis != None:
+        if axis not in self.conf["run"]["active_axes"] and axis is not None:
             return "Stage not found", None, {}
 
         val = ""
         for ax in self.conf["run"]["active_axes"]:
-            if ax == axis or axis == None:
+            if ax == axis or axis is None:
                 stage = self._stage_select(ax)
                 with self._lock:
                     val = val + ax + ": " + str(stage.get_full_status()) + " \n"
@@ -394,12 +392,12 @@ class ECTstage(DataSender):
         args: `axis` (optional). else: applies to all stages
         """
         axis = request.payload
-        if axis not in self.conf["run"]["active_axes"] and axis != None:
+        if axis not in self.conf["run"]["active_axes"] and axis is not None:
             return "Stage not found", None, {}
 
         val = ""
         for ax in self.conf["run"]["active_axes"]:
-            if ax == axis or axis == None:
+            if ax == axis or axis is None:
                 stage = self._stage_select(ax)
                 with self._lock:
                     val = val + ax + ": " + str(stage.get_full_info()) + " \n"
@@ -413,14 +411,13 @@ class ECTstage(DataSender):
         args: `axis`
         """
         axis = request.payload
-        if axis in self.conf["run"]["active_axes"] and axis != None:
+        if axis in self.conf["run"]["active_axes"] and axis is not None:
             stage = self._stage_select(axis)
             with self._lock:
                 stage.blink()
             return "Blinking {} axis".format(axis), None, {}
         else:
             return "Stage not found. `axis` is a mandatory argument", None, {}
-
 
     @cscp_requestable
     def disconnect(self, request: CSCPMessage) -> tuple[str, any, dict]:
@@ -429,12 +426,12 @@ class ECTstage(DataSender):
         args: `axis` (optional). else: applies to all stages
         """
         axis = request.payload
-        if axis not in self.conf["run"]["active_axes"] and axis != None:
+        if axis not in self.conf["run"]["active_axes"] and axis is not None:
             return "Stage not found", None, {}
 
         for ax in self.conf["run"]["active_axes"]:
             print_axes = ""
-            if ax == axis or axis == None:
+            if ax == axis or axis is None:
                 print_axes = print_axes + ax + " "
                 stage = self._stage_select(ax)
                 with self._lock:
@@ -452,11 +449,11 @@ class ECTstage(DataSender):
         args: `axis` (optional). else: applies to all stages
         """
         axis = request.payload
-        if axis not in self.conf["run"]["active_axes"] and axis != None:
+        if axis not in self.conf["run"]["active_axes"] and axis is not None:
             return "Stage not found", None, {}
         val = ""
         for ax in self.conf["run"]["active_axes"]:
-            if ax == axis or axis == None:
+            if ax == axis or axis is None:
                 stage = self._stage_select(ax)
                 with self._lock:
                     val = val + ax + ":" + str(stage.get_velocity_parameters(channel=self.conf[ax]["channel"], scale=True))
@@ -473,12 +470,11 @@ class ECTstage(DataSender):
         args: `axis` (optional). else: applies to all stages
         """
         axis = request.payload
-        if axis not in self.conf["run"]["active_axes"] and axis != None:
+        if axis not in self.conf["run"]["active_axes"] and axis is not None:
             return "Stage not found", None, {}
         val = ""
         for ax in self.conf["run"]["active_axes"]:
-            if ax == axis or axis == None:
-                stage = self._stage_select(ax)
+            if ax == axis or axis is None:
                 val = val + ax + ":" + str(self._get_position(ax))
                 if ax in stage_axes["r"]:
                     val = val + " deg; \n"
@@ -529,11 +525,10 @@ class ECTstage(DataSender):
                 )
 
                 if self.conf[axis]["serial_no"] != stage.get_full_info()["device_info"][0]:
-                    raise KeyError(
-                        "Serial Number of {}-stage does not match the device. Device serial number:{}, serial number in config:{}".format(
-                            axis, stage.get_full_info()["device_info"][0], self.conf[axis]["serial_no"]
-                        )
-                    )
+                    print_1 = f"Serial Number of {axis}-stage does not match the device."
+                    print_2 = f"Device serial number:{stage.get_full_info()['device_info'][0]}"
+                    print_3 = f"serial number in config:{self.conf[axis]['serial_no']}"
+                    raise KeyError(f"{print_1} {print_2} {print_3}")
 
                 if self.conf[axis]["velocity"] > max_velocity:
                     raise KeyError(
@@ -560,11 +555,10 @@ class ECTstage(DataSender):
                 )
 
                 if self.conf[axis]["serial_no"] != stage.get_full_info()["device_info"][0]:
-                    raise KeyError(
-                        "Serial Number of {}-stage does not match the device. Device serial number:{}, serial number in config:{}".format(
-                            axis, stage.get_full_info()["device_info"][0], self.conf[axis]["serial_no"]
-                        )
-                    )
+                    print_1 = f"Serial Number of {axis}-stage does not match the device."
+                    print_2 = f"Device serial number:{stage.get_full_info()['device_info'][0]}"
+                    print_3 = f"serial number in config:{self.conf[axis]['serial_no']}"
+                    raise KeyError(f"{print_1} {print_2} {print_3}")
 
                 if self.conf[axis]["velocity"] > max_velocity_r:
                     raise KeyError(
@@ -631,17 +625,16 @@ class ECTstage(DataSender):
         move to start positions defined in config file
         """
         for ax in self.conf["run"]["active_axes"]:
-            if ax == axis or axis == None:
+            if ax == axis or axis is None:
                 # print(axis,"stage moving to start point (home)")
                 unit = self._get_unit(ax)
                 self.log.info(f"{ax} stage moving to start point (home): {self.conf[ax]['start_position']} {unit}")
-                stage = self._stage_select(ax)
                 self._move_stage(ax, self.conf[ax]["start_position"])
             else:
                 raise KeyError("Stage not found")
         self._move_lock()
         # print("stages moved")
-        self.log.info(f"stages moved")
+        self.log.info("stages moved")
 
     def _stage_moving(self, stage):
         with self._lock:
@@ -694,16 +687,19 @@ class ECTstage(DataSender):
         creates the zig-zag positions
         """
         XYarray = [[(x, y) for x in posX_list] for y in posY_list]
-        XY_rev=[]
+        XY_rev = []
         for index in range(len(XYarray)):
-            if index % 2 == 1: XY_rev.append(XYarray[index][::-1])
-            else             : XY_rev.append(XYarray[index])
+            if index % 2 == 1:
+                XY_rev.append(XYarray[index][::-1])
+            else:
+                XY_rev.append(XYarray[index])
         XYarray = [item for sublist in XY_rev for item in sublist]
         XYRarray = [[(x, y, r) for (x, y) in XYarray] for r in posR_list]
 
-        XYR_rev=[]
+        XYR_rev = []
         for index in range(len(XYRarray)):
-            if index % 2 == 1: XYR_rev.append(XYRarray[index][::-1])
+            if index % 2 == 1:
+                XYR_rev.append(XYRarray[index][::-1])
             else:
                 XYR_rev.append(XYRarray[index])
 
@@ -723,9 +719,7 @@ class ECTstage(DataSender):
         outdir.mkdir(parents=True, exist_ok=True)
         formatted_time = time.strftime("%Y-%m-%d-%H%M%S", time.localtime())
 
-        outdir = outdir / Path(
-            "t_" + str(formatted_time) + "_" + config_file.rpartition("/")[2]
-        )
+        outdir = outdir / Path("t_" + str(formatted_time) + "_" + config_file.rpartition("/")[2])
         shutil.copyfile(Path(config_file), outdir)
         self.log.info(f"Saved config file as {str(outdir)}")
 
@@ -734,7 +728,7 @@ class ECTstage(DataSender):
 
             payload = np.array(
                 [
-                    time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)-self.start_of_run_time,
+                    time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW) - self.start_of_run_time,
                     self._get_position("x"),
                     self._get_position("y"),
                     self._get_position("z"),
