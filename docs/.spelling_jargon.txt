@@ -52,3 +52,5 @@ uptime
 Gid
 KiB
 gui
+rethrows
+Variadic
