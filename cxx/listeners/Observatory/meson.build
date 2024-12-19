@@ -13,7 +13,7 @@ inc = include_directories('.')
 
 qrc_files = qt.compile_resources(sources: 'Observatory.qrc')
 ui_files = qt.compile_ui(sources: ['Observatory.ui', 'LogDialog.ui'])
-moc_files = qt.compile_moc(headers: ['QLogFilter.hpp', 'QLogListener.hpp', 'QLogMessage.hpp', 'Observatory.hpp'])
+moc_files = qt.compile_moc(headers: ['QLogFilter.hpp', 'QLogListener.hpp', 'Observatory.hpp'])
 
 executable('Observatory', 'Observatory.cpp', 'QLogFilter.cpp', 'QLogListener.cpp', 'QLogMessage.cpp', ui_files, moc_files, qrc_files,
            include_directories: inc,
