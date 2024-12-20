@@ -1,3 +1,8 @@
+"""
+SPDX-FileCopyrightText: 2024 DESY and the Constellation authors
+SPDX-License-Identifier: CC-BY-4.0
+"""
+
 from serial import Serial
 import time
 
@@ -87,20 +92,12 @@ class KeithleySMU6517Series:
             self._ser.write((":SYST:ZCH OFF" + "\r\n").encode("utf-8"))
             self._ser.write((":CALC:FORM NONE" + "\r\n").encode("utf-8"))
 
-            self._ser.write(
-                (":SOUR:VOLT:LIM " + str(self._OVPSource) + "\r\n").encode("utf-8")
-            )
+            self._ser.write((":SOUR:VOLT:LIM " + str(self._OVPSource) + "\r\n").encode("utf-8"))
 
             # Set up the sensing. Can be voltage, current, or resistance
             self._ser.write((':SENS:FUNC "' + self._measure + '"\r\n').encode("utf-8"))
             self._ser.write(
-                (
-                    ":SENS:"
-                    + self._measure
-                    + ":RANG:AUTO "
-                    + str(self._autorangeMeasure)
-                    + "\r\n"
-                ).encode("utf-8")
+                (":SENS:" + self._measure + ":RANG:AUTO " + str(self._autorangeMeasure) + "\r\n").encode("utf-8")
             )
 
             # Set up the buffer
@@ -109,9 +106,7 @@ class KeithleySMU6517Series:
                 (":TRAC:POIN " + str(self._triggerCount) + "\r\n").encode("utf-8")
             )  # Specifies the size of the buffer
             self._ser.write(b":TRAC:CLEar\r\n")  # Clears the buffer
-            self._ser.write(
-                b":TRAC:FEED:CONT NEXT\r\n"
-            )  # Enable buffer storage. Fills the buffer, then stops
+            self._ser.write(b":TRAC:FEED:CONT NEXT\r\n")  # Enable buffer storage. Fills the buffer, then stops
 
             # Set up the data format for transfer of readings over bus
             self._ser.write(b":FORMat:DATA ASCii\r\n")
@@ -126,9 +121,7 @@ class KeithleySMU6517Series:
             self._ser.write(
                 str.encode(":TRIG:COUN " + str(self._triggerCount) + "\r\n")
             )  # Specifies the number of measurements to do
-            self._ser.write(
-                str.encode(":TRIG:DELay " + str(self._triggerDelay) + "\r\n")
-            )
+            self._ser.write(str.encode(":TRIG:DELay " + str(self._triggerDelay) + "\r\n"))
 
         except ValueError:
             print("ERROR: No serial connection. Check cable and port!")
@@ -165,15 +158,9 @@ class KeithleySMU6517Series:
     def sample(self, no_of_samples):
         self._ser.write(b":TRAC:FEED:CONT NEVer\r\n")  # Disable buffer storage
         self._ser.write(b":TRACe:CLEar\r\n")  # Clear the buffer
-        self._ser.write(
-            (":TRACe:POINTs " + str(no_of_samples) + "\r\n").encode()
-        )  # Clear the buffer
-        self._ser.write(
-            (":TRIG:COUNT " + str(no_of_samples) + "\r\n").encode()
-        )  # Clear the buffer
-        self._ser.write(
-            b":TRAC:FEED:CONT NEXT\r\n"
-        )  # Enable buffer storage, fills buffer then stops
+        self._ser.write((":TRACe:POINTs " + str(no_of_samples) + "\r\n").encode())  # Clear the buffer
+        self._ser.write((":TRIG:COUNT " + str(no_of_samples) + "\r\n").encode())  # Clear the buffer
+        self._ser.write(b":TRAC:FEED:CONT NEXT\r\n")  # Enable buffer storage, fills buffer then stops
         self._ser.write(b":INIT\r\n")
         # :TRACE:CLEAR
         # :TRACE:POINTS 1000
@@ -204,9 +191,7 @@ class KeithleySMU6517Series:
         return data
 
     def check_compliance(self):
-        self._ser.write(
-            (":SENS:" + self._measure + ":PROT:TRIPped?" + "\r\n").encode("utf-8")
-        )
+        self._ser.write((":SENS:" + self._measure + ":PROT:TRIPped?" + "\r\n").encode("utf-8"))
 
     def get_current_timestamp_voltage(self, observable="all"):
         self.sample(1)
@@ -249,9 +234,7 @@ class KeithleySMU6517Series:
             try:
                 self.set_voltage(currVoltage - v_step, unit)
             except ValueError:
-                print(
-                    "Error occurred. Check compliance and voltage. Going to safe state"
-                )
+                print("Error occurred. Check compliance and voltage. Going to safe state")
                 self.set_voltage(self._SafeLevelSource, unit)
                 raise ValueError("Voltage ramp failed")
             time.sleep(settle_time)
@@ -260,9 +243,7 @@ class KeithleySMU6517Series:
             try:
                 self.set_voltage(currVoltage + v_step, unit)
             except ValueError:
-                print(
-                    "Error occurred. Check compliance and voltage. Going to safe state"
-                )
+                print("Error occurred. Check compliance and voltage. Going to safe state")
                 self.set_voltage(self._SafeLevelSource, unit)
                 raise ValueError("Voltage ramp failed")
             time.sleep(settle_time)
