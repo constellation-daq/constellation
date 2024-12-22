@@ -109,8 +109,7 @@ zmq::multipart_t CHP1Message::assemble() {
     // then state
     msgpack_pack(sbuf, std::to_underlying(state_));
     // then flags
-    msgpack_pack(
-        sbuf, std::to_underlying(flags_ | (status_.has_value() ? CHP::MessageFlags::HAS_STATUS : CHP::MessageFlags::NONE)));
+    msgpack_pack(sbuf, std::to_underlying(flags_));
     // then interval
     msgpack_pack(sbuf, static_cast<uint16_t>(interval_.count()));
 

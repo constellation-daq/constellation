@@ -45,7 +45,6 @@ A receiving CHP host SHALL discard messages that it receives with an invalid for
 
 The heartbeat and extrasystole message frame MUST be encoded according to the MessagePack specification.
 It SHALL contain two strings, followed by a 64-bit timestamp, two 1-OCTET integer values and a 2-OCTET integer value.
-The message MAY contain an additional string at the end.
 
 The first string MUST contain the protocol identifier, which SHALL consist of the letters ‘C’, ‘H’ and ‘P’, followed by the protocol version number, which SHALL be %x01.
 
@@ -61,12 +60,13 @@ The second 1-OCTET integer variable SHALL hold the CHP message flags, which are 
 
 * `%x01` for message flag `IS_EXTRASYSTOLE`: The currently processed CHP message is an extrasystole message.
 * `%x02` for message flag `IS_AUTONOMOUS`: The state indicated in the currently processed CHP message has been reached autonomously.
-* `%x04` for message flag `HAS_STATUS`: The currently processed message provides an OPTIONAL string with the current CHP sender status message.
-* The flags `%x08`, `%x10`, `%x20`, `%x40` and `%x80` are reserved.
+* The flags `%x04`, `%x08`, `%x10`, `%x20`, `%x40` and `%x80` are reserved.
 
 The 2-OCTET integer variable SHALL indicate the maximum time interval in units of milliseconds until the next heartbeat message is emitted by the sending CHP host.
 
-The OPTIONAL string contains the current CHP sender status message. If the status message is transmitted, the message flag `%x04` MUST be present.
+### Payload Frame
+
+The OPTIONAL message payload frame SHALL consist of the current status message of the CHP sender, encoded as a UTF8 string.
 
 ### Lives Counter & Heartbeat Timeouts
 
