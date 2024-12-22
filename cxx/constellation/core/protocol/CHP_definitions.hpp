@@ -17,27 +17,17 @@ namespace constellation::protocol::CHP {
     static constexpr std::uint8_t Lives = 3;
 
     /** Possible CHP message flags */
-    enum class MessageFlags : std::uint8_t {
-        NONE = 0x0,
+    enum MessageFlags : std::uint8_t {
+        NONE = 0x00,
 
         /* Indicate a extrasystole message */
-        IS_EXTRASYSTOLE = 0x1,
+        IS_EXTRASYSTOLE = 0x01,
 
         /* Indicate whether the current state has been reached autonomously or by CSCP command */
-        IS_AUTONOMOUS = 0x2,
+        IS_AUTONOMOUS = 0x02,
 
         /* Indicate that this message contains a status text */
-        HAS_STATUS = 0x4,
+        HAS_STATUS = 0x04,
     };
-
-    constexpr MessageFlags operator|(MessageFlags lhs, MessageFlags rhs) {
-        return static_cast<MessageFlags>(static_cast<std::underlying_type_t<MessageFlags>>(lhs) |
-                                         static_cast<std::underlying_type_t<MessageFlags>>(rhs));
-    }
-
-    constexpr bool operator&(MessageFlags lhs, MessageFlags rhs) {
-        return static_cast<bool>(static_cast<std::underlying_type_t<MessageFlags>>(lhs) &
-                                 static_cast<std::underlying_type_t<MessageFlags>>(rhs));
-    }
 
 } // namespace constellation::protocol::CHP

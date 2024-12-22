@@ -78,7 +78,7 @@ void HeartbeatSend::loop(const std::stop_token& stop_token) {
 
         try {
             // Publish CHP message with current state
-            CHP1Message(sender_, state_callback_(), interval_.load(), flags_).assemble().send(pub_socket_);
+            CHP1Message(sender_, state_callback_(), interval_.load(), flags_.load()).assemble().send(pub_socket_);
             flags_ = CHP::MessageFlags::NONE;
         } catch(const zmq::error_t& e) {
             throw NetworkError(e.what());
