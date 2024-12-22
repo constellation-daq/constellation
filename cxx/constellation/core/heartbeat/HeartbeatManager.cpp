@@ -87,8 +87,8 @@ void HeartbeatManager::host_disconnected(const chirp::DiscoveredService& service
 }
 
 void HeartbeatManager::process_heartbeat(const CHP1Message& msg) {
-    LOG(logger_, TRACE) << msg.getSender() << " reports state " << msg.getState() << ", next message in "
-                        << msg.getInterval();
+    LOG(logger_, TRACE) << msg.getSender() << " reports state " << msg.getState() << ", flags " << enum_name(msg.getFlags())
+                        << ", next message in " << msg.getInterval();
 
     const auto now = std::chrono::system_clock::now();
     const std::lock_guard lock {mutex_};
