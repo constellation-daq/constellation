@@ -7,11 +7,20 @@ import time
 import io
 import msgpack  # type: ignore[import-untyped]
 import zmq
+from enum import IntFlag
 from typing import Tuple
 from .protocol import Protocol
 
 
-def CHPDecodeMessage(msg: list[bytes]) -> Tuple[str, msgpack.Timestamp, int, int, str | None]:
+class CHPMessageFlags(IntFlag):
+    """Defines the message flags of CHP messages."""
+
+    NONE = 0x00
+    IS_EXTRASYSTOLE = 0x01
+    IS_AUTONOMOUS = 0x02
+
+
+def CHPDecodeMessage(msg: list[bytes]) -> Tuple[str, msgpack.Timestamp, int, CHPMessageFlags, int]:
     """Decode a CHP binary message.
 
     Returns host, timestamp, state, interval and status if available.
@@ -26,13 +35,14 @@ def CHPDecodeMessage(msg: list[bytes]) -> Tuple[str, msgpack.Timestamp, int, int
     name = unpacker.unpack()
     timestamp = unpacker.unpack()
     state = unpacker.unpack()
+    flags = unpacker.unpack()
     interval = unpacker.unpack()
 
     status = None
     if len(msg) > 1:
         status = msg[1].decode("utf-8")
 
-    return name, timestamp, state, interval, status
+    return name, timestamp, state, flags, interval, status
 
 
 class CHPTransmitter:
@@ -43,7 +53,7 @@ class CHPTransmitter:
         self.name = name
         self._socket = socket
 
-    def send(self, state: int, interval: int, status: str | None = None, flags: int = 0) -> None:
+    def send(self, state: int, interval: int, msgflags: CHPMessageFlags, status: str | None = None, flags: int = 0) -> None:
         """Send state and interval via CHP."""
         stream = io.BytesIO()
         packer = msgpack.Packer()
@@ -51,6 +61,7 @@ class CHPTransmitter:
         stream.write(packer.pack(self.name))
         stream.write(packer.pack(msgpack.Timestamp.from_unix_nano(time.time_ns())))
         stream.write(packer.pack(state))
+        stream.write(packer.pack(msgflags))
         stream.write(packer.pack(interval))
 
         if status:
@@ -64,7 +75,7 @@ class CHPTransmitter:
 
     def recv(
         self, flags: int = zmq.NOBLOCK
-    ) -> Tuple[str, msgpack.Timestamp, int, int, str | None] | Tuple[None, None, None, None]:
+    ) -> Tuple[str, msgpack.Timestamp, int, CHPMessageFlags, int, str | None] | Tuple[None, None, None, None]:
         """Receive a heartbeat via CHP."""
         try:
             msg = self._socket.recv_multipart(flags)
