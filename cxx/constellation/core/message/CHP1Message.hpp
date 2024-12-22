@@ -31,6 +31,7 @@ namespace constellation::message {
          * @param sender Sender name
          * @param state State of the sender
          * @param interval Time interval until next message is expected
+         * @param flags Message flags
          * @param status Optional status string for the message
          * @param time Message time
          */
@@ -40,7 +41,7 @@ namespace constellation::message {
                     protocol::CHP::MessageFlags flags = {},
                     std::optional<std::string> status = {},
                     std::chrono::system_clock::time_point time = std::chrono::system_clock::now())
-            : sender_(std::move(sender)), time_(time), state_(state), interval_(interval), status_(std::move(status)) {}
+            : sender_(std::move(sender)), time_(time), state_(state), flags_(flags), interval_(interval), status_(std::move(status)) {}
 
         /** Return message protocol */
         constexpr protocol::Protocol getProtocol() const { return protocol_; }
