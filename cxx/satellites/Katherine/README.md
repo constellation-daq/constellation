@@ -8,7 +8,7 @@ subtitle: "Satellite to control the Timepix3 readout system Katherine"
 ## Description
 
 This satellite controls the [Katherine readout system](https://iopscience.iop.org/article/10.1088/1748-0221/12/11/C11001)
-for Timepix3 detectors. The readout system is connected to the controlling computer via Gigabit ethernet and consequently
+for Timepix3 detectors. The readout system is connected to the controlling computer via Gigabit Ethernet and consequently
 supports maximum hit rates of up to 16MHits/s.
 
 The satellite allows to operate the Timepix3 detector in any of its matrix operation modes. i.e. the combined time-of-arrival
@@ -119,7 +119,7 @@ The following example configuration could be used to control a Katherine readout
 The satellite is configured to connect to the system at `192.168.1.182` and to use the provided local files for DAC settings
 and pixel matrix configuration. The pixel buffer is set to 300 pixel hits, all other settings are left at their defaults:
 
-```ini
+```toml
 [Satellites.Katherine.TPX3]
 ip_address = "192.168.1.182"
 dacs_file = "E2-W0005_dacs.txt"

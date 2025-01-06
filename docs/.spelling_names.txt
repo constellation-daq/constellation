@@ -16,3 +16,4 @@ QController
 SatelliteT
 DSOLoaderError
 IPython
+Timepix
