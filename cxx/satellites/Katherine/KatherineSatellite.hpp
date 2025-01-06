@@ -9,13 +9,24 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <future>
+#include <memory>
 #include <mutex>
+#include <stop_token>
+#include <string>
 #include <string_view>
+#include <vector>
 
-#include <katherinexx/katherinexx.hpp>
+#include <katherinexx/acquisition.hpp>
+#include <katherinexx/config.hpp>
+#include <katherinexx/device.hpp>
+#include <katherinexx/px_config.hpp>
 
+#include "constellation/core/config/Configuration.hpp"
+#include "constellation/core/log/log.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
@@ -23,7 +34,7 @@ class KatherineSatellite final : public constellation::satellite::TransmitterSat
     /**
      * @brief Shutter trigger modes
      */
-    enum class ShutterMode {
+    enum class ShutterMode : std::uint8_t {
         POS_EXT = 0,
         NEG_EXT = 1,
         POS_EXT_TIMER = 2,
@@ -34,7 +45,7 @@ class KatherineSatellite final : public constellation::satellite::TransmitterSat
     /**
      * @brief Operation modes
      */
-    enum class OperationMode {
+    enum class OperationMode : std::uint8_t {
         TOA_TOT = 0x000,
         TOA = 0x002,
         EVT_ITOT = 0x004,
@@ -55,25 +66,25 @@ public:
     void failure(constellation::protocol::CSCP::State previous_state) override;
 
 private:
-    katherine::dacs parse_dacs_file(const std::filesystem::path& file_path) const;
-    katherine::px_config parse_px_config_file(const std::filesystem::path& file_path) const;
+    static katherine::dacs parse_dacs_file(const std::filesystem::path& file_path);
+    static katherine::px_config parse_px_config_file(const std::filesystem::path& file_path);
 
     std::vector<std::string> get_hw_info();
 
-    std::string trim(const std::string& str, const std::string& delims = " \t\n\r\v") const;
+    static std::string trim(const std::string& str, const std::string& delims = " \t\n\r\v");
 
     void frame_started(int frame_idx);
     void frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info);
 
-    void data_received(const char* data, size_t count);
+    void data_received(const char* data, std::size_t count);
 
-    template <typename T> void pixels_received(const T* px, size_t count) {
+    template <typename T> void pixels_received(const T* px, std::size_t count) {
         auto msg = newDataMessage();
         LOG(TRACE) << "Received buffer with " << count << " pixel hits";
         LOG_IF(TRACE, count > 0) << "First pixel of buffer: " << static_cast<int>(px[0].coord.x) << " "
                                  << static_cast<int>(px[0].coord.y);
 
-        for(size_t i = 0; i < count; ++i) {
+        for(std::size_t i = 0; i < count; ++i) {
             msg.addFrame(to_bytes(px[i]));
         }
         // Try to send and retry if it failed:
@@ -106,7 +117,7 @@ private:
     std::mutex katherine_data_mutex_;
 
     std::shared_ptr<katherine::base_acquisition> acquisition_;
-    katherine::config katherine_config_ {};
+    katherine::config katherine_config_;
 
     /* Future to keep track of Katherine acquisition call state & exceptions */
     std::future<void> acq_future_;

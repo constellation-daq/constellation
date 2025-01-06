@@ -10,18 +10,33 @@
 #include "KatherineSatellite.hpp"
 
 #include <chrono>
+#include <cstdint>
+#include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <functional>
+#include <future>
+#include <ios>
 #include <memory>
 #include <mutex>
+#include <sstream>
+#include <stop_token>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include <katherinexx/acquisition.hpp>
+#include <katherinexx/config.hpp>
+#include <katherinexx/device.hpp>
+#include <katherinexx/error.hpp>
+#include <katherinexx/px_config.hpp>
+
+#include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/metrics/Metric.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/satellite/exceptions.hpp"
 #include "constellation/satellite/TransmitterSatellite.hpp"
 
 using namespace constellation::config;
@@ -168,7 +183,7 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
         // No "autotriggering"
         // enabled, channel, use_falling_edge
         katherine_config_.set_start_trigger(
-            {true, 0, (trigger_mode == ShutterMode::POS_EXT || trigger_mode == ShutterMode::POS_EXT_TIMER) ? false : true});
+            {true, 0, trigger_mode != ShutterMode::POS_EXT && trigger_mode != ShutterMode::POS_EXT_TIMER});
     }
 
     if(trigger_mode == ShutterMode::POS_EXT_TIMER || trigger_mode == ShutterMode::NEG_EXT_TIMER) {
@@ -209,18 +224,18 @@ void KatherineSatellite::initializing(constellation::config::Configuration& conf
     decode_data_ = config.get<bool>("decode_data");
 }
 
-void KatherineSatellite::data_received(const char* data, size_t count) {
+void KatherineSatellite::data_received(const char* data, std::size_t count) {
     auto msg = newDataMessage();
     LOG(TRACE) << "Received buffer with " << count << " words";
 
     if(count % 6 != 0) {
-        std::string msg = "Number of data words doesn't match measurement data granularity";
+        const std::string msg = "Number of data words doesn't match measurement data granularity";
         LOG(CRITICAL) << msg;
         throw CommunicationError(msg);
     }
 
     // Measurement data us 6 bytes, pack each in a frame
-    for(size_t i = 0; i < count; i += 6) {
+    for(std::size_t i = 0; i < count; i += 6) {
         msg.addFrame(std::string(data + i, data + i + 6));
     }
     // Try to send and retry if it failed:
@@ -228,7 +243,7 @@ void KatherineSatellite::data_received(const char* data, size_t count) {
     sendDataMessage(msg);
 }
 
-void KatherineSatellite::interrupting(CSCP::State) {
+void KatherineSatellite::interrupting(CSCP::State /*previous_state*/) {
     if(acquisition_) {
         LOG(WARNING) << "Acquisition was still running";
         const std::lock_guard acquisition_lock {katherine_acq_mutex_};
@@ -257,10 +272,12 @@ void KatherineSatellite::failure(CSCP::State state) {
     interrupting(state);
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 void KatherineSatellite::frame_started(int frame_idx) {
     LOG(INFO) << "Started frame " << frame_idx;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 void KatherineSatellite::frame_ended(int frame_idx, bool completed, const katherine_frame_info_t& info) {
     LOG(STATUS) << "Frame " << frame_idx << " finished, started at " << info.start_time.d << ", ended at " << info.end_time.d
                 << ", completed " << std::boolalpha << completed;
@@ -270,7 +287,7 @@ void KatherineSatellite::frame_ended(int frame_idx, bool completed, const kather
         << "Katherine -> PC lost " << (info.sent_pixels - info.received_pixels) << " pixels";
 }
 
-void KatherineSatellite::starting(std::string_view) {
+void KatherineSatellite::starting(std::string_view /*run_identifier*/) {
 
     const std::lock_guard acquisition_lock {katherine_acq_mutex_};
     const std::lock_guard device_lock {katherine_cmd_mutex_};
@@ -391,8 +408,8 @@ void KatherineSatellite::stopping() {
     setEORTag("hw_info", get_hw_info());
 
     // Read status information from acquisition object
-    LOG(STATUS) << "Acquisition completed" << std::endl
-                << "State: " << katherine::str_acq_state(acquisition_->state()) << std::endl
+    LOG(STATUS) << "Acquisition completed\n"
+                << "State: " << katherine::str_acq_state(acquisition_->state()) << "\n"
                 << "Received " << acquisition_->completed_frames() << " complete frames";
     LOG_IF(WARNING, acquisition_->dropped_measurement_data() > 0)
         << "Dropped " << acquisition_->dropped_measurement_data() << " measurement data items";
@@ -401,7 +418,7 @@ void KatherineSatellite::stopping() {
 }
 
 std::vector<std::string> KatherineSatellite::get_hw_info() {
-    std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
+    const std::lock_guard<std::mutex> lock {katherine_cmd_mutex_};
     auto state = device_->readout_status();
     return {"Type " + to_string(state.hw_type),
             "Revision " + to_string(state.hw_revision),
@@ -409,7 +426,7 @@ std::vector<std::string> KatherineSatellite::get_hw_info() {
             "Firmware " + to_string(state.fw_version)};
 }
 
-katherine::dacs KatherineSatellite::parse_dacs_file(const std::filesystem::path& file_path) const {
+katherine::dacs KatherineSatellite::parse_dacs_file(const std::filesystem::path& file_path) {
 
     LOG(DEBUG) << "Attempting to read DAC file at " << file_path;
     std::ifstream dacfile {file_path};
@@ -442,12 +459,12 @@ katherine::dacs KatherineSatellite::parse_dacs_file(const std::filesystem::path&
         LOG(DEBUG) << "Setting DAC " << dac_nr << " = " << dac_val;
 
         // Assign dac value
-        dacs.array[dac_nr - 1] = dac_val;
+        dacs.array[dac_nr - 1] = dac_val; // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
     }
     return dacs;
 }
 
-katherine::px_config KatherineSatellite::parse_px_config_file(const std::filesystem::path& file_path) const {
+katherine::px_config KatherineSatellite::parse_px_config_file(const std::filesystem::path& file_path) {
 
     LOG(INFO) << "Attempting to read pixel configuration file at " << file_path;
 
@@ -465,13 +482,13 @@ katherine::px_config KatherineSatellite::parse_px_config_file(const std::filesys
 
     // Generate new object and reset memory
     katherine::px_config px_config {};
-    memset(&px_config.words, 0, 65536);
-    auto* dest = (uint32_t*)px_config.words;
+    std::memset(&px_config.words, 0, 65536);
+    auto* dest = static_cast<std::uint32_t*>(px_config.words);
 
     std::string tline;
-    size_t pixels = 0;
-    size_t masked = 0;
-    size_t tp_enabled = 0;
+    std::size_t pixels = 0;
+    std::size_t masked = 0;
+    std::size_t tp_enabled = 0;
     while(std::getline(trimfile, tline)) {
         // Trim whitespace and line breaks
         tline = trim(tline);
@@ -483,11 +500,11 @@ katherine::px_config KatherineSatellite::parse_px_config_file(const std::filesys
 
         std::istringstream iss(tline);
 
-        int row {};
-        int col {};
-        int thr {};
-        int mask {};
-        int tp_ena {};
+        std::uint32_t row {};
+        std::uint32_t col {};
+        std::uint32_t thr {};
+        std::uint32_t mask {};
+        std::uint32_t tp_ena {};
         if(!(iss >> col >> row >> thr >> mask >> tp_ena)) {
             LOG(WARNING) << "Read invalid line: " << tline;
             break;
@@ -497,23 +514,20 @@ katherine::px_config KatherineSatellite::parse_px_config_file(const std::filesys
 
         // Store to the array - this is harvested from libkatherine's px_config.c:
         auto y = 255 - row;
-        uint8_t src = (mask & 0x1) | ((thr & 0xF) << 1) | ((tp_ena & 0x1) << 5); // maybe it's the other way around?
-        dest[(64 * col) + (y >> 2)] |= (uint32_t)(src << (8 * (3 - (y % 4))));
+        const std::uint8_t src = (mask & 0x1U) | ((thr & 0xFU) << 1U) | ((tp_ena & 0x1U) << 5U);
+        dest[(64 * col) + (y >> 2U)] |= static_cast<std::uint32_t>(src << (8 * (3 - (y % 4))));
 
+        // Keep counts
         pixels++;
-        if(mask) {
-            masked++;
-        }
-        if(tp_ena) {
-            tp_enabled++;
-        }
+        masked += mask;
+        tp_enabled += tp_ena;
     }
 
     LOG(INFO) << "Read " << pixels << " pixels, " << masked << " masked and " << tp_enabled << " with testpulse enabled";
     return px_config;
 }
 
-std::string KatherineSatellite::trim(const std::string& str, const std::string& delims) const {
+std::string KatherineSatellite::trim(const std::string& str, const std::string& delims) {
     auto b = str.find_first_not_of(delims);
     auto e = str.find_last_not_of(delims);
     if(b == std::string::npos || e == std::string::npos) {
