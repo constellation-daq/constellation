@@ -18,7 +18,6 @@
 #include <utility>
 
 #include <argparse/argparse.hpp>
-#include <magic_enum.hpp>
 
 #include <QApplication>
 #include <QBrush>
@@ -40,6 +39,7 @@
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/log/SinkManager.hpp"
+#include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/string.hpp"
 
 #include "listeners/Observatory/QLogListener.hpp"
@@ -105,8 +105,7 @@ void LogItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
 
     // Get log level color
     const auto level_str = lvl_index.data().toString().toStdString();
-    const auto color =
-        level_colors_.at(magic_enum::enum_cast<Level>(level_str, magic_enum::case_insensitive).value_or(WARNING));
+    const auto color = level_colors_.at(enum_cast<Level>(level_str).value_or(WARNING));
 
     painter->fillRect(option.rect, QBrush(color));
     QStyledItemDelegate::paint(painter, option, index);
@@ -159,7 +158,7 @@ Observatory::Observatory(std::string_view group_name) {
     // Load last filter settings:
     if(gui_settings_.contains("filters/level")) {
         const auto qlevel = gui_settings_.value("filters/level").toString();
-        const auto level = magic_enum::enum_cast<Level>(qlevel.toStdString(), magic_enum::case_insensitive);
+        const auto level = enum_cast<Level>(qlevel.toStdString());
         log_filter_.setFilterLevel(level.value_or(Level::TRACE));
         filterLevel->setCurrentIndex(std::to_underlying(level.value_or(Level::TRACE)));
     }
@@ -179,7 +178,7 @@ Observatory::Observatory(std::string_view group_name) {
 
     // Load last subscription:
     const auto qslevel = gui_settings_.value("subscriptions/level").toString();
-    const auto slevel = magic_enum::enum_cast<Level>(qslevel.toStdString(), magic_enum::case_insensitive);
+    const auto slevel = enum_cast<Level>(qslevel.toStdString());
     log_listener_.setGlobalSubscriptionLevel(slevel.value_or(Level::WARNING));
     globalLevel->setCurrentIndex(std::to_underlying(slevel.value_or(Level::WARNING)));
 
@@ -327,7 +326,7 @@ int main(int argc, char** argv) {
         }
 
         // Set log level
-        const auto default_level = magic_enum::enum_cast<Level>(get_arg(parser, "level"), magic_enum::case_insensitive);
+        const auto default_level = enum_cast<Level>(get_arg(parser, "level"));
         if(!default_level.has_value()) {
             LOG(logger, CRITICAL) << "Log level \"" << get_arg(parser, "level") << "\" is not valid"
                                   << ", possible values are: " << utils::list_enum_names<Level>();
