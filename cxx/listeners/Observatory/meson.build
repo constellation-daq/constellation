@@ -6,8 +6,10 @@ if not get_option('listener_observatory')
   subdir_done()
 endif
 
-qt = import(get_option('qt_version'))
-qt_dep = dependency(get_option('qt_version'), modules: ['Core', 'Gui', 'Widgets'])
+if get_option('build_gui') == 'none'
+  warning('Skipping Observatory since build_gui is set to none')
+  subdir_done()
+endif
 
 inc = include_directories('.')
 
@@ -17,7 +19,7 @@ moc_files = qt.compile_moc(headers: ['QLogFilter.hpp', 'QLogListener.hpp', 'Obse
 
 executable('Observatory', 'Observatory.cpp', 'QLogFilter.cpp', 'QLogListener.cpp', 'QLogMessage.cpp', ui_files, moc_files, qrc_files,
            include_directories: inc,
-           dependencies: [exec_dep, argparse_dep, qt_dep, core_dep, magic_enum_dep],
+           dependencies: [exec_dep, argparse_dep, qt_dep, core_dep, magic_enum_dep, gui_dep],
            install: true,
            install_rpath: constellation_rpath,
            cpp_args: ['-Wno-deprecated-enum-enum-conversion', '-Wno-unused-variable'],

@@ -18,8 +18,8 @@
 
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/gui/qt_utils.hpp"
 
-#include "controllers/MissionControl/qt_utils.hpp"
 using namespace constellation::message;
 using namespace constellation::utils;
 
