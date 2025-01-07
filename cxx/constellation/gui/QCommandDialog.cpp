@@ -15,6 +15,7 @@
 
 #include "constellation/controller/Controller.hpp"
 #include "constellation/core/config/Dictionary.hpp"
+#include "constellation/core/config/Value.hpp"
 
 #include "ui_QCommandDialog.h"
 
@@ -27,7 +28,7 @@ void QCommandParameters::add(const Value& value) {
 }
 
 void QCommandParameters::reset() {
-    beginRemoveRows(QModelIndex(), 0, size() - 1);
+    beginRemoveRows(QModelIndex(), 0, static_cast<int>(size() - 1));
     List::clear();
     endRemoveRows();
 }
@@ -35,43 +36,39 @@ void QCommandParameters::reset() {
 QVariant QCommandParameters::data(const QModelIndex& index, int role) const {
 
     if(role != Qt::DisplayRole || !index.isValid() || index.row() >= static_cast<int>(size()) || index.column() > 0) {
-        return QVariant();
+        return {};
     }
 
     return QString::fromStdString(at(index.row()).str());
 }
 
 QCommandDialog::QCommandDialog(QWidget* parent, const std::string& command, const std::string& description)
-    : QDialog(parent), ui(new Ui::QCommandDialog) {
-    ui->setupUi(this);
+    : QDialog(parent), ui_(new Ui::QCommandDialog) {
+    ui_->setupUi(this);
     setSizeGripEnabled(true);
-    ui->commandDescription->setVisible(false);
+    ui_->commandDescription->setVisible(false);
     setWindowTitle("Satellite Command");
 
-    ui->listView->setModel(&parameters_);
+    ui_->listView->setModel(&parameters_);
 
     // Connect comboBox:
-    connect(ui->comboBoxType, &QComboBox::currentIndexChanged, ui->stackedWidgetType, &QStackedWidget::setCurrentIndex);
-    connect(ui->btnClearParams, &QPushButton::clicked, this, [&]() { parameters_.reset(); });
+    connect(ui_->comboBoxType, &QComboBox::currentIndexChanged, ui_->stackedWidgetType, &QStackedWidget::setCurrentIndex);
+    connect(ui_->btnClearParams, &QPushButton::clicked, this, [&]() { parameters_.reset(); });
 
     // Set command and description if provided
     if(!command.empty()) {
-        ui->commandLineEdit->setText(QString::fromStdString(command));
-        ui->commandLineEdit->setReadOnly(true);
+        ui_->commandLineEdit->setText(QString::fromStdString(command));
+        ui_->commandLineEdit->setReadOnly(true);
     }
     if(!description.empty()) {
-        ui->commandDescription->setText(QString::fromStdString(description));
-        ui->commandDescription->setReadOnly(true);
-        ui->commandDescription->setVisible(true);
+        ui_->commandDescription->setText(QString::fromStdString(description));
+        ui_->commandDescription->setReadOnly(true);
+        ui_->commandDescription->setVisible(true);
     }
-}
-
-QCommandDialog::~QCommandDialog() {
-    delete ui;
 }
 
 std::string QCommandDialog::getCommand() const {
-    return ui->commandLineEdit->text().toStdString();
+    return ui_->commandLineEdit->text().toStdString();
 }
 
 constellation::controller::Controller::CommandPayload QCommandDialog::getPayload() const {
@@ -83,17 +80,17 @@ constellation::controller::Controller::CommandPayload QCommandDialog::getPayload
 
 void QCommandDialog::on_btnAddParameter_clicked() {
     // Get currently selected type:
-    if(ui->stackedWidgetType->currentIndex() == 0) {
-        parameters_.add(ui->doubleSpinBox->value());
-        ui->doubleSpinBox->clear();
-    } else if(ui->stackedWidgetType->currentIndex() == 1) {
-        parameters_.add(ui->intSpinBox->value());
-        ui->intSpinBox->clear();
-    } else if(ui->stackedWidgetType->currentIndex() == 2) {
-        parameters_.add(ui->lineEditParam->text().toStdString());
-        ui->lineEditParam->clear();
+    if(ui_->stackedWidgetType->currentIndex() == 0) {
+        parameters_.add(ui_->doubleSpinBox->value());
+        ui_->doubleSpinBox->clear();
+    } else if(ui_->stackedWidgetType->currentIndex() == 1) {
+        parameters_.add(ui_->intSpinBox->value());
+        ui_->intSpinBox->clear();
+    } else if(ui_->stackedWidgetType->currentIndex() == 2) {
+        parameters_.add(ui_->lineEditParam->text().toStdString());
+        ui_->lineEditParam->clear();
     } else {
-        parameters_.add(ui->checkBoxParam->checkState() == Qt::Checked);
-        ui->checkBoxParam->setCheckState(Qt::Unchecked);
+        parameters_.add(ui_->checkBoxParam->checkState() == Qt::Checked);
+        ui_->checkBoxParam->setCheckState(Qt::Unchecked);
     }
 }

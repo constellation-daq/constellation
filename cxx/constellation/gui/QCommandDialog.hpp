@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include <QAbstractListModel>
@@ -19,16 +20,19 @@
 #include "constellation/core/config/Dictionary.hpp"
 #include "constellation/core/config/Value.hpp"
 
-namespace Ui {
+namespace Ui { // NOLINT(readability-identifier-naming)
     class QCommandDialog;
 }
+// namespace Ui
 
-class QCommandParameters : public QAbstractListModel, public constellation::config::List {
+class CNSTLN_API QCommandParameters : public QAbstractListModel, public constellation::config::List {
     Q_OBJECT
 
 public:
     QCommandParameters(QObject* parent = nullptr) : QAbstractListModel(parent) {}
-    int rowCount(const QModelIndex& /*unused*/) const override { return this->size(); }
+    virtual ~QCommandParameters() = default;
+
+    int rowCount(const QModelIndex& /*unused*/) const override { return static_cast<int>(size()); }
     QVariant data(const QModelIndex& index, int role) const override;
 
     void add(const constellation::config::Value& value);
@@ -44,8 +48,6 @@ class CNSTLN_API QCommandDialog : public QDialog {
 
 public:
     explicit QCommandDialog(QWidget* parent = nullptr, const std::string& command = "", const std::string& description = "");
-    virtual ~QCommandDialog();
-
     std::string getCommand() const;
     constellation::controller::Controller::CommandPayload getPayload() const;
 
@@ -56,6 +58,6 @@ private slots:
     void on_btnAddParameter_clicked();
 
 private:
-    Ui::QCommandDialog* ui;
+    std::shared_ptr<Ui::QCommandDialog> ui_;
     QCommandParameters parameters_;
 };
