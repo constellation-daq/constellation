@@ -22,8 +22,7 @@
 
 namespace Ui { // NOLINT(readability-identifier-naming)
     class QCommandDialog;
-}
-// namespace Ui
+} // namespace Ui
 
 class CNSTLN_API QCommandParameters : public QAbstractListModel, public constellation::config::List {
     Q_OBJECT
@@ -31,6 +30,14 @@ class CNSTLN_API QCommandParameters : public QAbstractListModel, public constell
 public:
     QCommandParameters(QObject* parent = nullptr) : QAbstractListModel(parent) {}
     virtual ~QCommandParameters() = default;
+
+    // No copy constructor/assignment/move constructor/assignment
+    /// @cond doxygen_suppress
+    QCommandParameters(const QCommandParameters& other) = delete;
+    QCommandParameters& operator=(const QCommandParameters& other) = delete;
+    QCommandParameters(QCommandParameters&& other) noexcept = delete;
+    QCommandParameters& operator=(QCommandParameters&& other) = delete;
+    /// @endcond
 
     int rowCount(const QModelIndex& /*unused*/) const override { return static_cast<int>(size()); }
     QVariant data(const QModelIndex& index, int role) const override;
