@@ -60,6 +60,7 @@
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/gui/QCommandDialog.hpp"
 #include "constellation/gui/QResponseDialog.hpp"
 #include "constellation/gui/qt_utils.hpp"
 
@@ -512,11 +513,14 @@ void MissionControl::custom_context_menu(const QPoint& point) {
         }
 
         auto* action = new QAction(QString::fromStdString(key), this);
-        connect(action, &QAction::triggered, this, [this, index, key]() {
-            const auto& response = runcontrol_.sendQCommand(index, key);
-            if(response.hasPayload()) {
-                QResponseDialog dialog(this, response);
-                dialog.exec();
+        connect(action, &QAction::triggered, this, [this, index, key, value]() {
+            QCommandDialog dialog(this, key, value.str());
+            if(dialog.exec() == QDialog::Accepted) {
+                const auto& response = runcontrol_.sendQCommand(index, dialog.getCommand(), dialog.getPayload());
+                if(response.hasPayload()) {
+                    QResponseDialog dialog(this, response);
+                    dialog.exec();
+                }
             }
         });
         contextMenu.addAction(action);
