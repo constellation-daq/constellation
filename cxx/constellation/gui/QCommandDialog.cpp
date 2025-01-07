@@ -52,7 +52,10 @@ QCommandDialog::QCommandDialog(QWidget* parent, const std::string& command, cons
     ui_->listView->setModel(&parameters_);
 
     // Connect comboBox:
-    connect(ui_->comboBoxType, &QComboBox::currentIndexChanged, ui_->stackedWidgetType, &QStackedWidget::setCurrentIndex);
+    connect(ui_->comboBoxType,
+            QOverload<int>::of(&QComboBox::currentIndexChanged),
+            ui_->stackedWidgetType,
+            &QStackedWidget::setCurrentIndex);
     connect(ui_->btnClearParams, &QPushButton::clicked, this, [&]() { parameters_.reset(); });
 
     // Set command and description if provided
