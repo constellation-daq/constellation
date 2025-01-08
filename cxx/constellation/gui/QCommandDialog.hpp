@@ -39,7 +39,21 @@ public:
     QCommandParameters& operator=(QCommandParameters&& other) = delete;
     /// @endcond
 
+    /**
+     * @brief Get total number of rows, i.e. number of parameters
+     *
+     * @return Number of parameters
+     */
     int rowCount(const QModelIndex& /*unused*/) const override { return static_cast<int>(size()); }
+
+    /**
+     * @brief Retrieve the data of a given cell (column, row) of the model i.e. a specific parameter
+     *
+     * @param index QModelIndex to obtain the data for
+     * @param role Role code
+     *
+     * @return QVariant holding the parameter data for the requested cell
+     */
     QVariant data(const QModelIndex& index, int role) const override;
 
     void add(const constellation::config::Value& value);

@@ -49,7 +49,7 @@ QCommandDialog::QCommandDialog(QWidget* parent, const std::string& command, cons
     ui_->commandDescription->setVisible(false);
     setWindowTitle("Satellite Command");
 
-    ui_->listView->setModel(&parameters_);
+    ui_->tableView->setModel(&parameters_);
 
     // Connect comboBox:
     connect(ui_->comboBoxType,
