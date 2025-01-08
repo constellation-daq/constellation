@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD041 -->
 ### Parameters inherited from `Satellite`
 
-#### Heartbeating
+#### Autonomous Operation
 
 | Parameter | Type | Description | Default Value |
 |-----------|------|-------------|---------------|

@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <iomanip>
 #include <map>
 #include <optional>
 #include <ranges>

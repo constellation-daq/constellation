@@ -167,7 +167,7 @@ namespace constellation::satellite {
          * satellite, e.g. for conditional transitions
          *
          * @param callback Callback taking the name of the remote satellite as argument and returning an optional with its
-         * state, if known, or a std::nullopt if not known
+         * state, if known, or a `std::nullopt` if not known
          */
         CNSTLN_API void registerRemoteCallback(std::function<std::optional<State>(std::string_view)> callback);
 
