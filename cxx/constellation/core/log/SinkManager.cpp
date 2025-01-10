@@ -246,5 +246,14 @@ void SinkManager::sendMetricNotification() {
 }
 
 void SinkManager::sendLogNotification() {
-    cmdp_sink_->sinkNotification("LOG?", {});
+    config::Dictionary payload;
+
+    std::unique_lock loggers_lock {loggers_mutex_};
+    for(const auto& logger : loggers_) {
+        // TODO(simonspa): Loggers don't have a description yet - leaving empty
+        payload.emplace(logger->name(), "");
+    }
+    loggers_lock.unlock();
+
+    cmdp_sink_->sinkNotification("LOG?", std::move(payload));
 }
