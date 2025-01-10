@@ -15,6 +15,7 @@
 #include <mutex>
 #include <stop_token>
 #include <string>
+#include <string_view>
 #include <thread>
 
 #include <spdlog/async_logger.h>
@@ -90,7 +91,7 @@ namespace constellation::log {
     private:
         void subscription_loop(const std::stop_token& stop_token);
 
-        void handle_log_subscriptions(bool subscribe, std::string_view topic);
+        void handle_log_subscriptions(bool subscribe, std::string_view body);
 
         void handle_stat_subscriptions(bool subscribe, std::string_view body);
 

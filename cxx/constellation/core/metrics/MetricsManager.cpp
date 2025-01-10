@@ -16,6 +16,7 @@
 #include <iomanip>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <stop_token>
 #include <string>
 #include <thread>

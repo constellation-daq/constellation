@@ -207,9 +207,10 @@ TEST_CASE("Message Assembly / Disassembly (CMDP1, invalid topic)", "[core][core:
     zmq::message_t invalid_topic {"INVALID/TOPIC"s};
     log_frames.at(0).swap(invalid_topic);
 
-    REQUIRE_THROWS_MATCHES(CMDP1Message::disassemble(log_frames),
-                           MessageDecodingError,
-                           Message("Error decoding message: Invalid message topic, neither log nor telemetry message"));
+    REQUIRE_THROWS_MATCHES(
+        CMDP1Message::disassemble(log_frames),
+        MessageDecodingError,
+        Message("Error decoding message: Invalid message topic \"INVALID/TOPIC\", neither log nor telemetry message"));
 }
 
 TEST_CASE("Message Assembly / Disassembly (CMDP1, invalid log level)", "[core][core::message]") {

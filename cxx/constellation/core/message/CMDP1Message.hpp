@@ -224,7 +224,7 @@ namespace constellation::message {
          * @param id Identifier of notification
          * @param topics Dictionary with available topics for the given identifier
          */
-        CNSTLN_API CMDP1Notification(Header header, const std::string& id, const config::Dictionary& topics);
+        CNSTLN_API CMDP1Notification(Header header, const std::string& id, config::Dictionary topics);
 
         /**
          * Construct a CMDP1Notification from a decoded CMDP1Message

@@ -168,7 +168,7 @@ CMDP1StatMessage CMDP1StatMessage::disassemble(zmq::multipart_t& frames) {
     return {CMDP1Message::disassemble(frames)};
 }
 
-CMDP1Notification::CMDP1Notification(Header header, const std::string& id, const Dictionary& topics)
+CMDP1Notification::CMDP1Notification(Header header, const std::string& id, Dictionary topics)
     : CMDP1Message(id, std::move(header), topics.assemble()), topics_(std::move(topics)) {}
 
 CMDP1Notification::CMDP1Notification(CMDP1Message&& message) : CMDP1Message(std::move(message)) {
