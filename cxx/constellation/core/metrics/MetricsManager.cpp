@@ -48,6 +48,17 @@ MetricsManager::~MetricsManager() noexcept {
     }
 }
 
+bool MetricsManager::shouldStat(std::string_view name) const {
+    return global_subscription_ || subscribed_topics_.contains(name);
+}
+
+void MetricsManager::updateSubscriptions(bool global, std::set<std::string_view> topic_subscriptions) {
+    // Acquire lock for metric variables and update them
+    const std::lock_guard levels_lock {metrics_mutex_};
+    global_subscription_ = global;
+    subscribed_topics_ = std::move(topic_subscriptions);
+}
+
 void MetricsManager::registerMetric(std::shared_ptr<Metric> metric) {
     const auto name = std::string(metric->name());
 

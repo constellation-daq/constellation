@@ -15,6 +15,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <set>
 #include <stop_token>
 #include <string>
 #include <string_view>
@@ -105,7 +106,7 @@ namespace constellation::metrics {
         /**
          * Check if a metric should be send given the subscription status
          */
-        static constexpr bool shouldStat(std::string_view /*name*/) { return true; }
+        CNSTLN_API bool shouldStat(std::string_view name) const;
 
         /**
          * Manually trigger a metric
@@ -114,6 +115,14 @@ namespace constellation::metrics {
          * @param value Value of the metric
          */
         CNSTLN_API void triggerMetric(std::string name, config::Value value);
+
+        /**
+         * @brief Update topic subscriptions
+         *
+         * @param global Global Flag for global subscription to all topics
+         * @param topic_subscriptions List of individual subscription topics
+         */
+        CNSTLN_API void updateSubscriptions(bool global, std::set<std::string_view> topic_subscriptions = {});
 
     private:
         MetricsManager();
@@ -147,6 +156,10 @@ namespace constellation::metrics {
 
     private:
         log::Logger logger_;
+
+        // List of topics with active subscribers:
+        std::set<std::string_view> subscribed_topics_;
+        bool global_subscription_;
 
         // Contains all metrics, including timed ones
         utils::string_hash_map<std::shared_ptr<Metric>> metrics_;
