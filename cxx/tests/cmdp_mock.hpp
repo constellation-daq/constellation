@@ -11,15 +11,16 @@
 #include <zmq.hpp>
 
 #include "constellation/core/message/CMDP1Message.hpp"
-#include "constellation/core/utils/networking.hpp"
+#include "constellation/core/networking/Port.hpp"
+#include "constellation/core/networking/zmq_helpers.hpp"
 
 class CMDPSender {
 public:
     CMDPSender(std::string name)
-        : name_(std::move(name)), pub_socket_(*constellation::utils::global_zmq_context(), zmq::socket_type::xpub),
-          port_(constellation::utils::bind_ephemeral_port(pub_socket_)) {}
+        : name_(std::move(name)), pub_socket_(*constellation::networking::global_zmq_context(), zmq::socket_type::xpub),
+          port_(constellation::networking::bind_ephemeral_port(pub_socket_)) {}
 
-    constellation::utils::Port getPort() const { return port_; }
+    constellation::networking::Port getPort() const { return port_; }
 
     std::string_view getName() const { return name_; }
 
@@ -47,5 +48,5 @@ public:
 private:
     std::string name_;
     zmq::socket_t pub_socket_;
-    constellation::utils::Port port_;
+    constellation::networking::Port port_;
 };

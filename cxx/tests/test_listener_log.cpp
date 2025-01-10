@@ -17,7 +17,6 @@
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
-#include "constellation/core/utils/networking.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/listener/LogListener.hpp"
 
