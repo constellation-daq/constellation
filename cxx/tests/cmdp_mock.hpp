@@ -7,9 +7,13 @@
 #pragma once
 
 #include <string>
+#include <string_view>
+#include <utility>
 
 #include <zmq.hpp>
+#include <zmq_addon.hpp>
 
+#include "constellation/core/log/Level.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/networking/Port.hpp"
 #include "constellation/core/networking/zmq_helpers.hpp"

@@ -10,14 +10,10 @@
 #pragma once
 
 #include <functional>
-#include <map>
 #include <mutex>
 #include <set>
 #include <string>
 #include <string_view>
-#include <utility>
-
-#include <zmq.hpp>
 
 #include "constellation/build.hpp"
 #include "constellation/core/chirp/CHIRP_definitions.hpp"

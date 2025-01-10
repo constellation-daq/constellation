@@ -4,10 +4,7 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include <chrono>
-#include <condition_variable>
-#include <memory>
-#include <mutex>
+#include <cstdint>
 #include <string_view>
 
 #include <catch2/catch_test_macros.hpp>
@@ -15,8 +12,6 @@
 #include <zmq_addon.hpp>
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
-#include "constellation/core/log/Level.hpp"
-#include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/listener/LogListener.hpp"
 
@@ -32,7 +27,7 @@ using namespace constellation::utils;
 namespace {
     bool check_sub_message(zmq::message_t msg, bool subscribe, std::string_view topic) {
         // First byte is subscribe bool
-        const auto msg_subscribe = static_cast<bool>(*msg.data<uint8_t>());
+        const auto msg_subscribe = static_cast<bool>(*msg.data<std::uint8_t>());
         if(msg_subscribe != subscribe) {
             return false;
         }
