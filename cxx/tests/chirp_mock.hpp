@@ -19,11 +19,23 @@
 #include "constellation/core/networking/Port.hpp"
 #include "constellation/core/protocol/CHIRP_definitions.hpp"
 
+class SingletonChirpManager {
+public:
+    SingletonChirpManager()
+        : manager_(std::make_shared<constellation::chirp::Manager>("0.0.0.0", "0.0.0.0", "edda", "chirp_manager")) {
+        manager_->setAsDefaultInstance();
+        manager_->start();
+    }
+
+    std::shared_ptr<constellation::chirp::Manager> getManager() { return manager_; }
+
+private:
+    std::shared_ptr<constellation::chirp::Manager> manager_;
+};
+
 inline std::shared_ptr<constellation::chirp::Manager> create_chirp_manager() {
-    static auto manager = std::make_shared<constellation::chirp::Manager>("0.0.0.0", "0.0.0.0", "edda", "chirp_manager");
-    manager->setAsDefaultInstance();
-    manager->start();
-    return manager;
+    static SingletonChirpManager chirpmanager;
+    return chirpmanager.getManager();
 }
 
 inline void chirp_mock_service(std::string_view name,
