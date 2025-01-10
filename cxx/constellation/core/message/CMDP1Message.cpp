@@ -75,8 +75,9 @@ CMDP1Message CMDP1Message::disassemble(zmq::multipart_t& frames) {
 
     // Decode topic
     const auto topic = frames.pop().to_string();
-    if(!(topic.starts_with("LOG/") || topic.starts_with("STAT/"))) {
-        throw MessageDecodingError("Invalid message topic, neither log nor telemetry message");
+    if(!(topic.starts_with("LOG/") || topic.starts_with("STAT/") || topic.starts_with("LOG?") ||
+         topic.starts_with("STAT?"))) {
+        throw MessageDecodingError("Invalid message topic \"" + topic + "\", neither log nor telemetry message");
     }
 
     // Check if valid log level by trying to decode it
