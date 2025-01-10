@@ -20,7 +20,7 @@
 #include "constellation/core/protocol/CHIRP_definitions.hpp"
 
 inline std::shared_ptr<constellation::chirp::Manager> create_chirp_manager() {
-    auto manager = std::make_shared<constellation::chirp::Manager>("0.0.0.0", "0.0.0.0", "edda", "chirp_manager");
+    static auto manager = std::make_shared<constellation::chirp::Manager>("0.0.0.0", "0.0.0.0", "edda", "chirp_manager");
     manager->setAsDefaultInstance();
     manager->start();
     return manager;
