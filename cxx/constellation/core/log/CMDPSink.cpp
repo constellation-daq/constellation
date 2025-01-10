@@ -38,6 +38,7 @@
 #include "constellation/core/log/SinkManager.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/metrics/Metric.hpp"
+#include "constellation/core/metrics/MetricsManager.hpp"
 #include "constellation/core/networking/exceptions.hpp"
 #include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/protocol/CHIRP_definitions.hpp"
@@ -126,15 +127,22 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
         body.remove_prefix(1);
         LOG(*logger_, TRACE) << "Received " << (subscribe ? "" : "un") << "subscribe message for " << body;
 
+        // Handle subscriptions as well as notification subscriptions:
         if(body.starts_with("LOG/")) {
             handle_log_subscriptions(subscribe, body);
+        } else if(body.starts_with("LOG?")) {
+            // handle_log_notifications(subscribe, body);
+        } else if(body.starts_with("STAT/")) {
+            handle_stat_subscriptions(subscribe, body);
+        } else if(body.starts_with("STAT?")) {
+            // handle_stat_notifications(subscribe, body);
+        } else {
+            LOG(*logger_, WARNING) << "Received " << (subscribe ? "" : "un") << "subscribe message with invalid topic " << body << ", ignoring";
         }
     }
 }
 
 void CMDPSink::handle_log_subscriptions(bool subscribe, std::string_view body) {
-
-    // TODO(simonspa) At some point we also have to treat STAT here
 
     const auto level_endpos = body.find_first_of('/', 4);
     const auto level_str = body.substr(4, level_endpos - 4);
@@ -178,6 +186,35 @@ void CMDPSink::handle_log_subscriptions(bool subscribe, std::string_view body) {
 
     // Update subscriptions
     SinkManager::getInstance().updateCMDPLevels(cmdp_global_level, std::move(cmdp_sub_topic_levels));
+}
+
+void CMDPSink::handle_stat_subscriptions(bool subscribe, std::string_view body) {
+
+    const auto topic = body.substr(5);
+    const auto topic_uc = transform(topic, ::toupper);
+    LOG(*logger_, TRACE) << "In/decrementing subscription counters for topic " << std::quoted(topic_uc);
+
+    if(subscribe) {
+        stat_subscriptions_[topic_uc] += 1;
+    } else {
+        if(stat_subscriptions_[topic_uc] > 0) {
+            stat_subscriptions_[topic_uc] -= 1;
+        }
+    }
+
+    // Global subscription to all topics
+    const auto global_subscription = (stat_subscriptions_.contains("") && stat_subscriptions_.at("") > 0);
+
+    // List of subscribed topics:
+    std::set<std::string_view> subscription_topics;
+    for(const auto& [topic, counter] : stat_subscriptions_) {
+        if(counter > 0) {
+            subscription_topics.insert(topic);
+        }
+    }
+
+    // Update subscriptions
+    MetricsManager::getInstance().updateSubscriptions(global_subscription, std::move(subscription_topics));
 }
 
 void CMDPSink::enableSending(std::string sender_name) {
