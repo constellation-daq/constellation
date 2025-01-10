@@ -171,8 +171,8 @@ void MetricsManager::run(const std::stop_token& stop_token) {
         // Check timed metrics
         const std::lock_guard timed_metrics_lock {timed_metrics_mutex_};
         for(auto& [name, timed_metric] : timed_metrics_) {
-            // If last time sent larger than interval and allowed -> send metric
-            if(timed_metric.timeoutReached()) {
+            // If last time sent larger than interval and allowed and there is a subscription -> send metric
+            if(timed_metric.timeoutReached() && shouldStat(name)) {
                 auto value = timed_metric->currentValue();
                 if(value.has_value()) {
                     LOG(logger_, TRACE) << "Sending metric " << std::quoted(timed_metric->name()) << ": "
