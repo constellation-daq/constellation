@@ -98,7 +98,7 @@ CMDP1Message CMDP1Message::disassemble(zmq::multipart_t& frames) {
 
 Level CMDP1Message::get_log_level_from_topic(std::string_view topic) {
     if(!topic.starts_with("LOG/")) {
-        throw MessageDecodingError("Not a log message");
+        throw IncorrectMessageType("Not a log message");
     }
 
     // Search for second slash after "LOG/" to get substring with log level
@@ -150,7 +150,7 @@ CMDP1StatMessage::CMDP1StatMessage(Header header, metrics::MetricValue metric_va
 
 CMDP1StatMessage::CMDP1StatMessage(CMDP1Message&& message) : CMDP1Message(std::move(message)) {
     if(!isStatMessage()) {
-        throw MessageDecodingError("Not a telemetry message");
+        throw IncorrectMessageType("Not a telemetry message");
     }
 
     // Assign topic after prefix "STAT/"
@@ -173,7 +173,7 @@ CMDP1Notification::CMDP1Notification(Header header, const std::string& id, const
 
 CMDP1Notification::CMDP1Notification(CMDP1Message&& message) : CMDP1Message(std::move(message)) {
     if(!isNotification()) {
-        throw MessageDecodingError("Not a telemetry notification");
+        throw IncorrectMessageType("Not a CMDP notification");
     }
 
     try {
