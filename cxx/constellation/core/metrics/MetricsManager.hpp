@@ -138,6 +138,11 @@ namespace constellation::metrics {
          */
         void run(const std::stop_token& stop_token);
 
+        /**
+         * @brief Send CMDP notification after change in registered metrics
+         */
+        void send_notification() const;
+
         class TimedMetricEntry {
         public:
             TimedMetricEntry(std::shared_ptr<TimedMetric> metric)

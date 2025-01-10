@@ -64,6 +64,7 @@ void MetricsManager::registerMetric(std::shared_ptr<Metric> metric) {
 
     std::unique_lock metrics_lock {metrics_mutex_};
     const auto [it, inserted] = metrics_.insert_or_assign(name, std::move(metric));
+    send_notification();
     metrics_lock.unlock();
 
     if(!inserted) {
@@ -83,6 +84,7 @@ void MetricsManager::registerTimedMetric(std::shared_ptr<TimedMetric> metric) {
     // Add to metrics map
     std::unique_lock metrics_lock {metrics_mutex_};
     const auto [it, inserted] = metrics_.insert_or_assign(name, metric);
+    send_notification();
     metrics_lock.unlock();
 
     if(!inserted) {
@@ -106,6 +108,7 @@ void MetricsManager::unregisterMetric(std::string_view name) {
     if(it != metrics_.end()) {
         metrics_.erase(it);
     }
+    send_notification();
     metrics_lock.unlock();
 
     std::unique_lock timed_metrics_lock {timed_metrics_mutex_};
@@ -119,11 +122,21 @@ void MetricsManager::unregisterMetric(std::string_view name) {
 void MetricsManager::unregisterMetrics() {
     std::unique_lock metrics_lock {metrics_mutex_};
     metrics_.clear();
+    send_notification();
     metrics_lock.unlock();
 
     std::unique_lock timed_metrics_lock {timed_metrics_mutex_};
     timed_metrics_.clear();
     timed_metrics_lock.unlock();
+}
+
+void MetricsManager::send_notification() const {
+
+    Dictionary metrics;
+    for(const auto& [name, metric]: metrics_) {
+        metrics.emplace(name, std::string(metric->name()));
+    }
+    SinkManager::getInstance().sendMetricNotification(std::move(metrics));
 }
 
 void MetricsManager::triggerMetric(std::string name, Value value) {
