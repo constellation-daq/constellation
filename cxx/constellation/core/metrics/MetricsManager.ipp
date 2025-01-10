@@ -28,7 +28,8 @@
 
 namespace constellation::metrics {
 
-    inline void MetricsManager::registerMetric(std::string name, std::string unit, metrics::MetricType type, std::string description) {
+    inline void
+    MetricsManager::registerMetric(std::string name, std::string unit, metrics::MetricType type, std::string description) {
         registerMetric(std::make_shared<metrics::Metric>(std::move(name), std::move(unit), type), std::move(description));
     };
 
@@ -60,7 +61,8 @@ namespace constellation::metrics {
             }
         };
         registerTimedMetric(
-            std::make_shared<TimedMetric>(std::move(name), std::move(unit), type, interval, std::move(value_callback_cast)), std::move(description));
+            std::make_shared<TimedMetric>(std::move(name), std::move(unit), type, interval, std::move(value_callback_cast)),
+            std::move(description));
     }
 
 } // namespace constellation::metrics

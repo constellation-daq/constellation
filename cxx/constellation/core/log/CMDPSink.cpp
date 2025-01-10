@@ -137,7 +137,8 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
         } else if(body.starts_with("STAT?") && subscribe) {
             SinkManager::getInstance().sendMetricNotification();
         } else {
-            LOG(*logger_, WARNING) << "Received " << (subscribe ? "" : "un") << "subscribe message with invalid topic " << body << ", ignoring";
+            LOG(*logger_, WARNING) << "Received " << (subscribe ? "" : "un") << "subscribe message with invalid topic "
+                                   << body << ", ignoring";
         }
     }
 }
