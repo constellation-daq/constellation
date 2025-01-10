@@ -53,8 +53,9 @@ namespace constellation::metrics {
          * Register a (manually triggered) metric
          *
          * @param metric Shared pointer to the metric
+         * @param description Description of the metric
          */
-        CNSTLN_API void registerMetric(std::shared_ptr<Metric> metric);
+        CNSTLN_API void registerMetric(std::shared_ptr<Metric> metric, std::string description);
 
         /**
          * Register a (manually triggered) metric
@@ -62,15 +63,17 @@ namespace constellation::metrics {
          * @param name Unique topic of the metric
          * @param unit Unit of the provided value
          * @param type Type of the metric
+         * @param description Description of the metric
          */
-        void registerMetric(std::string name, std::string unit, metrics::MetricType type);
+        void registerMetric(std::string name, std::string unit, metrics::MetricType type, std::string description);
 
         /**
          * Register a timed metric
          *
          * @param metric Shared pointer to the timed metric
+         * @param description Description of the metric
          */
-        CNSTLN_API void registerTimedMetric(std::shared_ptr<TimedMetric> metric);
+        CNSTLN_API void registerTimedMetric(std::shared_ptr<TimedMetric> metric, std::string description);
 
         /**
          * Register a timed metric
@@ -78,6 +81,7 @@ namespace constellation::metrics {
          * @param name Name of the metric
          * @param unit Unit of the metric as human readable string
          * @param type Type of the metric
+         * @param description Description of the metric
          * @param interval Interval in which to send the metric
          * @param value_callback Callback to determine the current value of the metric
          */
@@ -86,6 +90,7 @@ namespace constellation::metrics {
         void registerTimedMetric(std::string name,
                                  std::string unit,
                                  metrics::MetricType type,
+                                 std::string description,
                                  std::chrono::steady_clock::duration interval,
                                  C value_callback);
 
@@ -138,11 +143,6 @@ namespace constellation::metrics {
          */
         void run(const std::stop_token& stop_token);
 
-        /**
-         * @brief Send CMDP notification after change in registered metrics
-         */
-        void send_notification() const;
-
         class TimedMetricEntry {
         public:
             TimedMetricEntry(std::shared_ptr<TimedMetric> metric)
@@ -168,6 +168,7 @@ namespace constellation::metrics {
 
         // Contains all metrics, including timed ones
         utils::string_hash_map<std::shared_ptr<Metric>> metrics_;
+        utils::string_hash_map<std::string> metrics_descriptions_;
         std::mutex metrics_mutex_;
 
         // Only timed metrics for background thread

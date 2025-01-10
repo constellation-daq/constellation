@@ -158,8 +158,9 @@ namespace constellation::satellite {
          * @param name Unique topic of the metric
          * @param unit Unit of the provided value
          * @param type Type of the metric
+         * @param description Description of the metric
          */
-        static void register_metric(std::string name, std::string unit, metrics::MetricType type);
+        static void register_metric(std::string name, std::string unit, metrics::MetricType type, std::string description);
 
         /**
          * @brief Register a metric which will be emitted in regular intervals, evaluated from the provided function
@@ -167,6 +168,7 @@ namespace constellation::satellite {
          * @param name Name of the metric
          * @param unit Unit of the metric as human readable string
          * @param type Type of the metric
+         * @param description Description of the metric
          * @param interval Interval in which to send the metric
          * @param value_callback Callback to determine the current value of the metric
          */
@@ -175,6 +177,7 @@ namespace constellation::satellite {
         static void register_timed_metric(std::string name,
                                           std::string unit,
                                           metrics::MetricType type,
+                                          std::string description,
                                           std::chrono::steady_clock::duration interval,
                                           C value_callback);
 
@@ -184,6 +187,7 @@ namespace constellation::satellite {
          * @param name Name of the metric
          * @param unit Unit of the metric as human readable string
          * @param type Type of the metric
+         * @param description Description of the metric
          * @param interval Interval in which to send the metric
          * @param allowed_states Set of states in which the callback is allowed
          * @param value_callback Callback to determine the current value of the metric
@@ -193,6 +197,7 @@ namespace constellation::satellite {
         void register_timed_metric(std::string name,
                                    std::string unit,
                                    metrics::MetricType type,
+                                   std::string description,
                                    std::chrono::steady_clock::duration interval,
                                    std::set<protocol::CSCP::State> allowed_states,
                                    C value_callback);

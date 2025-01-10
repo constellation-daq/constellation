@@ -34,9 +34,10 @@ void SputnikSatellite::initializing(Configuration& config) {
     // Obtain the beeping interval from the configuration:
     auto interval = config.get<std::uint64_t>("interval", 3000U);
 
-    register_timed_metric("BEEP", "beeps", MetricType::LAST_VALUE, std::chrono::milliseconds(interval), []() { return 42; });
+    register_timed_metric(
+        "BEEP", "beeps", MetricType::LAST_VALUE, "Sputnik beeps", std::chrono::milliseconds(interval), []() { return 42; });
 
-    register_metric("TIME", "s", MetricType::LAST_VALUE);
+    register_metric("TIME", "s", MetricType::LAST_VALUE, "Sputnik total running time");
 }
 
 void SputnikSatellite::launching() {

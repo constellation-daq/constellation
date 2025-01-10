@@ -12,7 +12,7 @@ For the basic concepts behind telemetry in Constellation and the available metri
 Metrics have to be registered before use. For satellite this can be done via:
 
 ```c++
-register_metric("NAME", "unit", MetricsValue::LAST_VALUE);
+register_metric("NAME", "unit", MetricsValue::LAST_VALUE, "description");
 ```
 
 A metric can then be send using the `STAT` macros:
@@ -29,7 +29,7 @@ described in detail in the [framework reference](../../framework_reference/cxx/c
 Metrics that are evaluated regularly from a lambda can also be registered:
 
 ```c++
-register_timed_metric("NAME", "unit", MetricsValue::LAST_VALUE, 10s,
+register_timed_metric("NAME", "unit", MetricsValue::LAST_VALUE, "description", 10s,
                       [this]() -> std::optional<double> {
     return allowed_to_get_metric() ? std::optional(get_metric_value()) : std::nullopt;
 });
@@ -39,7 +39,7 @@ The lambda can return either the value directly, or an optional, where the empty
 not be sent. To check if the satellite is in a given state the `getState()` method can be used, or the following helper:
 
 ```c++
-register_timed_metric("NAME", "unit", MetricsValue::LAST_VALUE, 10s,
+register_timed_metric("NAME", "unit", MetricsValue::LAST_VALUE, "description", 10s,
                       {CSCP::State::ORBIT, CSCP::State::RUN},
                       [this]() { return get_metric_value(); }
 );

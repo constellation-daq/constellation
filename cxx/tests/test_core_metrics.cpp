@@ -78,12 +78,12 @@ TEST_CASE("Registering and unregistering metrics", "[core][metrics]") {
     auto& metrics_manager = MetricsManager::getInstance();
 
     // Register metrics
-    metrics_manager.registerMetric("TEST", "t", MetricType::LAST_VALUE);
-    metrics_manager.registerTimedMetric("TEST_T", "t", MetricType::LAST_VALUE, 100ms, []() { return 0; });
+    metrics_manager.registerMetric("TEST", "t", MetricType::LAST_VALUE, "description");
+    metrics_manager.registerTimedMetric("TEST_T", "t", MetricType::LAST_VALUE, "description", 100ms, []() { return 0; });
 
     // Overwrite registered metric
-    metrics_manager.registerMetric("TEST", "u", MetricType::LAST_VALUE);
-    metrics_manager.registerTimedMetric("TEST_T", "t", MetricType::LAST_VALUE, 100ms, []() { return 1; });
+    metrics_manager.registerMetric("TEST", "u", MetricType::LAST_VALUE, "description");
+    metrics_manager.registerTimedMetric("TEST_T", "t", MetricType::LAST_VALUE, "description", 100ms, []() { return 1; });
 
     // Unregister metric
     metrics_manager.unregisterMetric("TEST");
@@ -107,7 +107,7 @@ TEST_CASE("Receive triggered metric", "[core][metrics]") {
     metrics_receiver.waitSubscription();
 
     // Register new metric
-    metrics_manager.registerMetric("TEST", "t", MetricType::LAST_VALUE);
+    metrics_manager.registerMetric("TEST", "t", MetricType::LAST_VALUE, "description");
     // Trigger metric
     metrics_manager.triggerMetric("TEST", 0);
     // Trigger unregistered metric (does nothing)
@@ -137,10 +137,10 @@ TEST_CASE("Receive with STAT macros", "[core][metrics]") {
     metrics_receiver.waitSubscription();
 
     // Register metrics
-    metrics_manager.registerMetric("STAT", "counts", MetricType::LAST_VALUE);
-    metrics_manager.registerMetric("STAT_IF", "counts", MetricType::LAST_VALUE);
-    metrics_manager.registerMetric("STAT_NTH", "counts", MetricType::LAST_VALUE);
-    metrics_manager.registerMetric("STAT_T", "counts", MetricType::LAST_VALUE);
+    metrics_manager.registerMetric("STAT", "counts", MetricType::LAST_VALUE, "description");
+    metrics_manager.registerMetric("STAT_IF", "counts", MetricType::LAST_VALUE, "description");
+    metrics_manager.registerMetric("STAT_NTH", "counts", MetricType::LAST_VALUE, "description");
+    metrics_manager.registerMetric("STAT_T", "counts", MetricType::LAST_VALUE, "description");
 
     // Trigger metric with macro
     STAT("STAT", 1);
@@ -184,7 +184,7 @@ TEST_CASE("Receive timed metric", "[core][metrics]") {
     metrics_receiver.waitSubscription();
 
     // Register timed metric
-    metrics_manager.registerTimedMetric("TIMED", "t", MetricType::LAST_VALUE, 10ms, []() { return 3.14; });
+    metrics_manager.registerTimedMetric("TIMED", "t", MetricType::LAST_VALUE, "description", 10ms, []() { return 3.14; });
 
     // Receive metric
     std::this_thread::sleep_for(50ms);
@@ -210,10 +210,11 @@ TEST_CASE("Receive timed metric with optional", "[core][metrics]") {
     std::atomic_bool nullopt = false;
     std::mutex value_mutex;
     double value = std::numbers::phi;
-    metrics_manager.registerTimedMetric("TIMED", "t", MetricType::LAST_VALUE, 10ms, [&]() -> std::optional<double> {
-        const std::lock_guard value_lock {value_mutex};
-        return nullopt.load() ? std::nullopt : std::optional(value);
-    });
+    metrics_manager.registerTimedMetric(
+        "TIMED", "t", MetricType::LAST_VALUE, "description", 10ms, [&]() -> std::optional<double> {
+            const std::lock_guard value_lock {value_mutex};
+            return nullopt.load() ? std::nullopt : std::optional(value);
+        });
 
     // Receive metric, first time triggered immediately
     metrics_receiver.waitNextMessage();
