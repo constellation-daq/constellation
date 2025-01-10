@@ -127,7 +127,14 @@ namespace constellation::metrics {
          * @param global Global Flag for global subscription to all topics
          * @param topic_subscriptions List of individual subscription topics
          */
-        CNSTLN_API void updateSubscriptions(bool global, std::set<std::string_view> topic_subscriptions = {});
+        void updateSubscriptions(bool global, std::set<std::string_view> topic_subscriptions = {});
+
+        /**
+         * @brief Obtain map of registered metrics along with their descriptions
+         *
+         * @return Map with metric descriptions
+         */
+        utils::string_hash_map<std::string> getMetricsDescriptions() const { return metrics_descriptions_; }
 
     private:
         MetricsManager();
