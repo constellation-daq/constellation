@@ -92,11 +92,14 @@ namespace constellation::log {
         void sendCMDPMetric(metrics::MetricValue metric_value) { cmdp_sink_->sinkMetric(std::move(metric_value)); }
 
         /**
-         * Send CMDP Metric notification message via the CMDP sink
-         *
-         * @param topics Dictionary with topics and their description
+         * Send CMDP Metric topic notification message via the CMDP sink
          */
-        void sendMetricNotification(config::Dictionary topics) { cmdp_sink_->sinkNotification("STAT?", std::move(topics)); }
+        void sendMetricNotification();
+
+        /**
+         * Send CMDP Log topic notification message via the CMDP sink
+         */
+        void sendLogNotification();
 
         /**
          * @brief Get an asynchronous spdlog logger with a given topic
