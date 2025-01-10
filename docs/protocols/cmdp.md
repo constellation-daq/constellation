@@ -96,7 +96,7 @@ An example for a valid metrics data message topic is `STAT/CPULOAD`.
 
 ### Notification Topic
 
-The message topic frame SHALL start with topic prefix `LOG` or `STAT` if it distributes log or metrics data messages, respectively.
+The message topic frame SHALL start with topic prefix `LOG` or `STAT` if it distributes log or metrics notification messages, respectively.
 The selected topic prefix MUST be followed by a trailing question mark `?`.
 
 The two valid notification message topics are `LOG?` and `STAT?`.

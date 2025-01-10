@@ -221,7 +221,7 @@ namespace constellation::message {
          * @note The message topic will be taken as the metric name
          *
          * @param header CMDP1 header of the message
-         * @Param id Identifier of notification
+         * @param id Identifier of notification
          * @param topics Dictionary with available topics for the given identifier
          */
         CNSTLN_API CMDP1Notification(Header header, const std::string& id, const config::Dictionary& topics);
