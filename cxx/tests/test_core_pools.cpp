@@ -100,7 +100,7 @@ TEST_CASE("Message callback", "[core][core::pools]") {
     }
 
     // Subscribe to LOG messages
-    pool.subscribe("LOG");
+    pool.subscribe("LOG/");
 
     // Check that we got subscription message
     REQUIRE(check_sub_message(sender.recv().pop(), true, "LOG"));
@@ -148,7 +148,7 @@ TEST_CASE("Disconnect", "[core][core::pools]") {
     REQUIRE(disconnected_fut.get() == std::cv_status::no_timeout);
 
     // Subscribe to new topic
-    pool.subscribe("LOG");
+    pool.subscribe("LOG/");
 
     // Check that we did not subscription message since disconnected
     REQUIRE_FALSE(sender.canRecv());
@@ -184,7 +184,7 @@ TEST_CASE("Dispose", "[core][core::pools]") {
     REQUIRE(disconnected_fut.get() == std::cv_status::no_timeout);
 
     // Subscribe to new topic
-    pool.subscribe("LOG");
+    pool.subscribe("LOG/");
 
     // Check that we did not subscription message since disconnected
     REQUIRE_FALSE(sender.canRecv());
@@ -244,8 +244,8 @@ TEST_CASE("Sending and receiving subscriptions, single host", "[core][core::pool
     }
 
     // Subscribing / unsubscribing from non-existing sender is fine
-    pool.subscribe("fake1", "LOG");
-    pool.unsubscribe("fake2", "LOG");
+    pool.subscribe("fake1", "LOG/");
+    pool.unsubscribe("fake2", "LOG/");
 
     // Subscribe to topic
     pool.subscribe(sender1.getName(), "LOG/STATUS");
