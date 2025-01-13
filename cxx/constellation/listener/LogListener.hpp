@@ -117,6 +117,11 @@ namespace constellation::listener {
         CNSTLN_API void host_connected(const chirp::DiscoveredService& service) override;
 
     private:
+        // Hide subscribe/unsubscribe functions from SubscriberPool
+        using SubscriberPoolT::subscribe;
+        using SubscriberPoolT::unsubscribe;
+
+    private:
         std::mutex subscribed_topics_mutex_;
         std::set<std::string> subscribed_topics_;
         utils::string_hash_map<std::set<std::string>> extra_subscribed_topics_;
