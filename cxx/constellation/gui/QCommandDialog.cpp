@@ -20,6 +20,7 @@
 #include "ui_QCommandDialog.h"
 
 using namespace constellation::config;
+using namespace constellation::gui;
 
 void QCommandParameters::add(const Value& value) {
     beginInsertRows(QModelIndex(), static_cast<int>(size()), static_cast<int>(size()));
