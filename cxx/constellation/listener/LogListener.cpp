@@ -123,7 +123,7 @@ void LogListener::setExtraSubscriptionTopics(const std::string& host, std::set<s
         // Set of topics to unsubscribe: current topics not in subscribed_topics or new topics
         std::set<std::string> to_unsubscribe {};
         std::ranges::for_each(host_it->second, [&](const auto& topic) {
-            if(!subscribed_topics_.contains(topic) || !topics.contains(topic)) {
+            if(!subscribed_topics_.contains(topic) && !topics.contains(topic)) {
                 to_unsubscribe.emplace(topic);
             }
         });

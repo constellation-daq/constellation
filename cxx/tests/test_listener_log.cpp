@@ -108,6 +108,12 @@ TEST_CASE("Changing extra subscriptions", "[core][core::pools]") {
     pool.subscribeExtraTopic(to_string(sender1.getName()), "LOG/TRACE");
     REQUIRE_FALSE(sender1.canRecv());
 
+    // Additional extra subscription
+    pool.subscribeExtraTopic(to_string(sender1.getName()), "LOG/WARNING");
+    REQUIRE(check_sub_message(sender1.recv().pop(), true, "LOG/WARNING"));
+    pool.unsubscribeExtraTopic(to_string(sender1.getName()), "LOG/WARNING");
+    REQUIRE(check_sub_message(sender1.recv().pop(), false, "LOG/WARNING"));
+
     // Replace extra subscription: s1 now at LOG/STATUS, LOG/INFO, LOG/DEBUG
     pool.setExtraSubscriptionTopics(to_string(sender1.getName()), {"LOG/DEBUG", "LOG/INFO"});
 
