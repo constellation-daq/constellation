@@ -84,7 +84,7 @@ void LogListener::setSubscriptionTopics(std::set<std::string> topics) {
     subscribed_topics_ = std::move(topics);
 }
 
-void LogListener::subscribe(std::string topic) {
+void LogListener::subscribeTopic(std::string topic) {
     std::set<std::string> new_subscribed_topics {};
     {
         // Copy current topics
@@ -99,7 +99,7 @@ void LogListener::subscribe(std::string topic) {
     }
 }
 
-void LogListener::unsubscribe(const std::string& topic) {
+void LogListener::unsubscribeTopic(const std::string& topic) {
     std::set<std::string> new_subscribed_topics {};
     {
         // Copy current topics
@@ -151,7 +151,7 @@ void LogListener::setExtraSubscriptionTopics(const std::string& host, std::set<s
     extra_subscribed_topics_[host] = std::move(topics);
 }
 
-void LogListener::subscribeExtra(const std::string& host, std::string topic) {
+void LogListener::subscribeExtraTopic(const std::string& host, std::string topic) {
     std::set<std::string> new_subscription_topics {};
     bool run_logic {true};
     {
@@ -173,7 +173,7 @@ void LogListener::subscribeExtra(const std::string& host, std::string topic) {
     }
 }
 
-void LogListener::unsubscribeExtra(const std::string& host, const std::string& topic) {
+void LogListener::unsubscribeExtraTopic(const std::string& host, const std::string& topic) {
     std::set<std::string> new_subscription_topics {};
     bool run_logic {false};
     {

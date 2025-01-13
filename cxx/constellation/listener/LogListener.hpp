@@ -58,14 +58,14 @@ namespace constellation::listener {
          *
          * @param topic Topic to subscribe to
          */
-        CNSTLN_API void subscribe(std::string topic);
+        CNSTLN_API void subscribeTopic(std::string topic);
 
         /**
          * @brief Unsubscribe from a given topic for all sockets
          *
          * @param topic Topic to unsubscribe
          */
-        CNSTLN_API void unsubscribe(const std::string& topic);
+        CNSTLN_API void unsubscribeTopic(const std::string& topic);
 
         /*
          * @brief Method to update the extra topics this pool subscribe to for a specific socket
@@ -83,7 +83,7 @@ namespace constellation::listener {
          * @param host Canonical name of the host to subscribe to
          * @param topic Topic to subscribe to
          */
-        CNSTLN_API void subscribeExtra(const std::string& host, std::string topic);
+        CNSTLN_API void subscribeExtraTopic(const std::string& host, std::string topic);
 
         /**
          * @brief Unsubscribe from a given topic for a specific socket
@@ -93,7 +93,7 @@ namespace constellation::listener {
          * @param host Canonical name of the host to unsubscribe from
          * @param topic Topic to unsubscribe
          */
-        CNSTLN_API void unsubscribeExtra(const std::string& host, const std::string& topic);
+        CNSTLN_API void unsubscribeExtraTopic(const std::string& host, const std::string& topic);
 
         /**
          * @brief Remove extra topics for a specific socket
