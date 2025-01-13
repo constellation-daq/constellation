@@ -53,14 +53,14 @@ void LogListener::setSubscriptionTopics(std::set<std::string> topics) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
 
     // Set of topics to unsubscribe: current topics not in new topics
-    std::set<std::string> to_unsubscribe {};
+    std::set<std::string_view> to_unsubscribe {};
     std::ranges::for_each(subscribed_topics_, [&](const auto& topic) {
         if(!topics.contains(topic)) {
             to_unsubscribe.emplace(topic);
         }
     });
     // Set of topics to subscribe: new topics not in current topics
-    std::set<std::string> to_subscribe {};
+    std::set<std::string_view> to_subscribe {};
     std::ranges::for_each(topics, [&](const auto& new_topic) {
         if(!subscribed_topics_.contains(new_topic)) {
             to_subscribe.emplace(new_topic);
@@ -121,14 +121,14 @@ void LogListener::setExtraSubscriptionTopics(const std::string& host, std::set<s
     const auto host_it = extra_subscribed_topics_.find(host);
     if(host_it != extra_subscribed_topics_.end()) {
         // Set of topics to unsubscribe: current topics not in subscribed_topics or new topics
-        std::set<std::string> to_unsubscribe {};
+        std::set<std::string_view> to_unsubscribe {};
         std::ranges::for_each(host_it->second, [&](const auto& topic) {
             if(!subscribed_topics_.contains(topic) && !topics.contains(topic)) {
                 to_unsubscribe.emplace(topic);
             }
         });
         // Set of topics to subscribe: new topics not in subscribed_topics and current topics
-        std::set<std::string> to_subscribe {};
+        std::set<std::string_view> to_subscribe {};
         std::ranges::for_each(topics, [&](const auto& new_topic) {
             if(!subscribed_topics_.contains(new_topic) && !host_it->second.contains(new_topic)) {
                 to_subscribe.emplace(new_topic);

@@ -10,7 +10,6 @@
 #pragma once
 
 #include <functional>
-#include <string>
 #include <string_view>
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
@@ -49,7 +48,7 @@ namespace constellation::pools {
          * @param host Canonical name of the host to subscribe to
          * @param topic Topic to subscribe to
          */
-        void subscribe(std::string_view host, const std::string& topic);
+        void subscribe(std::string_view host, std::string_view topic);
 
         /**
          * @brief Subscribe to a given topic of a specific host
@@ -57,14 +56,14 @@ namespace constellation::pools {
          * @param host_id MD5 hash of canonical name of the host to subscribe to
          * @param topic Topic to subscribe to
          */
-        void subscribe(message::MD5Hash host_id, const std::string& topic);
+        void subscribe(message::MD5Hash host_id, std::string_view topic);
 
         /**
          * @brief Subscribe to a given topic for all connected hosts
          *
          * @param topic Topic to subscribe to
          */
-        void subscribe(const std::string& topic);
+        void subscribe(std::string_view topic);
 
         /**
          * @brief Unsubscribe from a given topic of a specific host
@@ -72,7 +71,7 @@ namespace constellation::pools {
          * @param host Canonical name of the host to unsubscribe from
          * @param topic Topic to unsubscribe
          */
-        void unsubscribe(std::string_view host, const std::string& topic);
+        void unsubscribe(std::string_view host, std::string_view topic);
 
         /**
          * @brief Unsubscribe from a given topic of a specific host
@@ -80,21 +79,21 @@ namespace constellation::pools {
          * @param host_id MD5 hash of canonical name of the host to unsubscribe from
          * @param topic Topic to unsubscribe
          */
-        void unsubscribe(message::MD5Hash host_id, const std::string& topic);
+        void unsubscribe(message::MD5Hash host_id, std::string_view topic);
 
         /**
          * @brief Unsubscribe from a given topic for all hosts
          *
          * @param topic Topic to unsubscribe
          */
-        void unsubscribe(const std::string& topic);
+        void unsubscribe(std::string_view topic);
 
     private:
         /** Sub- or unsubscribe to a topic for a single host */
-        void scribe(message::MD5Hash host_id, const std::string& topic, bool subscribe);
+        void scribe(message::MD5Hash host_id, std::string_view topic, bool subscribe);
 
         /** Sub- or unsubscribe to a topic for all connected hosts */
-        void scribe_all(const std::string& topic, bool subscribe);
+        void scribe_all(std::string_view topic, bool subscribe);
     };
 } // namespace constellation::pools
 
