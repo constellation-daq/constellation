@@ -70,7 +70,8 @@ namespace constellation::gui {
         Q_OBJECT
 
     public:
-        explicit QCommandDialog(QWidget* parent = nullptr,
+        explicit QCommandDialog(QWidget* parent,
+                                const std::string& satellite,
                                 const std::string& command = "",
                                 const std::string& description = "");
         std::string getCommand() const;

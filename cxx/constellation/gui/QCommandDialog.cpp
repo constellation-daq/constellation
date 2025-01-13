@@ -43,12 +43,16 @@ QVariant QCommandParameters::data(const QModelIndex& index, int role) const {
     return QString::fromStdString(at(index.row()).str());
 }
 
-QCommandDialog::QCommandDialog(QWidget* parent, const std::string& command, const std::string& description)
+QCommandDialog::QCommandDialog(QWidget* parent,
+                               const std::string& satellite,
+                               const std::string& command,
+                               const std::string& description)
     : QDialog(parent), ui_(new Ui::QCommandDialog) {
     ui_->setupUi(this);
     setSizeGripEnabled(true);
-    ui_->commandDescription->setVisible(false);
     setWindowTitle("Satellite Command");
+    ui_->satelliteName->setText("<font color='gray'><b>" + QString::fromStdString(satellite) + "</b></font>");
+    ui_->commandDescription->setVisible(false);
 
     ui_->tableView->setModel(&parameters_);
 
