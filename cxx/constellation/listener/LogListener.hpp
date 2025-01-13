@@ -46,8 +46,10 @@ namespace constellation::listener {
 
         CNSTLN_API virtual ~LogListener();
 
-        /*
-         * @brief Method to update the topics this pool subscribe to for all sockets
+        /**
+         * @brief Method to set the topics this pool subscribe to for all sockets
+         *
+         * @warning This replaces all previously subscribed topics
          *
          * @param topics Set of subscription topics to which to subscribe to
          */
@@ -67,10 +69,11 @@ namespace constellation::listener {
          */
         CNSTLN_API void unsubscribeTopic(const std::string& topic);
 
-        /*
-         * @brief Method to update the extra topics this pool subscribe to for a specific socket
+        /**
+         * @brief Method to set the extra topics this pool subscribe to for a specific socket
          *
          * @note Extra topics are topics subscribed to in addition to the topics for every socket
+         * @warning This replaces all previously subscribed extra topics
          *
          * @param host Canonical name of the host to set subscription topics
          * @param topics Set of subscription topics to which to subscribe all sockets
@@ -79,6 +82,8 @@ namespace constellation::listener {
 
         /**
          * @brief Subscribe to a given topic for a specific socket
+         *
+         * @note Extra topics are topics subscribed to in addition to the topics for every socket
          *
          * @param host Canonical name of the host to subscribe to
          * @param topic Topic to subscribe to
