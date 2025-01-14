@@ -1,13 +1,13 @@
 /**
  * @file
- * @brief LogListener implementation
+ * @brief CMDPListener implementation
  *
  * @copyright Copyright (c) 2024 DESY and the Constellation authors.
  * This software is distributed under the terms of the EUPL-1.2 License, copied verbatim in the file "LICENSE.md".
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include "LogListener.hpp"
+#include "CMDPListener.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -25,12 +25,12 @@ using namespace constellation;
 using namespace constellation::listener;
 using namespace constellation::message;
 
-LogListener::LogListener(std::string_view log_topic, std::function<void(CMDP1Message&&)> callback)
+CMDPListener::CMDPListener(std::string_view log_topic, std::function<void(CMDP1Message&&)> callback)
     : SubscriberPoolT(log_topic, std::move(callback)) {}
 
-LogListener::~LogListener() = default;
+CMDPListener::~CMDPListener() = default;
 
-void LogListener::host_connected(const chirp::DiscoveredService& service) {
+void CMDPListener::host_connected(const chirp::DiscoveredService& service) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
 
     // Directly subscribe to current topic list
@@ -49,7 +49,7 @@ void LogListener::host_connected(const chirp::DiscoveredService& service) {
     }
 }
 
-void LogListener::setTopicSubscriptions(std::set<std::string> topics) {
+void CMDPListener::setTopicSubscriptions(std::set<std::string> topics) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
 
     // Set of topics to unsubscribe: current topics not in new topics
@@ -84,7 +84,7 @@ void LogListener::setTopicSubscriptions(std::set<std::string> topics) {
     subscribed_topics_ = std::move(topics);
 }
 
-void LogListener::subscribeTopic(std::string topic) {
+void CMDPListener::subscribeTopic(std::string topic) {
     std::set<std::string> new_subscribed_topics {};
     {
         // Copy current topics
@@ -99,7 +99,7 @@ void LogListener::subscribeTopic(std::string topic) {
     }
 }
 
-void LogListener::unsubscribeTopic(const std::string& topic) {
+void CMDPListener::unsubscribeTopic(const std::string& topic) {
     std::set<std::string> new_subscribed_topics {};
     {
         // Copy current topics
@@ -114,12 +114,12 @@ void LogListener::unsubscribeTopic(const std::string& topic) {
     }
 }
 
-std::set<std::string> LogListener::getTopicSubscriptions() {
+std::set<std::string> CMDPListener::getTopicSubscriptions() {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
     return subscribed_topics_;
 }
 
-void LogListener::setExtraTopicSubscriptions(const std::string& host, std::set<std::string> topics) {
+void CMDPListener::setExtraTopicSubscriptions(const std::string& host, std::set<std::string> topics) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
 
     // Check if extra topics already set
@@ -156,7 +156,7 @@ void LogListener::setExtraTopicSubscriptions(const std::string& host, std::set<s
     extra_subscribed_topics_[host] = std::move(topics);
 }
 
-void LogListener::subscribeExtraTopic(const std::string& host, std::string topic) {
+void CMDPListener::subscribeExtraTopic(const std::string& host, std::string topic) {
     std::set<std::string> new_subscription_topics {};
     bool run_logic {true};
     {
@@ -178,7 +178,7 @@ void LogListener::subscribeExtraTopic(const std::string& host, std::string topic
     }
 }
 
-void LogListener::unsubscribeExtraTopic(const std::string& host, const std::string& topic) {
+void CMDPListener::unsubscribeExtraTopic(const std::string& host, const std::string& topic) {
     std::set<std::string> new_subscription_topics {};
     bool run_logic {false};
     {
@@ -197,7 +197,7 @@ void LogListener::unsubscribeExtraTopic(const std::string& host, const std::stri
     }
 }
 
-std::set<std::string> LogListener::getExtraTopicSubscriptions(const std::string& host) {
+std::set<std::string> CMDPListener::getExtraTopicSubscriptions(const std::string& host) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
     const auto host_it = extra_subscribed_topics_.find(host);
     if(host_it != extra_subscribed_topics_.end()) {
@@ -206,7 +206,7 @@ std::set<std::string> LogListener::getExtraTopicSubscriptions(const std::string&
     return {};
 }
 
-void LogListener::removeExtraTopicSubscriptions(const std::string& host) {
+void CMDPListener::removeExtraTopicSubscriptions(const std::string& host) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
     const auto host_it = extra_subscribed_topics_.find(host);
     if(host_it != extra_subscribed_topics_.end()) {
@@ -220,7 +220,7 @@ void LogListener::removeExtraTopicSubscriptions(const std::string& host) {
     }
 }
 
-void LogListener::removeExtraTopicSubscriptions() {
+void CMDPListener::removeExtraTopicSubscriptions() {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
     std::ranges::for_each(extra_subscribed_topics_, [&](const auto& host_p) {
         // Unsubscribe from each topic not in subscribed_topics_

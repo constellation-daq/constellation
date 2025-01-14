@@ -14,7 +14,7 @@
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
-#include "constellation/listener/LogListener.hpp"
+#include "constellation/listener/CMDPListener.hpp"
 
 #include "chirp_mock.hpp"
 #include "cmdp_mock.hpp"
@@ -45,7 +45,7 @@ TEST_CASE("Changing subscriptions", "[core][core::pools]") {
     auto chirp_manager = create_chirp_manager();
 
     // Start pool
-    auto pool = LogListener("pool", {});
+    auto pool = CMDPListener("pool", {});
     pool.startPool();
 
     // Set subscription topics
@@ -88,7 +88,7 @@ TEST_CASE("Changing extra subscriptions", "[core][core::pools]") {
     auto chirp_manager = create_chirp_manager();
 
     // Start pool
-    auto pool = LogListener("pool", {});
+    auto pool = CMDPListener("pool", {});
     pool.startPool();
 
     // Set subscription topics
@@ -157,7 +157,7 @@ TEST_CASE("Extra subscriptions on connection", "[core][core::pools]") {
     auto chirp_manager = create_chirp_manager();
 
     // Start pool
-    auto pool = LogListener("pool", {});
+    auto pool = CMDPListener("pool", {});
     pool.startPool();
 
     // Set subscription topics

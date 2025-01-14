@@ -24,27 +24,27 @@
 
 namespace constellation::listener {
 
-    class LogListener : public pools::SubscriberPool<message::CMDP1Message, chirp::ServiceIdentifier::MONITORING> {
+    class CMDPListener : public pools::SubscriberPool<message::CMDP1Message, chirp::ServiceIdentifier::MONITORING> {
     public:
         using SubscriberPoolT = pools::SubscriberPool<message::CMDP1Message, chirp::ServiceIdentifier::MONITORING>;
 
         /**
-         * @brief Construct LogListener
+         * @brief Construct CMDPListener
          *
          * @param log_topic Logger topic to be used for this component
          * @param callback Callback function pointer for received messages
          */
-        CNSTLN_API LogListener(std::string_view log_topic, std::function<void(message::CMDP1Message&&)> callback);
+        CNSTLN_API CMDPListener(std::string_view log_topic, std::function<void(message::CMDP1Message&&)> callback);
 
         // No copy/move constructor/assignment
         /// @cond doxygen_suppress
-        LogListener(const LogListener& other) = delete;
-        LogListener& operator=(const LogListener& other) = delete;
-        LogListener(LogListener&& other) noexcept = delete;
-        LogListener& operator=(LogListener&& other) = delete;
+        CMDPListener(const CMDPListener& other) = delete;
+        CMDPListener& operator=(const CMDPListener& other) = delete;
+        CMDPListener(CMDPListener&& other) noexcept = delete;
+        CMDPListener& operator=(CMDPListener&& other) = delete;
         /// @endcond
 
-        CNSTLN_API virtual ~LogListener();
+        CNSTLN_API virtual ~CMDPListener();
 
         /**
          * @brief Method to set the topics this pool subscribe to for all sockets

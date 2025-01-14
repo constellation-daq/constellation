@@ -158,11 +158,11 @@ test('Controller config test', test_controller_config,
 
 # Listener
 
-test_listener_log = executable('test_listener_log',
-  sources: 'test_listener_log.cpp',
+test_listener_cmdp = executable('test_listener_cmdp',
+  sources: 'test_listener_cmdp.cpp',
   dependencies: [core_dep, listener_dep, cppzmq_dep, catch2_dep],
 )
-test('Log listener functionality test', test_listener_log,
+test('Listener CMDPListener test', test_listener_cmdp,
   args: ['--durations', 'yes', '--verbosity', 'high'],
   is_parallel: false,
 )

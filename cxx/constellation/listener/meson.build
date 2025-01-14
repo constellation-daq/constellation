@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 listener_src = files(
-  'LogListener.cpp',
+  'CMDPListener.cpp',
 )
 
 listener_lib = library('ConstellationListener',
@@ -22,6 +22,6 @@ listener_dep = declare_dependency(
 )
 
 install_headers(
-  'LogListener.hpp',
+  'CMDPListener.hpp',
   subdir: 'constellation/listener',
 )
