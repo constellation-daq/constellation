@@ -74,20 +74,6 @@ private:
     std::condition_variable cv_;
 };
 
-namespace {
-    bool check_sub_message(zmq::message_t msg, bool subscribe, std::string_view topic) {
-        // First byte is subscribe bool
-        const auto msg_subscribe = static_cast<bool>(*msg.data<uint8_t>());
-        if(msg_subscribe != subscribe) {
-            return false;
-        }
-        // Rest is subscription topic
-        auto msg_topic = msg.to_string_view();
-        msg_topic.remove_prefix(1);
-        return msg_topic == topic;
-    }
-} // namespace
-
 TEST_CASE("Message callback", "[core][core::pools]") {
     // Create CHIRP manager for monitoring service discovery
     auto chirp_manager = create_chirp_manager();

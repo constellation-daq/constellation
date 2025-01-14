@@ -166,3 +166,12 @@ test('Listener CMDPListener test', test_listener_cmdp,
   args: ['--durations', 'yes', '--verbosity', 'high'],
   is_parallel: false,
 )
+
+test_listener_log = executable('test_listener_log',
+  sources: 'test_listener_log.cpp',
+  dependencies: [core_dep, listener_dep, cppzmq_dep, catch2_dep],
+)
+test('Listener LogListener test', test_listener_log,
+  args: ['--durations', 'yes', '--verbosity', 'high'],
+  is_parallel: false,
+)

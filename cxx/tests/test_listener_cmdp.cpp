@@ -4,13 +4,11 @@
  * SPDX-License-Identifier: EUPL-1.2
  */
 
-#include <cstdint>
-#include <string_view>
+#include <set>
+#include <string>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_range_equals.hpp>
-#include <zmq.hpp>
-#include <zmq_addon.hpp>
 
 #include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/utils/string.hpp"
@@ -25,20 +23,6 @@ using namespace constellation::listener;
 using namespace constellation::log;
 using namespace constellation::message;
 using namespace constellation::utils;
-
-namespace {
-    bool check_sub_message(zmq::message_t msg, bool subscribe, std::string_view topic) {
-        // First byte is subscribe bool
-        const auto msg_subscribe = static_cast<bool>(*msg.data<std::uint8_t>());
-        if(msg_subscribe != subscribe) {
-            return false;
-        }
-        // Rest is subscription topic
-        auto msg_topic = msg.to_string_view();
-        msg_topic.remove_prefix(1);
-        return msg_topic == topic;
-    }
-} // namespace
 
 TEST_CASE("Changing subscriptions", "[core][core::pools]") {
     // Create CHIRP manager for monitoring service discovery
@@ -105,6 +89,9 @@ TEST_CASE("Changing extra subscriptions", "[core][core::pools]") {
     REQUIRE(sender1.canRecv());
     REQUIRE(sender2.canRecv());
     REQUIRE(sender2.canRecv());
+
+    // Check no extra topic subscriptions yet
+    REQUIRE_THAT(pool.getExtraTopicSubscriptions(to_string(sender1.getName())), RangeEquals(std::set<std::string>({})));
 
     // Add extra subscription: s1 now at LOG/STATUS, LOG/INFO, LOG/TRACE
     pool.subscribeExtraTopic(to_string(sender1.getName()), "LOG/TRACE");

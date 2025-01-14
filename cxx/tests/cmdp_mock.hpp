@@ -54,3 +54,15 @@ private:
     zmq::socket_t pub_socket_;
     constellation::networking::Port port_;
 };
+
+inline bool check_sub_message(zmq::message_t msg, bool subscribe, std::string_view topic) {
+    // First byte is subscribe bool
+    const auto msg_subscribe = static_cast<bool>(*msg.data<std::uint8_t>());
+    if(msg_subscribe != subscribe) {
+        return false;
+    }
+    // Rest is subscription topic
+    auto msg_topic = msg.to_string_view();
+    msg_topic.remove_prefix(1);
+    return msg_topic == topic;
+}
