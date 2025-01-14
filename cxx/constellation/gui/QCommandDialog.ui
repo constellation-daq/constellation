@@ -233,6 +233,9 @@
       </item>
       <item row="2" column="0" colspan="4">
        <widget class="QTableView" name="tableView">
+        <property name="alternatingRowColors">
+         <bool>true</bool>
+        </property>
         <attribute name="horizontalHeaderVisible">
          <bool>false</bool>
         </attribute>
