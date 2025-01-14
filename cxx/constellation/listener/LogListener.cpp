@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -20,6 +21,7 @@
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/std_future.hpp"
+#include "constellation/core/utils/string.hpp"
 #include "constellation/listener/LogListener.hpp"
 
 #include "CMDPListener.hpp"
@@ -49,7 +51,7 @@ std::vector<std::string> LogListener::generate_topics(const std::string& log_top
 std::pair<std::string_view, Level> LogListener::demangle_topic(std::string_view topic) {
     const auto level_endpos = topic.find_first_of('/', 4);
     const auto level_str = topic.substr(4, level_endpos - 4);
-    const auto level = (level_str.empty() ? std::optional<Level>(TRACE) : enum_cast<Level>(level_str));
+    const auto level = (level_str.empty() ? std::optional<Level>(Level::TRACE) : enum_cast<Level>(level_str));
     if(!level.has_value()) {
         std::unreachable();
     }
@@ -88,7 +90,7 @@ void LogListener::unsubscribeLogTopic(const std::string& log_topic) {
 
 std::map<std::string, Level> LogListener::getLogTopicSubscriptions() {
     std::map<std::string, Level> log_topic_subscriptions {};
-    for(std::string_view topic : CMDPListener::getTopicSubscriptions()) {
+    for(const std::string_view topic : CMDPListener::getTopicSubscriptions()) {
         const auto [log_topic, level] = demangle_topic(topic);
         // Do not store global log topic
         if(log_topic.empty()) {
@@ -119,7 +121,7 @@ void LogListener::unsubscribeExtraLogTopic(const std::string& host, const std::s
 
 std::map<std::string, Level> LogListener::getExtraLogTopicSubscriptions(const std::string& host) {
     std::map<std::string, Level> log_topic_subscriptions {};
-    for(std::string_view topic : CMDPListener::getExtraTopicSubscriptions(host)) {
+    for(const std::string_view topic : CMDPListener::getExtraTopicSubscriptions(host)) {
         const auto [log_topic, level] = demangle_topic(topic);
         // Check if log topic already stored, if not store, else store min level
         const auto topic_it = log_topic_subscriptions.find(to_string(log_topic));
