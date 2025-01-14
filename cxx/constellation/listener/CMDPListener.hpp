@@ -24,7 +24,8 @@
 
 namespace constellation::listener {
 
-    class CMDPListener : public pools::SubscriberPool<message::CMDP1Message, chirp::ServiceIdentifier::MONITORING> {
+    class CNSTLN_API CMDPListener
+        : public pools::SubscriberPool<message::CMDP1Message, chirp::ServiceIdentifier::MONITORING> {
     public:
         using SubscriberPoolT = pools::SubscriberPool<message::CMDP1Message, chirp::ServiceIdentifier::MONITORING>;
 
@@ -44,7 +45,7 @@ namespace constellation::listener {
         CMDPListener& operator=(CMDPListener&& other) = delete;
         /// @endcond
 
-        CNSTLN_API virtual ~CMDPListener();
+        CNSTLN_API virtual ~CMDPListener() = default;
 
         /**
          * @brief Method to set the topics this pool subscribe to for all sockets

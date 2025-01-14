@@ -28,8 +28,6 @@ using namespace constellation::message;
 CMDPListener::CMDPListener(std::string_view log_topic, std::function<void(CMDP1Message&&)> callback)
     : SubscriberPoolT(log_topic, std::move(callback)) {}
 
-CMDPListener::~CMDPListener() = default;
-
 void CMDPListener::host_connected(const chirp::DiscoveredService& service) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
 

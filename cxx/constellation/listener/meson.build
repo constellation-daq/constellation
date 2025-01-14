@@ -3,6 +3,7 @@
 
 listener_src = files(
   'CMDPListener.cpp',
+  'LogListener.cpp',
 )
 
 listener_lib = library('ConstellationListener',
@@ -23,5 +24,6 @@ listener_dep = declare_dependency(
 
 install_headers(
   'CMDPListener.hpp',
+  'LogListener.hpp',
   subdir: 'constellation/listener',
 )
