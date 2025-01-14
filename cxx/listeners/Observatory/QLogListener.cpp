@@ -26,9 +26,9 @@
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
-#include "constellation/core/pools/SubscriberPool.hpp"
 #include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/string.hpp"
+#include "constellation/listener/LogListener.hpp"
 
 #include "listeners/Observatory/QLogMessage.hpp"
 
@@ -39,20 +39,9 @@ using namespace constellation::pools;
 using namespace constellation::utils;
 
 QLogListener::QLogListener(QObject* parent)
-    : QAbstractListModel(parent), SubscriberPool<CMDP1LogMessage, MONITORING>(
-                                      "LOGRECV", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }),
+    : QAbstractListModel(parent),
+      constellation::listener::LogListener("LOGRECV", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }),
       logger_("QLGRCV") {}
-
-std::set<std::string> QLogListener::get_global_subscription_topics() const {
-    std::set<std::string> topics;
-
-    for(const auto level : magic_enum::enum_values<Level>()) {
-        if(level >= subscription_global_level_) {
-            topics.emplace("LOG/" + to_string(level));
-        }
-    }
-    return topics;
-}
 
 void QLogListener::clearMessages() {
     const std::lock_guard message_lock {message_mutex_};
@@ -60,28 +49,6 @@ void QLogListener::clearMessages() {
         beginRemoveRows(QModelIndex(), 0, static_cast<int>(messages_.size() - 1));
         messages_.clear();
         endRemoveRows();
-    }
-}
-
-void QLogListener::subscribeToTopic(constellation::log::Level level, std::string_view topic) {
-
-    subscription_global_level_ = level;
-
-    constexpr auto levels = magic_enum::enum_values<Level>();
-    for(const auto lvl : levels) {
-        std::string log_topic = "LOG/" + to_string(lvl);
-        if(!topic.empty()) {
-            log_topic += "/";
-            log_topic += topic;
-        }
-
-        if(level <= lvl) {
-            LOG(logger_, DEBUG) << "Subscribing to " << std::quoted(log_topic);
-            subscribe(log_topic);
-        } else {
-            LOG(logger_, DEBUG) << "Unsubscribing from " << std::quoted(log_topic);
-            unsubscribe(log_topic);
-        }
     }
 }
 
@@ -113,16 +80,15 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
 }
 
 void QLogListener::host_connected(const DiscoveredService& service) {
-    // Subscribe to all current global topics:
-    for(const auto& topic : get_global_subscription_topics()) {
-        subscribe(service.host_id, topic);
-    }
+    LogListener::host_connected(service);
 
     // Emit the signal with the current number of connections
     emit connectionsChanged(countSockets());
 }
 
-void QLogListener::host_disconnected(const DiscoveredService& /*service*/) {
+void QLogListener::host_disconnected(const DiscoveredService& service) {
+    LogListener::host_disconnected(service);
+
     // Emit the signal with the current number of connections
     emit connectionsChanged(countSockets());
 }
@@ -152,10 +118,4 @@ QVariant QLogListener::headerData(int column, Qt::Orientation orientation, int r
     }
 
     return {};
-}
-
-void QLogListener::setGlobalSubscriptionLevel(Level level) {
-    LOG(logger_, DEBUG) << "Updating global subscription level to " << to_string(level);
-    subscription_global_level_ = level;
-    subscribeToTopic(level);
 }

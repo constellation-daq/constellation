@@ -179,7 +179,7 @@ Observatory::Observatory(std::string_view group_name) {
     // Load last subscription:
     const auto qslevel = gui_settings_.value("subscriptions/level").toString();
     const auto slevel = enum_cast<Level>(qslevel.toStdString());
-    log_listener_.setGlobalSubscriptionLevel(slevel.value_or(Level::WARNING));
+    log_listener_.setGlobalLogLevel(slevel.value_or(Level::WARNING));
     globalLevel->setCurrentIndex(std::to_underlying(slevel.value_or(Level::WARNING)));
 
     // Set up status bar:
@@ -209,8 +209,7 @@ void Observatory::closeEvent(QCloseEvent* event) {
     gui_settings_.setValue("filters/search", log_filter_.getFilterMessage());
 
     // Store subscription settings
-    gui_settings_.setValue("subscriptions/level",
-                           QString::fromStdString(to_string(log_listener_.getGlobalSubscriptionLevel())));
+    gui_settings_.setValue("subscriptions/level", QString::fromStdString(to_string(log_listener_.getGlobalLogLevel())));
 
     // Terminate the application
     event->accept();
@@ -221,7 +220,7 @@ void Observatory::on_filterLevel_currentIndexChanged(int index) {
 }
 
 void Observatory::on_globalLevel_currentIndexChanged(int index) {
-    log_listener_.subscribeToTopic(Level(index));
+    log_listener_.setGlobalLogLevel(Level(index));
 }
 
 void Observatory::on_filterSender_currentTextChanged(const QString& text) {

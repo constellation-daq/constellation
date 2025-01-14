@@ -27,13 +27,11 @@
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/log/Logger.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
-#include "constellation/core/pools/SubscriberPool.hpp"
+#include "constellation/listener/LogListener.hpp"
 
 #include "listeners/Observatory/QLogMessage.hpp"
 
-class QLogListener : public QAbstractListModel,
-                     public constellation::pools::SubscriberPool<constellation::message::CMDP1LogMessage,
-                                                                 constellation::chirp::MONITORING> {
+class QLogListener : public QAbstractListModel, public constellation::listener::LogListener {
     Q_OBJECT
 
 public:
@@ -43,18 +41,6 @@ public:
      * @param parent QObject parent
      */
     explicit QLogListener(QObject* parent = nullptr);
-
-    /**
-     * @brief Update the global subscription log level
-     * @param level New global subscription log level
-     */
-    void setGlobalSubscriptionLevel(constellation::log::Level level);
-
-    /**
-     * @brief Get current global log subscription level
-     * @return Global log subscription level
-     */
-    constellation::log::Level getGlobalSubscriptionLevel() const { return subscription_global_level_; }
 
     /**
      * @brief Obtain a message from a given QModelIndex
@@ -68,18 +54,6 @@ public:
      * @brief Clear all currently stored messages
      */
     void clearMessages();
-
-    /**
-     * @brief Subscribe to a given topic at a given log level
-     * @details This method subscribes automatically to all log levels higher than the chosen level. If no topic is provided,
-     * the method subscribes to the global logging at the given level, i.e. all topics available.
-     *
-     * @note Currently only works on all attached senders
-     *
-     * @param level Desired subscription log level
-     * @param topic Topic to subscribe to
-     */
-    void subscribeToTopic(constellation::log::Level level, std::string_view topic = "");
 
     /**
      * @brief Helper to check if a given sender is known already
@@ -152,14 +126,6 @@ private:
     void host_connected(const constellation::chirp::DiscoveredService& service) override;
     void host_disconnected(const constellation::chirp::DiscoveredService& service) override;
 
-    /**
-     * @brief Helper to get all subscription topics given a global subscription log level.This is used to immediately
-     * subscribe new sockets appearing to the global log level and all topics below
-
-     * @return Set of subscription topics
-     */
-    std::set<std::string> get_global_subscription_topics() const;
-
 private:
     /** Logger to use */
     constellation::log::Logger logger_;
@@ -169,8 +135,7 @@ private:
     std::atomic_size_t message_count_;
     mutable std::mutex message_mutex_;
 
-    /** Subscriptions */
-    constellation::log::Level subscription_global_level_ {constellation::log::Level::INFO};
+    /** Available senders and topics */
     std::set<std::string> sender_list_;
     std::set<std::string> topic_list_;
 };
