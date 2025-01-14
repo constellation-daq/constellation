@@ -21,6 +21,7 @@
 #include <optional>
 #include <stop_token>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 
@@ -139,7 +140,7 @@ void CMDPSink::subscription_loop(const std::stop_token& stop_token) {
             continue;
         }
 
-        const auto topic = (level_endpos != std::string::npos ? body.substr(level_endpos + 1) : std::string_view());
+        const auto topic = (level_endpos != std::string_view::npos ? body.substr(level_endpos + 1) : std::string_view());
         const auto topic_uc = transform(topic, ::toupper);
         LOG(*logger_, TRACE) << "In/decrementing subscription counters for topic " << std::quoted(topic_uc);
 
