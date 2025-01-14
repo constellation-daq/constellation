@@ -47,7 +47,7 @@ TEST_CASE("Changing subscriptions", "[core][core::pools]") {
     pool.startPool();
 
     // Set subscription topics
-    pool.setSubscriptionTopics({"LOG/STATUS", "LOG/INFO"});
+    pool.setTopicSubscriptions({"LOG/STATUS", "LOG/INFO"});
 
     // Start the sender and mock via chirp
     auto sender = CMDPSender("CMDPSender.s1");
@@ -84,7 +84,7 @@ TEST_CASE("Changing extra subscriptions", "[core][core::pools]") {
     pool.startPool();
 
     // Set subscription topics
-    pool.setSubscriptionTopics({"LOG/STATUS", "LOG/INFO"});
+    pool.setTopicSubscriptions({"LOG/STATUS", "LOG/INFO"});
 
     // Start the senders and mock via chirp
     auto sender1 = CMDPSender("CMDPSender.s1");
@@ -115,7 +115,7 @@ TEST_CASE("Changing extra subscriptions", "[core][core::pools]") {
     REQUIRE(check_sub_message(sender1.recv().pop(), false, "LOG/WARNING"));
 
     // Replace extra subscription: s1 now at LOG/STATUS, LOG/INFO, LOG/DEBUG
-    pool.setExtraSubscriptionTopics(to_string(sender1.getName()), {"LOG/DEBUG", "LOG/INFO"});
+    pool.setExtraTopicSubscriptions(to_string(sender1.getName()), {"LOG/DEBUG", "LOG/INFO"});
 
     // Check changing subscriptions
     REQUIRE(check_sub_message(sender1.recv().pop(), false, "LOG/TRACE"));
@@ -130,7 +130,7 @@ TEST_CASE("Changing extra subscriptions", "[core][core::pools]") {
     REQUIRE(check_sub_message(sender1.recv().pop(), true, "LOG/INFO"));
 
     // Remove extra subscriptions
-    pool.removeExtraSubscriptions(to_string(sender1.getName()));
+    pool.removeExtraTopicSubscriptions(to_string(sender1.getName()));
     REQUIRE(check_sub_message(sender1.recv().pop(), false, "LOG/DEBUG"));
 }
 
@@ -143,8 +143,8 @@ TEST_CASE("Extra subscriptions on connection", "[core][core::pools]") {
     pool.startPool();
 
     // Set subscription topics
-    pool.setSubscriptionTopics({"LOG/STATUS", "LOG/INFO"});
-    pool.setExtraSubscriptionTopics("CMDPSender.s1", {"LOG/INFO", "SOMETHING", "ELSE"});
+    pool.setTopicSubscriptions({"LOG/STATUS", "LOG/INFO"});
+    pool.setExtraTopicSubscriptions("CMDPSender.s1", {"LOG/INFO", "SOMETHING", "ELSE"});
     pool.unsubscribeExtraTopic("CMDPSender.s1", "ELSE");
 
     // Start the senders and mock via chirp
@@ -159,7 +159,7 @@ TEST_CASE("Extra subscriptions on connection", "[core][core::pools]") {
     REQUIRE(check_sub_message(sender.recv().pop(), true, "SOMETHING"));
 
     // Remove all extra subscriptions
-    pool.removeExtraSubscriptions();
+    pool.removeExtraTopicSubscriptions();
 
     // Check unsubscription message
     REQUIRE(check_sub_message(sender.recv().pop(), false, "SOMETHING"));

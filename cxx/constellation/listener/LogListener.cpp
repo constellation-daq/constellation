@@ -49,7 +49,7 @@ void LogListener::host_connected(const chirp::DiscoveredService& service) {
     }
 }
 
-void LogListener::setSubscriptionTopics(std::set<std::string> topics) {
+void LogListener::setTopicSubscriptions(std::set<std::string> topics) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
 
     // Set of topics to unsubscribe: current topics not in new topics
@@ -93,9 +93,9 @@ void LogListener::subscribeTopic(std::string topic) {
     }
     // Emplace new topic
     const auto [_, inserted] = new_subscribed_topics.emplace(std::move(topic));
-    // Handle logic in setSubscriptionTopics
+    // Handle logic in setTopicSubscriptions
     if(inserted) [[likely]] {
-        setSubscriptionTopics(std::move(new_subscribed_topics));
+        setTopicSubscriptions(std::move(new_subscribed_topics));
     }
 }
 
@@ -108,13 +108,13 @@ void LogListener::unsubscribeTopic(const std::string& topic) {
     }
     // Erase requested topic
     const auto erased = new_subscribed_topics.erase(topic);
-    // Handle logic in setSubscriptionTopics
+    // Handle logic in setTopicSubscriptions
     if(erased > 0) [[likely]] {
-        setSubscriptionTopics(std::move(new_subscribed_topics));
+        setTopicSubscriptions(std::move(new_subscribed_topics));
     }
 }
 
-void LogListener::setExtraSubscriptionTopics(const std::string& host, std::set<std::string> topics) {
+void LogListener::setExtraTopicSubscriptions(const std::string& host, std::set<std::string> topics) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
 
     // Check if extra topics already set
@@ -167,9 +167,9 @@ void LogListener::subscribeExtraTopic(const std::string& host, std::string topic
             new_subscription_topics.emplace(std::move(topic));
         }
     }
-    // Handle logic in setExtraSubscriptionTopics
+    // Handle logic in setExtraTopicSubscriptions
     if(run_logic) [[likely]] {
-        setExtraSubscriptionTopics(host, std::move(new_subscription_topics));
+        setExtraTopicSubscriptions(host, std::move(new_subscription_topics));
     }
 }
 
@@ -186,13 +186,13 @@ void LogListener::unsubscribeExtraTopic(const std::string& host, const std::stri
             run_logic = erased > 0;
         }
     }
-    // Handle logic in setExtraSubscriptionTopics
+    // Handle logic in setExtraTopicSubscriptions
     if(run_logic) [[likely]] {
-        setExtraSubscriptionTopics(host, std::move(new_subscription_topics));
+        setExtraTopicSubscriptions(host, std::move(new_subscription_topics));
     }
 }
 
-void LogListener::removeExtraSubscriptions(const std::string& host) {
+void LogListener::removeExtraTopicSubscriptions(const std::string& host) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
     const auto host_it = extra_subscribed_topics_.find(host);
     if(host_it != extra_subscribed_topics_.end()) {
@@ -206,7 +206,7 @@ void LogListener::removeExtraSubscriptions(const std::string& host) {
     }
 }
 
-void LogListener::removeExtraSubscriptions() {
+void LogListener::removeExtraTopicSubscriptions() {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
     std::ranges::for_each(extra_subscribed_topics_, [&](const auto& host_p) {
         // Unsubscribe from each topic not in subscribed_topics_

@@ -53,7 +53,7 @@ namespace constellation::listener {
          *
          * @param topics Set of subscription topics to which to subscribe to
          */
-        CNSTLN_API void setSubscriptionTopics(std::set<std::string> topics);
+        CNSTLN_API void setTopicSubscriptions(std::set<std::string> topics);
 
         /**
          * @brief Subscribe to a given topic for all sockets
@@ -78,7 +78,7 @@ namespace constellation::listener {
          * @param host Canonical name of the host to set subscription topics
          * @param topics Set of subscription topics to which to subscribe all sockets
          */
-        CNSTLN_API void setExtraSubscriptionTopics(const std::string& host, std::set<std::string> topics);
+        CNSTLN_API void setExtraTopicSubscriptions(const std::string& host, std::set<std::string> topics);
 
         /**
          * @brief Subscribe to a given topic for a specific socket
@@ -105,12 +105,12 @@ namespace constellation::listener {
          *
          * @param host Canonical name of the host
          */
-        CNSTLN_API void removeExtraSubscriptions(const std::string& host);
+        CNSTLN_API void removeExtraTopicSubscriptions(const std::string& host);
 
         /**
          * @brief Remove extra topics for all sockets
          */
-        CNSTLN_API void removeExtraSubscriptions();
+        CNSTLN_API void removeExtraTopicSubscriptions();
 
     protected:
         /**
