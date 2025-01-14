@@ -8,6 +8,7 @@
 #include <string_view>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_range_equals.hpp>
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
@@ -18,6 +19,7 @@
 #include "chirp_mock.hpp"
 #include "cmdp_mock.hpp"
 
+using namespace Catch::Matchers;
 using namespace constellation;
 using namespace constellation::listener;
 using namespace constellation::log;
@@ -57,6 +59,9 @@ TEST_CASE("Changing subscriptions", "[core][core::pools]") {
     REQUIRE(sender.canRecv());
     REQUIRE(sender.canRecv());
 
+    // Check topic subscriptions
+    REQUIRE_THAT(pool.getTopicSubscriptions(), RangeEquals(std::set<std::string>({"LOG/STATUS", "LOG/INFO"})));
+
     // Unsubscribe from topic
     pool.unsubscribeTopic("LOG/INFO");
     REQUIRE(check_sub_message(sender.recv().pop(), false, "LOG/INFO"));
@@ -73,6 +78,9 @@ TEST_CASE("Changing subscriptions", "[core][core::pools]") {
     // No duplicate subscriptions
     pool.subscribeTopic("LOG/TRACE");
     REQUIRE_FALSE(sender.canRecv());
+
+    // Check topic subscriptions again
+    REQUIRE_THAT(pool.getTopicSubscriptions(), RangeEquals(std::set<std::string>({"LOG/STATUS", "LOG/TRACE"})));
 }
 
 TEST_CASE("Changing extra subscriptions", "[core][core::pools]") {
@@ -111,6 +119,12 @@ TEST_CASE("Changing extra subscriptions", "[core][core::pools]") {
     // Additional extra subscription
     pool.subscribeExtraTopic(to_string(sender1.getName()), "LOG/WARNING");
     REQUIRE(check_sub_message(sender1.recv().pop(), true, "LOG/WARNING"));
+
+    // Check extra topic subscriptions
+    REQUIRE_THAT(pool.getExtraTopicSubscriptions(to_string(sender1.getName())),
+                 RangeEquals(std::set<std::string>({"LOG/TRACE", "LOG/WARNING"})));
+
+    // Unsubscribe again
     pool.unsubscribeExtraTopic(to_string(sender1.getName()), "LOG/WARNING");
     REQUIRE(check_sub_message(sender1.recv().pop(), false, "LOG/WARNING"));
 
@@ -128,6 +142,10 @@ TEST_CASE("Changing extra subscriptions", "[core][core::pools]") {
 
     // Check that sender1 gets subscription again since extra topic
     REQUIRE(check_sub_message(sender1.recv().pop(), true, "LOG/INFO"));
+
+    // Check extra topic subscriptions again
+    REQUIRE_THAT(pool.getExtraTopicSubscriptions(to_string(sender1.getName())),
+                 RangeEquals(std::set<std::string>({"LOG/DEBUG", "LOG/INFO"})));
 
     // Remove extra subscriptions
     pool.removeExtraTopicSubscriptions(to_string(sender1.getName()));

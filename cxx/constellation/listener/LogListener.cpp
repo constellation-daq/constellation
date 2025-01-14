@@ -114,6 +114,11 @@ void LogListener::unsubscribeTopic(const std::string& topic) {
     }
 }
 
+std::set<std::string> LogListener::getTopicSubscriptions() {
+    const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
+    return subscribed_topics_;
+}
+
 void LogListener::setExtraTopicSubscriptions(const std::string& host, std::set<std::string> topics) {
     const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
 
@@ -190,6 +195,15 @@ void LogListener::unsubscribeExtraTopic(const std::string& host, const std::stri
     if(run_logic) [[likely]] {
         setExtraTopicSubscriptions(host, std::move(new_subscription_topics));
     }
+}
+
+std::set<std::string> LogListener::getExtraTopicSubscriptions(const std::string& host) {
+    const std::lock_guard subscribed_topics_lock {subscribed_topics_mutex_};
+    const auto host_it = extra_subscribed_topics_.find(host);
+    if(host_it != extra_subscribed_topics_.end()) {
+        return host_it->second;
+    }
+    return {};
 }
 
 void LogListener::removeExtraTopicSubscriptions(const std::string& host) {
