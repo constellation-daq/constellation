@@ -27,7 +27,7 @@ namespace Ui { // NOLINT(readability-identifier-naming)
 
 namespace constellation::gui {
 
-    class CNSTLN_API QCommandParameters : public QAbstractListModel, public constellation::config::List {
+    class CNSTLN_API QCommandParameters : public QAbstractListModel, public config::List {
         Q_OBJECT
 
     public:
@@ -59,7 +59,7 @@ namespace constellation::gui {
          */
         QVariant data(const QModelIndex& index, int role) const override;
 
-        void add(const constellation::config::Value& value);
+        void add(const config::Value& value);
         void reset();
     };
 
@@ -76,7 +76,7 @@ namespace constellation::gui {
                                 const std::string& command = "",
                                 const std::string& description = "");
         std::string getCommand() const;
-        constellation::controller::Controller::CommandPayload getPayload() const;
+        controller::Controller::CommandPayload getPayload() const;
 
     private slots:
         /**
