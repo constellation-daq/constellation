@@ -50,6 +50,7 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
     const auto [s_it, s_inserted] = sender_list_.emplace(msg.getHeader().getSender());
     if(s_inserted) {
         emit newSender(QString::fromStdString(std::string(msg.getHeader().getSender())));
+        emit senderConnected(std::string(msg.getHeader().getSender()));
     }
 
     const auto [t_it, t_inserted] = topic_list_.emplace(msg.getLogTopic());

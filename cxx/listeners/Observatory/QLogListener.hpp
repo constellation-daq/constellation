@@ -90,6 +90,9 @@ signals:
      */
     void connectionsChanged(std::size_t connections);
 
+    void senderConnected(const std::string& host);
+    void senderDisconnected(const std::string& host);
+
     /**
      * @brief Signal emitted whenever a new message has been added
      * @param index QModelIndex at which the message has been inserted

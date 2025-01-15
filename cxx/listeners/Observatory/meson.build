@@ -12,11 +12,11 @@ if get_option('build_gui') == 'none'
 endif
 
 qrc_files = qt.compile_resources(sources: 'Observatory.qrc')
-ui_files = qt.compile_ui(sources: ['Observatory.ui'])
-moc_files = qt.compile_moc(headers: ['QLogFilter.hpp', 'QLogListener.hpp', 'Observatory.hpp'])
+ui_files = qt.compile_ui(sources: ['Observatory.ui', 'QSenderSubscriptions.ui'])
+moc_files = qt.compile_moc(headers: ['QLogFilter.hpp', 'QLogListener.hpp', 'QSenderSubscriptions.hpp', 'Observatory.hpp'])
 
 executable('Observatory',
-  sources: ['Observatory.cpp', 'QLogFilter.cpp', 'QLogListener.cpp', qrc_files, ui_files, moc_files],
+  sources: ['Observatory.cpp', 'QLogFilter.cpp', 'QLogListener.cpp', 'QSenderSubscriptions.cpp', qrc_files, ui_files, moc_files],
   dependencies: [core_dep, gui_dep, listener_dep, exec_dep, argparse_dep, qt_dep],
   install: true,
   install_rpath: constellation_rpath,
