@@ -26,6 +26,7 @@ path = [
   "cxx/controllers/MissionControl/MissionControl.ui",
   "cxx/listeners/Observatory/Observatory.qrc",
   "cxx/listeners/Observatory/Observatory.ui",
+  "cxx/listeners/Observatory/QSenderSubscriptions.ui",
 ]
 SPDX-FileCopyrightText = "DESY and the Constellation authors"
 SPDX-License-Identifier = "EUPL-1.2"
