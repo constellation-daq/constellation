@@ -39,7 +39,7 @@ namespace constellation::satellite {
     template <typename T> inline config::Value CommandRegistry::convert(const T& value) {
         try {
             return config::Value::set(value);
-        } catch(const utils::MsgPackError&) {
+        } catch(const std::bad_cast&) {
             throw InvalidUserCommandResult(utils::demangle<T>());
         }
     }

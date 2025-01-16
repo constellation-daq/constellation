@@ -88,10 +88,7 @@ namespace constellation::message {
      */
     class CNSTLN_API InvalidPayload : public MessageDecodingError {
     public:
-        explicit InvalidPayload(const std::string& reason) {
-            error_message_ = "Invalid message payload, ";
-            error_message_ += reason;
-        }
+        explicit InvalidPayload(std::string_view reason) { error_message_ = reason; }
     };
 
 } // namespace constellation::message
