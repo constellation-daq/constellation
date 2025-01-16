@@ -276,9 +276,12 @@ BaseSatellite::handle_user_command(std::string_view command, const message::Payl
             return_payload = {std::move(sbuf)};
         }
         return_verb = {CSCP1Message::Type::SUCCESS, "Command returned: " + retval.str()};
-    } catch(const MsgPackError&) {
+    } catch(const MsgpackUnpackError&) {
         // Issue with obtaining parameters from payload
         return_verb = {CSCP1Message::Type::INCOMPLETE, "Could not convert command payload to argument list"};
+    } catch(const MsgpackPackError&) {
+        // Issue with packing return values to payload
+        return_verb = {CSCP1Message::Type::INCOMPLETE, "Could not convert command response to payload"};
     } catch(const UnknownUserCommand&) {
         return std::nullopt;
     } catch(const InvalidUserCommand& error) {

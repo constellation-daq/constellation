@@ -79,7 +79,7 @@ CSCP1Message CSCP1Message::disassemble(zmq::multipart_t& frames) {
         }
 
         return cscp1_message;
-    } catch(const MsgPackError& e) {
+    } catch(const MsgpackUnpackError& e) {
         throw MessageDecodingError(e.what());
     }
 }

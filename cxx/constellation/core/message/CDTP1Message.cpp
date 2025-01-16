@@ -81,7 +81,7 @@ CDTP1Message::Header CDTP1Message::Header::disassemble(std::span<const std::byte
 
         // Construct header
         return {sender, time, tags, seq, type};
-    } catch(const MsgPackError& e) {
+    } catch(const MsgpackUnpackError& e) {
         throw MessageDecodingError(e.what());
     }
 }

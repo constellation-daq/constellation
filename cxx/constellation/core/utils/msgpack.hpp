@@ -17,7 +17,7 @@ namespace constellation::utils {
 
     /**
      * @brief MsgPack helper function to pack value to stream
-     * @details This helper catches all MsgPack exceptions and rethrows them as MsgPackError
+     * @details This helper catches all MsgPack exceptions and rethrows them as MsgpackPackError
      *
      * @tparam S Reference to target stream
      * @tparam T Value to be packed
@@ -25,15 +25,15 @@ namespace constellation::utils {
     template <typename S, typename T> inline void msgpack_pack(S& stream, const T& object) try {
         msgpack::pack(stream, object);
     } catch(const msgpack::type_error& e) {
-        throw MsgPackError("Type error", e.what());
+        throw MsgpackPackError("Type error", e.what());
     } catch(const msgpack::parse_error& e) {
-        throw MsgPackError("Error parsing data", e.what());
+        throw MsgpackPackError("Error parsing data", e.what());
     };
 
     /**
      * @brief MsgPack helper to unpack value
      * @details This helper unpacks the MsgPack value and returns it as target value type. It catches all MsgPack exceptions
-     *          and rethrows them as MsgPackError
+     *          and rethrows them as MsgpackUnpackError
      *
      * @tparam args Variadic arguments
      * @return Unpacked value in target type
@@ -42,11 +42,11 @@ namespace constellation::utils {
         const auto msgpack_var = msgpack::unpack(std::forward<Args>(args)...);
         return msgpack_var->template as<R>();
     } catch(const msgpack::type_error& e) {
-        throw MsgPackError("Type error", e.what());
+        throw MsgpackUnpackError("Type error", e.what());
     } catch(const msgpack::parse_error& e) {
-        throw MsgPackError("Error parsing data", e.what());
+        throw MsgpackUnpackError("Error parsing data", e.what());
     } catch(const msgpack::unpack_error& e) {
-        throw MsgPackError("Error unpacking data", e.what());
+        throw MsgpackUnpackError("Error unpacking data", e.what());
     };
 
 } // namespace constellation::utils

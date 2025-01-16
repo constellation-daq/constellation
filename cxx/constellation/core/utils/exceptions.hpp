@@ -98,13 +98,23 @@ namespace constellation::utils {
      *
      * Issues in treating incoming or outgoing MsgPack-encoded data
      */
-    class CNSTLN_API MsgPackError : public RuntimeError {
+    class CNSTLN_API MsgpackError : public RuntimeError {
     public:
-        explicit MsgPackError(const std::string& type, const std::string& reason) {
+        explicit MsgpackError(const std::string& type, const std::string& reason) {
             error_message_ = type;
             error_message_ += ": ";
             error_message_ += reason;
         }
+    };
+
+    class CNSTLN_API MsgpackPackError : public MsgpackError {
+    public:
+        explicit MsgpackPackError(const std::string& type, const std::string& reason) : MsgpackError(type, reason) {}
+    };
+
+    class CNSTLN_API MsgpackUnpackError : public MsgpackError {
+    public:
+        explicit MsgpackUnpackError(const std::string& type, const std::string& reason) : MsgpackError(type, reason) {}
     };
 
 } // namespace constellation::utils

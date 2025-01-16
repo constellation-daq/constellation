@@ -67,7 +67,7 @@ BaseHeader BaseHeader::disassemble(Protocol protocol, std::span<const std::byte>
 
         // Construct header
         return {protocol, sender, time, tags};
-    } catch(const MsgPackError& e) {
+    } catch(const MsgpackUnpackError& e) {
         throw MessageDecodingError(e.what());
     }
 }

@@ -77,7 +77,7 @@ CHP1Message CHP1Message::disassemble(zmq::multipart_t& frames) {
 
         // Construct message
         return {sender, state, interval, time};
-    } catch(const MsgPackError& e) {
+    } catch(const MsgpackUnpackError& e) {
         throw MessageDecodingError(e.what());
     }
 }
