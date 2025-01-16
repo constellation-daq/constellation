@@ -26,7 +26,7 @@ The satellite interfaces the Peary device manager to add devices and to control 
 
 * **Launching**: During launch, the device is powered using Peary's `powerOn()` command. After this, the satellite waits for one second in order to allow the AIDA TLU to fully configure and make the clock available on the DUT outputs. Then, the `configure()` command of the Peary device interface is called.
 
-* **Reconfiguration**: Any register returned by the device by `list_registers()` or memory registers from `list_memories()` can be updated during reconfiguration. The satellite attempts to read any of these values from the provided reconfiguration config and, if successful, updates the device.
+* **Reconfiguration**: Any register returned by the device by `list_registers()` or memory registers from `list_memories()` can be updated during reconfiguration. The satellite attempts to read any of these values from the provided reconfiguration object and, if successful, updates the device.
 
 * **Start / Stop**: During start and stop, the corresponding Peary device functions `daqStart()` and `daqStop()` are called.
 

@@ -11,3 +11,4 @@ plantuml
 libc
 libstdc
 IPython
+Carboard
