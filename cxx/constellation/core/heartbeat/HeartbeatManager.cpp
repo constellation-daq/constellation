@@ -54,8 +54,8 @@ HeartbeatManager::~HeartbeatManager() {
     }
 }
 
-void HeartbeatManager::sendExtrasystole() {
-    sender_.sendExtrasystole();
+void HeartbeatManager::sendExtrasystole(bool autonomous) {
+    sender_.sendExtrasystole(autonomous);
 }
 
 std::optional<CSCP::State> HeartbeatManager::getRemoteState(std::string_view remote) {

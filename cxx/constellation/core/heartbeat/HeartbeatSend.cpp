@@ -63,8 +63,9 @@ HeartbeatSend::~HeartbeatSend() {
     }
 }
 
-void HeartbeatSend::sendExtrasystole() {
-    flags_ = flags_.load() | CHP::MessageFlags::IS_EXTRASYSTOLE;
+void HeartbeatSend::sendExtrasystole(bool autonomous) {
+    flags_ = flags_.load() | CHP::MessageFlags::IS_EXTRASYSTOLE |
+             (autonomous ? CHP::MessageFlags::IS_AUTONOMOUS : CHP::MessageFlags::NONE);
     cv_.notify_one();
 }
 

@@ -73,8 +73,10 @@ namespace constellation::heartbeat {
 
         /**
          * @brief Send an extrasystole
+         *
+         * @param autonomous Boolean indicating if this state has been reached by an autonomous action
          */
-        CNSTLN_API void sendExtrasystole();
+        CNSTLN_API void sendExtrasystole(bool autonomous);
 
     private:
         /**

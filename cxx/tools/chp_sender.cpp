@@ -67,7 +67,7 @@ namespace {
             std::cout << "State:    [" << state << "] ";
             std::getline(std::cin, state_s);
             state = enum_cast<CSCP::State>(state_s).value_or(state);
-            sender.sendExtrasystole();
+            sender.sendExtrasystole(false);
         }
     }
 } // namespace

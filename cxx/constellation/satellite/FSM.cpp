@@ -194,7 +194,7 @@ void FSM::requestInterrupt(std::string_view reason) {
     }
 }
 
-void FSM::registerStateCallback(const std::string& identifier, std::function<void(State)> callback) {
+void FSM::registerStateCallback(const std::string& identifier, std::function<void(State, bool)> callback) {
     const std::lock_guard state_callbacks_lock {state_callbacks_mutex_};
     state_callbacks_.emplace(identifier, std::move(callback));
 }
@@ -211,7 +211,7 @@ void FSM::call_state_callbacks() {
     for(const auto& [id, callback] : state_callbacks_) {
         futures.emplace_back(std::async(std::launch::async, [&]() {
             try {
-                callback(state_.load());
+                callback(state_.load(), false);
             } catch(...) {
                 LOG(logger_, WARNING) << "State callback " << std::quoted(id) << " threw an exception";
             }

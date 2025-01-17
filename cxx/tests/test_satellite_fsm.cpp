@@ -454,9 +454,9 @@ TEST_CASE("FSM callbacks", "[satellite][satellite::fsm]") {
 
     std::atomic_bool throw_cb = false;
     std::atomic_int cb_count = 0;
-    fsm.registerStateCallback("test", [&](State state) {
+    fsm.registerStateCallback("test", [&](State state, bool auton) {
         const auto local_count = ++cb_count;
-        LOG(DEBUG) << "State callback with state " << state << ", count " << local_count;
+        LOG(DEBUG) << "State callback with state " << state << ", count " << local_count << (auton ? ", autonomous" : "");
         if(throw_cb) {
             throw Exception("Throwing in state callback as requested");
         }

@@ -136,7 +136,7 @@ namespace constellation::satellite {
          * @param identifier Identifier string for this callback
          * @param callback Callback taking the new state as argument
          */
-        CNSTLN_API void registerStateCallback(const std::string& identifier, std::function<void(State)> callback);
+        CNSTLN_API void registerStateCallback(const std::string& identifier, std::function<void(State, bool)> callback);
 
         /**
          * @brief Unregistering a state callback
@@ -277,7 +277,7 @@ namespace constellation::satellite {
         std::thread failure_thread_;
 
         /** State update callback */
-        std::map<std::string, std::function<void(State)>> state_callbacks_;
+        std::map<std::string, std::function<void(State, bool)>> state_callbacks_;
         std::mutex state_callbacks_mutex_;
     };
 
