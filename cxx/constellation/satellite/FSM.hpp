@@ -88,19 +88,21 @@ namespace constellation::satellite {
          * @brief Perform a FSM transition
          *
          * @param transition Transition to perform
+         * @param autonomous Boolean to indicate whether this reaction was autonomous
          * @param payload Payload for the transition function
          * @throw FSMError if the transition is not a valid transition in the current state
          */
-        CNSTLN_API void react(Transition transition, TransitionPayload payload = {});
+        CNSTLN_API void react(Transition transition, bool autonomous = false, TransitionPayload payload = {});
 
         /**
          * @brief Perform a FSM transition if allowed, otherwise do nothing
          *
          * @param transition Transition to perform if allowed
+         * @param autonomous Boolean to indicate whether this reaction was autonomous
          * @param payload Payload for the transition function
          * @return True if the transition was initiated
          */
-        CNSTLN_API bool reactIfAllowed(Transition transition, TransitionPayload payload = {});
+        CNSTLN_API bool reactIfAllowed(Transition transition, bool autonomous = false, TransitionPayload payload = {});
 
         /**
          * @brief Perform a FSM transition via a CSCP message
@@ -164,8 +166,10 @@ namespace constellation::satellite {
 
         /**
          * @brief Call all state callbacks
+         *
+         * @param autonomous Boolean indicate whether this state was reached autonomously or by command
          */
-        void call_state_callbacks();
+        void call_state_callbacks(bool autonomous);
 
         /**
          * @brief Call a satellite function
@@ -176,7 +180,7 @@ namespace constellation::satellite {
          * @return Transition after function call, either success transition or failure
          */
         template <typename Func, typename... Args>
-        Transition call_satellite_function(Func func, Transition success_transition, Args&&... args);
+        std::pair<Transition, bool> call_satellite_function(Func func, Transition success_transition, Args&&... args);
 
         /**
          * @brief Stop and join the run_thread

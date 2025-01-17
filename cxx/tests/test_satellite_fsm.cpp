@@ -41,12 +41,12 @@ TEST_CASE("Regular FSM operation", "[satellite][satellite::fsm]") {
     auto& fsm = satellite.getFSM();
 
     // NEW -> INIT
-    fsm.react(Transition::initialize, Configuration());
+    fsm.react(Transition::initialize, false, Configuration());
     REQUIRE(fsm.getState() == State::initializing);
     satellite.progressFsm();
     REQUIRE(fsm.getState() == State::INIT);
     // INIT -> INIT
-    fsm.react(Transition::initialize, Configuration());
+    fsm.react(Transition::initialize, false, Configuration());
     REQUIRE(fsm.getState() == State::initializing);
     satellite.progressFsm();
     REQUIRE(fsm.getState() == State::INIT);
@@ -56,7 +56,7 @@ TEST_CASE("Regular FSM operation", "[satellite][satellite::fsm]") {
     satellite.progressFsm();
     REQUIRE(fsm.getState() == State::ORBIT);
     // ORBIT -> ORBIT
-    fsm.react(Transition::reconfigure, Configuration());
+    fsm.react(Transition::reconfigure, false, Configuration());
     REQUIRE(fsm.getState() == State::reconfiguring);
     satellite.progressFsm();
     REQUIRE(fsm.getState() == State::ORBIT);
@@ -84,7 +84,7 @@ TEST_CASE("FSM interrupts and failures", "[satellite][satellite::fsm]") {
     auto& fsm = satellite.getFSM();
 
     // Failure in transitional state
-    fsm.react(Transition::initialize, Configuration());
+    fsm.react(Transition::initialize, false, Configuration());
     REQUIRE(fsm.getState() == State::initializing);
     satellite.setThrowTransitional();
     while(fsm.getState() == State::initializing) {
@@ -97,7 +97,7 @@ TEST_CASE("FSM interrupts and failures", "[satellite][satellite::fsm]") {
     REQUIRE_FALSE(fsm.reactIfAllowed(Transition::failure));
 
     // Reset
-    fsm.react(Transition::initialize, Configuration());
+    fsm.react(Transition::initialize, false, Configuration());
     satellite.progressFsm();
     REQUIRE(fsm.getState() == State::INIT);
 
@@ -185,7 +185,7 @@ TEST_CASE("Allowed FSM transitions", "[satellite][satellite::fsm]") {
     REQUIRE_THROWS_WITH(fsm.react(interrupted), Equals("Transition interrupted not allowed from NEW state"));
     INFO("NEW succeeded");
 
-    fsm.react(initialize, Configuration());
+    fsm.react(initialize, false, Configuration());
     REQUIRE(fsm.getState() == State::initializing);
     std::this_thread::sleep_for(5ms); // Give some to log in the correct order
     // Allowed in initializing: initialized, failure
@@ -267,7 +267,7 @@ TEST_CASE("Allowed FSM transitions", "[satellite][satellite::fsm]") {
     REQUIRE(fsm.isAllowed(failure));
     INFO("ORBIT succeeded");
 
-    fsm.react(reconfigure, Configuration());
+    fsm.react(reconfigure, false, Configuration());
     REQUIRE(fsm.getState() == State::reconfiguring);
     std::this_thread::sleep_for(5ms); // Give some to log in the correct order
     // Allowed in reconfiguring: reconfigured, interrupt, failure
@@ -441,7 +441,7 @@ TEST_CASE("Allowed FSM transitions", "[satellite][satellite::fsm]") {
     INFO("ERROR succeeded");
 
     // Reset
-    fsm.react(Transition::initialize, Configuration());
+    fsm.react(Transition::initialize, false, Configuration());
     satellite.progressFsm();
     REQUIRE(fsm.getState() == State::INIT);
 
