@@ -17,7 +17,11 @@
 
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/casts.hpp"
+<<<<<<< HEAD
 #include "constellation/core/utils/msgpack.hpp"
+=======
+#include "constellation/core/utils/string.hpp"
+>>>>>>> e6bf3b7b (cxx: fix Observatory crash and better dict to_string)
 
 using namespace constellation::config;
 using namespace constellation::message;
@@ -109,10 +113,12 @@ Dictionary Dictionary::disassemble(const PayloadBuffer& message) {
     return msgpack_unpack_to<Dictionary>(to_char_ptr(message.span().data()), message.span().size());
 }
 
-std::string Dictionary::to_string() const {
-    std::string out {};
-    for(const auto& [key, value] : *this) {
-        out += "\n " + key + ": " + value.str();
+std::string Dictionary::to_string(bool prefix) const {
+    std::string out = (prefix ? "\n" : "");
+    out += range_to_string(
+        *this, [prefix](const auto& it) { return (prefix ? " " : "") + it.first + ": " + it.second.str(); }, "\n");
+    if(out == "\n") {
+        out.clear();
     }
     return out;
 }

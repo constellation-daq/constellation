@@ -68,9 +68,10 @@ namespace constellation::config {
         /**
          * @brief Convert dictionary to human readable string
          *
-         * @return String with one line for each key-value pair starting `\n `
+         * @param prefix If true prefix the first line with a newline if dictionary not empty
+         * @return String with one line for each key-value pair
          */
-        CNSTLN_API std::string to_string() const;
+        CNSTLN_API std::string to_string(bool prefix = true) const;
     };
 
 } // namespace constellation::config

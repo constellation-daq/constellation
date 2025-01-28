@@ -51,7 +51,7 @@ QVariant QLogMessage::operator[](int column) const {
         }
         return QString::fromStdString(msg);
     }
-    case 5: return QString::fromStdString(getHeader().getTags().to_string().substr(1, std::string::npos));
+    case 5: return QString::fromStdString(getHeader().getTags().to_string(false));
     case 6: return QString::fromStdString(std::string(getLogMessage()));
     default: return "";
     }

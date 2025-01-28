@@ -16,7 +16,6 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 
 #include <msgpack.hpp>
 
@@ -30,9 +29,8 @@
 
 using namespace constellation::config;
 using namespace constellation::message;
-using namespace constellation::utils;
 using namespace constellation::protocol;
-using namespace std::string_view_literals;
+using namespace constellation::utils;
 
 // Similar to CDTP1Header::disassemble in CDTP1Header.cpp, check when modifying
 BaseHeader BaseHeader::disassemble(Protocol protocol, std::span<const std::byte> data) {
@@ -86,10 +84,10 @@ void BaseHeader::msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpack_packer)
 std::string BaseHeader::to_string() const {
     std::ostringstream out {};
     std::boolalpha(out);
-    out << "Header: "sv << get_readable_protocol(protocol_) << '\n' //
-        << "Sender: "sv << sender_ << '\n'                          //
-        << "Time:   "sv << utils::to_string(time_) << '\n'          //
-        << "Tags:"sv << tags_.to_string();
+    out << "Header: " << get_readable_protocol(protocol_) << '\n' //
+        << "Sender: " << sender_ << '\n'                          //
+        << "Time:   " << utils::to_string(time_) << '\n'          //
+        << "Tags:" << tags_.to_string();
 
     return out.str();
 }
