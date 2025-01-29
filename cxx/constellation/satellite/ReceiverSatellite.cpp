@@ -100,6 +100,9 @@ void ReceiverSatellite::starting_receiver() {
 void ReceiverSatellite::stopping_receiver() {
     // Wait until no more events returned by poller
     while(pollerEvents() > 0) {
+        // Check any exceptions that prevents poller from continuing
+        checkPoolException();
+
         LOG(cdtp_logger_, TRACE) << "Poller still returned events, waiting before checking for EOR arrivals";
 
         // Wait a bit to avoid hot loop

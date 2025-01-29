@@ -284,14 +284,15 @@ namespace constellation::pools {
                     // The poller returns immediately when a socket received something, but will time out after the set
                     // period:
                     poller_events_.store(poller_.wait(50ms));
-                } catch(const zmq::error_t& e) {
-                    throw networking::NetworkError(e.what());
+                } catch(const zmq::error_t& error) {
+                    throw networking::NetworkError(error.what());
                 }
             }
+        } catch(const std::exception& error) {
+            LOG(pool_logger_, CRITICAL) << "Caught exception in pool thread: " << error.what();
+            exception_ptr_ = std::current_exception();
         } catch(...) {
             LOG(pool_logger_, CRITICAL) << "Caught exception in pool thread";
-
-            // Save exception
             exception_ptr_ = std::current_exception();
         }
     }
