@@ -68,8 +68,10 @@ namespace {
             std::visit(
                 [&](auto&& arg) {
                     using T = std::decay_t<decltype(arg)>;
-                    if constexpr(std::is_same_v<T, std::monostate>) {
+                    if constexpr(std::same_as<T, std::monostate>) {
                         add_type_to(std::vector<std::byte>());
+                    } else if constexpr(std::same_as<T, std::chrono::system_clock::time_point>) {
+                        add_type_to(value.str());
                     } else {
                         add_type_to(value.get<T>());
                     }
