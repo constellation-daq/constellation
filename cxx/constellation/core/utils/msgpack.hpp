@@ -22,13 +22,15 @@ namespace constellation::utils {
      * @tparam S Reference to target stream
      * @tparam T Value to be packed
      */
-    template <typename S, typename T> inline void msgpack_pack(S& stream, const T& object) try {
-        msgpack::pack(stream, object);
-    } catch(const msgpack::type_error& e) {
-        throw MsgpackPackError("Type error", e.what());
-    } catch(const msgpack::parse_error& e) {
-        throw MsgpackPackError("Error parsing data", e.what());
-    };
+    template <typename S, typename T> inline void msgpack_pack(S& stream, const T& object) {
+        try {
+            msgpack::pack(stream, object);
+        } catch(const msgpack::type_error& e) {
+            throw MsgpackPackError("Type error", e.what());
+        } catch(const msgpack::parse_error& e) {
+            throw MsgpackPackError("Error parsing data", e.what());
+        }
+    }
 
     /**
      * @brief MsgPack helper to unpack value
@@ -38,15 +40,17 @@ namespace constellation::utils {
      * @tparam args Variadic arguments
      * @return Unpacked value in target type
      */
-    template <typename R, typename... Args> inline R msgpack_unpack_to(Args&&... args) try {
-        const auto msgpack_var = msgpack::unpack(std::forward<Args>(args)...);
-        return msgpack_var->template as<R>();
-    } catch(const msgpack::type_error& e) {
-        throw MsgpackUnpackError("Type error", e.what());
-    } catch(const msgpack::parse_error& e) {
-        throw MsgpackUnpackError("Error parsing data", e.what());
-    } catch(const msgpack::unpack_error& e) {
-        throw MsgpackUnpackError("Error unpacking data", e.what());
-    };
+    template <typename R, typename... Args> inline R msgpack_unpack_to(Args&&... args) {
+        try {
+            const auto msgpack_var = msgpack::unpack(std::forward<Args>(args)...);
+            return msgpack_var->template as<R>();
+        } catch(const msgpack::type_error& e) {
+            throw MsgpackUnpackError("Type error", e.what());
+        } catch(const msgpack::parse_error& e) {
+            throw MsgpackUnpackError("Error parsing data", e.what());
+        } catch(const msgpack::unpack_error& e) {
+            throw MsgpackUnpackError("Error unpacking data", e.what());
+        }
+    }
 
 } // namespace constellation::utils
