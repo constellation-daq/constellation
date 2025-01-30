@@ -18,7 +18,6 @@
 #include <string>
 #include <string_view>
 #include <thread>
-#include <typeinfo>
 #include <utility>
 #include <vector>
 
