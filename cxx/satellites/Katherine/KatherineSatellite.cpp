@@ -330,7 +330,10 @@ void KatherineSatellite::starting(std::string_view) {
     // - changes state to RUNNING
     // - calls katherine_cmd_start_acquisition CTRL UDP to send start cmd to hardware
     acquisition_->begin(katherine_config_, ro_type_);
+    LOG(INFO) << "Acquisition started";
+}
 
+void KatherineSatellite::running(const std::stop_token& stop_token) {
     // Start Katherine acquisition task:
     acq_future_ = std::async(std::launch::async, [this]() {
         try {
@@ -346,9 +349,7 @@ void KatherineSatellite::starting(std::string_view) {
         }
     });
     LOG(INFO) << "Spawned acquisition thread";
-}
 
-void KatherineSatellite::running(const std::stop_token& stop_token) {
     while(!stop_token.stop_requested()) {
         if(acq_future_.valid()) {
             const auto state = acq_future_.wait_for(300ms);
