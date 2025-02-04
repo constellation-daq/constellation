@@ -13,6 +13,7 @@ import numpy as np
 import toml
 from pathlib import Path
 import shutil
+import subprocess
 
 from threading import Lock
 from threading import Thread
@@ -86,6 +87,11 @@ class ECTstage(DataSender):
         """
         Configure the Satellite and ThorLab stages
         """
+
+        allports = pll.list_backend_resources("serial")
+        self.usbports = [element for element in allports if "/dev/ttyUSB" in element]
+        self.log.info(self.usbports)
+
         # load conf file and save into ECTstage object
         config_file = cnfg["config_file"]
         with open(config_file, "r") as f:
@@ -510,9 +516,45 @@ class ECTstage(DataSender):
         else:
             return "Stage not found! `axis` is a mandatory argument. Stage not enabled", None, {}
 
+    def _get_serial_number(self, device_port):
+        """
+        Retrieves the ID_SERIAL of a device using udevadm.
+        args:   device_port: The path to the device (e.g., "/dev/ttyUSB0").
+        returns:
+            The serial number as a string, or None if it's not found or an error occurs.
+        """
+        try:
+            result = subprocess.run(
+                ["udevadm", "info", "--query=property", "--property=ID_SERIAL_SHORT", "--value", device_port],
+                capture_output=True,
+                text=True,  # Important: Decode output as text
+                check=True,  # Raise an exception for non-zero exit codes
+            )
+            serial = result.stdout.strip()  # Remove leading/trailing whitespace
+            return serial
+        except subprocess.CalledProcessError as e:
+            print(f"Error getting serial number: {e}")
+            print(f"Stderr: {e.stderr}")  # Print stderr for debugging
+            return None
+        except FileNotFoundError:
+            print("udevadm command not found.")
+            return None
+        except Exception as e:  # Catch other potential errors
+            print(f"An unexpected error occurred: {e}")
+            return None
+
     def _init_stage(self, axis):
         "initialise the ThorLabs motor stages"
-
+        for port in self.usbports:
+            serial = self._get_serial_number(port)
+            if serial is not None and str(self.conf[axis]["serial_no"]) == str(serial):
+                self.conf[axis]["port"] = port
+                self.log.info(f"{axis} assigned to port {port}")
+                self.log.info(f"Device serial: {self.conf[axis]["serial_no"]}")
+                self.usbports.remove(port)
+                print(self.usbports)
+                break
+        #
         with self._lock:
             if axis in stage_axes["x"] or axis in stage_axes["y"] or axis in stage_axes["z"]:
                 stage = Thorlabs.KinesisMotor(
@@ -752,7 +794,6 @@ def main(args=None):
     basis for custom implementations.
 
     """
-    print(pll.list_backend_resources("serial"))
 
     parser = SatelliteArgumentParser(description=main.__doc__, epilog=EPILOG)
     # this sets the defaults for our "demo" Satellite
