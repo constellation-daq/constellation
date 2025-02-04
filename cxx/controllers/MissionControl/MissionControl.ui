@@ -1235,67 +1235,6 @@
                </item>
               </layout>
              </widget>
-<<<<<<< HEAD
-=======
-             <widget class="QWidget" name="pageFloat">
-              <layout class="QGridLayout" name="gridLayout_8">
-               <item row="1" column="0">
-                <widget class="QDoubleSpinBox" name="doubleSpinBoxStart">
-                 <property name="minimum">
-                  <double>-999999.000000000000000</double>
-                 </property>
-                 <property name="maximum">
-                  <double>999999.000000000000000</double>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1">
-                <widget class="QDoubleSpinBox" name="doubleSpinBoxStop">
-                 <property name="minimum">
-                  <double>-999999.000000000000000</double>
-                 </property>
-                 <property name="maximum">
-                  <double>999999.000000000000000</double>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="2">
-                <widget class="QDoubleSpinBox" name="doubleSpinBoxStep">
-                 <property name="minimum">
-                  <double>0.010000000000000</double>
-                 </property>
-                 <property name="maximum">
-                  <double>9999.000000000000000</double>
-                 </property>
-                 <property name="value">
-                  <double>1.000000000000000</double>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0">
-                <widget class="QLabel" name="label_3">
-                 <property name="text">
-                  <string>Start</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1">
-                <widget class="QLabel" name="label_4">
-                 <property name="text">
-                  <string>Stop</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="2">
-                <widget class="QLabel" name="label_5">
-                 <property name="text">
-                  <string>Step size</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
->>>>>>> 4b9ba3d1 (euRun: implement more scan types)
              <widget class="QWidget" name="pageStr">
               <layout class="QGridLayout" name="gridLayout_9">
                <property name="leftMargin">
@@ -1319,7 +1258,6 @@
                </item>
                <item row="1" column="0">
                 <widget class="QLineEdit" name="lineEditParamValues"/>
-<<<<<<< HEAD
                </item>
               </layout>
              </widget>
@@ -1357,8 +1295,6 @@
                   <string>False</string>
                  </property>
                 </widget>
-=======
->>>>>>> 4b9ba3d1 (euRun: implement more scan types)
                </item>
               </layout>
              </widget>
