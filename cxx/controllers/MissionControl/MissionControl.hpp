@@ -105,6 +105,11 @@ private slots:
     void startup(std::size_t num);
 
     /**
+     * @brief Private slot to update dropdown with satellite names
+     */
+    void update_satellite_dropdown();
+
+    /**
      * @brief Configuration file editing slot
      */
     void on_txtConfigFileName_textChanged();
@@ -153,6 +158,11 @@ private slots:
      * @brief Private slot for "Generate" button for generating a configuration file from a running Constellation
      */
     void on_btnGenConf_clicked();
+
+    /**
+     * @brief Private slot for "Add Parameter" button for selecting the configuration file
+     */
+    void on_btnAddParameter_clicked();
 
     /**
      * @brief Private slot for the connection list context menu
@@ -207,6 +217,9 @@ private:
     QRegularExpressionValidator run_id_validator_;
     QCompleter config_file_completer_;
     FileSystemModel config_file_fs_;
+
+    /* Scan information */
+    bool scan_running_ {false};
 
     /** UI timer for refreshing certain elements such as the run duration */
     QTimer display_timer_;
