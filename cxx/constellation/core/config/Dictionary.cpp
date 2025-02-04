@@ -17,11 +17,8 @@
 
 #include "constellation/core/message/PayloadBuffer.hpp"
 #include "constellation/core/utils/casts.hpp"
-<<<<<<< HEAD
 #include "constellation/core/utils/msgpack.hpp"
-=======
 #include "constellation/core/utils/string.hpp"
->>>>>>> e6bf3b7b (cxx: fix Observatory crash and better dict to_string)
 
 using namespace constellation::config;
 using namespace constellation::message;
