@@ -247,16 +247,7 @@ class ECTstage(DataSender):
                 if self._state_thread_evt.is_set():
                     break
 
-            # for pos_r in pos["r"]:
-            #     if np.isnan(pos_r):
-            #         self.log.debug(f"r stage not moved")
-            #     else:
-            #         self.log.debug(f"r position {pos_r}")
-            #         self._move_stage("r", pos_r)
-            #         self._wait_until_stage_stops_moving(self.stage_r)
-            #         if self._state_thread_evt.is_set():
-            #             break
-
+            self.log.debug(self._generate_zigzagPath(pos["x"], pos["y"], pos["r"]))
             for pos_x, pos_y, pos_r in self._generate_zigzagPath(pos["x"], pos["y"], pos["r"]):
                 self.log.info(f"Move to {pos_x} {pos_y} {pos_z} {pos_r}")
 
@@ -547,13 +538,15 @@ class ECTstage(DataSender):
         "initialise the ThorLabs motor stages"
         for port in self.usbports:
             serial = self._get_serial_number(port)
+            self.log.debug(f"port:{port}")
+            self.log.debug(f"device serial no:{serial}")
+            self.log.debug(f"serial no in config file:{self.conf[axis]['serial_no']}")
             if serial is not None and str(self.conf[axis]["serial_no"]) == str(serial):
                 self.conf[axis]["port"] = port
-                self.log.info(f"{axis} assigned to port {port}")
+                self.log.info(f"{axis}-axis assigned to port {port}")
                 self.log.info(f"Device serial: {self.conf[axis]["serial_no"]}")
                 self.usbports.remove(port)
                 print(self.usbports)
-                break
         #
         with self._lock:
             if axis in stage_axes["x"] or axis in stage_axes["y"] or axis in stage_axes["z"]:
@@ -566,11 +559,11 @@ class ECTstage(DataSender):
                     ),
                 )
 
-                if self.conf[axis]["serial_no"] != stage.get_full_info()["device_info"][0]:
-                    print_1 = f"Serial Number of {axis}-stage does not match the device."
-                    print_2 = f"Device serial number:{stage.get_full_info()['device_info'][0]}"
-                    print_3 = f"serial number in config:{self.conf[axis]['serial_no']}"
-                    raise KeyError(f"{print_1} {print_2} {print_3}")
+                # if self.conf[axis]["serial_no"] != stage.get_full_info()["device_info"][0]:
+                #     print_1 = f"Serial Number of {axis}-stage does not match the device."
+                #     print_2 = f"Device serial number:{stage.get_full_info()['device_info'][0]}"
+                #     print_3 = f"serial number in config:{self.conf[axis]['serial_no']}"
+                #     raise KeyError(f"{print_1} {print_2} {print_3}")
 
                 if self.conf[axis]["velocity"] > max_velocity:
                     raise KeyError(
@@ -747,13 +740,6 @@ class ECTstage(DataSender):
 
         XYRarray = [item for sublist in XYR_rev for item in sublist]
         return XYRarray
-
-        # XYarray = [[(i, j) for i in posX_list] for j in posY_list]
-        # for index in range(len(XYarray)):
-        #     if index % 2 == 1:  # Check if the row index is odd (i.e., every second row)
-        #         XYarray[index].sort(reverse=True)
-        # XYarray = [item for sublist in XYarray for item in sublist]
-        # return XYarray
 
     def _save_config_file(self, config_file):
         outdir = Path.cwd()

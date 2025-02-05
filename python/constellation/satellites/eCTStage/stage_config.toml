@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: CC-BY-4.0
 
 [x]
-serial_no = 45437184
+serial_no = 45437174
 channel = 0
 # in mm
 velocity = 10
@@ -10,7 +10,7 @@ acceleration = 2
 start_position = 50
 
 [y]
-serial_no = 45454864
+serial_no = 45455454
 channel = 0
 # in mm
 velocity = 10
@@ -18,12 +18,12 @@ acceleration = 2
 start_position = 50
 
 [z]
-serial_no = 45455454
+serial_no = 45454864
 channel = 0
 # in mm
 velocity = 6
 acceleration = 4
-start_position = 0
+start_position = 50
 
 [r]
 # serial_no = 27252700
@@ -31,12 +31,12 @@ serial_no = 27269817
 channel = 0
 # in deg
 velocity = 8
-acceleration = 8
-start_position = 180
+acceleration = 4
+start_position = 0
 
 [run]
-# active_axes = ["x","y","r"]
-active_axes = ["y","r"]
+active_axes = ["x","y","z","r"]
+# active_axes = ["r"]
 
 # wait time at each point (measurement window)
 stop_time_per_point_s = 1
@@ -46,9 +46,9 @@ readout_freq_s = 0.1
 
 ## in mm
 position_x = [50,150,50]
-# position_y = [50,150,50]
-#position_z = [19,29,5]
+position_y = [50,150,50]
+position_z = [50,150,50]
 ## in deg
-position_r = [175,185,5]
+position_r = [-5,5,5]
 
 save_config = true
