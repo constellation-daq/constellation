@@ -233,6 +233,7 @@ namespace constellation::satellite {
         config::Dictionary eor_tags_;
         config::Dictionary run_metadata_;
         bool mark_run_tainted_ {false};
+        bool discard_data_ {false};
         std::atomic_size_t bytes_transmitted_;
     };
 

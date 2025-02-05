@@ -81,6 +81,11 @@ TransmitterSatellite::DataMessage TransmitterSatellite::newDataMessage(std::size
 }
 
 bool TransmitterSatellite::trySendDataMessage(TransmitterSatellite::DataMessage& message) {
+    if(discard_data_) {
+        LOG(cdtp_logger_, TRACE) << "Discarding data message " << message.getHeader().getSequenceNumber();
+        return true;
+    }
+
     // Send data but do not wait for receiver
     LOG(cdtp_logger_, TRACE) << "Sending data message " << message.getHeader().getSequenceNumber();
 
@@ -100,6 +105,11 @@ bool TransmitterSatellite::trySendDataMessage(TransmitterSatellite::DataMessage&
 }
 
 void TransmitterSatellite::sendDataMessage(TransmitterSatellite::DataMessage& message) {
+    if(discard_data_) {
+        LOG(cdtp_logger_, TRACE) << "Discarding data message " << message.getHeader().getSequenceNumber();
+        return;
+    }
+
     LOG(cdtp_logger_, TRACE) << "Sending data message " << message.getHeader().getSequenceNumber();
     try {
         const auto payload_bytes = message.countPayloadBytes();
@@ -119,6 +129,9 @@ void TransmitterSatellite::initializing_transmitter(Configuration& config) {
     data_msg_timeout_ = std::chrono::seconds(config.get<std::uint64_t>("_data_timeout", 10));
     LOG(cdtp_logger_, DEBUG) << "Timeout for BOR message " << data_bor_timeout_ << ", for EOR message " << data_eor_timeout_
                              << ", for DATA message " << data_msg_timeout_;
+
+    discard_data_ = config.get<bool>("_discard_data", false);
+    LOG_IF(cdtp_logger_, WARNING, discard_data_) << "This satellite is configured to discard its data instead of sending it";
 }
 
 void TransmitterSatellite::reconfiguring_transmitter(const Configuration& partial_config) {
@@ -133,6 +146,11 @@ void TransmitterSatellite::reconfiguring_transmitter(const Configuration& partia
     if(partial_config.has("_data_timeout")) {
         data_msg_timeout_ = std::chrono::seconds(partial_config.get<std::uint64_t>("_data_timeout"));
         LOG(cdtp_logger_, DEBUG) << "Reconfigured timeout for DATA message: " << data_msg_timeout_;
+    }
+    if(partial_config.has("_discard_data")) {
+        discard_data_ = partial_config.get<bool>("_discard_data");
+        LOG_IF(cdtp_logger_, WARNING, discard_data_)
+            << "This satellite is configured to discard its data instead of sending it";
     }
 }
 
@@ -150,27 +168,29 @@ void TransmitterSatellite::starting_transmitter(std::string_view run_identifier,
     set_run_metadata_tag("run_id", run_identifier);
     set_run_metadata_tag("time_start", std::chrono::system_clock::now());
 
-    // Create CDTP1 message for BOR
-    CDTP1Message msg {{getCanonicalName(), seq_, CDTP1Message::Type::BOR, std::chrono::system_clock::now(), bor_tags_}, 1};
-    msg.addPayload(config.getDictionary().assemble());
+    if(!discard_data_) {
+        // Create CDTP1 message for BOR
+        CDTP1Message msg {{getCanonicalName(), seq_, CDTP1Message::Type::BOR, std::chrono::system_clock::now(), bor_tags_},
+                          1};
+        msg.addPayload(config.getDictionary().assemble());
 
-    // Send BOR
-    LOG(cdtp_logger_, DEBUG) << "Sending BOR message (timeout " << data_bor_timeout_ << ")";
-    // Note: this is not interruptible, thus we set a send timeout to hang if no data receiver
-    set_send_timeout(data_bor_timeout_);
-    try {
-        const auto sent = msg.assemble().send(cdtp_push_socket_);
-        if(!sent) {
-            throw SendTimeoutError("BOR message", data_bor_timeout_);
+        // Send BOR
+        LOG(cdtp_logger_, DEBUG) << "Sending BOR message (timeout " << data_bor_timeout_ << ")";
+        // Note: this is not interruptible, thus we set a send timeout to hang if no data receiver
+        set_send_timeout(data_bor_timeout_);
+        try {
+            const auto sent = msg.assemble().send(cdtp_push_socket_);
+            if(!sent) {
+                throw SendTimeoutError("BOR message", data_bor_timeout_);
+            }
+        } catch(const zmq::error_t& e) {
+            throw networking::NetworkError(e.what());
         }
-    } catch(const zmq::error_t& e) {
-        throw networking::NetworkError(e.what());
+        LOG(cdtp_logger_, DEBUG) << "Sent BOR message";
+
+        // Set timeout for data sending
+        set_send_timeout(data_msg_timeout_);
     }
-    LOG(cdtp_logger_, DEBUG) << "Sent BOR message";
-
-    // Set timeout for data sending
-    set_send_timeout(data_msg_timeout_);
-
     // Clear BOR tags:
     bor_tags_ = {};
 }
@@ -178,23 +198,26 @@ void TransmitterSatellite::starting_transmitter(std::string_view run_identifier,
 void TransmitterSatellite::send_eor() {
     set_run_metadata_tag("time_end", std::chrono::system_clock::now());
 
-    // Create CDTP1 message for EOR
-    CDTP1Message msg {{getCanonicalName(), ++seq_, CDTP1Message::Type::EOR, std::chrono::system_clock::now(), eor_tags_}, 1};
-    msg.addPayload(run_metadata_.assemble());
+    if(!discard_data_) {
+        // Create CDTP1 message for EOR
+        CDTP1Message msg {{getCanonicalName(), ++seq_, CDTP1Message::Type::EOR, std::chrono::system_clock::now(), eor_tags_},
+                          1};
+        msg.addPayload(run_metadata_.assemble());
 
-    // Send EOR
-    LOG(cdtp_logger_, DEBUG) << "Sending EOR message (" << data_eor_timeout_ << ")";
-    // Note: this is not interruptible, thus we set a send timeout to prevent hang if no data receiver
-    set_send_timeout(data_eor_timeout_);
-    try {
-        const auto sent = msg.assemble().send(cdtp_push_socket_);
-        if(!sent) {
-            throw SendTimeoutError("EOR message", data_eor_timeout_);
+        // Send EOR
+        LOG(cdtp_logger_, DEBUG) << "Sending EOR message (" << data_eor_timeout_ << ")";
+        // Note: this is not interruptible, thus we set a send timeout to prevent hang if no data receiver
+        set_send_timeout(data_eor_timeout_);
+        try {
+            const auto sent = msg.assemble().send(cdtp_push_socket_);
+            if(!sent) {
+                throw SendTimeoutError("EOR message", data_eor_timeout_);
+            }
+        } catch(const zmq::error_t& e) {
+            throw networking::NetworkError(e.what());
         }
-    } catch(const zmq::error_t& e) {
-        throw networking::NetworkError(e.what());
+        LOG(cdtp_logger_, DEBUG) << "Sent EOR message";
     }
-    LOG(cdtp_logger_, DEBUG) << "Sent EOR message";
 
     // Clear EOR tags:
     eor_tags_ = {};
