@@ -50,7 +50,6 @@ class PushThread(threading.Thread):
         self.queue = queue
         self._socket = socket
 
-
     def run(self) -> None:
         """Start sending data."""
         transmitter = DataTransmitter(self.name, self._socket)
@@ -102,13 +101,11 @@ class DataSender(Satellite):
         # run CHIRP
         self.register_offer(CHIRPServiceIdentifier.DATA, self.data_port)
         self.broadcast_offers()
-        # Set up own logger with CSCP topic
-        self.log = cast(ConstellationLogger, logging.getLogger("DATA"))
 
     def reentry(self) -> None:
         # close the socket
         self.socket.close()
-        self.log.debug("Closed data socket")
+        log("DATA").debug("Closed data socket")
         super().reentry()
 
     @property
