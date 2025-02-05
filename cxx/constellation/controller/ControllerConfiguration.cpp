@@ -204,7 +204,12 @@ void ControllerConfiguration::parse_toml(std::string_view toml) {
     };
 
     // Find satellites base node
-    if(const auto& node = tbl.at_path("satellites")) {
+    bool satellites_found = false;
+    tbl.for_each([&](const toml::key& key, auto&& node) {
+        if(transform(key, ::tolower) != "satellites") {
+            return;
+        }
+        satellites_found = true;
 
         // Loop over all nodes:
         node.as_table()->for_each([&](const toml::key& global_key, auto&& global_val) {
@@ -248,8 +253,9 @@ void ControllerConfiguration::parse_toml(std::string_view toml) {
                 }
             }
         });
+    });
 
-    } else {
+    if(!satellites_found) {
         LOG(config_parser_logger_, WARNING) << "Could not find base node for satellites";
     }
 }
