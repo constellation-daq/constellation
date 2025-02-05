@@ -47,7 +47,7 @@ class HeartbeatSender(SatelliteStateHandler):
         log("CHP").debug("Heartbeat sender thread prepared and added to the pool.")
 
     def _run_heartbeat(self) -> None:
-        self.log.info("Starting heartbeat sender thread")
+        log("CHP").info("Starting heartbeat sender thread")
         last = datetime.now()
         # assert for mypy static type analysis
         assert isinstance(self._com_thread_evt, threading.Event), "Thread Event not set up correctly"

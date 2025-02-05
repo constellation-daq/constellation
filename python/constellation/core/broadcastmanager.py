@@ -269,7 +269,7 @@ class CHIRPBroadcaster(BaseSatelliteFrame):
             if not msg:
                 continue
 
-            self.log.trace(
+            log("CHIRP").trace(
                 "Received CHIRP %s for %s on interface '%s' from '%s'",
                 msg.msgtype.name,
                 msg.serviceid.name,
