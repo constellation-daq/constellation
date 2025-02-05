@@ -20,7 +20,6 @@
 #include <thread>
 #include <utility>
 
-#include "constellation/core/chirp/CHIRP_definitions.hpp"
 #include "constellation/core/chirp/Manager.hpp"
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/config/Dictionary.hpp"
@@ -33,6 +32,7 @@
 #include "constellation/core/networking/exceptions.hpp"
 #include "constellation/core/pools/BasePool.hpp"
 #include "constellation/core/protocol/CDTP_definitions.hpp"
+#include "constellation/core/protocol/CHIRP_definitions.hpp"
 #include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/std_future.hpp"
@@ -65,7 +65,7 @@ ReceiverSatellite::ReceiverSatellite(std::string_view type, std::string_view nam
 
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
     if(chirp_manager != nullptr) {
-        chirp_manager->sendRequest(chirp::DATA);
+        chirp_manager->sendRequest(CHIRP::DATA);
     }
 }
 
@@ -98,7 +98,7 @@ void ReceiverSatellite::launching_receiver() {
     auto* chirp_manager = chirp::Manager::getDefaultInstance();
     if(chirp_manager != nullptr) {
         // Get discovered DATA services
-        const auto services = chirp_manager->getDiscoveredServices(chirp::DATA);
+        const auto services = chirp_manager->getDiscoveredServices(CHIRP::DATA);
 
         // Cross-check their providers with the configured data transmitters:
         auto it = std::ranges::find_if(data_transmitters_, [this, &services](const auto& host) {
