@@ -126,7 +126,8 @@ private:
     /** Log messages & access mutex*/
     std::deque<constellation::gui::QLogMessage> messages_;
     std::atomic_size_t message_count_;
-    mutable std::mutex message_mutex_;
+    mutable std::mutex message_read_mutex_;
+    mutable std::mutex message_write_mutex_;
 
     /** Available senders and topics */
     std::set<std::string> sender_list_;
