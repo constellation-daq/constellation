@@ -37,8 +37,7 @@ QLogListener::QLogListener(QObject* parent)
       constellation::listener::LogListener("LOG", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }) {}
 
 void QLogListener::clearMessages() {
-    const std::lock_guard message_lock {message_read_mutex_};
-    const std::lock_guard message_lock_w {message_write_mutex_};
+    const std::scoped_lock message_lock {message_read_mutex_, message_write_mutex_};
     if(!messages_.empty()) {
         beginRemoveRows(QModelIndex(), 0, static_cast<int>(messages_.size() - 1));
         messages_.clear();
