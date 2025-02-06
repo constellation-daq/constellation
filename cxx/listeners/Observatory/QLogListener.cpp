@@ -9,6 +9,7 @@
 
 #include "QLogListener.hpp"
 
+#include <cstddef>
 #include <mutex>
 #include <set>
 #include <string>
@@ -37,6 +38,7 @@ QLogListener::QLogListener(QObject* parent)
       constellation::listener::LogListener("LOG", [this](auto&& arg) { add_message(std::forward<decltype(arg)>(arg)); }) {}
 
 void QLogListener::clearMessages() {
+    message_count_.store(0);
     const std::lock_guard message_lock {message_mutex_};
     if(!messages_.empty()) {
         beginRemoveRows(QModelIndex(), 0, static_cast<int>(messages_.size() - 1));
@@ -59,16 +61,21 @@ void QLogListener::add_message(CMDP1LogMessage&& msg) {
 
     const auto level = msg.getLogLevel();
 
-    const std::lock_guard message_lock {message_mutex_};
+    // Add new message to the end of the deque
+    std::size_t messages_size {};
+    {
+        const std::lock_guard message_lock {message_mutex_};
+        messages_.emplace_back(std::move(msg));
+        messages_size = messages_.size();
+    }
+    message_count_.store(messages_size);
 
-    // We always add new messages to the end of the deque:
-    const auto pos = static_cast<int>(messages_.size());
+    // Call insert rows afterwards for less time with mutex
+    const auto pos = static_cast<int>(messages_size - 1);
     beginInsertRows(QModelIndex(), pos, pos);
-    messages_.emplace_back(std::move(msg));
-    message_count_.store(messages_.size());
     endInsertRows();
 
-    // send signal:
+    // Send signal
     emit newMessage(createIndex(pos, 0), level);
 }
 
@@ -91,8 +98,8 @@ QVariant QLogListener::data(const QModelIndex& index, int role) const {
         return {};
     }
 
-    const std::lock_guard message_lock {message_mutex_};
-    if(index.column() < QLogMessage::countColumns() && index.row() < static_cast<int>(messages_.size())) {
+    if(index.column() < QLogMessage::countColumns() && index.row() < static_cast<int>(message_count_.load())) {
+        const std::lock_guard message_lock {message_mutex_};
         return messages_[index.row()][index.column()];
     }
 
