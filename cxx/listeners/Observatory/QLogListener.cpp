@@ -92,7 +92,7 @@ QVariant QLogListener::data(const QModelIndex& index, int role) const {
     }
 
     const std::lock_guard message_lock {message_read_mutex_};
-    if(index.column() < QLogMessage::countColumns() && index.row() < static_cast<int>(messages_.size())) {
+    if(index.column() < QLogMessage::countColumns() && index.row() < static_cast<int>(message_count_.load())) {
         return messages_[index.row()][index.column()];
     }
 
