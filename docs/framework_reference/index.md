@@ -19,6 +19,7 @@ only for implementing Constellation libraries in different languages, or for con
 
 contributing
 flatpak
+release
 ```
 
 ```{raw} latex

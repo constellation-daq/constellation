@@ -53,6 +53,15 @@ namespace constellation::config {
      */
     class Dictionary : public std::map<std::string, Value> {
     public:
+        /** Create a dictionary object directly from a map with string keys */
+        template <typename T> static Dictionary fromMap(const std::map<std::string, T>& map) {
+            Dictionary dict;
+            for(const auto& [key, value] : map) {
+                dict.emplace(key, Value::set(value));
+            }
+            return dict;
+        }
+
         /** Pack dictionary with msgpack */
         CNSTLN_API void msgpack_pack(msgpack::packer<msgpack::sbuffer>& msgpack_packer) const;
 

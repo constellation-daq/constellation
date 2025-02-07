@@ -11,6 +11,7 @@ and types, commands etc. The goal of this is to minimize the possibility of long
 
 * Satellite types should be `PascalCase`. Case is preserved to make them more easily readable.
 * Command names should be `snake_case` for quicker typing and easy tab completion.
+* Commands starting with an underscore shall be treated as hidden commands and not advertised e.g. through the `get_commands` call.
 * Configuration parameters should best be defined in `snake_case`, i.e. all lower-case with underscores separating words.
 
 ## Code Naming Conventions

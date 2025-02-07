@@ -158,7 +158,7 @@ class CaenHV(Satellite):
         return ", ".join(status)
 
     @cscp_requestable
-    def get_parameter(self, request: CSCPMessage) -> tuple[str, Any, dict]:
+    def get_parameter(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Return the value of a parameter.
 
         Payload: dictionary with 'board', 'channel' and 'parameter' keys
@@ -175,7 +175,7 @@ class CaenHV(Satellite):
         return self._ready()
 
     @cscp_requestable
-    def get_hv_status(self, request: CSCPMessage) -> tuple[str, Any, dict]:
+    def get_hv_status(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Return the collected state of all channels.
 
         Payload: None.
@@ -203,7 +203,7 @@ class CaenHV(Satellite):
         return self._ready()
 
     @cscp_requestable
-    def get_hw_config(self, request: CSCPMessage) -> tuple[str, Any, dict]:
+    def get_hw_config(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Read and return the current hardware configuration.
 
         Payload: None
@@ -226,7 +226,7 @@ class CaenHV(Satellite):
         return f"Read {len(res)} parameters", res, {}
 
     @cscp_requestable
-    def about(self, _request: CSCPMessage) -> tuple[str, Any, dict]:
+    def about(self, _request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Get info about the Satellite"""
         # TODO extend with info on connected crate (FW release, etc)
         res = f"{__name__} "

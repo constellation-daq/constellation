@@ -328,6 +328,8 @@ TEST_CASE("Message Payload (CDTP1)", "[core][core::message]") {
         cdtp1_msg.addPayload(std::move(sbuf_header));
     }
 
+    REQUIRE(cdtp1_msg.countPayloadBytes() == 39);
+
     // Assemble and disassemble message
     auto frames = cdtp1_msg.assemble();
     auto cdtp1_msg2 = CDTP1Message::disassemble(frames);

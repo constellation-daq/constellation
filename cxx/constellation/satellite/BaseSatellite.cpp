@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <map>
 #include <optional>
 #include <ranges>
 #include <stop_token>
@@ -22,6 +23,7 @@
 #include <tuple>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include <msgpack.hpp>
 #include <zmq.hpp>
@@ -206,11 +208,45 @@ BaseSatellite::handle_standard_command(std::string_view command) {
         // Append user commands
         const auto user_commands = user_commands_.describeCommands();
         for(const auto& cmd : user_commands) {
+            // Command starting with underscore are not listed:
+            if(cmd.first.starts_with("_")) {
+                continue;
+            }
             command_dict.emplace(cmd.first, cmd.second);
         }
 
         return_verb = {CSCP1Message::Type::SUCCESS,
                        to_string(command_dict.size()) + " commands known, list attached in payload"};
+        // Pack dict
+        return_payload = command_dict.assemble();
+        break;
+    }
+    case _get_commands: {
+        auto command_dict = Dictionary();
+        // Hidden FSM commands
+        command_dict["_interrupt"] = "Send interrupt signal to satellite to transition to SAFE mode";
+        command_dict["_failure"] = "Send failure signal to satellite to transition to ERROR mode";
+        // Hidden commands
+        command_dict["_get_commands"] =
+            "Get hidden commands provided by satellite (returned in payload as flat MessagePack dict with strings as keys)";
+        ;
+        command_dict["_get_remotes"] = "Get remote services registered by the satellite (returned in payload as dictionary "
+                                       "with the remote host ID as key and a list of services as value)";
+        command_dict["_get_services"] = "Get services provided by the satellite (returned in payload as dictionary with the "
+                                        "service identifier as key and the port on which it is offered as value)";
+
+        // Append user commands
+        const auto user_commands = user_commands_.describeCommands();
+        for(const auto& cmd : user_commands) {
+            // Only commands starting with underscore are listed:
+            if(!cmd.first.starts_with("_")) {
+                continue;
+            }
+            command_dict.emplace(cmd.first, cmd.second);
+        }
+
+        return_verb = {CSCP1Message::Type::SUCCESS,
+                       to_string(command_dict.size()) + " hidden commands known, list attached in payload"};
         // Pack dict
         return_payload = command_dict.assemble();
         break;
@@ -234,6 +270,41 @@ BaseSatellite::handle_standard_command(std::string_view command) {
     }
     case get_run_id: {
         return_verb = {CSCP1Message::Type::SUCCESS, run_identifier_};
+        break;
+    }
+    case _get_remotes: {
+        auto* chirp_manager = chirp::Manager::getDefaultInstance();
+        if(chirp_manager != nullptr) {
+            auto remotes_dict = std::map<std::string, std::vector<std::string>>();
+            for(const auto& remote : chirp_manager->getDiscoveredServices()) {
+                // Emplace new vector or return existing one
+                auto [services_it, _] = remotes_dict.try_emplace(remote.host_id.to_string());
+                services_it->second.emplace_back(enum_name(remote.identifier) + " @ " + remote.to_uri());
+            }
+
+            return_verb = {CSCP1Message::Type::SUCCESS,
+                           to_string(remotes_dict.size()) + " remote services registered" +
+                               (remotes_dict.empty() ? "" : ", list attached in payload")};
+            return_payload = Dictionary::fromMap(remotes_dict).assemble();
+        } else {
+            return_verb = {CSCP1Message::Type::INVALID, "No network discovery service available"};
+        }
+        break;
+    }
+    case _get_services: {
+        auto* chirp_manager = chirp::Manager::getDefaultInstance();
+        if(chirp_manager != nullptr) {
+            auto service_dict = Dictionary();
+            for(const auto& service : chirp_manager->getRegisteredServices()) {
+                service_dict.emplace(enum_name(service.identifier), service.port);
+            }
+
+            return_verb = {CSCP1Message::Type::SUCCESS,
+                           to_string(service_dict.size()) + " services offered, list attached in payload"};
+            return_payload = service_dict.assemble();
+        } else {
+            return_verb = {CSCP1Message::Type::INVALID, "No network discovery service available"};
+        }
         break;
     }
     case shutdown: {

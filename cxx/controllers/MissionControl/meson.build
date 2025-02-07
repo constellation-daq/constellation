@@ -25,8 +25,3 @@ install_data(
   'de.desy.constellation.missioncontrol.desktop',
   install_dir: get_option('datadir') / 'applications',
 )
-install_data(
-  meson.project_source_root() / 'docs' / 'logo' / 'logo.svg',
-  rename: 'de.desy.constellation.svg',
-  install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'apps',
-)

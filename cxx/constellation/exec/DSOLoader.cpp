@@ -47,30 +47,23 @@ DSOLoader::DSOLoader(const std::string& dso_name, Logger& logger, const std::fil
 
     auto add_file_path = [&](const std::filesystem::path& path) {
         const auto abs_path = std::filesystem::absolute(path);
-        LOG(logger, TRACE) << "Checking " << std::quoted(path.string()) << " (abs " << std::quoted(abs_path.string()) << ")";
         // Check that path is a file
         if(std::filesystem::is_regular_file(abs_path)) {
             // Check that file name matches (case-insensitive)
             if(transform(abs_path.filename().string(), ::tolower) == transform(dso_file_name, ::tolower)) {
                 LOG(logger, TRACE) << "Adding " << std::quoted(abs_path.string()) << " to library lookup";
                 possible_paths.emplace_back(abs_path);
-            } else {
-                LOG(logger, TRACE) << "Skipping " << std::quoted(abs_path.string()) << ": filename does not match";
             }
-        } else {
-            LOG(logger, TRACE) << "Skipping " << std::quoted(abs_path.string()) << ": not a regular file";
         }
     };
 
     auto add_path = [&](const std::filesystem::path& path) {
         const auto abs_path = std::filesystem::absolute(path);
-        LOG(logger, TRACE) << "Adding library search path " << std::quoted(path.string()) << " (abs "
-                           << std::quoted(abs_path.string()) << ")";
+        LOG(logger, TRACE) << "Adding library search path " << std::quoted(path.string());
         // For directories, recursively iterate and add paths
         if(std::filesystem::is_directory(abs_path)) {
-            LOG(logger, TRACE) << "Path " << std::quoted(abs_path.string()) << " is a directory, recursing through content";
-            for(const auto& entry : std::filesystem::recursive_directory_iterator(
-                    abs_path, std::filesystem::directory_options::skip_permission_denied)) {
+            for(const auto& entry :
+                std::filesystem::directory_iterator(abs_path, std::filesystem::directory_options::skip_permission_denied)) {
                 // Try adding path as file
                 add_file_path(entry.path());
             }

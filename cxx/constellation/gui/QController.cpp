@@ -175,6 +175,10 @@ void QController::reached_state(CSCP::State state, bool global) {
     emit reachedState(state, global);
 }
 
+void QController::leaving_state(CSCP::State state, bool global) {
+    emit leavingState(state, global);
+}
+
 void QController::propagate_update(UpdateType type, std::size_t position, std::size_t total) {
     if(type == UpdateType::ADDED) {
         beginInsertRows(QModelIndex(), static_cast<int>(position), static_cast<int>(position));

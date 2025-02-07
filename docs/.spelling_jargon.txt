@@ -54,3 +54,4 @@ KiB
 gui
 rethrows
 Variadic
+linter

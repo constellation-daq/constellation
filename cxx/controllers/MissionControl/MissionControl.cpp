@@ -213,6 +213,13 @@ MissionControl::MissionControl(std::string controller_name, std::string_view gro
         labelState->setText(QController::getStyledState(state, global));
     });
 
+    connect(&runcontrol_, &QController::leavingState, this, [&](CSCP::State state, bool global) {
+        // If previous state was global RUN, increment sequence:
+        if(state == CSCP::State::RUN && global) {
+            runSequence->setValue(runSequence->value() + 1);
+        }
+    });
+
     // Attach validators & completers:
     runIdentifier->setValidator(&run_id_validator_);
     config_file_fs_.setRootPath({});
@@ -339,9 +346,6 @@ void MissionControl::on_btnStop_clicked() {
     for(auto& response : runcontrol_.sendQCommands("stop")) {
         LOG(logger_, DEBUG) << "Stop: " << response.first << ": " << response.second.getVerb().first;
     }
-
-    // Increment run sequence:
-    runSequence->setValue(runSequence->value() + 1);
 }
 
 void MissionControl::on_btnLog_clicked() {
@@ -488,8 +492,8 @@ void MissionControl::custom_context_menu(const QPoint& point) {
 
     // Add standard commands
     for(const auto command : enum_names<CSCP::StandardCommand>()) {
-        if(command == "shutdown") {
-            // Already added above
+        if(command == "shutdown" || command.starts_with("_")) {
+            // Already added above || hidden command
             continue;
         }
         const auto command_str = to_string(command);
@@ -528,6 +532,23 @@ void MissionControl::custom_context_menu(const QPoint& point) {
         });
         contextMenu.addAction(action);
     }
+
+    // Draw separator
+    contextMenu.addSeparator();
+
+    // Add possibility to run custom command
+    auto* customAction = new QAction("Custom...", this);
+    connect(customAction, &QAction::triggered, this, [this, index]() {
+        QCommandDialog dialog(this, runcontrol_.getQName(index));
+        if(dialog.exec() == QDialog::Accepted) {
+            const auto& response = runcontrol_.sendQCommand(index, dialog.getCommand(), dialog.getPayload());
+            if(response.hasPayload()) {
+                QResponseDialog dialog(this, response);
+                dialog.exec();
+            }
+        }
+    });
+    contextMenu.addAction(customAction);
 
     contextMenu.exec(viewConn->viewport()->mapToGlobal(point));
 }

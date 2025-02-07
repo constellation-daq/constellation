@@ -28,6 +28,7 @@ public:
     DummySatelliteNR(std::string_view name = "sat1") : SatelliteT("Dummy", name) {
         SatelliteT::support_reconfigure();
         SatelliteT::register_command("my_cmd", "A User Command", {}, &DummySatelliteNR::usr_cmd, this);
+        SatelliteT::register_command("_my_hidden_cmd", "A Hidden User Command", {}, &DummySatelliteNR::usr_cmd, this);
         SatelliteT::register_command("my_cmd_arg", "Another User Command", {}, &DummySatelliteNR::usr_cmd_arg, this);
         SatelliteT::register_command(
             "my_cmd_invalid_return", "Invalid User Command", {}, &DummySatelliteNR::usr_cmd_invalid_return, this);

@@ -60,7 +60,6 @@ void EudaqNativeWriterSatellite::FileSerializer::write(std::span<const std::byte
     if(!file_.good()) {
         throw SatelliteError("Error writing to file");
     }
-    bytes_written_ += data.size_bytes();
 }
 
 void EudaqNativeWriterSatellite::FileSerializer::write_str(const std::string& t) {

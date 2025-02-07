@@ -170,6 +170,15 @@ namespace constellation::gui {
          */
         void reachedState(protocol::CSCP::State state, bool global);
 
+        /**
+         * @brief Signal emitted whenever the state of the Constellation changed, either to a new lowest or a new global
+         * state
+         *
+         * @param state Previous state of the Constellation
+         * @param global Boolean indicating whether this was a global or a lowest state
+         */
+        void leavingState(protocol::CSCP::State state, bool global);
+
     protected:
         /**
          * @brief Helper method emitting the reachedGlobalState and reachedLowestSate signals
@@ -178,6 +187,14 @@ namespace constellation::gui {
          * @param global Flag whether the state is a new global or lowest state
          */
         void reached_state(protocol::CSCP::State state, bool global) final;
+
+        /**
+         * @brief Helper method emitting the reachedGlobalState and reachedLowestSate signals
+         *
+         * @param state Global or lowest state the Constellation was in previously
+         * @param global Flag whether the state was a global or lowest state
+         */
+        void leaving_state(protocol::CSCP::State state, bool global) final;
 
         /**
          * @brief Helper method emitting the connectionsChanged signal

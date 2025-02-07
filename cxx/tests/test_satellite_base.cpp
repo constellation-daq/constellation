@@ -133,6 +133,45 @@ TEST_CASE("Standard commands", "[satellite]") {
     satellite.exit();
 }
 
+TEST_CASE("Hidden commands", "[satellite]") {
+    // Create and start satellite
+    DummySatellite satellite {};
+
+    // Create sender
+    CSCPSender sender {satellite.getCommandPort()};
+
+    // _get_commands
+    sender.sendCommand("_get_commands");
+    auto recv_msg_get_commands = sender.recv();
+    REQUIRE(recv_msg_get_commands.getVerb().first == CSCP1Message::Type::SUCCESS);
+    REQUIRE_THAT(to_string(recv_msg_get_commands.getVerb().second), EndsWith("commands known, list attached in payload"));
+    REQUIRE(recv_msg_get_commands.hasPayload());
+    const auto get_commands_dict = Dictionary::disassemble(recv_msg_get_commands.getPayload());
+    REQUIRE(get_commands_dict.contains("_get_commands"));
+    REQUIRE_THAT(get_commands_dict.at("_interrupt").get<std::string>(),
+                 Equals("Send interrupt signal to satellite to transition to SAFE mode"));
+    REQUIRE_THAT(get_commands_dict.at("_failure").get<std::string>(),
+                 Equals("Send failure signal to satellite to transition to ERROR mode"));
+    REQUIRE(get_commands_dict.contains("_my_hidden_cmd"));
+    REQUIRE_THAT(
+        std::get<std::string>(get_commands_dict.at("_my_hidden_cmd")),
+        Equals("A Hidden User Command\nThis command requires 0 arguments.\nThis command can be called in all states."));
+
+    // _get_remotes
+    sender.sendCommand("_get_remotes");
+    auto recv_msg_get_remotes = sender.recv();
+    REQUIRE(recv_msg_get_remotes.getVerb().first == CSCP1Message::Type::INVALID);
+    REQUIRE_THAT(to_string(recv_msg_get_remotes.getVerb().second), Equals("No network discovery service available"));
+
+    // _get_services
+    sender.sendCommand("_get_services");
+    auto recv_msg_get_services = sender.recv();
+    REQUIRE(recv_msg_get_services.getVerb().first == CSCP1Message::Type::INVALID);
+    REQUIRE_THAT(to_string(recv_msg_get_services.getVerb().second), Equals("No network discovery service available"));
+
+    satellite.exit();
+}
+
 TEST_CASE("Satellite name", "[satellite]") {
     class InvalidSatellite : public Satellite {
     public:

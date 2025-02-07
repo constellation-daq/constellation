@@ -44,8 +44,9 @@ Features, protocols and the behavior of individual components may still change.
 ```{toctree}
 :caption: Get started
 
-get_started/install_from_source
+get_started/install_from_flathub
 get_started/install_from_pypi
+get_started/install_from_source
 ```
 
 ```{raw} latex

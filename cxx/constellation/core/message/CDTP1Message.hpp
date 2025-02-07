@@ -106,6 +106,11 @@ namespace constellation::message {
         std::size_t countPayloadFrames() const { return payload_buffers_.size(); }
 
         /**
+         * @return Payload size in bytes of all payload frames in this message
+         */
+        CNSTLN_API std::size_t countPayloadBytes() const;
+
+        /**
          * Assemble full message to frames for ZeroMQ
          *
          * This function always moves the payload

@@ -1,6 +1,7 @@
 Keithley
 Grafana
 Adenium
+Flathub
 Flatpak
 Doxygen
 zeroconf

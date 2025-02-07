@@ -80,8 +80,7 @@ void EudaqNativeWriterSatellite::receive_bor(const CDTP1Message::Header& header,
     serializer_->serializeDelimiterMsg(header, config.getDictionary());
 }
 
-void EudaqNativeWriterSatellite::receive_data(
-    CDTP1Message&& data_message) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+void EudaqNativeWriterSatellite::receive_data(CDTP1Message data_message) {
     const auto& header = data_message.getHeader();
     LOG(DEBUG) << "Received data message from " << header.getSender();
     serializer_->serializeDataMsg(data_message);

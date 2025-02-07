@@ -108,26 +108,27 @@ void CMDPListener::multiscribeExtraTopics(const std::string& host,
     const auto host_it = extra_subscribed_topics_.find(host);
     if(host_it == extra_subscribed_topics_.end()) {
         // Not present in map yet, subscribe to each topic and store
-        auto [set_it, _] = extra_subscribed_topics_.emplace(host, std::set<std::string>());
+        std::set<std::string> topics {};
         std::ranges::for_each(subscribe_topics, [&](const auto& topic) {
-            set_it->second.emplace(topic);
-            // Subscribe only if subscribed globally
+            topics.emplace(topic);
+            // Subscribe only if not already subscribed globally
             if(!subscribed_topics_.contains(topic)) {
                 SubscriberPoolT::subscribe(host, topic);
             }
         });
+        extra_subscribed_topics_.emplace(host, std::move(topics));
     } else {
         // If present in map, simply unsubscribe and subscribe while checking global subscriptions
         std::ranges::for_each(unsubscribe_topics, [&](const auto& topic) {
             const auto erased = host_it->second.erase(topic);
-            // Do not unsubscribe if not in globally subscribed topic
+            // Unsubscribe only if not subscribed globally
             if(erased > 0 && !subscribed_topics_.contains(topic)) {
                 SubscriberPoolT::unsubscribe(host, topic);
             }
         });
         std::ranges::for_each(subscribe_topics, [&](const auto& topic) {
             const auto [_, inserted] = host_it->second.emplace(topic);
-            // Do not subscribe if in globally subscribed topic
+            // Subscribe only if not already subscribed globally
             if(inserted && !subscribed_topics_.contains(topic)) {
                 SubscriberPoolT::subscribe(host, topic);
             }

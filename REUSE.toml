@@ -37,6 +37,7 @@ SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
 path = [
+  "docs/etc/de.desy.constellation.metainfo.xml",
   "cxx/controllers/MissionControl/de.desy.constellation.missioncontrol.desktop",
   "cxx/listeners/Observatory/de.desy.constellation.observatory.desktop",
   "python/constellation/core/version_code_name",

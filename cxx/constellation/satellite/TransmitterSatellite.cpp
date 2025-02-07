@@ -21,6 +21,8 @@
 #include "constellation/core/config/Configuration.hpp"
 #include "constellation/core/log/log.hpp"
 #include "constellation/core/message/CDTP1Message.hpp"
+#include "constellation/core/metrics/Metric.hpp"
+#include "constellation/core/metrics/stat.hpp"
 #include "constellation/core/networking/exceptions.hpp"
 #include "constellation/core/networking/zmq_helpers.hpp"
 #include "constellation/core/protocol/CDTP_definitions.hpp"
@@ -32,14 +34,23 @@
 
 using namespace constellation::config;
 using namespace constellation::message;
+using namespace constellation::metrics;
 using namespace constellation::networking;
 using namespace constellation::protocol;
 using namespace constellation::satellite;
 using namespace constellation::utils;
+using namespace std::chrono_literals;
 
 TransmitterSatellite::TransmitterSatellite(std::string_view type, std::string_view name)
     : Satellite(type, name), cdtp_push_socket_(*global_zmq_context(), zmq::socket_type::push),
       cdtp_port_(bind_ephemeral_port(cdtp_push_socket_)), cdtp_logger_("CDTP") {
+
+    register_timed_metric("BYTES_TRANSMITTED",
+                          "B",
+                          MetricType::LAST_VALUE,
+                          10s,
+                          {CSCP::State::starting, CSCP::State::RUN, CSCP::State::stopping},
+                          [this]() { return bytes_transmitted_.load(); });
 
     try {
         // Only send to completed connections
@@ -74,8 +85,11 @@ bool TransmitterSatellite::trySendDataMessage(TransmitterSatellite::DataMessage&
     LOG(cdtp_logger_, TRACE) << "Sending data message " << message.getHeader().getSequenceNumber();
 
     try {
+        const auto payload_bytes = message.countPayloadBytes();
         const auto sent = message.assemble().send(cdtp_push_socket_, static_cast<int>(zmq::send_flags::dontwait));
-        if(!sent) [[unlikely]] {
+        if(sent) {
+            bytes_transmitted_ += payload_bytes;
+        } else {
             LOG(cdtp_logger_, DEBUG) << "Could not send message " << message.getHeader().getSequenceNumber();
         }
 
@@ -88,10 +102,12 @@ bool TransmitterSatellite::trySendDataMessage(TransmitterSatellite::DataMessage&
 void TransmitterSatellite::sendDataMessage(TransmitterSatellite::DataMessage& message) {
     LOG(cdtp_logger_, TRACE) << "Sending data message " << message.getHeader().getSequenceNumber();
     try {
+        const auto payload_bytes = message.countPayloadBytes();
         const auto sent = message.assemble().send(cdtp_push_socket_);
         if(!sent) {
             throw SendTimeoutError("data message", data_msg_timeout_);
         }
+        bytes_transmitted_ += payload_bytes;
     } catch(const zmq::error_t& e) {
         throw NetworkError(e.what());
     }
@@ -121,6 +137,10 @@ void TransmitterSatellite::reconfiguring_transmitter(const Configuration& partia
 }
 
 void TransmitterSatellite::starting_transmitter(std::string_view run_identifier, const config::Configuration& config) {
+    // Reset bytes transmitted metric
+    bytes_transmitted_ = 0;
+    STAT("BYTES_TRANSMITTED", 0);
+
     // Reset run metadata and sequence counter
     seq_ = 0;
     run_metadata_ = {};

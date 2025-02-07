@@ -94,6 +94,7 @@ void Controller::stop() {
 }
 
 void Controller::reached_state(CSCP::State /*state*/, bool /*global*/) {};
+void Controller::leaving_state(CSCP::State /*state*/, bool /*global*/) {};
 void Controller::propagate_update(UpdateType /*type*/, std::size_t /*position*/, std::size_t /*total*/) {};
 
 // NOLINTNEXTLINE(performance-unnecessary-value-param)
@@ -103,6 +104,10 @@ void Controller::callback(chirp::DiscoveredService service, chirp::ServiceStatus
 }
 
 void Controller::callback_impl(const constellation::chirp::DiscoveredService& service, chirp::ServiceStatus status) {
+
+    // Store old state:
+    const auto old_lowest_state = getLowestState();
+    const auto old_is_global = isInGlobalState();
 
     std::unique_lock<std::mutex> lock {connection_mutex_};
 
@@ -129,6 +134,7 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
 
             lock.unlock();
             // Propagate state change of the constellation
+            leaving_state(old_lowest_state, old_is_global);
             reached_state(getLowestState(), isInGlobalState());
         }
     } else if(status == chirp::ServiceStatus::DISCOVERED) {
@@ -172,6 +178,7 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
 
                 lock.unlock();
                 // Propagate state change of the constellation
+                leaving_state(old_lowest_state, old_is_global);
                 reached_state(getLowestState(), isInGlobalState());
             }
         } catch(const zmq::error_t& e) {
@@ -183,6 +190,10 @@ void Controller::callback_impl(const constellation::chirp::DiscoveredService& se
 }
 
 void Controller::process_heartbeat(const message::CHP1Message& msg) {
+
+    // Cache old lowest state
+    const auto old_lowest_state = getLowestState();
+    const auto old_is_global = isInGlobalState();
 
     std::unique_lock<std::mutex> lock {connection_mutex_};
     const auto now = std::chrono::system_clock::now();
@@ -218,6 +229,7 @@ void Controller::process_heartbeat(const message::CHP1Message& msg) {
 
             lock.unlock();
             // Notify about this new state
+            leaving_state(old_lowest_state, old_is_global);
             reached_state(getLowestState(), isInGlobalState());
         }
     } else {

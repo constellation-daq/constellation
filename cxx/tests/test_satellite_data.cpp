@@ -53,7 +53,7 @@ protected:
         bor_tag_map_.emplace(sender, header.getTags());
         bor_received_ = true;
     }
-    void receive_data(CDTP1Message&& data_message) override {
+    void receive_data(CDTP1Message data_message) override {
         const auto sender = to_string(data_message.getHeader().getSender());
         const std::lock_guard map_lock {map_mutex_};
         last_data_map_.erase(sender);

@@ -55,7 +55,7 @@ class LakeShore218(Satellite):
         return None
 
     @cscp_requestable
-    def get_temp(self, request: CSCPMessage) -> tuple[str, Any, dict]:
+    def get_temp(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         channel = int(request.payload)
         if channel < 1 or channel > 8:
             raise Exception(f"Channel {channel} does not exist")

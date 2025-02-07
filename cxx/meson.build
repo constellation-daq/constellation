@@ -91,3 +91,14 @@ subdir('controllers')
 subdir('listeners')
 subdir('satellites')
 subdir('tests')
+
+# Install metainfo and icon for Flathub
+install_data(
+  meson.project_source_root() / 'docs' / 'etc' / 'de.desy.constellation.metainfo.xml',
+  install_dir: get_option('datadir') / 'metainfo',
+)
+install_data(
+  meson.project_source_root() / 'docs' / 'logo' / 'logo.svg',
+  rename: 'de.desy.constellation.svg',
+  install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'apps',
+)

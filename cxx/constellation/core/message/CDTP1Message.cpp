@@ -12,6 +12,8 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
+#include <numeric>
 #include <span>
 #include <sstream>
 #include <stdexcept>
@@ -117,6 +119,13 @@ std::string CDTP1Message::Header::to_string() const {
 
 CDTP1Message::CDTP1Message(Header header, std::size_t frames) : header_(std::move(header)) {
     payload_buffers_.reserve(frames);
+}
+
+std::size_t CDTP1Message::countPayloadBytes() const {
+    return std::transform_reduce(
+        payload_buffers_.begin(), payload_buffers_.end(), 0UL, std::plus(), [](const auto& payload_buffer) {
+            return payload_buffer.span().size_bytes();
+        });
 }
 
 zmq::multipart_t CDTP1Message::assemble() {

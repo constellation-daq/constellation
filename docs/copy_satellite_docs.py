@@ -145,14 +145,28 @@ def append_parent_classes(language: str, parent_classes: list[str]) -> str:
     if any(class_name in ["ReceiverSatellite", "TransmitterSatellite"] for class_name in parent_classes):
         parent_classes.append("Satellite")
 
-    # Append content for each relevant class
     append = ""
+
+    # Append parameter content for each relevant class
+    append += "\n```{include} _parameter_header.md\n```\n"
     for class_name in parent_classes:
-        content_file = "_" + language_shortcode(language) + "_" + class_name + ".md"
+        logger.verbose(f"Appending parameters for parent classes: {parent_classes}")
+        content_file = "_parameters_" + language_shortcode(language) + "_" + class_name + ".md"
         if content_file and (pathlib.Path("satellites") / content_file).exists():
             append += "\n```{include} " + content_file + "\n```\n"
         else:
-            logger.verbose(f"Could not find parent class {content_file}")
+            logger.verbose(f"Could not find parent class file {content_file}")
+
+    # Append metric content for each relevant class
+    append += "\n```{include} _metric_header.md\n```\n"
+    for class_name in parent_classes:
+        logger.verbose(f"Appending parameters for parent classes: {parent_classes}")
+        content_file = "_metrics_" + language_shortcode(language) + "_" + class_name + ".md"
+        if content_file and (pathlib.Path("satellites") / content_file).exists():
+            append += "\n```{include} " + content_file + "\n```\n"
+        else:
+            logger.verbose(f"Could not find parent class file {content_file}")
+
     return append
 
 
@@ -166,8 +180,6 @@ def convert_satellite_readme(
     markdown = convert_front_matter(markdown, extra_front_matter)
     # Append parent classes
     if parent_classes:
-        logger.verbose(f"Appending parameters for parent classes: {parent_classes}")
-        markdown += "\n```{include} _parameter_header.md\n```\n"
         markdown += append_parent_classes(language, parent_classes)
 
     return markdown
@@ -195,7 +207,7 @@ def convert_satellite_readme_repo(in_path: pathlib.Path, out_path: pathlib.Path)
         logger.verbose(f"Satellite definition file for {satellite_name}: {satellite_header}")
         parent_classes = extract_parent_classes(language, satellite_header, satellite_name)
         if parent_classes:
-            logger.verbose(f"Appending parameters for parent classes: {parent_classes}")
+            logger.verbose(f"Appending parent classes: {parent_classes}")
         else:
             logger.warning(f"No parent classes for {satellite_name} found in {satellite_header}")
             parent_classes = []

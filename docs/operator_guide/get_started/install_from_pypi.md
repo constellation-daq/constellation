@@ -13,4 +13,6 @@ A recommended installation includes the `cli` and `influx` components:
 pip install ConstellationDAQ[cli,influx]
 ```
 
+```{note}
 Currently, only the Python version of the framework is available on PyPI.
+```

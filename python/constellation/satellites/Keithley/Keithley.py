@@ -134,12 +134,12 @@ class Keithley(Satellite):
         self.log.info(f"Ramped output voltage to {self.device.get_voltage()}V")
 
     @cscp_requestable
-    def identify(self, request: CSCPMessage) -> tuple[str, Any, dict]:
+    def identify(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Identify device (includes serial number)"""
         return self.device.identify(), None, {}
 
     @cscp_requestable
-    def in_compliance(self, request: CSCPMessage) -> tuple[str, Any, dict]:
+    def in_compliance(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Check if current is in compliance"""
         in_compliance = self.device.in_compliance()
         is_str = "is" if in_compliance else "is not"
@@ -149,7 +149,7 @@ class Keithley(Satellite):
         return self.fsm.current_state_value not in [SatelliteState.NEW, SatelliteState.ERROR]
 
     @cscp_requestable
-    def read_output(self, request: CSCPMessage) -> tuple[str, Any, dict]:
+    def read_output(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Read voltage and current output"""
         voltage, current, timestamp = self.device.read_output()
         return f"Output: {voltage}V, {current}A", {"voltage": voltage, "current": current, "timestamp": timestamp}, {}

@@ -1,4 +1,4 @@
 <!-- markdownlint-disable MD041 -->
-### Parameters inherited from `Satellite`
+### Metrics inherited from `DataReceiver`
 
 None

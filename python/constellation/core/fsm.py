@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 """
 
 import re
-from typing import Callable, Any, Tuple
+from typing import Callable, Any
 from threading import Event
 from concurrent.futures import ThreadPoolExecutor, Future
 from enum import Enum
@@ -154,7 +154,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
 
     @debug_log
     @cscp_requestable
-    def initialize(self, request: CSCPMessage) -> Tuple[str, str, None]:
+    def initialize(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Initiate 'initialize' state transition via a CSCP request.
 
         Takes dictionary with configuration values as argument.
@@ -170,7 +170,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
 
     @debug_log
     @cscp_requestable
-    def launch(self, request: CSCPMessage) -> Tuple[str, str, None]:
+    def launch(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Initiate launch state transition via a CSCP request.
 
         No payload argument.
@@ -183,7 +183,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
 
     @debug_log
     @cscp_requestable
-    def land(self, request: CSCPMessage) -> Tuple[str, str, None]:
+    def land(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Initiate landing state transition via a CSCP request.
 
         No payload argument.
@@ -196,7 +196,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
 
     @debug_log
     @cscp_requestable
-    def start(self, request: CSCPMessage) -> Tuple[str, str, None]:
+    def start(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Initiate start state transition via a CSCP request.
 
         Payload: run identifier [str].
@@ -215,7 +215,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
 
     @debug_log
     @cscp_requestable
-    def stop(self, request: CSCPMessage) -> Tuple[str, str, None]:
+    def stop(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Initiate stop state transition via a CSCP request.
 
         No payload argument.
@@ -232,7 +232,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
 
     @debug_log
     @cscp_requestable
-    def reconfigure(self, request: CSCPMessage) -> Tuple[str, str, None]:
+    def reconfigure(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Initiate reconfigure state transition via a CSCP request.
 
         Takes dictionary with configuration values as argument.
@@ -250,7 +250,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
 
     @debug_log
     @cscp_requestable
-    def interrupt(self, request: CSCPMessage) -> Tuple[str, str, None]:
+    def _interrupt(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Initiate interrupt state transition via a CSCP request.
 
         No payload argument.
@@ -263,7 +263,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
 
     @debug_log
     @cscp_requestable
-    def failure(self, request: CSCPMessage) -> Tuple[str, str, None]:
+    def _failure(self, request: CSCPMessage) -> tuple[str, Any, dict[str, Any]]:
         """Enter error state transition via a CSCP request.
 
         No payload argument.
@@ -274,7 +274,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         """
         return self._transition("failure", request.payload, thread=False)
 
-    def _transition(self, target: str, payload: Any, thread: bool) -> Tuple[str, str, None]:
+    def _transition(self, target: str, payload: Any, thread: bool) -> tuple[str, Any, dict[str, Any]]:
         """Prepare and enqeue a transition task.
 
         The task consists of the respective transition method and the request
@@ -301,7 +301,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         else:
             # task will be executed within the main satellite thread
             self.task_queue.put((self._start_transition, [transit_fcn, payload]))
-        return "transitioning", target, None
+        return "transitioning", target, {}
 
     @debug_log
     def _start_transition(self, fcn: Callable[[Any], str], payload: Any) -> None:
@@ -361,7 +361,7 @@ class SatelliteStateHandler(BaseSatelliteFrame):
                 self.fsm.status = res
 
     @cscp_requestable
-    def get_state(self, _request: CSCPMessage | None = None) -> Tuple[str, int, dict[str, Any]]:
+    def get_state(self, _request: CSCPMessage | None = None) -> tuple[str, Any, dict[str, Any]]:
         """Return the current state of the Satellite.
 
         No payload argument.
@@ -376,10 +376,10 @@ class SatelliteStateHandler(BaseSatelliteFrame):
         return self.fsm.current_state_value.name, payload, meta
 
     @cscp_requestable
-    def get_status(self, _request: CSCPMessage | None = None) -> Tuple[str, None, None]:
+    def get_status(self, _request: CSCPMessage | None = None) -> tuple[str, Any, dict[str, Any]]:
         """Get a string describing the current status of the Satellite.
 
         No payload argument.
 
         """
-        return self.fsm.status, None, None
+        return self.fsm.status, None, {}

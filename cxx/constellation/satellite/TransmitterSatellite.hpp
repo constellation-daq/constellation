@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -232,6 +233,7 @@ namespace constellation::satellite {
         config::Dictionary eor_tags_;
         config::Dictionary run_metadata_;
         bool mark_run_tainted_ {false};
+        std::atomic_size_t bytes_transmitted_;
     };
 
 } // namespace constellation::satellite

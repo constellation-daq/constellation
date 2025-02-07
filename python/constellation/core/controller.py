@@ -100,7 +100,9 @@ class SatelliteArray:
         """Return a link to a Satellite given by its class and name."""
         return self._satellites[f"{sat_class}.{sat_name}"]
 
-    def _add_class(self, name: str, commands: dict[str, Any]) -> SatelliteClassCommLink:
+    def _add_class(
+        self, name: str, commands: dict[str, Any], hidden_commands: dict[str, str] = {}
+    ) -> SatelliteClassCommLink:
         """Add a new class to the array."""
         try:
             cl: SatelliteClassCommLink = getattr(self, name)
@@ -110,17 +112,21 @@ class SatelliteArray:
         # add attributes now
         cl = SatelliteClassCommLink(name)
         self._add_cmds(cl, self._handler, commands)
+        self._add_cmds(cl, self._handler, hidden_commands)
         setattr(self, name, cl)
         return cl
 
-    def _add_satellite(self, name: str, cls: str, commands: dict[str, str]) -> SatelliteCommLink:
+    def _add_satellite(
+        self, name: str, cls: str, commands: dict[str, str], hidden_commands: dict[str, str] = {}
+    ) -> SatelliteCommLink:
         """Add a new Satellite."""
         try:
             cl: SatelliteClassCommLink = getattr(self, cls)
         except AttributeError:
-            cl = self._add_class(cls, commands)
+            cl = self._add_class(cls, commands, hidden_commands)
         sat: SatelliteCommLink = SatelliteCommLink(name, cls)
         self._add_cmds(sat, self._handler, commands)
+        self._add_cmds(sat, self._handler, hidden_commands)
         setattr(cl, self._sanitize_name(name), sat)
         self._satellites[f"{cls}.{name}"] = sat
         return sat
@@ -432,9 +438,17 @@ class BaseController(CHIRPBroadcaster, HeartbeatChecker):
         try:
             # get list of commands
             msg = ct.request_get_response("get_commands")
+            hidden_cmds = {}
+
+            try:
+                # also register hidden commands:
+                hidden_cmds = ct.request_get_response("_get_commands").payload
+            except RuntimeError:
+                pass
+
             # get canonical name
             cls, name = msg.from_host.split(".", maxsplit=1)
-            sat = self._constellation._add_satellite(name, cls, msg.payload)
+            sat = self._constellation._add_satellite(name, cls, msg.payload, hidden_cmds)
             if sat._uuid != str(service.host_uuid):
                 self.log.warning(
                     "UUIDs do not match: expected %s but received %s",

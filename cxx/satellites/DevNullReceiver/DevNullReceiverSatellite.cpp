@@ -28,7 +28,6 @@ DevNullReceiverSatellite::DevNullReceiverSatellite(std::string_view type, std::s
 }
 
 void DevNullReceiverSatellite::starting(std::string_view /* run_identifier */) {
-    bytes_received_ = 0;
     timer_.start();
 }
 
@@ -38,20 +37,18 @@ void DevNullReceiverSatellite::stopping() {
     const auto run_duration_ns = timer_.duration();
     const auto run_duration_s = std::chrono::duration_cast<std::chrono::seconds>(run_duration_ns);
 
-    const auto gb_received = 1e-9 * static_cast<double>(bytes_received_);
+    const auto bytes_received = get_bytes_received();
+    const auto gb_received = 1e-9 * static_cast<double>(bytes_received);
     LOG(STATUS) << "Received " << gb_received << " GB in " << run_duration_s << " ("
-                << static_cast<double>(bytes_received_) / static_cast<double>(run_duration_ns.count()) << " GB/s)";
+                << static_cast<double>(bytes_received) / static_cast<double>(run_duration_ns.count()) << " GB/s)";
 }
 
 void DevNullReceiverSatellite::receive_bor(const CDTP1Message::Header& header, Configuration config) {
     LOG(INFO) << "Received BOR from " << header.getSender() << " with config" << config.getDictionary().to_string();
 }
 
-void DevNullReceiverSatellite::receive_data(
-    CDTP1Message&& data_message) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
-    for(const auto& msg : data_message.getPayload()) {
-        bytes_received_ += msg.span().size();
-    }
+void DevNullReceiverSatellite::receive_data(CDTP1Message /*data_message*/) {
+    // Drop message
 }
 
 void DevNullReceiverSatellite::receive_eor(const CDTP1Message::Header& header, Dictionary run_metadata) {
