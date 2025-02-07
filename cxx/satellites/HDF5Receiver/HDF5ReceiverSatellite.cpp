@@ -123,8 +123,7 @@ void HDF5ReceiverSatellite::receive_bor(const CDTP1Message::Header& header, Conf
     add_dict_to(bor_group, config.getDictionary(), AddDictAs::DATASET);
 }
 
-void HDF5ReceiverSatellite::receive_data(
-    CDTP1Message&& data_message) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+void HDF5ReceiverSatellite::receive_data(CDTP1Message data_message) {
     const auto& header = data_message.getHeader();
     const auto message_prefix = get_group_prefix(header.getSender()) + "/DATA_" + to_string(header.getSequenceNumber());
     auto group = hdf5_file_->createGroup(message_prefix);

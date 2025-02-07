@@ -34,7 +34,7 @@ public:
 protected:
     void receive_bor(const constellation::message::CDTP1Message::Header& header,
                      constellation::config::Configuration config) final;
-    void receive_data(constellation::message::CDTP1Message&& data_message) final;
+    void receive_data(constellation::message::CDTP1Message data_message) final;
     void receive_eor(const constellation::message::CDTP1Message::Header& header,
                      constellation::config::Dictionary run_metadata) final;
 
