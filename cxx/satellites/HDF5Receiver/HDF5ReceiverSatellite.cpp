@@ -116,7 +116,8 @@ void HDF5ReceiverSatellite::failure(CSCP::State /*state*/) {
 }
 
 void HDF5ReceiverSatellite::receive_bor(const CDTP1Message::Header& header, Configuration config) {
-    LOG(INFO) << "Received BOR from " << header.getSender() << " with config" << config.getDictionary().to_string();
+    LOG(INFO) << "Received BOR from " << header.getSender() << " with config" << config.getDictionary().to_string() << '\n'
+              << "and tags" << header.getTags().to_string();
     const auto bor_prefix = get_group_prefix(header.getSender()) + "/BOR";
     auto bor_group = hdf5_file_->createGroup(bor_prefix);
     add_dict_to(bor_group, header.getTags(), AddDictAs::ATTRIBUTE);
@@ -144,7 +145,9 @@ void HDF5ReceiverSatellite::receive_data(CDTP1Message data_message) {
 }
 
 void HDF5ReceiverSatellite::receive_eor(const CDTP1Message::Header& header, Dictionary run_metadata) {
-    LOG(INFO) << "Received EOR from " << header.getSender() << " with metadata" << run_metadata.to_string();
+    LOG(INFO) << "Received EOR from " << header.getSender() << " with metadata" << run_metadata.to_string() << '\n'
+              << "and tags" << header.getTags().to_string();
+    ;
     const auto eor_prefix = get_group_prefix(header.getSender()) + "/EOR";
     auto eor_group = hdf5_file_->createGroup(eor_prefix);
     add_dict_to(eor_group, header.getTags(), AddDictAs::ATTRIBUTE);
