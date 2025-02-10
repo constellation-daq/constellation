@@ -140,11 +140,24 @@ namespace constellation::listener {
         CNSTLN_API void host_connected(const chirp::DiscoveredService& service) override;
 
     private:
+        /**
+         * @brief Helper methods to separate notification messages from regular CMDP messages. Notifications are handled
+         * internally while regular messages are passed on to the provided callback of the implementing class.
+         *
+         * @param msg CMDP message to process
+         */
+        void handle_message(message::CMDP1Message&& msg);
+
+    private:
         // Hide subscribe/unsubscribe functions from SubscriberPool
         using SubscriberPoolT::subscribe;
         using SubscriberPoolT::unsubscribe;
 
     private:
+        /* Callback */
+        std::function<void(message::CMDP1Message&&)> callback_;
+
+        /* Subscribed topics */
         std::mutex subscribed_topics_mutex_;
         std::set<std::string> subscribed_topics_;
         utils::string_hash_map<std::set<std::string>> extra_subscribed_topics_;
