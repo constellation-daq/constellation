@@ -9,19 +9,26 @@
 
 #pragma once
 
+#include <map>
+#include <string_view>
+
+#include "constellation/build.hpp"
 #include "constellation/core/message/CMDP1Message.hpp"
 #include "constellation/core/pools/SubscriberPool.hpp"
 #include "constellation/core/protocol/CHIRP_definitions.hpp"
+#include "constellation/core/utils/string_hash_map.hpp"
 
 namespace constellation::listener {
 
-    class LogNotifications
+    class CNSTLN_API Notifications
         : public pools::SubscriberPool<message::CMDP1Notification, protocol::CHIRP::ServiceIdentifier::MONITORING> {
     public:
         using SubscriberPoolT =
             pools::SubscriberPool<message::CMDP1Notification, protocol::CHIRP::ServiceIdentifier::MONITORING>;
 
-        LogNotifications();
+        Notifications(bool log_notifications);
+
+        std::map<std::string, std::string> getTopics(std::string_view sender);
 
     private:
         /**
@@ -39,6 +46,11 @@ namespace constellation::listener {
         using SubscriberPoolT::unsubscribe;
 
     private:
+        bool log_notifications_;
+
+        std::mutex topics_mutex_;
+        utils::string_hash_map<std::map<std::string, std::string>> topics_;
+
         /** Logger to use */
         log::Logger logger_;
     };
