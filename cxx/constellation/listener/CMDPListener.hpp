@@ -149,6 +149,13 @@ namespace constellation::listener {
          */
         CNSTLN_API void host_connected(const chirp::DiscoveredService& service) override;
 
+        /**
+         * @brief Method for derived classes to act on topic notifications
+         *
+         * \param topics [description]
+         */
+        CNSTLN_API virtual void topics_available(std::string_view sender, const std::map<std::string, std::string>& topics);
+
     private:
         /**
          * @brief Helper methods to separate notification messages from regular CMDP messages. Notifications are handled
