@@ -40,6 +40,8 @@
 
 #define CNSTLN_VERSION_FULL "v" CNSTLN_VERSION " (" CNSTLN_VERSION_CODE_NAME ")"
 
+#define CNSTLN_PREFIX "@prefix@"
+
 #define CNSTLN_LIBDIR "@libdir@"
 
 #define CNSTLN_BUILDDIR "@builddir@"

@@ -36,8 +36,9 @@ using namespace constellation::utils;
 DSOLoader::DSOLoader(const std::string& dso_name, Logger& logger, const std::filesystem::path& hint) {
     // Possible paths:
     // - custom executable: hint
-    // - in dev environment: builddir/satellites/XYZ/libXYZ.suffix
-    // - in installed environment: libdir/ConstellationSatellites/libXYZ.suffix
+    // - in build folder: builddir/cxx/satellites/libXYZ.suffix
+    // - in meson devenv: builddir/libdir/ConstellationSatellites/libXYZ.suffix
+    // - in installed environment: prefix/libdir/ConstellationSatellites/libXYZ.suffix
     // - in portable installed environment: current directory
     const auto dso_file_name = to_dso_file_name(dso_name);
     LOG(logger, TRACE) << "Searching paths for library with name " << std::quoted(dso_file_name);
@@ -81,7 +82,10 @@ DSOLoader::DSOLoader(const std::string& dso_name, Logger& logger, const std::fil
     const auto build_dir = std::filesystem::path(CNSTLN_BUILDDIR) / "cxx" / "satellites";
     add_path(build_dir);
 
-    const auto lib_dir = std::filesystem::path(CNSTLN_LIBDIR) / "ConstellationSatellites";
+    const auto devenv_dir = std::filesystem::path(CNSTLN_BUILDDIR) / CNSTLN_LIBDIR / "ConstellationSatellites";
+    add_path(devenv_dir);
+
+    const auto lib_dir = std::filesystem::path(CNSTLN_PREFIX) / CNSTLN_LIBDIR / "ConstellationSatellites";
     add_path(lib_dir);
 
     const auto cwd = std::filesystem::current_path();

@@ -697,7 +697,7 @@
    <sender>txtLogmsg</sender>
    <signal>returnPressed()</signal>
    <receiver>btnLog</receiver>
-   <slot>animateClick()</slot>
+   <slot>click()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>248</x>
