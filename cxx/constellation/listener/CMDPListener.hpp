@@ -10,6 +10,7 @@
 #pragma once
 
 #include <functional>
+#include <map>
 #include <mutex>
 #include <set>
 #include <string>
@@ -130,6 +131,15 @@ namespace constellation::listener {
          */
         CNSTLN_API void removeExtraTopicSubscriptions();
 
+        /**
+         * @brief Obtain available topics for given sender. Topics are parsed from CMDP notification messages and cached per
+         * sender. Returns an empty map if the sender is not known or has not sent a topic notification yet.
+         *
+         * @param sender Sending CMDP host to get available topics for
+         * @return Map with available topics as keys and their description as values
+         */
+        CNSTLN_API std::map<std::string, std::string> getAvailableTopics(std::string_view sender);
+
     protected:
         /**
          * @brief Method for derived classes to act on newly connected sockets
@@ -161,6 +171,10 @@ namespace constellation::listener {
         std::mutex subscribed_topics_mutex_;
         std::set<std::string> subscribed_topics_;
         utils::string_hash_map<std::set<std::string>> extra_subscribed_topics_;
+
+        /* Available topics from notification */
+        std::mutex available_topics_mutex_;
+        utils::string_hash_map<std::map<std::string, std::string>> available_topics_;
     };
 
 } // namespace constellation::listener

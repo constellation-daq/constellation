@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <map>
 #include <mutex>
 #include <set>
 #include <string>
@@ -50,7 +51,36 @@ void CMDPListener::host_connected(const chirp::DiscoveredService& service) {
 }
 
 void CMDPListener::handle_message(message::CMDP1Message&& msg) {
-    callback_(std::move(msg));
+    try {
+        // Most messages will be regular messages, try to convert and handle first:
+        callback_(std::move(msg));
+    } catch(const message::IncorrectMessageType&) {
+        // Otherwise handle as notification:
+        const auto notification = CMDP1Notification(std::move(msg));
+        const auto topics = notification.getTopics();
+        const auto sender = notification.getHeader().getSender();
+
+        const std::lock_guard available_topics_lock {available_topics_mutex_};
+        const auto [it, inserted] = available_topics_.emplace(sender, std::map<std::string, std::string>());
+
+        if(!inserted) {
+            it->second.clear();
+        }
+
+        for(const auto& t : topics) {
+            it->second.emplace(t.first, t.second.str());
+        }
+    }
+}
+
+std::map<std::string, std::string> CMDPListener::getAvailableTopics(std::string_view sender) {
+    const std::lock_guard topics_lock {available_topics_mutex_};
+    const auto sender_it = available_topics_.find(sender);
+    if(sender_it != available_topics_.end()) {
+        return sender_it->second;
+    }
+
+    return {};
 }
 
 void CMDPListener::subscribeTopic(std::string topic) {
