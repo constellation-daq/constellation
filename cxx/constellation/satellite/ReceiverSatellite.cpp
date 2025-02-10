@@ -58,6 +58,7 @@ ReceiverSatellite::ReceiverSatellite(std::string_view type, std::string_view nam
     register_timed_metric("BYTES_RECEIVED",
                           "B",
                           MetricType::LAST_VALUE,
+                          "Number of bytes received by this satellite in the current run",
                           10s,
                           {CSCP::State::starting, CSCP::State::RUN, CSCP::State::stopping},
                           [this]() { return bytes_received_.load(); });
