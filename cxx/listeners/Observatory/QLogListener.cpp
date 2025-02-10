@@ -18,6 +18,7 @@
 #include <QDateTime>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QVariant>
 
 #include "constellation/core/chirp/Manager.hpp"
@@ -84,6 +85,22 @@ void QLogListener::host_disconnected(const DiscoveredService& service) {
 
     // Emit the signal with the current number of connections
     emit connectionsChanged(countSockets());
+}
+
+void QLogListener::topics_available(std::string_view, const std::map<std::string, std::string>& topics) {
+
+    QStringList all_topics;
+
+    for(const auto& [topic, desc] : topics) {
+        all_topics.append(QString::fromStdString(topic));
+    }
+    all_topics.removeDuplicates();
+    all_topics.sort();
+
+    // Emit signal for global topic list change:
+    emit newTopics(all_topics);
+
+    // emit newSenderTopics(QString::fromStdString(std::string(sender)), {});
 }
 
 QVariant QLogListener::data(const QModelIndex& index, int role) const {
