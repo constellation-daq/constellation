@@ -36,7 +36,10 @@ using namespace constellation::utils;
 LogListener::LogListener(std::string_view log_topic, std::function<void(CMDP1LogMessage&&)> callback)
     : CMDPListener(log_topic,
                    [callback = std::move(callback)](CMDP1Message&& msg) { callback(CMDP1LogMessage(std::move(msg))); }),
-      global_log_level_(Level::OFF) {}
+      global_log_level_(Level::OFF) {
+    // Subscribe to notifications:
+    CMDPListener::subscribeTopic("LOG?");
+}
 
 std::vector<std::string> LogListener::generate_topics(const std::string& log_topic, Level level, bool subscribe) {
     std::vector<std::string> topics {};
