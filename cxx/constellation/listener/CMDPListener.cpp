@@ -55,7 +55,7 @@ void CMDPListener::handle_message(message::CMDP1Message&& msg) {
     if(msg.isNotification()) {
         // Handle notification message:
         const auto notification = CMDP1Notification(std::move(msg));
-        const auto topics = notification.getTopics();
+        const auto& topics = notification.getTopics();
         const auto sender = notification.getHeader().getSender();
 
         const std::lock_guard available_topics_lock {available_topics_mutex_};
