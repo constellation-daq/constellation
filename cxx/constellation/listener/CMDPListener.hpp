@@ -152,7 +152,8 @@ namespace constellation::listener {
         /**
          * @brief Method for derived classes to act on topic notifications
          *
-         * \param topics [description]
+         * @param sender CMDP sending host of the topic notification
+         * @param topics Map with notification topics and their description
          */
         CNSTLN_API virtual void topics_available(std::string_view sender, const std::map<std::string, std::string>& topics);
 
