@@ -63,9 +63,9 @@ Declare as `[run]`. All parameters must be defined in config file.
 
 ### Modes of Operation
 
-* If `pos_{stage_axis}` is undefined, the stage will move to the home position of `{stage_axis}` and take data.
+* If `position_{stage_axis}` is undefined, the stage will move to the home position of `{stage_axis}` and take data.
 
-* If `pos_{stage_axis}` is a three-vector eg: `[val_1,val_2,val_3]` the stage will move between `val_1` and `val_2` in steps of `val_3`.
+* If `position_{stage_axis}` is a three-vector eg: `[val_1,val_2,val_3]` the stage will move between `val_1` and `val_2` in steps of `val_3`.
 
 
 A minimal configuration would be:
