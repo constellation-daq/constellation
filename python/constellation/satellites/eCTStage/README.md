@@ -39,9 +39,8 @@ Declare as `[{stage_axis}]` eg: `[x]`,`[y]`,`[z]`,`[r]`. All parameters must be 
 
 | Parameter       | Description                                                            | Type      | Default Value [+] | Safety Limit                   |
 |-----------------|------------------------------------------------------------------------|-----------|-------------------|--------------------------------|
-| `port`          | Serial port name (eg:`"/dev/ttyUSB0"`)                                 | string    | -                 | -                              |
 | `serial_no`     | Serial number of the stage. Used to make sure the correct stage is moving | 8-digit number| -            | -                              |
-| `chan`          | Channel number if multiple stages are moved via same serial connection | number    | `0`               | -                              |
+| `channel`          | Channel number if multiple stages are moved via same serial connection | number    | `0`               | -                              |
 | `velocity`      | Velocity of the stage movement in `mm/s`                               | int/float | `1`               | max=`10`                       |
 | `acceleration`  | Acceleration of the stage movement in `mm/s^2`                         | int/float | `1`               | max=`10`                       |
 | `start_position`| Start Position of all new runs in `mm`. See "Modes of Operations"      | int/float | -                 | `0` to `299` for linear stages |
@@ -56,7 +55,7 @@ Declare as `[run]`. All parameters must be defined in config file.
 | Parameter               | Description                                  | Type                                   | Safety Limit                   |
 |-------------------------|----------------------------------------------|----------------------------------------|--------------------------------|
 | `active_axes`           | Axes/stages that must be initialised         | list of axis names eg: `["x","y"]`     | -                              |
-| `pos_{stage_axis}`      | in `mm`. See "Modes of Operations"           | three-vector list  (int/float)         | `0` to `299` for linear stages |
+| `position_{stage_axis}`      | in `mm`. See "Modes of Operations"           | three-vector list  (int/float)         | `0` to `299` for linear stages |
 | `stop_time_per_point_s` | wait time at each point (measurement window) in `s` | float                           | -                              |
 | `readout_freq_s`        | stage position sending frequency (in `s`) to data writer | float                      | -                              |
 | `save_config`           | (optional) If True, the configuration file will be saved in `path/to/constellation/data` folder    | bool| -           |
@@ -73,36 +72,32 @@ A minimal configuration would be:
 
 ```ini
 [x]
-port = "/dev/ttyUSB0"
 serial_no = 45455454
-chan = 0
+channel = 0
 # in mm
 velocity = 2
 acceleration = 10
 start_position = 10
 
 [y]
-port = "/dev/ttyUSB1"
 serial_no = 45455454
-chan = 0
+channel = 0
 # in mm
 velocity = 2
 acceleration = 10
 start_position = 10
 
 [z]
-port = "/dev/ttyUSB3"
 serial_no = 45455454
-chan = 0
+channel = 0
 # in mm
 velocity = 2
 acceleration = 10
 start_position = 10
 
 [r]
-port = "/dev/ttyUSB3"
 serial_no = 45455454
-chan = 0
+channel = 0
 # in deg
 velocity = 8
 acceleration = 8
@@ -114,11 +109,11 @@ stop_time_per_point_s = 3
 readout_freq_s = 1e-3
 
 # in mm
-pos_x = [10,30,10]
-pos_y = [10,30,10]
-pos_z = [10,20,10]
+position_x = [10,30,10]
+position_y = [10,30,10]
+position_z = [10,20,10]
 # in deg
-pos_r = [175,185,10]
+position_r = [175,185,10]
 
 save_config = true
 ```
