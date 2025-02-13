@@ -387,12 +387,12 @@ void KatherineSatellite::stopping() {
     if(!acquisition_->aborted()) {
         const std::lock_guard device_lock {katherine_cmd_mutex_};
         // Calls katherine_acq_abort or katherine_acq_stop which sends the stop command via CTRL UDP
-        if(decode_data_) {
-            acquisition_->stop();
-        } else {
-            // When we do not decode the data, we need to abort hard
-            acquisition_->abort();
-        }
+        // if(decode_data_) {
+        // acquisition_->stop();
+        // } else {
+        // When we do not decode the data, we need to abort hard
+        acquisition_->abort();
+        // }
         LOG(DEBUG) << "Stopped acquisition";
     }
 
