@@ -12,3 +12,4 @@ plantuml
 libc
 libstdc
 IPython
+Timepix
