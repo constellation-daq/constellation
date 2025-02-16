@@ -62,7 +62,10 @@ HeartbeatSend::~HeartbeatSend() {
     }
 }
 
-void HeartbeatSend::sendExtrasystole() {
+void HeartbeatSend::sendExtrasystole(std::string_view status) {
+    if(!status.empty()) {
+        status_ = status;
+    }
     cv_.notify_one();
 }
 
@@ -77,7 +80,8 @@ void HeartbeatSend::loop(const std::stop_token& stop_token) {
 
         try {
             // Publish CHP message with current state
-            CHP1Message(sender_, state_callback_(), interval_.load()).assemble().send(pub_socket_);
+            CHP1Message(sender_, state_callback_(), interval_.load(), status_).assemble().send(pub_socket_);
+            status_.reset();
         } catch(const zmq::error_t& e) {
             throw NetworkError(e.what());
         }

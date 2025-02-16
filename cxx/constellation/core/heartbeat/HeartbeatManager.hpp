@@ -70,8 +70,10 @@ namespace constellation::heartbeat {
 
         /**
          * @brief Send an extrasystole
+         *
+         * @param status Latest status message of the satellite
          */
-        CNSTLN_API void sendExtrasystole();
+        CNSTLN_API void sendExtrasystole(std::string_view status);
 
         /**
          * @brief Obtain the current state registered from a given remote

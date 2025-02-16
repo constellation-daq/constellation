@@ -97,7 +97,7 @@ BaseSatellite::BaseSatellite(std::string_view type, std::string_view name)
     cscp_thread_ = std::jthread(std::bind_front(&BaseSatellite::cscp_loop, this));
 
     // Register state callback for extrasystoles
-    fsm_.registerStateCallback("extrasystoles", [&](CSCP::State) { heartbeat_manager_.sendExtrasystole(); });
+    fsm_.registerStateCallback("extrasystoles", [&](CSCP::State) { heartbeat_manager_.sendExtrasystole(status_); });
 }
 
 std::string BaseSatellite::getCanonicalName() const {
