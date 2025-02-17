@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -35,13 +36,13 @@ using namespace constellation::protocol;
 using namespace std::string_view_literals;
 
 CHP1Message CHP1Message::disassemble(zmq::multipart_t& frames) {
-    if(frames.size() != 1) {
-        throw MessageDecodingError("CHP1 messages can only have one frame");
+    if(frames.empty() || frames.size() > 2) {
+        throw MessageDecodingError("Wrong number of frames for CHP1 message");
     }
 
-    const auto frame = frames.pop();
-
     try {
+        const auto frame = frames.pop();
+
         // Offset since we decode five separate msgpack objects
         std::size_t offset = 0;
 
@@ -75,8 +76,15 @@ CHP1Message CHP1Message::disassemble(zmq::multipart_t& frames) {
         const auto interval = static_cast<std::chrono::milliseconds>(
             msgpack_unpack_to<std::uint16_t>(to_char_ptr(frame.data()), frame.size(), offset));
 
+        // Attempt to unpack a status message
+        std::optional<std::string> status {};
+        if(!frames.empty()) {
+            const auto status_frame = frames.pop();
+            status = std::string(status_frame.to_string_view());
+        }
+
         // Construct message
-        return {sender, state, interval, time};
+        return {sender, state, interval, status, time};
     } catch(const MsgpackUnpackError& e) {
         throw MessageDecodingError(e.what());
     }
@@ -99,6 +107,11 @@ zmq::multipart_t CHP1Message::assemble() {
     msgpack_pack(sbuf, static_cast<uint16_t>(interval_.count()));
 
     frames.add(PayloadBuffer(std::move(sbuf)).to_zmq_msg_release());
+
+    // add status to new frame if available
+    if(status_.has_value()) {
+        frames.add(PayloadBuffer(std::move(status_.value())).to_zmq_msg_release());
+    }
 
     return frames;
 }

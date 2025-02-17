@@ -22,12 +22,12 @@ repos:
         args: [--markdown-linebreak-ext=md]
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.3.0
+    rev: v2.4.1
     hooks:
       - id: codespell
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v19.1.6
+    rev: v19.1.7
     hooks:
       - id: clang-format
 
@@ -38,20 +38,20 @@ repos:
         additional_dependencies: [Flake8-pyproject]
 
   - repo: https://github.com/psf/black
-    rev: 24.10.0
+    rev: 25.1.0
     hooks:
       - id: black
         language_version: python3
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.14.1
+    rev: v1.15.0
     hooks:
       - id: mypy
         args: [--no-warn-unused-ignores, --ignore-missing-imports]
         files: "python/constellation/core"
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.43.0
+    rev: v0.44.0
     hooks:
       - id: markdownlint
 

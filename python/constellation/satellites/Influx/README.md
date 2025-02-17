@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: CC-BY-4.0 OR EUPL-1.2
 title: "Influx"
 description: "Satellite writing metrics to InfluxDB"
+category: "Monitoring"
 ---
 
 ## Description

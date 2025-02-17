@@ -29,7 +29,7 @@ def get_broadcast_socket() -> socket.socket:
     # add destination information to ancillary message in recvmsg
     sock.setsockopt(socket.IPPROTO_IP, IP_RECVORIGDSTADDR, 1)
 
-    # on socket layer (SOL_SOCKET), enable re-using address in case
+    # on socket layer (SOL_SOCKET), enable reusing address in case
     # already bound (REUSEPORT)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)

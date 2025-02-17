@@ -191,7 +191,7 @@ build:debian-clang-libcxx:
     - .debian-clang
   variables:
     BUILD_TYPE: "debugoptimized"
-    BUILD_OPTIONS: "--wrap-mode=forcefallback -Dspdlog:external_fmt=disabled -Db_sanitize=thread -Db_lundef=false"
+    BUILD_OPTIONS: "--wrap-mode=forcefallback -Db_sanitize=thread -Db_lundef=false"
     BUILD_SCRIPTS: "scripts/meson_disable_qt_components.sh"
     CXXFLAGS: "-stdlib=libc++ -fexperimental-library"
 

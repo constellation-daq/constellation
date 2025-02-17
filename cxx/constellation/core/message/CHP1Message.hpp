@@ -10,6 +10,7 @@
 #pragma once
 
 #include <chrono>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -27,15 +28,17 @@ namespace constellation::message {
     public:
         /**
          * @param sender Sender name
-         * @param time Message time
          * @param state State of the sender
          * @param interval Time interval until next message is expected
+         * @param status Optional status string for the message
+         * @param time Message time
          */
         CHP1Message(std::string sender,
                     protocol::CSCP::State state,
                     std::chrono::milliseconds interval,
+                    std::optional<std::string> status = {},
                     std::chrono::system_clock::time_point time = std::chrono::system_clock::now())
-            : sender_(std::move(sender)), time_(time), state_(state), interval_(interval) {}
+            : sender_(std::move(sender)), time_(time), state_(state), interval_(interval), status_(std::move(status)) {}
 
         /** Return message protocol */
         constexpr protocol::Protocol getProtocol() const { return protocol_; }
@@ -48,6 +51,9 @@ namespace constellation::message {
 
         /** Return state of the message */
         constexpr protocol::CSCP::State getState() const { return state_; }
+
+        /** Return optional status of the message */
+        constexpr std::optional<std::string> getStatus() const { return status_; }
 
         /** Return maxima time interval until next message is expected */
         constexpr std::chrono::milliseconds getInterval() const { return interval_; }
@@ -70,6 +76,7 @@ namespace constellation::message {
         std::chrono::system_clock::time_point time_;
         protocol::CSCP::State state_;
         std::chrono::milliseconds interval_;
+        std::optional<std::string> status_;
     };
 
 } // namespace constellation::message

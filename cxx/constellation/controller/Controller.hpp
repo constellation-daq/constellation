@@ -74,7 +74,7 @@ namespace constellation::controller {
             /** State and last response */
             protocol::CSCP::State state {protocol::CSCP::State::NEW};
             message::CSCP1Message::Type last_cmd_type {};
-            std::string last_cmd_verb {}; // NOLINT(readability-redundant-member-init)
+            std::string last_message {}; // NOLINT(readability-redundant-member-init)
             config::Dictionary commands {};
 
             /** Heartbeat status */

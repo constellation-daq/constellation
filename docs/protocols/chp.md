@@ -26,7 +26,8 @@ This specification is not transport specific, but not all behavior will be repro
 
 ## Implementation
 
-A CHP message MUST consist of a single frames. The definition of ‘frame’ follows that defined in [23/ZMTP](http://rfc.zeromq.org/spec:23/ZMTP).
+A CHP message SHALL be sent as multipart message and MUST consist of at least one frame and MAY consist of one additional frame.
+The definitions of ‘frame’ and ‘multipart message’ follow those defined in [23/ZMTP](http://rfc.zeromq.org/spec:23/ZMTP).
 
 ### Overall Behavior
 
@@ -56,6 +57,10 @@ The values SHOULD be the time of sending the heartbeat or extrasystole message a
 The 1-OCTET integer variable SHALL contain the current state of the CHP sending host.
 
 The 2-OCTET integer variable SHALL indicate the maximum time interval in units of milliseconds until the next heartbeat message is emitted by the sending CHP host.
+
+### Payload Frame
+
+The OPTIONAL message payload frame SHALL consist of the current status message of the CHP sender, encoded as a UTF8 string.
 
 ### Lives Counter & Heartbeat Timeouts
 
