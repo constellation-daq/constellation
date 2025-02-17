@@ -144,16 +144,6 @@ namespace constellation::gui {
          */
         std::string getQName(const QModelIndex& index) const;
 
-        /**
-         * @brief Helper to obtain the state string with color and formatting
-         *
-         * @param state State to obtain string for
-         * @param global Marker if the state is global or not
-         *
-         * @return String for the state display
-         */
-        static QString getStyledState(protocol::CSCP::State state, bool global);
-
     signals:
         /**
          * @brief Signal emitted whenever a connection changed

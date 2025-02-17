@@ -21,6 +21,7 @@
 
 #include "constellation/core/log/Level.hpp"
 #include "constellation/core/message/CSCP1Message.hpp"
+#include "constellation/core/protocol/CSCP_definitions.hpp"
 #include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/std_future.hpp"
 
@@ -29,6 +30,62 @@
 #endif
 
 namespace constellation::gui {
+
+    /**
+     * @brief Helper to obtain the state string with color and formatting
+     *
+     * @param state State to obtain string for
+     * @param global Marker if the state is global or not
+     *
+     * @return String for the state display
+     */
+    inline QString get_styled_state(protocol::CSCP::State state, bool global) {
+
+        const QString global_indicatior = (global ? "" : " ≊");
+
+        switch(state) {
+        case protocol::CSCP::State::NEW: {
+            return "<font color='gray'><b>New</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::initializing: {
+            return "<font color='gray'><b>Initializing...</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::INIT: {
+            return "<font color='gray'><b>Initialized</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::launching: {
+            return "<font color='orange'><b>Launching...</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::landing: {
+            return "<font color='orange'><b>Landing...</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::reconfiguring: {
+            return "<font color='orange'><b>Reconfiguring...</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::ORBIT: {
+            return "<font color='orange'><b>Orbiting</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::starting: {
+            return "<font color='green'><b>Starting...</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::stopping: {
+            return "<font color='green'><b>Stopping...</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::RUN: {
+            return "<font color='green'><b>Running</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::SAFE: {
+            return "<font color='red'><b>Safe Mode</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::interrupting: {
+            return "<font color='red'><b>Interrupting...</b>" + global_indicatior + "</font>";
+        }
+        case protocol::CSCP::State::ERROR: {
+            return "<font color='darkred'><b>Error</b>" + global_indicatior + "</font>";
+        }
+        default: std::unreachable();
+        }
+    }
 
     /**
      * @brief Helper to obtain the CSCP message type string with color and formatting
