@@ -16,3 +16,5 @@
 
 # Satellite dependencies
 /cpr-*/
+/curl-*/
+/openssl-*/
