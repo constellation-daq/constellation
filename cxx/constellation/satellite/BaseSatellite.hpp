@@ -193,6 +193,11 @@ namespace constellation::satellite {
          */
         void set_status(std::string status) { status_ = std::move(status); }
 
+        /**
+         * @brief Clears the status message
+         */
+        void clear_status() { status_.clear(); }
+
     public:
         /// @cond doxygen_suppress
         virtual void initializing(config::Configuration& config) = 0;
