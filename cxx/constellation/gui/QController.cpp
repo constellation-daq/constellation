@@ -65,10 +65,16 @@ QVariant QController::data(const QModelIndex& index, int role) const {
     auto it = connections_.begin();
     std::advance(it, index.row());
 
-    const auto& name = it->first;
-    const auto& conn = it->second;
+    return get_data(it, index.column());
+}
 
-    switch(index.column()) {
+QVariant QController::get_data(std::map<std::string, Connection, std::less<>>::const_iterator connection,
+                               std::size_t idx) const {
+
+    const auto& name = connection->first;
+    const auto& conn = connection->second;
+
+    switch(idx) {
     case 0: {
         // Satellite type
         const auto type_endpos = name.find_first_of('.', 0);
@@ -112,6 +118,29 @@ QVariant QController::data(const QModelIndex& index, int role) const {
         return QString("");
     }
     }
+}
+
+QMap<QString, QVariant> QController::getQDetails(const QModelIndex& index) const {
+
+    if(!index.isValid()) {
+        return {};
+    }
+
+    if(index.row() >= static_cast<int>(getConnectionCount()) || index.column() >= static_cast<int>(headers_.size())) {
+        return {};
+    }
+
+    const std::lock_guard connection_lock {connection_mutex_};
+    // Select connection by index:
+    auto it = connections_.begin();
+    std::advance(it, index.row());
+
+    QMap<QString, QVariant> details;
+    for(std::size_t i = 0; i < headers_.size(); i++) {
+        details.insert(headers_.at(i), get_data(it, i));
+    }
+
+    return details;
 }
 
 QVariant QController::headerData(int column, Qt::Orientation orientation, int role) const {
