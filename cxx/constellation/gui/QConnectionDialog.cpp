@@ -11,15 +11,11 @@
 
 #include <iterator>
 #include <string>
-#include <string_view>
 
 #include <QDialog>
 #include <QString>
 
 #include "constellation/core/config/Dictionary.hpp"
-#include "constellation/core/message/CHIRPMessage.hpp"
-#include "constellation/core/utils/string.hpp"
-#include "constellation/gui/qt_utils.hpp"
 
 #include "ui_QConnectionDialog.h"
 
@@ -42,7 +38,7 @@ QConnectionDialog::QConnectionDialog(QWidget* parent,
     // ui_->satelliteState->setText(get_styled_state(state, true) + "</b></font>");
 
     // Set connection details:
-    ui_->connectionTable->setRowCount(details.size());
+    ui_->connectionTable->setRowCount(static_cast<int>(details.size()));
     ui_->connectionTable->setColumnCount(2);
     ui_->connectionTable->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 

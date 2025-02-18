@@ -10,6 +10,7 @@
 #include "QController.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <iterator>
 #include <map>
 #include <mutex>
@@ -68,8 +69,7 @@ QVariant QController::data(const QModelIndex& index, int role) const {
     return get_data(it, index.column());
 }
 
-QVariant QController::get_data(std::map<std::string, Connection, std::less<>>::const_iterator connection,
-                               std::size_t idx) const {
+QVariant QController::get_data(std::map<std::string, Connection, std::less<>>::const_iterator connection, std::size_t idx) {
 
     const auto& name = connection->first;
     const auto& conn = connection->second;

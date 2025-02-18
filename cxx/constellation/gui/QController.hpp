@@ -11,6 +11,7 @@
 
 #include <array>
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <string>
 
@@ -210,7 +211,7 @@ namespace constellation::gui {
          *
          * @return QVariant holding the connection detail data for the requested cell
          */
-        QVariant get_data(std::map<std::string, Connection, std::less<>>::const_iterator connection, std::size_t idx) const;
+        static QVariant get_data(std::map<std::string, Connection, std::less<>>::const_iterator connection, std::size_t idx);
 
         // Column headers of the connection details
         static constexpr std::array<const char*, 8> headers_ {

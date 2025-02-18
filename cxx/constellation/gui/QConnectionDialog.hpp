@@ -10,7 +10,7 @@
 #pragma once
 
 #include <memory>
-#include <string_view>
+#include <string>
 
 #include <QDialog>
 #include <QMap>
@@ -18,9 +18,6 @@
 
 #include "constellation/build.hpp"
 #include "constellation/core/config/Dictionary.hpp"
-#include "constellation/core/message/CHIRPMessage.hpp"
-#include "constellation/core/message/CSCP1Message.hpp"
-#include "constellation/core/protocol/CSCP_definitions.hpp"
 
 // Expose Qt class auto-generated from the user interface XML:
 namespace Ui { // NOLINT(readability-identifier-naming)
