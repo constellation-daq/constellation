@@ -64,7 +64,7 @@ max_aclrtn = 10  # mm/s^2
 max_velocity_r = 10  # mm/s  (recommended: <5 mm/s)
 max_aclrtn_r = 10  # mm/s^2
 
-stage_max = {"x": 299, "y": 299, "z": 299, "r": 400}
+stage_max = {"x": 300, "y": 300, "z": 300, "r": 400}
 
 # DO NOT SET VELOCITY > 20!!! THE STAGE WILL STOP MOVING AND SYNCING WITH PC MAY BE AFFECTED
 # THIS THRESHOLD WAS TESTED ON X-STAGE AFTER X,Y,Z,R STAGES WERE MOUNTED TOGETHER.
