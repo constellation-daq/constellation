@@ -105,6 +105,13 @@ private slots:
     void startup(std::size_t num);
 
     /**
+     * @brief Slot for opening a connection detail dialog
+     *
+     * @param i Model index to open dialog for
+     */
+    void on_viewConn_activated(const QModelIndex& i);
+
+    /**
      * @brief Configuration file editing slot
      */
     void on_txtConfigFileName_textChanged();

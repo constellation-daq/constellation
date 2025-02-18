@@ -632,6 +632,12 @@
             <property name="selectionBehavior">
              <enum>QAbstractItemView::SelectRows</enum>
             </property>
+            <property name="selectionMode">
+             <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+            </property>
+            <property name="allColumnsShowFocus">
+             <bool>true</bool>
+            </property>
             <property name="rootIsDecorated">
              <bool>false</bool>
             </property>

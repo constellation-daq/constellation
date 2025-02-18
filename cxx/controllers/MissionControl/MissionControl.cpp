@@ -61,6 +61,7 @@
 #include "constellation/core/utils/enum.hpp"
 #include "constellation/core/utils/string.hpp"
 #include "constellation/gui/QCommandDialog.hpp"
+#include "constellation/gui/QConnectionDialog.hpp"
 #include "constellation/gui/QResponseDialog.hpp"
 #include "constellation/gui/qt_utils.hpp"
 
@@ -284,6 +285,19 @@ void MissionControl::update_run_identifier(const QString& text, int number) {
     gui_settings_.setValue("run/sequence", number);
 
     LOG(logger_, DEBUG) << "Updated run identifier to " << current_run_.toStdString();
+}
+
+void MissionControl::on_viewConn_activated(const QModelIndex& i) {
+    // Use the sorting proxy to obtain the correct model index of the source:
+    const QModelIndex index = sorting_proxy_.mapToSource(i);
+    if(!index.isValid()) {
+        return;
+    }
+
+    const auto name = runcontrol_.getQName(index);
+    const auto details = runcontrol_.getQDetails(index);
+    const auto cmds = runcontrol_.getQCommands(index);
+    new QConnectionDialog(this, name, details, cmds);
 }
 
 void MissionControl::on_btnInit_clicked() {
