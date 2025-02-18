@@ -41,7 +41,9 @@ namespace constellation::gui {
          * @brief Constructor of the QConnectionDialog
          *
          * @param parent Parent widget of the dialog
-         * @param message CSCP message returned by the satellite
+         * @param name Name of the satellite
+         * @param details Map with connection details
+         * @param commands Dictionary with commands of the satellite
          */
         explicit QConnectionDialog(QWidget* parent,
                                    const std::string& name,
